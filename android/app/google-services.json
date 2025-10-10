@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1011842661481",
+    "project_id": "sincroapp-529cc",
+    "storage_bucket": "sincroapp-529cc.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1011842661481:android:9b92388c1210fef2e2b6f8",
+        "android_client_info": {
+          "package_name": "com.example.sincro_app_flutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCwM51dLKFbejbJjiRHMN8gTDhfwsTSq10"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
