@@ -12,4 +12,6 @@ class AppColors {
 
   static const Color primaryAccent = Color(0xFF7C3AED); // purple-600 (botão)
   static const Color secondaryAccent = Color(0xFFA78BFA); // purple-400 (links)
+
+  static const Color primary = Color(0xff7c3aed);
 }

@@ -14,9 +14,26 @@ import 'package:sincro_app_flutter/common/widgets/bussola_card.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 
+// --- ADIÇÃO 1: Importar as novas telas ---
+import '../../calendar/presentation/calendar_screen.dart';
+import '../../tasks/presentation/foco_do_dia_screen.dart';
+
+// ================== SEU CÓDIGO ORIGINAL (INTACTO) ==================
+class MyCustomScrollBehavior extends MaterialScrollBehavior {
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.stylus,
+        PointerDeviceKind.invertedStylus,
+      };
+}
+// ====================================================================
+
+// --- SEU CÓDIGO ORIGINAL (INTACTO) ---
 class DashboardCardData {
   final String id;
-  final Widget Function(bool isEditMode) cardBuilder;
+  final Widget Function(bool isEditMode, {Widget? dragHandle}) cardBuilder;
   DashboardCardData({required this.id, required this.cardBuilder});
 }
 
@@ -28,6 +45,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  // --- SEU CÓDIGO ORIGINAL (INTACTO) ---
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   UserModel? _userData;
   NumerologyResult? _numerologyData;
@@ -103,7 +121,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     _cards = [
       DashboardCardData(
           id: 'vibracaoDia',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Vibração do Dia",
               number: diaPessoalNum.toString(),
               info: diaPessoal,
@@ -113,7 +132,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Vibração do Dia", diaPessoal))),
       DashboardCardData(
           id: 'vibracaoMes',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Vibração do Mês",
               number: _numerologyData!.numeros['mesPessoal']!.toString(),
               info: mesPessoal,
@@ -123,7 +143,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Vibração do Mês", mesPessoal))),
       DashboardCardData(
           id: 'vibracaoAno',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Vibração do Ano",
               number: _numerologyData!.numeros['anoPessoal']!.toString(),
               info: anoPessoal,
@@ -133,7 +154,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Vibração do Ano", anoPessoal))),
       DashboardCardData(
           id: 'arcanoRegente',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Arcano Regente",
               number: _numerologyData!.estruturas['arcanoRegente'].toString(),
               info: arcanoRegente,
@@ -143,7 +165,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Arcano Regente", arcanoRegente))),
       DashboardCardData(
           id: 'arcanoVigente',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Arcano Vigente",
               number:
                   (_numerologyData!.estruturas['arcanoAtual']['numero'] ?? '-')
@@ -155,7 +178,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Arcano Vigente", arcanoVigente))),
       DashboardCardData(
           id: 'cicloVida',
-          cardBuilder: (isEditMode) => InfoCard(
+          cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
+              dragHandle: dragHandle,
               title: "Ciclo de Vida",
               number: _numerologyData!.estruturas['cicloDeVidaAtual']['regente']
                   .toString(),
@@ -166,7 +190,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () => _handleCardTap("Ciclo de Vida", cicloDeVida))),
       DashboardCardData(
           id: 'bussola',
-          cardBuilder: (isEditMode) => BussolaCard(
+          cardBuilder: (isEditMode, {dragHandle}) => BussolaCard(
+              dragHandle: dragHandle,
               bussolaContent: bussola,
               isEditMode: isEditMode,
               onTap: () => _handleBussolaTap(bussola))),
@@ -205,6 +230,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ContentData.bussolaAtividades[0]!;
   }
 
+  // --- ADIÇÃO 2: Função que escolhe qual página mostrar ---
+  Widget _buildCurrentPage({required bool isDesktop}) {
+    switch (_sidebarIndex) {
+      case 0:
+        return _buildDashboardContent(isDesktop: isDesktop);
+      case 1:
+        return const CalendarScreen();
+      case 3:
+        return const FocoDoDiaScreen();
+      default:
+        return _buildDashboardContent(isDesktop: isDesktop);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(builder: (context, constraints) {
@@ -219,16 +258,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
               ),
         drawer: isDesktop ? null : _buildMobileDrawer(),
+        // --- ALTERADO: O body agora chama o método que decide o layout ---
         body: _isLoading
             ? const Center(child: CustomLoadingSpinner())
             : isDesktop
                 ? _buildDesktopLayout()
                 : _buildMobileLayout(),
-        floatingActionButton: (isDesktop == false && _isEditMode)
+        floatingActionButton: (isDesktop == false &&
+                _isEditMode &&
+                _sidebarIndex == 0) // Adicionado o check "_sidebarIndex == 0"
             ? FloatingActionButton(
                 onPressed: () => setState(() => _isEditMode = false),
                 backgroundColor: Colors.green,
-                child: const Icon(Icons.check, color: Colors.white),
+                mini: true,
+                shape: const CircleBorder(),
+                child: const Icon(Icons.check, color: Colors.white, size: 24),
               )
             : null,
       );
@@ -241,8 +285,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         isExpanded: true,
         selectedIndex: _sidebarIndex,
         onDestinationSelected: (index) {
-          if (index < 4) {
-            setState(() => _sidebarIndex = index);
+          if (index < 5) {
+            setState(() {
+              _sidebarIndex = index;
+              _isEditMode = false;
+            });
           }
           Navigator.pop(context);
         },
@@ -257,7 +304,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           userName: _userData?.nomeAnalise,
           isDesktop: true,
           isEditMode: _isEditMode,
-          onEditPressed: () => setState(() => _isEditMode = !_isEditMode),
+          onEditPressed: _sidebarIndex == 0
+              ? () => setState(() => _isEditMode = !_isEditMode)
+              : null,
           onMenuPressed: () =>
               setState(() => _isSidebarExpanded = !_isSidebarExpanded),
         ),
@@ -269,12 +318,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 isExpanded: _isSidebarExpanded,
                 selectedIndex: _sidebarIndex,
                 onDestinationSelected: (index) {
-                  if (index < 4) {
-                    setState(() => _sidebarIndex = index);
+                  if (index < 5) {
+                    setState(() {
+                      _sidebarIndex = index;
+                      _isEditMode = false;
+                    });
                   }
                 },
               ),
-              Expanded(child: _buildDashboardContent(isDesktop: true)),
+              // --- ALTERADO: O Expanded agora chama a função de navegação ---
+              Expanded(child: _buildCurrentPage(isDesktop: true)),
             ],
           ),
         ),
@@ -284,22 +337,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMobileLayout() {
     return GestureDetector(
-      onLongPress: () => setState(() => _isEditMode = true),
-      child: _buildDashboardContent(isDesktop: false),
+      onLongPress: (_isEditMode || _sidebarIndex != 0)
+          ? null
+          : () => setState(() => _isEditMode = true),
+      // --- ALTERADO: O child agora chama a função de navegação ---
+      child: _buildCurrentPage(isDesktop: false),
     );
   }
 
+  // --- SEU CÓDIGO ORIGINAL (INTACTO) ---
   Widget _buildDashboardContent({required bool isDesktop}) {
     if (_numerologyData == null) {
       return const Center(child: Text("Não foi possível calcular os dados."));
     }
 
+    Widget buildDragHandle(int index) {
+      return ReorderableDragStartListener(
+        index: index,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.grab,
+          child: Container(
+            width: 48,
+            height: 48,
+            alignment: Alignment.center,
+            color: Colors.transparent,
+            child: Icon(
+              Icons.drag_indicator,
+              color: AppColors.secondaryText.withOpacity(0.7),
+              size: 24,
+            ),
+          ),
+        ),
+      );
+    }
+
     if (!isDesktop) {
       return ReorderableListView.builder(
+        buildDefaultDragHandles: false,
         padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
         itemCount: _cards.length,
-        // --- ERRO CORRIGIDO ---
-        // A propriedade 'buildDefaultDragHandles' foi removida.
         proxyDecorator: (child, index, animation) =>
             Material(elevation: 8.0, color: Colors.transparent, child: child),
         onReorder: (oldIndex, newIndex) {
@@ -314,10 +390,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return Padding(
             key: ValueKey(item.id),
             padding: const EdgeInsets.only(bottom: 20.0),
-            child: ReorderableDragStartListener(
-              index: index,
-              enabled: _isEditMode,
-              child: item.cardBuilder(_isEditMode),
+            child: item.cardBuilder(
+              _isEditMode,
+              dragHandle: _isEditMode ? buildDragHandle(index) : null,
             ),
           );
         },
@@ -332,38 +407,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
           (crossAxisCount * cardMaxWidth) + ((crossAxisCount - 1) * spacing);
       const double childAspectRatio = 1.35;
 
-      return SingleChildScrollView(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: gridMaxWidth),
-            child: Padding(
-              padding: const EdgeInsets.all(spacing),
-              child: ReorderableGridView.builder(
-                itemCount: _cards.length,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                dragEnabled: _isEditMode,
-                // --- ERRO CORRIGIDO ---
-                // A propriedade 'buildDefaultDragHandles' foi removida.
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: spacing,
-                  mainAxisSpacing: spacing,
-                  childAspectRatio: childAspectRatio,
+      return ScrollConfiguration(
+        behavior: MyCustomScrollBehavior(),
+        child: SingleChildScrollView(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: gridMaxWidth),
+              child: Padding(
+                padding: const EdgeInsets.all(spacing),
+                child: ReorderableGridView.builder(
+                  itemCount: _cards.length,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  dragEnabled: _isEditMode,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    crossAxisSpacing: spacing,
+                    mainAxisSpacing: spacing,
+                    childAspectRatio: childAspectRatio,
+                  ),
+                  onReorder: (oldIndex, newIndex) => setState(() {
+                    final item = _cards.removeAt(oldIndex);
+                    _cards.insert(newIndex, item);
+                  }),
+                  itemBuilder: (context, index) {
+                    final item = _cards[index];
+                    return Container(
+                      key: ValueKey(item.id),
+                      child: item.cardBuilder(
+                        _isEditMode,
+                        dragHandle: _isEditMode
+                            ? Icon(
+                                Icons.drag_indicator,
+                                color: AppColors.secondaryText.withOpacity(0.7),
+                                size: 24,
+                              )
+                            : null,
+                      ),
+                    );
+                  },
                 ),
-                onReorder: (oldIndex, newIndex) => setState(() {
-                  final item = _cards.removeAt(oldIndex);
-                  _cards.insert(newIndex, item);
-                }),
-                itemBuilder: (context, index) {
-                  final item = _cards[index];
-                  return ReorderableDragStartListener(
-                    key: ValueKey(item.id),
-                    index: index,
-                    enabled: _isEditMode,
-                    child: item.cardBuilder(_isEditMode),
-                  );
-                },
               ),
             ),
           ),

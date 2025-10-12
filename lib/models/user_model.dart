@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String uid;
   final String email;
-  final String? primeiroNome;
-  final String? sobrenome;
+  final String primeiroNome;
+  final String sobrenome;
   final String nomeAnalise;
   final String dataNasc;
   final String plano;
@@ -11,22 +13,21 @@ class UserModel {
   UserModel({
     required this.uid,
     required this.email,
-    this.primeiroNome,
-    this.sobrenome,
+    required this.primeiroNome,
+    required this.sobrenome,
     required this.nomeAnalise,
     required this.dataNasc,
-    this.plano = 'gratuito',
-    this.isAdmin = false,
+    required this.plano,
+    required this.isAdmin,
   });
 
-  // Converte um documento do Firestore num objeto UserModel
-  factory UserModel.fromFirestore(
-      Map<String, dynamic> data, String documentId) {
+  factory UserModel.fromFirestore(DocumentSnapshot<Object?> doc) {
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return UserModel(
-      uid: documentId,
+      uid: doc.id,
       email: data['email'] ?? '',
-      primeiroNome: data['primeiroNome'],
-      sobrenome: data['sobrenome'],
+      primeiroNome: data['primeiroNome'] ?? '',
+      sobrenome: data['sobrenome'] ?? '',
       nomeAnalise: data['nomeAnalise'] ?? '',
       dataNasc: data['dataNasc'] ?? '',
       plano: data['plano'] ?? 'gratuito',
@@ -34,7 +35,6 @@ class UserModel {
     );
   }
 
-  // Converte um objeto UserModel num mapa para ser salvo no Firestore
   Map<String, dynamic> toFirestore() {
     return {
       'email': email,

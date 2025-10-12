@@ -1,3 +1,5 @@
+// lib/services/numerology_engine.dart
+
 import 'package:intl/intl.dart';
 
 // Classe de dados para um resultado mais organizado
@@ -37,12 +39,9 @@ class NumerologyEngine {
     return n;
   }
 
-  // Equivalente ao 'calcularValor' do JS, com lógica simplificada para acentos.
   int _calcularValor(String letra) {
     String char = letra.toUpperCase();
     if (char == 'Ç') return 6;
-
-    // Lógica de normalização para remover acentos comuns
     String charNormalizado = char
         .replaceAll('Á', 'A')
         .replaceAll('À', 'A')
@@ -55,7 +54,6 @@ class NumerologyEngine {
         .replaceAll('Õ', 'O')
         .replaceAll('Ô', 'O')
         .replaceAll('Ú', 'U');
-
     return _tabelaConversao[charNormalizado] ?? 0;
   }
 
@@ -70,7 +68,6 @@ class NumerologyEngine {
   int _calcularIdade() {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return 0;
-
     final hoje = DateTime.now();
     int idade = hoje.year - dataNasc.year;
     if (hoje.month < dataNasc.month ||
@@ -90,24 +87,19 @@ class NumerologyEngine {
   Map<String, dynamic> _calcularCiclosDeVida(int numeroDestino) {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return {};
-
     final formatador = DateFormat('dd/MM/yyyy');
-
     final idadeFimCiclo1 = 37 - numeroDestino;
     final dataFim1 = DateTime(
         dataNasc.year + idadeFimCiclo1, dataNasc.month, dataNasc.day - 1);
-
     final idadeInicioCiclo2 = idadeFimCiclo1;
     final idadeFimCiclo2 = idadeInicioCiclo2 + 27;
     final dataInicio2 = DateTime(
         dataNasc.year + idadeInicioCiclo2, dataNasc.month, dataNasc.day);
     final dataFim2 = DateTime(
         dataNasc.year + idadeFimCiclo2, dataNasc.month, dataNasc.day - 1);
-
     final idadeInicioCiclo3 = idadeFimCiclo2;
     final dataInicio3 = DateTime(
         dataNasc.year + idadeInicioCiclo3, dataNasc.month, dataNasc.day);
-
     return {
       'ciclo1': {
         'nome': "Primeiro Ciclo de Vida",
@@ -136,7 +128,6 @@ class NumerologyEngine {
     final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '').toUpperCase();
     if (nomeLimpo.isEmpty)
       return {'arcanoRegente': null, 'sequenciaCompletaArcanos': []};
-
     List<int> valoresNumericos =
         nomeLimpo.split('').map((l) => _calcularValor(l)).toList();
     List<int> sequenciaCompletaArcanos = [];
@@ -144,7 +135,6 @@ class NumerologyEngine {
       sequenciaCompletaArcanos
           .add(int.parse('${valoresNumericos[i]}${valoresNumericos[i + 1]}'));
     }
-
     List<int> linhaAtual = List.from(valoresNumericos);
     while (linhaAtual.length > 1) {
       List<int> proximaLinha = [];
@@ -153,7 +143,6 @@ class NumerologyEngine {
       }
       linhaAtual = proximaLinha;
     }
-
     return {
       'arcanoRegente': linhaAtual.isNotEmpty ? linhaAtual[0] : null,
       'sequenciaCompletaArcanos': sequenciaCompletaArcanos
@@ -169,7 +158,6 @@ class NumerologyEngine {
     };
   }
 
-  // --- Função Principal ---
   NumerologyResult? calcular() {
     final dataNascDate = _parseDate(dataNascimento);
     if (nomeCompleto.isEmpty || dataNascDate == null) return null;
@@ -219,5 +207,27 @@ class NumerologyEngine {
         'arcanoAtual': arcanoAtual,
       },
     );
+  }
+
+  // --- MÉTODO NOVO ADICIONADO PARA O CALENDÁRIO ---
+  int calculatePersonalDayForDate(DateTime date) {
+    final dataNasc = _parseDate(dataNascimento);
+    if (dataNasc == null) return 0;
+
+    int diaNascReduzido = _reduzirNumero(dataNasc.day, mestre: true);
+    int mesNascReduzido = _reduzirNumero(dataNasc.month, mestre: true);
+
+    int diaAtualReduzido = _reduzirNumero(date.day, mestre: true);
+    int mesAtualReduzido = _reduzirNumero(date.month, mestre: true);
+    int anoAtualReduzido = _reduzirNumero(date.year, mestre: true);
+
+    // Lógica para o dia pessoal baseada na soma das vibrações do dia e do ano pessoal do momento.
+    int anoPessoalDoDia = _reduzirNumero(
+        diaNascReduzido + mesNascReduzido + anoAtualReduzido,
+        mestre: true);
+    int mesPessoalDoDia =
+        _reduzirNumero(anoPessoalDoDia + mesAtualReduzido, mestre: true);
+
+    return _reduzirNumero(mesPessoalDoDia + diaAtualReduzido, mestre: true);
   }
 }

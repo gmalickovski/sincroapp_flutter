@@ -1,9 +1,4 @@
-// =========================================================================
-// PASSO CRÍTICO: ESTA É A LINHA QUE RESOLVE O ERRO.
-// ELA DEVE SER A PRIMEIRA LINHA DO ARQUIVO.
 import 'dart:ui';
-// =========================================================================
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -12,12 +7,16 @@ class BussolaCard extends StatefulWidget {
   final BussolaContent bussolaContent;
   final VoidCallback? onTap;
   final bool isEditMode;
+  final Widget? dragHandle;
+  final bool isDesktopLayout; // Parâmetro para controlar o layout
 
   const BussolaCard({
     super.key,
     required this.bussolaContent,
     this.onTap,
     this.isEditMode = false,
+    this.dragHandle,
+    this.isDesktopLayout = false, // Padrão é o layout mobile
   });
 
   @override
@@ -58,43 +57,15 @@ class _BussolaCardState extends State<BussolaCard> {
             children: [
               Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize:
-                      MainAxisSize.min, // Chave para altura flexível no mobile
-                  children: [
-                    const Row(children: [
-                      Icon(Icons.compass_calibration,
-                          color: AppColors.primaryAccent, size: 24),
-                      SizedBox(width: 12),
-                      Text("Bússola de Atividades",
-                          style: TextStyle(
-                              color: AppColors.primaryText,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16)),
-                    ]),
-                    const SizedBox(height: 24),
-                    _buildBussolaSection(
-                        title: "Potencializar",
-                        items: widget.bussolaContent.potencializar,
-                        color: Colors.green.shade300),
-                    const SizedBox(height: 24),
-                    _buildBussolaSection(
-                        title: "Atenção",
-                        items: widget.bussolaContent.atencao,
-                        color: Colors.red.shade300),
-                  ],
-                ),
+                child: widget.isDesktopLayout
+                    ? _buildDesktopLayout()
+                    : _buildMobileLayout(),
               ),
-              if (widget.isEditMode)
-                MouseRegion(
-                  cursor: SystemMouseCursors.grab,
-                  child: const Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Icon(Icons.drag_indicator,
-                        color: AppColors.secondaryText, size: 24),
-                  ),
+              if (widget.dragHandle != null)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: widget.dragHandle!,
                 ),
             ],
           ),
@@ -120,6 +91,88 @@ class _BussolaCardState extends State<BussolaCard> {
           child: cardContent,
         ),
       ),
+    );
+  }
+
+  // Layout antigo para Mobile
+  Widget _buildMobileLayout() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Row(children: [
+            Icon(Icons.compass_calibration,
+                color: AppColors.primaryAccent, size: 24),
+            SizedBox(width: 12),
+            Text("Bússola de Atividades",
+                style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+          ]),
+          const SizedBox(height: 24),
+          _buildBussolaSection(
+              title: "Potencializar",
+              items: widget.bussolaContent.potencializar,
+              color: Colors.green.shade300),
+          const SizedBox(height: 24),
+          _buildBussolaSection(
+              title: "Atenção",
+              items: widget.bussolaContent.atencao,
+              color: Colors.red.shade300),
+        ],
+      ),
+    );
+  }
+
+  // Layout novo para Desktop
+  Widget _buildDesktopLayout() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. Título (Topo)
+        const Row(
+          children: [
+            Icon(Icons.compass_calibration,
+                color: AppColors.primaryAccent, size: 24),
+            SizedBox(width: 12),
+            Text("Bússola de Atividades",
+                style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16)),
+          ],
+        ),
+
+        // 2. Conteúdo (Centralizado)
+        Expanded(
+          child: Center(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(height: 16),
+                  _buildBussolaSection(
+                    title: "Potencializar",
+                    items: widget.bussolaContent.potencializar,
+                    color: Colors.green.shade300,
+                  ),
+                  const SizedBox(height: 24),
+                  _buildBussolaSection(
+                    title: "Atenção",
+                    items: widget.bussolaContent.atencao,
+                    color: Colors.red.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 

@@ -1,4 +1,4 @@
-import 'dart:async'; // Importar para usar o StreamSubscription
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -12,8 +12,15 @@ import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_scr
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
+// --- ALTERAÇÃO 1: Adicione esta importação ---
+import 'package:intl/date_symbol_data_local.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // --- ALTERAÇÃO 2: Adicione esta linha para inicializar a localização ---
+  await initializeDateFormatting('pt_BR', null);
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -44,11 +51,12 @@ class SincroApp extends StatelessWidget {
         ),
       ),
       home: const AuthCheck(),
+      debugShowCheckedModeBanner:
+          false, // Adicionado para remover o banner de debug
     );
   }
 }
 
-// 1. Convertido para StatefulWidget
 class AuthCheck extends StatefulWidget {
   const AuthCheck({super.key});
 
@@ -65,18 +73,19 @@ class _AuthCheckState extends State<AuthCheck> {
   @override
   void initState() {
     super.initState();
-    // 2. Ouvimos o stream de autenticação e atualizamos o estado
     _authSubscription = _authRepository.authStateChanges.listen((user) {
-      setState(() {
-        _firebaseUser = user;
-        _isLoading = false;
-      });
+      if (mounted) {
+        // Garante que o widget ainda está na árvore
+        setState(() {
+          _firebaseUser = user;
+          _isLoading = false;
+        });
+      }
     });
   }
 
   @override
   void dispose() {
-    // 3. Cancelamos a subscrição para evitar fugas de memória
     _authSubscription.cancel();
     super.dispose();
   }
@@ -85,14 +94,11 @@ class _AuthCheckState extends State<AuthCheck> {
   Widget build(BuildContext context) {
     final firestoreService = FirestoreService();
 
-    // Enquanto o estado inicial de autenticação está a ser verificado
     if (_isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    // Se o utilizador está logado
     if (_firebaseUser != null) {
-      // Usamos o FutureBuilder como antes para verificar os dados no Firestore
       return FutureBuilder<UserModel?>(
         future: firestoreService.getUserData(_firebaseUser!.uid),
         builder: (context, userSnapshot) {
@@ -100,15 +106,19 @@ class _AuthCheckState extends State<AuthCheck> {
             return const Scaffold(
                 body: Center(child: CircularProgressIndicator()));
           }
-          if (userSnapshot.hasData && userSnapshot.data != null) {
+          // Se o utilizador tem dados no Firestore, vai para o Dashboard
+          if (userSnapshot.hasData &&
+              userSnapshot.data != null &&
+              userSnapshot.data!.nomeAnalise.isNotEmpty) {
             return const DashboardScreen();
           }
+          // Caso contrário, vai para a tela de preenchimento de dados
           return UserDetailsScreen(firebaseUser: _firebaseUser!);
         },
       );
     }
 
-    // Se o utilizador não está logado
+    // Se não há utilizador, vai para o Login
     return const LoginScreen();
   }
 }
