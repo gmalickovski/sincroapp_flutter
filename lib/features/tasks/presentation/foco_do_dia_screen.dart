@@ -1,5 +1,3 @@
-// ... (mantenha as importações como estão)
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
@@ -7,12 +5,14 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'widgets/task_item.dart';
 import 'widgets/task_input_modal.dart';
+import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 
 class FocoDoDiaScreen extends StatefulWidget {
-  const FocoDoDiaScreen({super.key});
-
+  final UserModel? userData;
+  const FocoDoDiaScreen({super.key, required this.userData});
   @override
   State<FocoDoDiaScreen> createState() => _FocoDoDiaScreenState();
 }
@@ -21,36 +21,32 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final String _userId = AuthRepository().getCurrentUser()!.uid;
   bool _showTodayTasks = true;
-  UserModel? _userData;
-
-  @override
-  void initState() {
-    super.initState();
-    _firestoreService.getUserData(_userId).then((user) {
-      if (mounted) {
-        setState(() => _userData = user);
-      }
-    });
-  }
 
   void _openAddTaskModal() {
-    if (_userData == null) return;
-
+    if (widget.userData == null) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
         return TaskInputModal(
-          userData: _userData,
-          onAddTask: (text) {
-            // No futuro, aqui faremos o parse do texto para extrair #, @ e /
+          userData: widget.userData,
+          onAddTask: (parsedTask, dueDate) {
+            final dateForVibration = dueDate;
+            final engine = NumerologyEngine(
+              nomeCompleto: widget.userData!.nomeAnalise,
+              dataNascimento: widget.userData!.dataNasc,
+            );
+            final personalDay =
+                engine.calculatePersonalDayForDate(dateForVibration);
             final newTask = TaskModel(
               id: '',
-              text: text,
+              text: parsedTask.cleanText,
               completed: false,
               createdAt: DateTime.now(),
-              dueDate: DateTime.now(),
+              dueDate: dueDate,
+              tags: parsedTask.tags,
+              personalDay: personalDay,
             );
             _firestoreService.addTask(_userId, newTask);
           },
@@ -59,9 +55,28 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     );
   }
 
+  void _openEditTaskModal(TaskModel taskToEdit) {
+    // No futuro, esta função abrirá o TaskInputModal com os dados da tarefa
+    print("Abrindo modal para editar a tarefa: ${taskToEdit.text}");
+    // Implementaremos a lógica completa na próxima etapa.
+  }
+
+  void _duplicateTask(TaskModel originalTask) {
+    final duplicatedTask = TaskModel(
+      id: '', // O ID será gerado pelo Firestore
+      text: originalTask.text,
+      completed: false, // A cópia começa como não concluída
+      createdAt: DateTime.now(), // Nova data de criação
+      dueDate: originalTask.dueDate, // Mantém a mesma data de vencimento
+      tags: originalTask.tags,
+      personalDay: originalTask.personalDay,
+      journeyId: originalTask.journeyId,
+    );
+    _firestoreService.addTask(_userId, duplicatedTask);
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ... (o resto do build da FocoDoDiaScreen permanece o mesmo)
     return Scaffold(
       backgroundColor: AppColors.background,
       body: Center(
@@ -83,10 +98,26 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                         return const Center(child: CustomLoadingSpinner());
                       }
                       if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return const Center(
-                          child: Text(
-                            'Nenhuma tarefa para o filtro selecionado.',
-                            style: TextStyle(color: AppColors.tertiaryText),
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_circle_outline,
+                                  color: AppColors.tertiaryText, size: 48),
+                              const SizedBox(height: 16),
+                              const Text('Tudo limpo por aqui!',
+                                  style: TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 18)),
+                              const SizedBox(height: 8),
+                              Text(
+                                _showTodayTasks
+                                    ? 'Você não tem tarefas para hoje.'
+                                    : 'Seu histórico de tarefas está vazio.',
+                                style: const TextStyle(
+                                    color: AppColors.tertiaryText),
+                              ),
+                            ],
                           ),
                         );
                       }
@@ -105,6 +136,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                             onDelete: () {
                               _firestoreService.deleteTask(_userId, task.id);
                             },
+                            onEdit: () => _openEditTaskModal(task),
+                            onDuplicate: () => _duplicateTask(task),
                           );
                         },
                       );
@@ -117,8 +150,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _userData != null ? _openAddTaskModal : null,
-        backgroundColor: _userData != null ? AppColors.primary : Colors.grey,
+        onPressed: widget.userData != null ? _openAddTaskModal : null,
+        backgroundColor:
+            widget.userData != null ? AppColors.primary : Colors.grey,
         tooltip: 'Adicionar Tarefa',
         child: const Icon(Icons.add, color: Colors.white),
       ),
@@ -130,14 +164,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 40),
-        const Text(
-          'Tarefas',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        const Text('Tarefas',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 32,
+                fontWeight: FontWeight.bold)),
         const SizedBox(height: 24),
         Row(
           children: [

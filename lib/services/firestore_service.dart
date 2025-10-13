@@ -1,14 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/calendar/models/event_model.dart';
-
-// --- NOVA IMPORTAÇÃO ---
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // --- SEU CÓDIGO ORIGINAL (INTACTO) ---
   Future<void> saveUserData(UserModel user) async {
     try {
       await _db.collection('users').doc(user.uid).set(user.toFirestore());
@@ -73,14 +70,10 @@ class FirestoreService {
     }
   }
 
-  // --- MÉTODOS NOVOS ADICIONADOS PARA A FUNCIONALIDADE DE TAREFAS ---
-
-  // Retorna um Stream (ouvinte em tempo real) de tarefas, com filtro opcional.
   Stream<List<TaskModel>> getTasksStream(String userId,
       {bool todayOnly = true}) {
     Query query = _db.collection('users').doc(userId).collection('tasks');
 
-    // Se o filtro 'todayOnly' estiver ativo, aplica a condição na data de vencimento
     if (todayOnly) {
       final todayStart = DateTime(
           DateTime.now().year, DateTime.now().month, DateTime.now().day);
@@ -91,16 +84,17 @@ class FirestoreService {
           .where('dueDate', isLessThan: Timestamp.fromDate(todayEnd));
     }
 
-    // Ordena os resultados pela data de criação
+    // ATUALIZAÇÃO: A ordenação foi alterada de 'createdAt' para 'dueDate'.
+    // Isso garante que a consulta funcione corretamente sem a necessidade de um
+    // índice composto manual no Firestore e ordena as tarefas de forma lógica.
     return query
-        .orderBy('createdAt', descending: true)
+        .orderBy('dueDate', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
     });
   }
 
-  // Adiciona uma nova tarefa à base de dados
   Future<void> addTask(String userId, TaskModel task) async {
     await _db
         .collection('users')
@@ -109,7 +103,6 @@ class FirestoreService {
         .add(task.toFirestore());
   }
 
-  // Atualiza o estado 'completed' de uma tarefa
   Future<void> updateTask(String userId, String taskId,
       {required bool completed}) async {
     await _db
@@ -120,7 +113,6 @@ class FirestoreService {
         .update({'completed': completed});
   }
 
-  // Apaga uma tarefa da base de dados
   Future<void> deleteTask(String userId, String taskId) async {
     await _db
         .collection('users')

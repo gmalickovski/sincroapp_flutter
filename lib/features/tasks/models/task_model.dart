@@ -5,9 +5,10 @@ class TaskModel {
   final String text;
   final bool completed;
   final DateTime createdAt;
-  final DateTime? dueDate; // Data de vencimento (opcional)
-  final List<String> tags; // Lista de tags (ex: #pessoal)
-  final String? journeyId; // ID da jornada/meta associada (ex: @projetoX)
+  final DateTime? dueDate; // Mantido como opcional (nullable)
+  final List<String> tags;
+  final String? journeyId; // Mantido
+  final int? personalDay; // Adicionado como opcional (nullable)
 
   TaskModel({
     required this.id,
@@ -17,6 +18,7 @@ class TaskModel {
     this.dueDate,
     this.tags = const [],
     this.journeyId,
+    this.personalDay,
   });
 
   factory TaskModel.fromFirestore(DocumentSnapshot doc) {
@@ -31,6 +33,7 @@ class TaskModel {
           : null,
       tags: List<String>.from(data['tags'] ?? []),
       journeyId: data['journeyId'],
+      personalDay: data['personalDay'], // Lê o novo campo
     );
   }
 
@@ -42,6 +45,7 @@ class TaskModel {
       'dueDate': dueDate,
       'tags': tags,
       'journeyId': journeyId,
+      'personalDay': personalDay, // Salva o novo campo
     };
   }
 }

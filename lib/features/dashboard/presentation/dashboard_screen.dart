@@ -14,11 +14,9 @@ import 'package:sincro_app_flutter/common/widgets/bussola_card.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 
-// --- ADIÇÃO 1: Importar as novas telas ---
 import '../../calendar/presentation/calendar_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
 
-// ================== SEU CÓDIGO ORIGINAL (INTACTO) ==================
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -28,9 +26,7 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.invertedStylus,
       };
 }
-// ====================================================================
 
-// --- SEU CÓDIGO ORIGINAL (INTACTO) ---
 class DashboardCardData {
   final String id;
   final Widget Function(bool isEditMode, {Widget? dragHandle}) cardBuilder;
@@ -45,7 +41,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  // --- SEU CÓDIGO ORIGINAL (INTACTO) ---
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   UserModel? _userData;
   NumerologyResult? _numerologyData;
@@ -68,6 +63,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     if (currentUser != null) {
       final userData = await firestoreService.getUserData(currentUser.uid);
+
+      // ### DEBUGGING ADICIONADO AQUI ###
+      print("================ DADOS DO USUÁRIO CARREGADOS ================");
+      if (userData != null) {
+        print("UserData Carregado: SUCESSO");
+        print(
+            "  -> nomeAnalise: '${userData.nomeAnalise}' (Vazio? ${userData.nomeAnalise.isEmpty})");
+        print(
+            "  -> dataNasc: '${userData.dataNasc}' (Vazio? ${userData.dataNasc.isEmpty})");
+      } else {
+        print(
+            "UserData Carregado: FALHA (usuário não encontrado no Firestore)");
+      }
+      print("==========================================================");
+      // ### FIM DO DEBUGGING ###
+
       if (userData != null &&
           userData.nomeAnalise.isNotEmpty &&
           userData.dataNasc.isNotEmpty) {
@@ -86,11 +97,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } else {
-        if (mounted) setState(() => _isLoading = false);
+        // Se os dados estiverem incompletos, ainda precisamos definir o _userData
+        // para que o app não fique em loading infinito.
+        if (mounted) {
+          setState(() {
+            _userData = userData; // Passa os dados, mesmo que incompletos
+            _isLoading = false;
+          });
+        }
       }
     }
   }
 
+  // O resto do arquivo permanece exatamente o mesmo...
   void _handleCardTap(String cardTitle, VibrationContent content) {
     if (_isEditMode) return;
     print("Card Clicado: $cardTitle");
@@ -230,15 +249,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ContentData.bussolaAtividades[0]!;
   }
 
-  // --- ADIÇÃO 2: Função que escolhe qual página mostrar ---
   Widget _buildCurrentPage({required bool isDesktop}) {
     switch (_sidebarIndex) {
       case 0:
         return _buildDashboardContent(isDesktop: isDesktop);
       case 1:
-        return const CalendarScreen();
+        return CalendarScreen(userData: _userData);
       case 3:
-        return const FocoDoDiaScreen();
+        return FocoDoDiaScreen(userData: _userData);
       default:
         return _buildDashboardContent(isDesktop: isDesktop);
     }
@@ -258,7 +276,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
               ),
         drawer: isDesktop ? null : _buildMobileDrawer(),
-        // --- ALTERADO: O body agora chama o método que decide o layout ---
         body: _isLoading
             ? const Center(child: CustomLoadingSpinner())
             : isDesktop
@@ -266,7 +283,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 : _buildMobileLayout(),
         floatingActionButton: (isDesktop == false &&
                 _isEditMode &&
-                _sidebarIndex == 0) // Adicionado o check "_sidebarIndex == 0"
+                _sidebarIndex == 0)
             ? FloatingActionButton(
                 onPressed: () => setState(() => _isEditMode = false),
                 backgroundColor: Colors.green,
@@ -326,7 +343,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   }
                 },
               ),
-              // --- ALTERADO: O Expanded agora chama a função de navegação ---
               Expanded(child: _buildCurrentPage(isDesktop: true)),
             ],
           ),
@@ -340,12 +356,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       onLongPress: (_isEditMode || _sidebarIndex != 0)
           ? null
           : () => setState(() => _isEditMode = true),
-      // --- ALTERADO: O child agora chama a função de navegação ---
       child: _buildCurrentPage(isDesktop: false),
     );
   }
 
-  // --- SEU CÓDIGO ORIGINAL (INTACTO) ---
   Widget _buildDashboardContent({required bool isDesktop}) {
     if (_numerologyData == null) {
       return const Center(child: Text("Não foi possível calcular os dados."));

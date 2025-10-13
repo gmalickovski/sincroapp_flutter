@@ -14,7 +14,11 @@ import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 
 class CalendarScreen extends StatefulWidget {
-  const CalendarScreen({super.key});
+  // ATUALIZAÇÃO: Adicionado para receber userData da tela pai
+  final UserModel? userData;
+
+  // ATUALIZAÇÃO: Construtor modificado para aceitar userData
+  const CalendarScreen({super.key, required this.userData});
 
   @override
   State<CalendarScreen> createState() => _CalendarScreenState();
@@ -31,7 +35,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Map<DateTime, List<CalendarEvent>> _events = {};
   bool _isLoading = true;
   int? _personalDayNumber;
-  UserModel? _currentUserModel;
+  // A variável _currentUserModel foi removida, pois agora usamos widget.userData
 
   @override
   void initState() {
@@ -42,8 +46,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    _currentUserModel = await _firestoreService.getUserData(_userId);
-    // await _fetchEventsForMonth(_focusedDay);
+    // A busca de dados do usuário foi removida daqui.
+    // Usamos os dados recebidos via widget.userData.
     if (_selectedDay != null) {
       _updatePersonalDay(_selectedDay!);
     }
@@ -54,7 +58,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _fetchEventsForMonth(DateTime month) async {
     if (!mounted) return;
-    // setState(() => _isLoading = true);
     final fetchedEvents =
         await _firestoreService.getEventsForMonth(_userId, month);
     final groupedEvents = groupBy(
@@ -64,16 +67,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
     if (mounted) {
       setState(() {
         _events = groupedEvents;
-        // _isLoading = false;
       });
     }
   }
 
   void _updatePersonalDay(DateTime date) {
-    if (_currentUserModel != null && _currentUserModel!.dataNasc.isNotEmpty) {
+    // A verificação agora usa widget.userData
+    if (widget.userData != null && widget.userData!.dataNasc.isNotEmpty) {
       final engine = NumerologyEngine(
-          nomeCompleto: _currentUserModel!.nomeAnalise,
-          dataNascimento: _currentUserModel!.dataNasc);
+          nomeCompleto: widget.userData!.nomeAnalise,
+          dataNascimento: widget.userData!.dataNasc);
       if (mounted) {
         setState(() =>
             _personalDayNumber = engine.calculatePersonalDayForDate(date));
@@ -240,7 +243,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  // --- ALTERAÇÃO 2: Novo widget para a barra dos dias da semana ---
   Widget _buildDaysOfWeekHeader() {
     final days = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
     return Row(
