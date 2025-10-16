@@ -1,18 +1,21 @@
+// lib/features/tasks/presentation/widgets/task_input_modal.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
+import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
-import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 // Classe de controle de texto com coloração de sintaxe
 class _SyntaxHighlightingController extends TextEditingController {
   final Map<RegExp, TextStyle> patternMap;
-  final TextStyle? defaultStyle;
-
-  _SyntaxHighlightingController({required this.patternMap, this.defaultStyle});
+  _SyntaxHighlightingController({required this.patternMap});
 
   @override
   TextSpan buildTextSpan(
@@ -20,8 +23,6 @@ class _SyntaxHighlightingController extends TextEditingController {
       TextStyle? style,
       required bool withComposing}) {
     final List<InlineSpan> children = [];
-    final text = this.text;
-
     text.splitMapJoin(
       RegExp(patternMap.keys.map((e) => e.pattern).join('|'),
           caseSensitive: false),
@@ -37,19 +38,20 @@ class _SyntaxHighlightingController extends TextEditingController {
         return '';
       },
     );
-
     return TextSpan(style: style, children: children);
   }
 }
 
 class TaskInputModal extends StatefulWidget {
-  final Function(ParsedTask parsedTask, DateTime dueDate) onAddTask;
   final UserModel? userData;
+  final TaskModel? taskToEdit;
+  final DateTime? preselectedDate;
 
   const TaskInputModal({
     super.key,
-    required this.onAddTask,
     required this.userData,
+    this.taskToEdit,
+    this.preselectedDate,
   });
 
   @override
@@ -58,142 +60,71 @@ class TaskInputModal extends StatefulWidget {
 
 class _TaskInputModalState extends State<TaskInputModal> {
   late _SyntaxHighlightingController _textController;
+  final FirestoreService _firestoreService = FirestoreService();
 
   DateTime _selectedDate = DateTime.now();
   int _personalDay = 0;
   VibrationContent? _dayInfo;
 
-  // Mapa de meses para o parser
-  static const Map<String, int> _monthMap = {
-    'janeiro': 1,
-    'fevereiro': 2,
-    'março': 3,
-    'marco': 3,
-    'abril': 4,
-    'maio': 5,
-    'junho': 6,
-    'julho': 7,
-    'agosto': 8,
-    'setembro': 9,
-    'outubro': 10,
-    'novembro': 11,
-    'dezembro': 12,
-  };
+  bool get _isEditing => widget.taskToEdit != null;
 
   @override
   void initState() {
     super.initState();
-
-    // ATUALIZAÇÃO 1: Construir o padrão de meses dinamicamente
-    final monthPattern = _monthMap.keys.join('|');
+    final monthPattern = TaskParser.getMonthPattern();
 
     _textController = _SyntaxHighlightingController(
       patternMap: {
         RegExp(r"#\w+"): const TextStyle(color: Colors.purpleAccent),
         RegExp(r"@\w+"): const TextStyle(color: Colors.cyanAccent),
-        // Regex de data agora usa o padrão de meses específico
         RegExp(r"/\s*(?:dia\s+\d{1,2}(?:\s+de)?\s+(" +
                 monthPattern +
-                r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{4})?)"):
+                r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)"):
             const TextStyle(color: Colors.orangeAccent),
       },
     );
 
+    if (_isEditing) {
+      String editText = widget.taskToEdit!.text;
+      if (widget.taskToEdit!.journeyId != null) {
+        editText += ' @${widget.taskToEdit!.journeyId}';
+      }
+      if (widget.taskToEdit!.dueDate != null) {
+        final formattedDate =
+            DateFormat('dd/MM/yyyy').format(widget.taskToEdit!.dueDate!);
+        editText += ' /${formattedDate}';
+      }
+      _textController.text = editText;
+      _selectedDate = widget.taskToEdit!.dueDate ?? DateTime.now();
+    } else if (widget.preselectedDate != null) {
+      _selectedDate = widget.preselectedDate!;
+      final formattedDate = DateFormat('dd/MM/yyyy').format(_selectedDate);
+      _textController.text = ' /${formattedDate}';
+      // Move o cursor para o início do texto
+      _textController.selection = const TextSelection.collapsed(offset: 0);
+    }
+
     _textController.addListener(_onTextChanged);
     if (widget.userData != null) {
-      _updateVibrationForDate(DateTime.now());
+      _updateVibrationForDate(_selectedDate);
     }
-  }
-
-  @override
-  void didUpdateWidget(TaskInputModal oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.userData == null && widget.userData != null) {
-      _updateVibrationForDate(DateTime.now());
-    }
-  }
-
-  // ATUALIZAÇÃO 2: Lógica de parsing de data aprimorada para ser mais precisa
-  DateTime _parseDateFromText(String text) {
-    final textLower = text.toLowerCase();
-    final now = DateTime.now();
-    final monthPattern = _monthMap.keys.join('|');
-
-    // Padrão unificado e preciso para linguagem natural: /dia 10 [de] dezembro [de 2025]
-    var match = RegExp(r'/\s*dia\s+(\d{1,2})(?:\s+de)?\s+(' +
-            monthPattern +
-            r')(?:\s+de\s+(\d{4}))?')
-        .firstMatch(textLower);
-    if (match != null) {
-      try {
-        final day = int.parse(match.group(1)!);
-        final monthName = match.group(2)!;
-        final yearStr = match.group(3);
-        final month = _monthMap[monthName];
-
-        if (month != null) {
-          final year = yearStr != null ? int.parse(yearStr) : now.year;
-          var date = DateTime(year, month, day);
-
-          if (yearStr == null &&
-              date.isBefore(DateTime(now.year, now.month, now.day))) {
-            date = DateTime(now.year + 1, month, day);
-          }
-          return date;
-        }
-      } catch (e) {/* Ignora */}
-    }
-
-    // Padrão: /dia 10
-    match = RegExp(r'/\s*dia\s+(\d{1,2})').firstMatch(textLower);
-    if (match != null) {
-      try {
-        final day = int.parse(match.group(1)!);
-        var date = DateTime(now.year, now.month, day);
-        if (date.isBefore(DateTime(now.year, now.month, now.day))) {
-          date = DateTime(now.year, now.month + 1, day);
-        }
-        return date;
-      } catch (e) {/* Ignora */}
-    }
-
-    // Padrão numérico: /10/12/2025 ou /10/12
-    match =
-        RegExp(r'/\s*(\d{1,2})/(\d{1,2})(?:/(\d{4}))?').firstMatch(textLower);
-    if (match != null) {
-      try {
-        final day = int.parse(match.group(1)!);
-        final month = int.parse(match.group(2)!);
-        final year =
-            match.group(3) != null ? int.parse(match.group(3)!) : now.year;
-
-        var date = DateTime(year, month, day);
-        if (match.group(3) == null &&
-            date.isBefore(DateTime(now.year, now.month, now.day))) {
-          date = DateTime(now.year + 1, month, day);
-        }
-        return date;
-      } catch (e) {/* Ignora */}
-    }
-
-    return now;
   }
 
   void _onTextChanged() {
-    final newDate = _parseDateFromText(_textController.text);
-    if (!isSameDay(_selectedDate, newDate)) {
+    final newDate = TaskParser.parseDateFromText(_textController.text);
+    if (newDate != null && !_isSameDay(_selectedDate, newDate)) {
       _updateVibrationForDate(newDate);
+    } else if (newDate == null && !_isSameDay(_selectedDate, DateTime.now())) {
+      _updateVibrationForDate(DateTime.now());
     }
   }
 
-  bool isSameDay(DateTime a, DateTime b) {
-    return a.year == b.year && a.month == b.month && a.day == b.day;
-  }
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   void _updateVibrationForDate(DateTime date) {
-    if (widget.userData != null &&
-        widget.userData!.dataNasc.isNotEmpty &&
-        widget.userData!.nomeAnalise.isNotEmpty) {
+    if (widget.userData?.dataNasc.isNotEmpty == true &&
+        widget.userData?.nomeAnalise.isNotEmpty == true) {
       final engine = NumerologyEngine(
         nomeCompleto: widget.userData!.nomeAnalise,
         dataNascimento: widget.userData!.dataNasc,
@@ -209,6 +140,23 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
+  Future<void> _selectDate(BuildContext context) async {
+    final picked = await showDatePicker(
+        context: context,
+        initialDate: _selectedDate,
+        firstDate: DateTime(2020),
+        lastDate: DateTime(2101),
+        locale: const Locale('pt', 'BR'));
+    if (picked != null && !_isSameDay(picked, _selectedDate)) {
+      _updateVibrationForDate(picked);
+      String currentText = TaskParser.parse(_textController.text).cleanText;
+      final formattedDate = DateFormat('dd/MM/yyyy').format(picked);
+      _textController.text = '$currentText /${formattedDate}';
+      _textController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _textController.text.length));
+    }
+  }
+
   void _insertActionText(String char) {
     final text = _textController.text;
     final selection = _textController.selection;
@@ -221,11 +169,37 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   void _submit() {
     final rawText = _textController.text.trim();
-    if (rawText.isNotEmpty) {
-      final parsedTask = TaskParser.parse(rawText);
-      widget.onAddTask(parsedTask, _selectedDate);
-      Navigator.of(context).pop();
+    if (rawText.isEmpty) return;
+
+    final userId = AuthRepository().getCurrentUser()!.uid;
+    final parsedTask = TaskParser.parse(rawText);
+
+    if (_isEditing) {
+      final updatedTask = TaskModel(
+        id: widget.taskToEdit!.id,
+        text: parsedTask.cleanText,
+        completed: widget.taskToEdit!.completed,
+        createdAt: widget.taskToEdit!.createdAt,
+        dueDate: parsedTask.dueDate,
+        tags: parsedTask.tags,
+        personalDay: _personalDay,
+        journeyId: parsedTask.journeyId,
+      );
+      _firestoreService.updateTask(userId, updatedTask);
+    } else {
+      final newTask = TaskModel(
+        id: '',
+        text: parsedTask.cleanText,
+        completed: false,
+        createdAt: DateTime.now(),
+        dueDate: parsedTask.dueDate,
+        tags: parsedTask.tags,
+        personalDay: _personalDay,
+        journeyId: parsedTask.journeyId,
+      );
+      _firestoreService.addTask(userId, newTask);
     }
+    Navigator.of(context).pop();
   }
 
   @override
@@ -238,13 +212,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-
     return Padding(
       padding: EdgeInsets.only(bottom: bottomPadding),
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
         decoration: const BoxDecoration(
-          color: Color(0xFF27272a),
+          color: Color(0xFF2a2141),
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(24.0),
             topRight: Radius.circular(24.0),
@@ -260,7 +233,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
               style:
                   const TextStyle(fontSize: 16, color: AppColors.secondaryText),
               decoration: const InputDecoration(
-                hintText: "Adicionar tarefa, #tag... /data",
+                hintText: "Adicionar tarefa, #tag, @meta, /data",
                 hintStyle: TextStyle(color: AppColors.tertiaryText),
                 border: InputBorder.none,
               ),
@@ -268,30 +241,33 @@ class _TaskInputModalState extends State<TaskInputModal> {
             ),
             const SizedBox(height: 12),
             if (_personalDay > 0 && _dayInfo != null)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    VibrationPill(
-                      vibrationNumber: _personalDay,
-                      onTap: () => showVibrationInfoModal(context,
-                          vibrationNumber: _personalDay),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _dayInfo!.descricaoCurta,
-                        style: const TextStyle(
-                            color: AppColors.secondaryText, fontSize: 12),
+              Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.background.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      VibrationPill(
+                        vibrationNumber: _personalDay,
+                        onTap: () => showVibrationInfoModal(context,
+                            vibrationNumber: _personalDay),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _dayInfo!.descricaoCurta,
+                          style: const TextStyle(
+                              color: AppColors.secondaryText, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(height: 12),
@@ -307,22 +283,22 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     onTap: () => _insertActionText('@')),
                 _buildActionButton(
                     icon: Icons.calendar_today_outlined,
-                    onTap: () {
-                      _insertActionText('/');
-                    }),
+                    onTap: () => _selectDate(context)),
                 const Spacer(),
                 ElevatedButton(
                   onPressed: _submit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 10),
                   ),
-                  child: const Icon(Icons.arrow_upward,
-                      color: Colors.white, size: 20),
+                  child: Icon(
+                    _isEditing ? Icons.check : Icons.arrow_upward,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                 )
               ],
             )

@@ -1,3 +1,5 @@
+// lib/features/tasks/presentation/foco_do_dia_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
@@ -5,10 +7,8 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'widgets/task_item.dart';
 import 'widgets/task_input_modal.dart';
-import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 
 class FocoDoDiaScreen extends StatefulWidget {
   final UserModel? userData;
@@ -18,6 +18,7 @@ class FocoDoDiaScreen extends StatefulWidget {
 }
 
 class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
+  // ... (código sem alterações, já estava correto)
   final FirestoreService _firestoreService = FirestoreService();
   final String _userId = AuthRepository().getCurrentUser()!.uid;
   bool _showTodayTasks = true;
@@ -28,46 +29,31 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) {
-        return TaskInputModal(
-          userData: widget.userData,
-          onAddTask: (parsedTask, dueDate) {
-            final dateForVibration = dueDate;
-            final engine = NumerologyEngine(
-              nomeCompleto: widget.userData!.nomeAnalise,
-              dataNascimento: widget.userData!.dataNasc,
-            );
-            final personalDay =
-                engine.calculatePersonalDayForDate(dateForVibration);
-            final newTask = TaskModel(
-              id: '',
-              text: parsedTask.cleanText,
-              completed: false,
-              createdAt: DateTime.now(),
-              dueDate: dueDate,
-              tags: parsedTask.tags,
-              personalDay: personalDay,
-            );
-            _firestoreService.addTask(_userId, newTask);
-          },
-        );
-      },
+      builder: (context) => TaskInputModal(
+        userData: widget.userData,
+      ),
     );
   }
 
   void _openEditTaskModal(TaskModel taskToEdit) {
-    // No futuro, esta função abrirá o TaskInputModal com os dados da tarefa
-    print("Abrindo modal para editar a tarefa: ${taskToEdit.text}");
-    // Implementaremos a lógica completa na próxima etapa.
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TaskInputModal(
+        userData: widget.userData,
+        taskToEdit: taskToEdit,
+      ),
+    );
   }
 
   void _duplicateTask(TaskModel originalTask) {
     final duplicatedTask = TaskModel(
-      id: '', // O ID será gerado pelo Firestore
+      id: '',
       text: originalTask.text,
-      completed: false, // A cópia começa como não concluída
-      createdAt: DateTime.now(), // Nova data de criação
-      dueDate: originalTask.dueDate, // Mantém a mesma data de vencimento
+      completed: false,
+      createdAt: DateTime.now(),
+      dueDate: originalTask.dueDate,
       tags: originalTask.tags,
       personalDay: originalTask.personalDay,
       journeyId: originalTask.journeyId,
@@ -102,7 +88,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.check_circle_outline,
+                              const Icon(Icons.check_circle_outline,
                                   color: AppColors.tertiaryText, size: 48),
                               const SizedBox(height: 16),
                               const Text('Tudo limpo por aqui!',
@@ -130,7 +116,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           return TaskItem(
                             task: task,
                             onToggle: (completed) {
-                              _firestoreService.updateTask(_userId, task.id,
+                              _firestoreService.updateTaskCompletion(
+                                  _userId, task.id,
                                   completed: completed);
                             },
                             onDelete: () {
@@ -202,7 +189,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        const Divider(color: AppColors.border, height: 1),
+        const Divider(),
       ],
     );
   }

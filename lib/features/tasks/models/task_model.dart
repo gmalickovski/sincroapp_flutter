@@ -1,23 +1,27 @@
+// lib/features/tasks/models/task_model.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TaskModel {
   final String id;
   final String text;
-  final bool completed;
+  final bool completed; // CORRIGIDO: Revertido para 'completed'
   final DateTime createdAt;
-  final DateTime? dueDate; // Mantido como opcional (nullable)
+  final DateTime? dueDate;
   final List<String> tags;
-  final String? journeyId; // Mantido
-  final int? personalDay; // Adicionado como opcional (nullable)
+  final String? journeyId;
+  final String? journeyTitle; // Título da Jornada para exibição
+  final int? personalDay;
 
   TaskModel({
     required this.id,
     required this.text,
-    required this.completed,
+    this.completed = false,
     required this.createdAt,
     this.dueDate,
     this.tags = const [],
     this.journeyId,
+    this.journeyTitle,
     this.personalDay,
   });
 
@@ -33,7 +37,8 @@ class TaskModel {
           : null,
       tags: List<String>.from(data['tags'] ?? []),
       journeyId: data['journeyId'],
-      personalDay: data['personalDay'], // Lê o novo campo
+      journeyTitle: data['journeyTitle'],
+      personalDay: data['personalDay'],
     );
   }
 
@@ -45,7 +50,8 @@ class TaskModel {
       'dueDate': dueDate,
       'tags': tags,
       'journeyId': journeyId,
-      'personalDay': personalDay, // Salva o novo campo
+      'journeyTitle': journeyTitle,
+      'personalDay': personalDay,
     };
   }
 }

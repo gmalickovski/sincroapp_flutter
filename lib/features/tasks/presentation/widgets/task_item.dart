@@ -1,50 +1,10 @@
+// lib/features/tasks/presentation/widgets/task_item.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-
-// Widgets auxiliares (sem alterações)
-class _IndicatorIcon extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color color;
-  const _IndicatorIcon(
-      {required this.icon, required this.text, required this.color});
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Icon(icon, color: color, size: 14),
-        const SizedBox(width: 4),
-        Text(text,
-            style: TextStyle(
-                color: color, fontSize: 12, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-}
-
-class _TagChip extends StatelessWidget {
-  final String tag;
-  const _TagChip({required this.tag});
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: Colors.purple.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text('#$tag',
-          style: TextStyle(
-              color: Colors.purple.shade200,
-              fontSize: 12,
-              fontWeight: FontWeight.w500)),
-    );
-  }
-}
 
 class TaskItem extends StatelessWidget {
   final TaskModel task;
@@ -85,8 +45,6 @@ class TaskItem extends StatelessWidget {
       splashColor: Colors.transparent,
       highlightColor: Colors.transparent,
       child: Padding(
-        // ### ATUALIZAÇÃO AQUI ###
-        // O padding vertical foi reduzido para compactar ainda mais o item da tarefa.
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,6 +140,11 @@ class TaskItem extends StatelessWidget {
                   onDuplicate();
                 }
               },
+              // ATUALIZAÇÃO DE UI/UX: Cor do menu ajustada.
+              color: const Color(0xFF2a2141), // Um roxo escuro, mais sutil
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+              icon: const Icon(Icons.more_vert, color: AppColors.tertiaryText),
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                 const PopupMenuItem<String>(
                   value: 'edit',
@@ -219,14 +182,52 @@ class TaskItem extends StatelessWidget {
                   ),
                 ),
               ],
-              icon: const Icon(Icons.more_vert, color: AppColors.tertiaryText),
-              color: const Color(0xFF27272a),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+// Widgets auxiliares (sem alterações)
+class _IndicatorIcon extends StatelessWidget {
+  final IconData icon;
+  final String text;
+  final Color color;
+  const _IndicatorIcon(
+      {required this.icon, required this.text, required this.color});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 14),
+        const SizedBox(width: 4),
+        Text(text,
+            style: TextStyle(
+                color: color, fontSize: 12, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String tag;
+  const _TagChip({required this.tag});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text('#$tag',
+          style: TextStyle(
+              color: Colors.purple.shade200,
+              fontSize: 12,
+              fontWeight: FontWeight.w500)),
     );
   }
 }

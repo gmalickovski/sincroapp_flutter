@@ -14,4 +14,9 @@ class AppColors {
   static const Color secondaryAccent = Color(0xFFA78BFA); // purple-400 (links)
 
   static const Color primary = Color(0xff7c3aed);
+
+  // Novas cores para os marcadores do Calendário
+  static const Color taskMarker = Color(0xFF3B82F6); // blue-500
+  static const Color goalTaskMarker = Color(0xFFEC4899); // pink-500
+  static const Color journalMarker = Color(0xFF14B8A6); // teal-500
 }

@@ -1,3 +1,5 @@
+// lib/features/dashboard/presentation/dashboard_screen.dart
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
@@ -15,7 +17,10 @@ import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 
 import '../../calendar/presentation/calendar_screen.dart';
+import '../../journal/presentation/journal_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
+// ADIÇÃO: Importa a nova tela de Metas
+import '../../goals/presentation/goals_screen.dart';
 
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -64,21 +69,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (currentUser != null) {
       final userData = await firestoreService.getUserData(currentUser.uid);
 
-      // ### DEBUGGING ADICIONADO AQUI ###
-      print("================ DADOS DO USUÁRIO CARREGADOS ================");
-      if (userData != null) {
-        print("UserData Carregado: SUCESSO");
-        print(
-            "  -> nomeAnalise: '${userData.nomeAnalise}' (Vazio? ${userData.nomeAnalise.isEmpty})");
-        print(
-            "  -> dataNasc: '${userData.dataNasc}' (Vazio? ${userData.dataNasc.isEmpty})");
-      } else {
-        print(
-            "UserData Carregado: FALHA (usuário não encontrado no Firestore)");
-      }
-      print("==========================================================");
-      // ### FIM DO DEBUGGING ###
-
       if (userData != null &&
           userData.nomeAnalise.isNotEmpty &&
           userData.dataNasc.isNotEmpty) {
@@ -97,11 +87,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           });
         }
       } else {
-        // Se os dados estiverem incompletos, ainda precisamos definir o _userData
-        // para que o app não fique em loading infinito.
         if (mounted) {
           setState(() {
-            _userData = userData; // Passa os dados, mesmo que incompletos
+            _userData = userData;
             _isLoading = false;
           });
         }
@@ -109,7 +97,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // O resto do arquivo permanece exatamente o mesmo...
   void _handleCardTap(String cardTitle, VibrationContent content) {
     if (_isEditMode) return;
     print("Card Clicado: $cardTitle");
@@ -250,13 +237,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildCurrentPage({required bool isDesktop}) {
+    final currentUserData = _userData;
+
     switch (_sidebarIndex) {
       case 0:
         return _buildDashboardContent(isDesktop: isDesktop);
       case 1:
-        return CalendarScreen(userData: _userData);
+        if (currentUserData != null) {
+          return CalendarScreen(userData: currentUserData);
+        }
+        return const Center(child: CustomLoadingSpinner());
+      case 2:
+        if (currentUserData != null) {
+          return JournalScreen(userData: currentUserData);
+        }
+        return const Center(child: CustomLoadingSpinner());
       case 3:
-        return FocoDoDiaScreen(userData: _userData);
+        if (currentUserData != null) {
+          return FocoDoDiaScreen(userData: currentUserData);
+        }
+        return const Center(child: CustomLoadingSpinner());
+      // *** ATUALIZAÇÃO: Adiciona o case para a tela de Metas ***
+      case 4:
+        if (currentUserData != null) {
+          return GoalsScreen(userData: currentUserData);
+        }
+        return const Center(child: CustomLoadingSpinner());
       default:
         return _buildDashboardContent(isDesktop: isDesktop);
     }
