@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 
@@ -12,6 +13,7 @@ class TaskItem extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onDuplicate;
+  final bool showJourney;
 
   const TaskItem({
     super.key,
@@ -20,6 +22,7 @@ class TaskItem extends StatelessWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onDuplicate,
+    this.showJourney = true,
   });
 
   bool _isNotToday(DateTime? date) {
@@ -32,6 +35,9 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CORRIGIDO: Usa a propriedade 'journeyTitle' do TaskModel atualizado
+    final bool hasJourney =
+        task.journeyTitle != null && task.journeyTitle!.isNotEmpty;
     final showDateIndicator = _isNotToday(task.dueDate);
     final currentYear = DateTime.now().year;
 
@@ -40,10 +46,10 @@ class TaskItem extends StatelessWidget {
         : 'dd/MMM';
 
     return InkWell(
-      onTap: () {},
+      onTap: onEdit,
       borderRadius: BorderRadius.circular(8),
-      splashColor: Colors.transparent,
-      highlightColor: Colors.transparent,
+      splashColor: AppColors.primary.withOpacity(0.1),
+      highlightColor: AppColors.primary.withOpacity(0.1),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
         child: Row(
@@ -110,7 +116,9 @@ class TaskItem extends StatelessWidget {
                       ],
                     ),
                   ),
-                  if (showDateIndicator || task.tags.isNotEmpty)
+                  if (showDateIndicator ||
+                      task.tags.isNotEmpty ||
+                      (showJourney && hasJourney))
                     const SizedBox(height: 4),
                   Wrap(
                     spacing: 12,
@@ -123,6 +131,14 @@ class TaskItem extends StatelessWidget {
                           text: DateFormat(dateFormat, 'pt_BR')
                               .format(task.dueDate!),
                           color: AppColors.tertiaryText,
+                        ),
+                      if (showJourney && hasJourney)
+                        _IndicatorIcon(
+                          icon: Icons.flag_outlined,
+                          // CORRIGIDO: Usa 'journeyTitle' e o sanitizador
+                          text:
+                              '@${StringSanitizer.toSimpleTag(task.journeyTitle!)}',
+                          color: AppColors.primary.withOpacity(0.8),
                         ),
                       ...task.tags.map((tag) => _TagChip(tag: tag)).toList(),
                     ],
@@ -140,8 +156,7 @@ class TaskItem extends StatelessWidget {
                   onDuplicate();
                 }
               },
-              // ATUALIZAÇÃO DE UI/UX: Cor do menu ajustada.
-              color: const Color(0xFF2a2141), // Um roxo escuro, mais sutil
+              color: const Color(0xFF2a2141),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8)),
               icon: const Icon(Icons.more_vert, color: AppColors.tertiaryText),
@@ -169,15 +184,15 @@ class TaskItem extends StatelessWidget {
                   ),
                 ),
                 const PopupMenuDivider(),
-                const PopupMenuItem<String>(
+                PopupMenuItem<String>(
                   value: 'delete',
                   child: Row(
                     children: [
-                      Icon(Icons.delete_outline,
+                      const Icon(Icons.delete_outline,
                           size: 20, color: Colors.redAccent),
-                      SizedBox(width: 12),
+                      const SizedBox(width: 12),
                       Text('Excluir Tarefa',
-                          style: TextStyle(color: Colors.redAccent)),
+                          style: TextStyle(color: Colors.redAccent.shade100)),
                     ],
                   ),
                 ),

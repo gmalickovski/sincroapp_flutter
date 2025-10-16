@@ -6,9 +6,10 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'widgets/milestone_list_item.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -28,6 +29,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
   Stream<List<TaskModel>> _getMilestonesStream() {
+    // CORRIGIDO: A lógica agora filtra pelo ID da meta, que é muito mais robusto e confiável.
     return _firestoreService.getTasksStream(widget.userData.uid).map((tasks) =>
         tasks
             .where((task) => task.journeyId == widget.initialGoal.id)
@@ -35,7 +37,29 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   void _addMilestone() {
-    print('Adicionar novo marco para ${widget.initialGoal.title}');
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return TaskInputModal(
+          userData: widget.userData,
+          preselectedGoal: widget.initialGoal,
+        );
+      },
+    );
+  }
+
+  void _editMilestone(TaskModel task) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TaskInputModal(
+        userData: widget.userData,
+        taskToEdit: task,
+      ),
+    );
   }
 
   void _showAiSuggestions() {
@@ -53,71 +77,52 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         title: const Text('Detalhes da Jornada',
             style: TextStyle(color: Colors.white, fontSize: 18)),
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(24.0),
-        children: [
-          _GoalInfoCard(goal: widget.initialGoal),
-          const SizedBox(height: 32),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Marcos da Jornada',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
-              ),
-              TextButton.icon(
-                onPressed: _showAiSuggestions,
-                icon: const Icon(Icons.auto_awesome,
-                    color: AppColors.primary, size: 18),
-                label: const Text('Sugerir com IA',
-                    style: TextStyle(color: AppColors.primary)),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          StreamBuilder<List<TaskModel>>(
-            stream: _getMilestonesStream(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CustomLoadingSpinner());
-              }
-              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Text('Nenhum marco adicionado ainda.',
-                        style: TextStyle(color: AppColors.secondaryText)),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          bool isDesktop = constraints.maxWidth > 800;
+
+          if (isDesktop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: _GoalInfoCard(goal: widget.initialGoal),
                   ),
-                );
-              }
-              final milestones = snapshot.data!;
-              return ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: milestones.length,
-                itemBuilder: (context, index) {
-                  final milestone = milestones[index];
-                  return MilestoneListItem(
-                    milestone: milestone,
-                    onStatusChanged: (isCompleted) {
-                      _firestoreService.updateTaskCompletion(
-                          widget.userData.uid, milestone.id,
-                          completed: isCompleted);
-                    },
-                    onEdit: () {/* Lógica de edição a ser implementada */},
-                    onDelete: () {
-                      _firestoreService.deleteTask(
-                          widget.userData.uid, milestone.id);
-                    },
-                  );
-                },
-              );
-            },
-          ),
-        ],
+                ),
+                const VerticalDivider(width: 1, color: AppColors.border),
+                Expanded(
+                  flex: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        _buildMilestonesHeader(),
+                        const SizedBox(height: 16),
+                        Expanded(child: _buildMilestonesList(isDesktop: true)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return ListView(
+              padding: const EdgeInsets.all(24.0),
+              children: [
+                _GoalInfoCard(goal: widget.initialGoal),
+                const SizedBox(height: 32),
+                _buildMilestonesHeader(),
+                const SizedBox(height: 16),
+                _buildMilestonesList(isDesktop: false),
+              ],
+            );
+          }
+        },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _addMilestone,
@@ -126,6 +131,85 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
       ),
+    );
+  }
+
+  Widget _buildMilestonesHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Marcos da Jornada',
+          style: TextStyle(
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+        TextButton.icon(
+          onPressed: _showAiSuggestions,
+          icon: const Icon(Icons.auto_awesome,
+              color: AppColors.primary, size: 18),
+          label: const Text('Sugerir com IA',
+              style: TextStyle(color: AppColors.primary)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMilestonesList({required bool isDesktop}) {
+    return StreamBuilder<List<TaskModel>>(
+      stream: _getMilestonesStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CustomLoadingSpinner());
+        }
+        if (snapshot.hasError) {
+          return Center(
+              child: Text('Erro ao carregar marcos: ${snapshot.error}',
+                  style: TextStyle(color: Colors.red.shade300)));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: 48.0),
+              child: Text('Nenhum marco adicionado ainda.',
+                  style: TextStyle(color: AppColors.secondaryText)),
+            ),
+          );
+        }
+
+        final milestones = snapshot.data!;
+
+        return ListView.builder(
+          shrinkWrap: !isDesktop,
+          physics: isDesktop
+              ? const AlwaysScrollableScrollPhysics()
+              : const NeverScrollableScrollPhysics(),
+          itemCount: milestones.length,
+          itemBuilder: (context, index) {
+            final task = milestones[index];
+            return TaskItem(
+              task: task,
+              showJourney: false,
+              onToggle: (isCompleted) {
+                _firestoreService.updateTaskCompletion(
+                    widget.userData.uid, task.id,
+                    completed: isCompleted);
+              },
+              onEdit: () => _editMilestone(task),
+              onDelete: () {
+                _firestoreService.deleteTask(widget.userData.uid, task.id);
+              },
+              onDuplicate: () {
+                final duplicatedTask = task.copyWith(
+                  id: '',
+                  text: '${task.text} (cópia)',
+                  createdAt: DateTime.now(),
+                );
+                _firestoreService.addTask(widget.userData.uid, duplicatedTask);
+              },
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -164,7 +248,7 @@ class _GoalInfoCard extends StatelessWidget {
             children: [
               const Text('Progresso',
                   style: TextStyle(color: AppColors.secondaryText)),
-              Text('${goal.progress}%',
+              Text('${goal.progress.toInt()}%',
                   style: const TextStyle(
                       color: AppColors.primary, fontWeight: FontWeight.bold)),
             ],

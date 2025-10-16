@@ -3,16 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
+import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
-// Classe de controle de texto com coloração de sintaxe
 class _SyntaxHighlightingController extends TextEditingController {
   final Map<RegExp, TextStyle> patternMap;
   _SyntaxHighlightingController({required this.patternMap});
@@ -46,12 +47,14 @@ class TaskInputModal extends StatefulWidget {
   final UserModel? userData;
   final TaskModel? taskToEdit;
   final DateTime? preselectedDate;
+  final Goal? preselectedGoal;
 
   const TaskInputModal({
     super.key,
     required this.userData,
     this.taskToEdit,
     this.preselectedDate,
+    this.preselectedGoal,
   });
 
   @override
@@ -75,8 +78,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     _textController = _SyntaxHighlightingController(
       patternMap: {
-        RegExp(r"#\w+"): const TextStyle(color: Colors.purpleAccent),
-        RegExp(r"@\w+"): const TextStyle(color: Colors.cyanAccent),
+        RegExp(r"#(\w+)"): const TextStyle(color: Colors.purpleAccent),
+        RegExp(r"@(\w+)"): const TextStyle(color: Colors.cyanAccent),
         RegExp(r"/\s*(?:dia\s+\d{1,2}(?:\s+de)?\s+(" +
                 monthPattern +
                 r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)"):
@@ -86,8 +89,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     if (_isEditing) {
       String editText = widget.taskToEdit!.text;
-      if (widget.taskToEdit!.journeyId != null) {
-        editText += ' @${widget.taskToEdit!.journeyId}';
+      if (widget.taskToEdit!.journeyTitle != null &&
+          widget.taskToEdit!.journeyTitle!.isNotEmpty) {
+        final simplifiedTag =
+            StringSanitizer.toSimpleTag(widget.taskToEdit!.journeyTitle!);
+        editText = '${widget.taskToEdit!.text} @$simplifiedTag';
       }
       if (widget.taskToEdit!.dueDate != null) {
         final formattedDate =
@@ -96,11 +102,15 @@ class _TaskInputModalState extends State<TaskInputModal> {
       }
       _textController.text = editText;
       _selectedDate = widget.taskToEdit!.dueDate ?? DateTime.now();
+    } else if (widget.preselectedGoal != null) {
+      final simplifiedTag =
+          StringSanitizer.toSimpleTag(widget.preselectedGoal!.title);
+      _textController.text = ' @$simplifiedTag';
+      _textController.selection = const TextSelection.collapsed(offset: 0);
     } else if (widget.preselectedDate != null) {
       _selectedDate = widget.preselectedDate!;
       final formattedDate = DateFormat('dd/MM/yyyy').format(_selectedDate);
       _textController.text = ' /${formattedDate}';
-      // Move o cursor para o início do texto
       _textController.selection = const TextSelection.collapsed(offset: 0);
     }
 
@@ -149,7 +159,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
         locale: const Locale('pt', 'BR'));
     if (picked != null && !_isSameDay(picked, _selectedDate)) {
       _updateVibrationForDate(picked);
-      String currentText = TaskParser.parse(_textController.text).cleanText;
+      // A chamada ao parser agora precisa ser async
+      final parsed =
+          await TaskParser.parse(_textController.text, widget.userData!.uid);
+      String currentText = parsed.cleanText;
       final formattedDate = DateFormat('dd/MM/yyyy').format(picked);
       _textController.text = '$currentText /${formattedDate}';
       _textController.selection = TextSelection.fromPosition(
@@ -167,35 +180,36 @@ class _TaskInputModalState extends State<TaskInputModal> {
     );
   }
 
-  void _submit() {
+  // ATENÇÃO: O método _submit agora é ASYNC
+  void _submit() async {
     final rawText = _textController.text.trim();
     if (rawText.isEmpty) return;
 
     final userId = AuthRepository().getCurrentUser()!.uid;
-    final parsedTask = TaskParser.parse(rawText);
+    // O parser agora é async e precisa do userId para encontrar a meta
+    final parsedResult = await TaskParser.parse(rawText, userId);
 
     if (_isEditing) {
-      final updatedTask = TaskModel(
-        id: widget.taskToEdit!.id,
-        text: parsedTask.cleanText,
-        completed: widget.taskToEdit!.completed,
-        createdAt: widget.taskToEdit!.createdAt,
-        dueDate: parsedTask.dueDate,
-        tags: parsedTask.tags,
+      final updatedTask = widget.taskToEdit!.copyWith(
+        text: parsedResult.cleanText,
+        dueDate: parsedResult.dueDate,
+        tags: parsedResult.tags,
+        journeyId: parsedResult.journeyId,
+        journeyTitle: parsedResult.journeyTitle,
         personalDay: _personalDay,
-        journeyId: parsedTask.journeyId,
       );
       _firestoreService.updateTask(userId, updatedTask);
     } else {
       final newTask = TaskModel(
         id: '',
-        text: parsedTask.cleanText,
+        text: parsedResult.cleanText,
         completed: false,
         createdAt: DateTime.now(),
-        dueDate: parsedTask.dueDate,
-        tags: parsedTask.tags,
+        dueDate: parsedResult.dueDate,
+        tags: parsedResult.tags,
+        journeyId: parsedResult.journeyId,
+        journeyTitle: parsedResult.journeyTitle,
         personalDay: _personalDay,
-        journeyId: parsedTask.journeyId,
       );
       _firestoreService.addTask(userId, newTask);
     }

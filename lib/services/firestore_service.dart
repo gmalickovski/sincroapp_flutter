@@ -1,10 +1,10 @@
 // lib/services/firestore_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
-// ADIÇÃO: Importa o novo modelo de dados para as Metas.
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 
 class FirestoreService {
@@ -95,20 +95,14 @@ class FirestoreService {
     }
   }
 
-  Stream<List<TaskModel>> getTasksStream(String userId,
-      {bool todayOnly = true}) {
-    Query query = _db.collection('users').doc(userId).collection('tasks');
-    if (todayOnly) {
-      final todayStart = DateTime(
-          DateTime.now().year, DateTime.now().month, DateTime.now().day);
-      final todayEnd = todayStart.add(const Duration(days: 1));
-      query = query
-          .where('dueDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
-          .where('dueDate', isLessThan: Timestamp.fromDate(todayEnd));
-    }
-    return query
-        .orderBy('dueDate', descending: true)
+  // ALTERADO: Este stream agora busca TODAS as tarefas, tornando-o mais reutilizável.
+  // A filtragem por data ou meta será feita na UI.
+  Stream<List<TaskModel>> getTasksStream(String userId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('tasks')
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
@@ -214,10 +208,9 @@ class FirestoreService {
   }
 
   // =======================================================================
-  // *** INÍCIO DOS NOVOS MÉTODOS PARA AS METAS (JORNADAS) ***
+  // *** MÉTODOS PARA AS METAS (JORNADAS) ***
   // =======================================================================
 
-  /// Retorna um Stream com a lista de metas do usuário.
   Stream<List<Goal>> getGoalsStream(String userId) {
     return _db
         .collection('users')
@@ -229,7 +222,6 @@ class FirestoreService {
             snapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList());
   }
 
-  /// Adiciona uma nova meta.
   Future<DocumentReference> addGoal(
       String userId, Map<String, dynamic> data) async {
     return await _db
@@ -239,7 +231,6 @@ class FirestoreService {
         .add(data);
   }
 
-  /// Atualiza uma meta existente.
   Future<void> updateGoal(
       String userId, String goalId, Map<String, dynamic> data) async {
     await _db
@@ -250,29 +241,59 @@ class FirestoreService {
         .update(data);
   }
 
-  /// Deleta uma meta e todas as suas tarefas (marcos) associadas.
   Future<void> deleteGoal(String userId, String goalId) async {
     final WriteBatch batch = _db.batch();
-
-    // 1. Deleta a meta
     final goalRef =
         _db.collection('users').doc(userId).collection('goals').doc(goalId);
     batch.delete(goalRef);
-
-    // 2. Encontra e deleta todas as tarefas associadas
-    // ATENÇÃO: Verifique se o campo no seu TaskModel é 'journeyId' ou 'goalId'
     final tasksQuery = _db
         .collection('users')
         .doc(userId)
         .collection('tasks')
         .where('journeyId', isEqualTo: goalId);
-
     final tasksSnapshot = await tasksQuery.get();
     for (final doc in tasksSnapshot.docs) {
       batch.delete(doc.reference);
     }
-
-    // 3. Executa a operação em lote
     await batch.commit();
+  }
+
+  Future<Goal?> getGoalById(String userId, String goalId) async {
+    try {
+      final doc = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('goals')
+          .doc(goalId)
+          .get();
+      if (doc.exists) {
+        return Goal.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      print("Erro ao buscar jornada por ID: $e");
+      return null;
+    }
+  }
+
+  // NOVO MÉTODO: Busca uma meta pela sua tag de texto simplificada.
+  Future<Goal?> findGoalBySanitizedTitle(
+      String userId, String sanitizedTitle) async {
+    try {
+      final querySnapshot =
+          await _db.collection('users').doc(userId).collection('goals').get();
+
+      for (final doc in querySnapshot.docs) {
+        final goal = Goal.fromFirestore(doc);
+        if (StringSanitizer.toSimpleTag(goal.title).toLowerCase() ==
+            sanitizedTitle.toLowerCase()) {
+          return goal; // Retorna a primeira meta que corresponder
+        }
+      }
+      return null; // Retorna nulo se nenhuma for encontrada
+    } catch (e) {
+      print("Erro ao buscar meta pelo título simplificado: $e");
+      return null;
+    }
   }
 }

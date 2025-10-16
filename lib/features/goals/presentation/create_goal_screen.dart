@@ -64,12 +64,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       setState(() => _isSaving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: Colors.red.shade400,
-          content: const Text('Erro ao criar a jornada. Tente novamente.'),
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade400,
+            content: const Text('Erro ao criar a jornada. Tente novamente.'),
+          ),
+        );
+      }
     }
   }
 
@@ -78,6 +80,33 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     _titleController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  /// Helper para construir a decoração dos campos de texto de forma padronizada.
+  InputDecoration _buildInputDecoration({
+    required String labelText,
+    required String hintText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: const TextStyle(color: AppColors.secondaryText),
+      hintText: hintText,
+      hintStyle: const TextStyle(color: AppColors.tertiaryText),
+      filled: true,
+      fillColor: AppColors.background,
+      border: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: const OutlineInputBorder(
+        borderRadius: BorderRadius.all(Radius.circular(8)),
+        borderSide: BorderSide(color: AppColors.primary, width: 2),
+      ),
+    );
   }
 
   @override
@@ -102,17 +131,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold),
-              decoration: const InputDecoration(
+              decoration: _buildInputDecoration(
                 labelText: 'Título da Jornada',
-                labelStyle: TextStyle(color: AppColors.secondaryText),
                 hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
-                hintStyle: TextStyle(color: AppColors.tertiaryText),
-                border: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.border)),
-                enabledBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: UnderlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -126,21 +147,10 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               controller: _descriptionController,
               style: const TextStyle(color: Colors.white, fontSize: 16),
               maxLines: 4,
-              decoration: const InputDecoration(
+              decoration: _buildInputDecoration(
                 labelText: 'Descrição',
-                labelStyle: TextStyle(color: AppColors.secondaryText),
                 hintText:
                     'Descreva o que você quer alcançar e por que isso é importante para você.',
-                hintStyle: TextStyle(color: AppColors.tertiaryText),
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    borderSide: BorderSide(color: AppColors.border)),
-                enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(8)),
-                    borderSide: BorderSide(color: AppColors.primary, width: 2)),
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
@@ -150,25 +160,31 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               },
             ),
             const SizedBox(height: 24),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              leading: const Icon(Icons.calendar_today,
-                  color: AppColors.secondaryText),
-              title: Text(
-                _targetDate == null
-                    ? 'Definir Data Alvo (Opcional)'
-                    : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
-                style: const TextStyle(color: Colors.white),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.border),
               ),
-              trailing: _targetDate != null
-                  ? IconButton(
-                      icon: const Icon(Icons.clear,
-                          color: AppColors.secondaryText),
-                      onPressed: () => setState(() => _targetDate = null))
-                  : null,
-              onTap: _pickDate,
+              child: ListTile(
+                onTap: _pickDate,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
+                leading: const Icon(Icons.calendar_today,
+                    color: AppColors.secondaryText),
+                title: Text(
+                  _targetDate == null
+                      ? 'Definir Data Alvo (Opcional)'
+                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                ),
+                trailing: _targetDate != null
+                    ? IconButton(
+                        icon: const Icon(Icons.clear,
+                            color: AppColors.secondaryText),
+                        onPressed: () => setState(() => _targetDate = null))
+                    : null,
+              ),
             ),
           ],
         ),

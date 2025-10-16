@@ -7,7 +7,7 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'widgets/task_item.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tasks_list_view.dart';
 import 'widgets/task_input_modal.dart';
 
 class FocoDoDiaScreen extends StatefulWidget {
@@ -18,7 +18,6 @@ class FocoDoDiaScreen extends StatefulWidget {
 }
 
 class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
-  // ... (código sem alterações, já estava correto)
   final FirestoreService _firestoreService = FirestoreService();
   final String _userId = AuthRepository().getCurrentUser()!.uid;
   bool _showTodayTasks = true;
@@ -48,15 +47,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   void _duplicateTask(TaskModel originalTask) {
-    final duplicatedTask = TaskModel(
+    final duplicatedTask = originalTask.copyWith(
       id: '',
-      text: originalTask.text,
       completed: false,
       createdAt: DateTime.now(),
-      dueDate: originalTask.dueDate,
-      tags: originalTask.tags,
-      personalDay: originalTask.personalDay,
-      journeyId: originalTask.journeyId,
     );
     _firestoreService.addTask(_userId, duplicatedTask);
   }
@@ -76,56 +70,60 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                 _buildHeader(),
                 Expanded(
                   child: StreamBuilder<List<TaskModel>>(
-                    stream: _firestoreService.getTasksStream(_userId,
-                        todayOnly: _showTodayTasks),
+                    // CORRIGIDO: A chamada agora está correta, sem o parâmetro 'todayOnly'.
+                    stream: _firestoreService.getTasksStream(_userId),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting &&
                           !snapshot.hasData) {
                         return const Center(child: CustomLoadingSpinner());
                       }
-                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check_circle_outline,
-                                  color: AppColors.tertiaryText, size: 48),
-                              const SizedBox(height: 16),
-                              const Text('Tudo limpo por aqui!',
-                                  style: TextStyle(
-                                      color: AppColors.secondaryText,
-                                      fontSize: 18)),
-                              const SizedBox(height: 8),
-                              Text(
-                                _showTodayTasks
-                                    ? 'Você não tem tarefas para hoje.'
-                                    : 'Seu histórico de tarefas está vazio.',
-                                style: const TextStyle(
-                                    color: AppColors.tertiaryText),
-                              ),
-                            ],
-                          ),
-                        );
+                      if (snapshot.hasError) {
+                        return Center(child: Text('Erro: ${snapshot.error}'));
                       }
-                      final tasks = snapshot.data!;
-                      return ListView.builder(
-                        padding: const EdgeInsets.only(top: 8, bottom: 80),
-                        itemCount: tasks.length,
-                        itemBuilder: (context, index) {
-                          final task = tasks[index];
-                          return TaskItem(
-                            task: task,
-                            onToggle: (completed) {
-                              _firestoreService.updateTaskCompletion(
-                                  _userId, task.id,
-                                  completed: completed);
-                            },
-                            onDelete: () {
-                              _firestoreService.deleteTask(_userId, task.id);
-                            },
-                            onEdit: () => _openEditTaskModal(task),
-                            onDuplicate: () => _duplicateTask(task),
+
+                      final allTasks = snapshot.data ?? [];
+
+                      // LÓGICA DE FILTRO MOVIDA PARA A UI
+                      final List<TaskModel> filteredTasks;
+                      if (_showTodayTasks) {
+                        final now = DateTime.now();
+                        final todayStart =
+                            DateTime(now.year, now.month, now.day);
+                        filteredTasks = allTasks.where((task) {
+                          // Inclui tarefas com dueDate de hoje ou tarefas sem data
+                          if (task.dueDate == null) return true;
+                          return task.dueDate!.isAtSameMomentAs(todayStart) ||
+                              (task.dueDate!.isAfter(todayStart) &&
+                                  task.dueDate!.isBefore(
+                                      todayStart.add(const Duration(days: 1))));
+                        }).toList();
+                      } else {
+                        filteredTasks = allTasks;
+                      }
+
+                      return TasksListView(
+                        tasks: filteredTasks,
+                        userData: widget.userData,
+                        showJourney: true,
+                        emptyListMessage: 'Tudo limpo por aqui!',
+                        emptyListSubMessage: _showTodayTasks
+                            ? 'Você não tem tarefas para hoje.'
+                            : 'Seu histórico de tarefas está vazio.',
+                        onToggle: (task, isCompleted) {
+                          _firestoreService.updateTaskCompletion(
+                            _userId,
+                            task.id,
+                            completed: isCompleted,
                           );
+                        },
+                        onTaskDeleted: (task) {
+                          _firestoreService.deleteTask(_userId, task.id);
+                        },
+                        onTaskEdited: (task) {
+                          _openEditTaskModal(task);
+                        },
+                        onTaskDuplicated: (task) {
+                          _duplicateTask(task);
                         },
                       );
                     },

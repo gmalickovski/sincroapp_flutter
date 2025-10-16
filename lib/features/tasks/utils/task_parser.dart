@@ -1,17 +1,21 @@
 // lib/features/tasks/utils/task_parser.dart
 
 import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
+import 'package:sincro_app_flutter/services/firestore_service.dart';
 
 class ParsedTask {
   final String cleanText;
   final List<String> tags;
-  final String? journeyId;
+  final String? journeyId; // Armazena o ID da meta
+  final String? journeyTitle; // Armazena o Título original da meta
   final DateTime? dueDate;
 
   ParsedTask({
     required this.cleanText,
     this.tags = const [],
     this.journeyId,
+    this.journeyTitle,
     this.dueDate,
   });
 }
@@ -37,10 +41,12 @@ class TaskParser {
     return _monthMap.keys.join('|');
   }
 
-  static ParsedTask parse(String rawText) {
+  // ATENÇÃO: O parser agora é ASYNC e precisa do userId para fazer a busca.
+  static Future<ParsedTask> parse(String rawText, String userId) async {
     String cleanText = rawText;
     final tags = <String>[];
     String? journeyId;
+    String? journeyTitle;
 
     final tagRegExp = RegExp(r"#(\w+)");
     tagRegExp.allMatches(rawText).forEach((match) {
@@ -50,9 +56,20 @@ class TaskParser {
 
     final journeyRegExp = RegExp(r"@(\w+)");
     final journeyMatch = journeyRegExp.firstMatch(rawText);
+
     if (journeyMatch != null) {
-      journeyId = journeyMatch.group(1);
-      cleanText = cleanText.replaceAll(journeyMatch.group(0)!, '');
+      final extractedTag = journeyMatch.group(1);
+      if (extractedTag != null) {
+        final firestoreService = FirestoreService();
+        final goal = await firestoreService.findGoalBySanitizedTitle(
+            userId, extractedTag);
+
+        if (goal != null) {
+          journeyId = goal.id; // Salva o ID real
+          journeyTitle = goal.title; // Salva o título original para exibição
+        }
+        cleanText = cleanText.replaceAll(journeyMatch.group(0)!, '');
+      }
     }
 
     final dueDate = parseDateFromText(rawText);
@@ -68,12 +85,12 @@ class TaskParser {
       cleanText: cleanText.trim(),
       tags: tags,
       journeyId: journeyId,
+      journeyTitle: journeyTitle,
       dueDate: dueDate,
     );
   }
 
   static DateTime? parseDateFromText(String text) {
-    // ... (código do parseDateFromText sem alterações)
     final textLower = text.toLowerCase();
     final now = DateTime.now();
     final monthPattern = getMonthPattern();

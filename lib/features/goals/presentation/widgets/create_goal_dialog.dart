@@ -4,7 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
@@ -80,6 +79,42 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     super.dispose();
   }
 
+  /// Helper para construir a decoração dos campos de texto.
+  /// Agora, o foco colore apenas a borda, sem preenchimento de fundo.
+  InputDecoration _buildInputDecoration({
+    required String labelText,
+    String? hintText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      labelStyle: const TextStyle(color: AppColors.secondaryText),
+      hintText: hintText,
+      hintStyle: const TextStyle(color: AppColors.tertiaryText),
+      // Removemos o preenchimento para que apenas a borda seja afetada no foco
+      filled: false,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      // Borda padrão (quando não está focado)
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      // Borda quando o campo está focado (selecionado)
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+      ),
+      // Borda para o caso de erro de validação
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.red.shade400),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
@@ -115,15 +150,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                   TextFormField(
                     controller: _titleController,
                     style: const TextStyle(color: Colors.white, fontSize: 18),
-                    decoration: InputDecoration(
+                    decoration: _buildInputDecoration(
                       labelText: 'Título da Jornada',
-                      labelStyle:
-                          const TextStyle(color: AppColors.secondaryText),
-                      filled: true,
-                      fillColor: AppColors.background.withOpacity(0.5),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none),
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
@@ -135,15 +163,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     controller: _descriptionController,
                     style: const TextStyle(color: Colors.white, fontSize: 16),
                     maxLines: 4,
-                    decoration: InputDecoration(
+                    decoration: _buildInputDecoration(
                       labelText: 'Descrição',
-                      labelStyle:
-                          const TextStyle(color: AppColors.secondaryText),
-                      filled: true,
-                      fillColor: AppColors.background.withOpacity(0.5),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none),
+                      hintText: 'O que você quer alcançar?',
                     ),
                     validator: (value) =>
                         (value == null || value.trim().isEmpty)
@@ -151,25 +173,53 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                             : null,
                   ),
                   const SizedBox(height: 16),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8)),
-                    leading: const Icon(Icons.calendar_today,
-                        color: AppColors.secondaryText),
-                    title: Text(
-                      _targetDate == null
-                          ? 'Definir Data Alvo (Opcional)'
-                          : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
-                      style: const TextStyle(color: Colors.white),
+                  // Seletor de data com aparência de botão
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      color: AppColors
+                          .background, // Cor de fundo para destacar como botão
                     ),
-                    trailing: _targetDate != null
-                        ? IconButton(
-                            icon: const Icon(Icons.clear,
-                                color: AppColors.secondaryText),
-                            onPressed: () => setState(() => _targetDate = null))
-                        : null,
-                    onTap: _pickDate,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _pickDate,
+                        borderRadius: BorderRadius.circular(8),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14), // Mais padding vertical
+                          child: Row(
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  color: AppColors.secondaryText, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  _targetDate == null
+                                      ? 'Definir Data Alvo (Opcional)'
+                                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
+                                  style: const TextStyle(
+                                      color: Colors.white, fontSize: 16),
+                                ),
+                              ),
+                              if (_targetDate != null)
+                                // Usando um InkWell menor para o ícone de limpar para melhorar a área de toque
+                                InkWell(
+                                  onTap: () =>
+                                      setState(() => _targetDate = null),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: Icon(Icons.clear,
+                                        color: AppColors.secondaryText,
+                                        size: 20),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 32),
                   SizedBox(
