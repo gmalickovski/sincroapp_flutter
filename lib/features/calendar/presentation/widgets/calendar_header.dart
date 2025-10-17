@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:table_calendar/table_calendar.dart';
 
 class CalendarHeader extends StatelessWidget {
   final DateTime focusedDay;
@@ -28,14 +27,13 @@ class CalendarHeader extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // *** WIDGET EXPANDED ADICIONADO PARA CORRIGIR O OVERFLOW ***
               Expanded(
                 child: Text(
                   toBeginningOfSentenceCase(
                       DateFormat.yMMMM('pt_BR').format(focusedDay))!,
                   style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24, // Fonte ligeiramente menor para mais espaço
+                      fontSize: 24,
                       fontWeight: FontWeight.bold),
                 ),
               ),

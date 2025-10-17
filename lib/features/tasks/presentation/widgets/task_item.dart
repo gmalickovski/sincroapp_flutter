@@ -1,4 +1,5 @@
 // lib/features/tasks/presentation/widgets/task_item.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -43,159 +44,151 @@ class TaskItem extends StatelessWidget {
         ? 'dd/MMM/yy'
         : 'dd/MMM';
 
-    return InkWell(
-      onTap: onEdit,
-      borderRadius: BorderRadius.circular(8),
-      splashColor: AppColors.primary.withOpacity(0.1),
-      highlightColor: AppColors.primary.withOpacity(0.1),
-      child: Padding(
-        // *** PADDING AJUSTADO PARA REMOVER ESPAÇO INTERNO À DIREITA ***
-        padding: const EdgeInsets.only(left: 4, right: 0, top: 8, bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            GestureDetector(
-              onTap: () => onToggle(!task.completed),
-              child: Container(
-                width: 24,
-                height: 24,
-                margin: const EdgeInsets.only(top: 6, right: 4),
-                decoration: BoxDecoration(
+    // O InkWell foi removido daqui para desabilitar o clique no corpo do item.
+    return Padding(
+      padding: const EdgeInsets.only(left: 4, right: 0, top: 8, bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          GestureDetector(
+            onTap: () => onToggle(!task.completed),
+            child: Container(
+              width: 24,
+              height: 24,
+              margin: const EdgeInsets.only(top: 6, right: 4),
+              decoration: BoxDecoration(
+                color:
+                    task.completed ? Colors.green.shade500 : Colors.transparent,
+                shape: BoxShape.circle,
+                border: Border.all(
                   color: task.completed
                       ? Colors.green.shade500
-                      : Colors.transparent,
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: task.completed
-                        ? Colors.green.shade500
-                        : AppColors.tertiaryText,
-                    width: 2,
-                  ),
+                      : AppColors.tertiaryText,
+                  width: 2,
                 ),
-                child: task.completed
-                    ? const Icon(Icons.check, size: 16, color: Colors.white)
-                    : null,
               ),
+              child: task.completed
+                  ? const Icon(Icons.check, size: 16, color: Colors.white)
+                  : null,
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 7),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            task.text,
-                            style: TextStyle(
-                              color: task.completed
-                                  ? AppColors.tertiaryText
-                                  : AppColors.secondaryText,
-                              decoration: task.completed
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                              fontSize: 16,
-                            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 7),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          task.text,
+                          style: TextStyle(
+                            color: task.completed
+                                ? AppColors.tertiaryText
+                                : AppColors.secondaryText,
+                            decoration: task.completed
+                                ? TextDecoration.lineThrough
+                                : TextDecoration.none,
+                            fontSize: 16,
                           ),
                         ),
-                        if (task.personalDay != null && task.personalDay! > 0)
-                          Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: VibrationPill(
-                              vibrationNumber: task.personalDay!,
-                              type: VibrationPillType.compact,
-                            ),
+                      ),
+                      if (task.personalDay != null && task.personalDay! > 0)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: VibrationPill(
+                            vibrationNumber: task.personalDay!,
+                            type: VibrationPillType.compact,
                           ),
-                      ],
-                    ),
-                  ),
-                  if (showDateIndicator ||
-                      task.tags.isNotEmpty ||
-                      (showJourney && hasJourney))
-                    const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      if (showDateIndicator)
-                        _IndicatorIcon(
-                          icon: Icons.calendar_today_outlined,
-                          text: DateFormat(dateFormat, 'pt_BR')
-                              .format(task.dueDate!),
-                          color: AppColors.tertiaryText,
                         ),
-                      if (showJourney && hasJourney)
-                        _IndicatorIcon(
-                          icon: Icons.flag_outlined,
-                          text:
-                              '@${StringSanitizer.toSimpleTag(task.journeyTitle!)}',
-                          color: Colors.cyanAccent,
-                        ),
-                      ...task.tags.map((tag) => _TagChip(tag: tag)).toList(),
-                    ],
-                  )
-                ],
-              ),
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else if (value == 'delete') {
-                  onDelete();
-                } else if (value == 'duplicate') {
-                  onDuplicate();
-                }
-              },
-              color: const Color(0xFF2a2141),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-              icon: const Icon(Icons.more_vert, color: AppColors.tertiaryText),
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                const PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_outlined,
-                          size: 20, color: AppColors.secondaryText),
-                      SizedBox(width: 12),
-                      Text('Editar Tarefa'),
                     ],
                   ),
                 ),
-                const PopupMenuItem<String>(
-                  value: 'duplicate',
-                  child: Row(
-                    children: [
-                      Icon(Icons.copy_outlined,
-                          size: 20, color: AppColors.secondaryText),
-                      SizedBox(width: 12),
-                      Text('Duplicar Tarefa'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem<String>(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      const Icon(Icons.delete_outline,
-                          size: 20, color: Colors.redAccent),
-                      const SizedBox(width: 12),
-                      Text('Excluir Tarefa',
-                          style: TextStyle(color: Colors.redAccent.shade100)),
-                    ],
-                  ),
-                ),
+                if (showDateIndicator ||
+                    task.tags.isNotEmpty ||
+                    (showJourney && hasJourney))
+                  const SizedBox(height: 6),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    if (showDateIndicator)
+                      _IndicatorIcon(
+                        icon: Icons.calendar_today_outlined,
+                        text: DateFormat(dateFormat, 'pt_BR')
+                            .format(task.dueDate!),
+                        color: AppColors.tertiaryText,
+                      ),
+                    if (showJourney && hasJourney)
+                      _IndicatorIcon(
+                        icon: Icons.flag_outlined,
+                        text:
+                            '@${StringSanitizer.toSimpleTag(task.journeyTitle!)}',
+                        color: Colors.cyanAccent,
+                      ),
+                    ...task.tags.map((tag) => _TagChip(tag: tag)).toList(),
+                  ],
+                )
               ],
             ),
-          ],
-        ),
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') {
+                onEdit();
+              } else if (value == 'delete') {
+                onDelete();
+              } else if (value == 'duplicate') {
+                onDuplicate();
+              }
+            },
+            color: const Color(0xFF2a2141),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            icon: const Icon(Icons.more_vert, color: AppColors.tertiaryText),
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              const PopupMenuItem<String>(
+                value: 'edit',
+                child: Row(
+                  children: [
+                    Icon(Icons.edit_outlined,
+                        size: 20, color: AppColors.secondaryText),
+                    SizedBox(width: 12),
+                    Text('Editar Tarefa'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem<String>(
+                value: 'duplicate',
+                child: Row(
+                  children: [
+                    Icon(Icons.copy_outlined,
+                        size: 20, color: AppColors.secondaryText),
+                    SizedBox(width: 12),
+                    Text('Duplicar Tarefa'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              PopupMenuItem<String>(
+                value: 'delete',
+                child: Row(
+                  children: [
+                    const Icon(Icons.delete_outline,
+                        size: 20, color: Colors.redAccent),
+                    const SizedBox(width: 12),
+                    Text('Excluir Tarefa',
+                        style: TextStyle(color: Colors.redAccent.shade100)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

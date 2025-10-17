@@ -1,18 +1,23 @@
 // lib/common/widgets/dashboard_sidebar.dart
+
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
 
 class DashboardSidebar extends StatelessWidget {
   final bool isExpanded;
   final int selectedIndex;
   final ValueChanged<int> onDestinationSelected;
+  final UserModel userData;
 
   const DashboardSidebar({
     super.key,
     required this.isExpanded,
     required this.selectedIndex,
     required this.onDestinationSelected,
+    required this.userData,
   });
 
   @override
@@ -35,42 +40,56 @@ class DashboardSidebar extends StatelessWidget {
           right: BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
         ),
       ),
-      // *** SAFEAREA REMOVIDO DAQUI ***
-      // O Scaffold na tela principal agora gerencia o espaçamento.
-      child: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.only(top: 24, left: 12, right: 12),
-              children: List.generate(navItems.length, (index) {
-                return _buildNavItem(
-                  icon: navItems[index]['icon'] as IconData,
-                  text: navItems[index]['label'] as String,
-                  index: index,
-                );
-              }),
+      child: SafeArea(
+        // SafeArea para evitar que o conteúdo da sidebar sobreponha a status bar
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.only(top: 24, left: 12, right: 12),
+                children: List.generate(navItems.length, (index) {
+                  return _buildNavItem(
+                    context: context,
+                    icon: navItems[index]['icon'] as IconData,
+                    text: navItems[index]['label'] as String,
+                    index: index,
+                  );
+                }),
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: const Divider(color: Color(0x804b5563), height: 1),
-          ),
-          const SizedBox(height: 8),
-          _buildNavItem(
-              icon: Icons.settings_outlined, text: 'Configurações', index: 98),
-          _buildNavItem(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+              child: const Divider(color: Color(0x804b5563), height: 1),
+            ),
+            const SizedBox(height: 8),
+            _buildNavItem(
+              context: context,
+              icon: Icons.settings_outlined,
+              text: 'Configurações',
+              index: 98,
+              onTap: () {
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (context) => SettingsScreen(userData: userData),
+                ));
+              },
+            ),
+            _buildNavItem(
+              context: context,
               icon: Icons.logout,
               text: 'Sair',
               index: 99,
               isLogout: true,
-              onTap: () => AuthRepository().signOut()),
-          const SizedBox(height: 20),
-        ],
+              onTap: () => AuthRepository().signOut(),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildNavItem({
+    required BuildContext context,
     required IconData icon,
     required String text,
     required int index,
@@ -89,6 +108,7 @@ class DashboardSidebar extends StatelessWidget {
   }
 }
 
+// O widget _SidebarItem (interno) permanece o mesmo
 class _SidebarItem extends StatefulWidget {
   final VoidCallback onTap;
   final bool isExpanded;

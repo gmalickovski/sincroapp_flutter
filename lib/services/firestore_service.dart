@@ -19,6 +19,17 @@ class FirestoreService {
     }
   }
 
+  // *** NOVO MÉTODO ADICIONADO AQUI ***
+  /// Atualiza campos específicos do documento de um usuário.
+  Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
+    try {
+      await _db.collection('users').doc(uid).update(data);
+    } catch (e) {
+      print("Erro ao atualizar dados do usuário: $e");
+      rethrow;
+    }
+  }
+
   Future<UserModel?> getUserData(String uid) async {
     try {
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
@@ -167,7 +178,6 @@ class FirestoreService {
     });
   }
 
-  // *** MÉTODO NOVO E CORRIGIDO ADICIONADO AQUI ***
   Future<List<JournalEntry>> getJournalEntriesForMonth(
       String userId, DateTime month) async {
     try {
@@ -177,7 +187,7 @@ class FirestoreService {
       final querySnapshot = await _db
           .collection('users')
           .doc(userId)
-          .collection('journalEntries') // Nome da coleção corrigido
+          .collection('journalEntries')
           .where('createdAt',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
           .where('createdAt',

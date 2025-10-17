@@ -1,4 +1,5 @@
 // lib/features/dashboard/presentation/dashboard_screen.dart
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
@@ -9,12 +10,10 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
-
 import 'package:sincro_app_flutter/common/widgets/info_card.dart';
 import 'package:sincro_app_flutter/common/widgets/bussola_card.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
-
 import '../../calendar/presentation/calendar_screen.dart';
 import '../../journal/presentation/journal_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
@@ -43,7 +42,8 @@ class DashboardScreen extends StatefulWidget {
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   UserModel? _userData;
   NumerologyResult? _numerologyData;
   bool _isLoading = true;
@@ -51,14 +51,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<DashboardCardData> _cards = [];
   bool _isEditMode = false;
 
-  // *** VARIÁVEIS DE CONTROLE DO LAYOUT ATUALIZADAS ***
-  bool _isDesktopSidebarExpanded = false;
-  bool _isMobileDrawerOpen = false; // Novo controle para o drawer mobile
+  bool _isDesktopSidebarExpanded = true;
+  bool _isMobileDrawerOpen = false;
+
+  late AnimationController _menuAnimationController;
 
   @override
   void initState() {
     super.initState();
+    _menuAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    if (_isDesktopSidebarExpanded) {
+      _menuAnimationController.forward();
+    }
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _menuAnimationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -86,17 +100,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _isLoading = false;
           });
         }
-      } else {
-        if (mounted) {
-          setState(() {
-            _userData = userData;
-            _isLoading = false;
-          });
-        }
+      } else if (mounted) {
+        setState(() {
+          _userData = userData;
+          _isLoading = false;
+        });
       }
     }
   }
 
+  // ... (demais métodos _handle, _buildCardList, _get...Content permanecem os mesmos)
   void _handleCardTap(String cardTitle, VibrationContent content) {
     if (_isEditMode) return;
     print("Card Clicado: $cardTitle");
@@ -236,117 +249,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ContentData.bussolaAtividades[0]!;
   }
 
-  Widget _buildCurrentPage({required bool isDesktop}) {
-    final currentUserData = _userData;
-
-    switch (_sidebarIndex) {
-      case 0:
-        return _buildDashboardContent(isDesktop: isDesktop);
-      case 1:
-        if (currentUserData != null) {
-          return CalendarScreen(userData: currentUserData);
-        }
-        return const Center(child: CustomLoadingSpinner());
-      case 2:
-        if (currentUserData != null) {
-          return JournalScreen(userData: currentUserData);
-        }
-        return const Center(child: CustomLoadingSpinner());
-      case 3:
-        if (currentUserData != null) {
-          return FocoDoDiaScreen(userData: currentUserData);
-        }
-        return const Center(child: CustomLoadingSpinner());
-      case 4:
-        if (currentUserData != null) {
-          return GoalsScreen(userData: currentUserData);
-        }
-        return const Center(child: CustomLoadingSpinner());
-      default:
-        return _buildDashboardContent(isDesktop: isDesktop);
-    }
+  Widget _buildCurrentPage() {
+    if (_userData == null) return const Center(child: CustomLoadingSpinner());
+    return IndexedStack(
+      index: _sidebarIndex,
+      children: [
+        _buildDashboardContent(
+            isDesktop: MediaQuery.of(context).size.width > 800),
+        CalendarScreen(userData: _userData!),
+        JournalScreen(userData: _userData!),
+        FocoDoDiaScreen(userData: _userData!),
+        GoalsScreen(userData: _userData!),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      bool isDesktop = constraints.maxWidth > 800;
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        // *** APPBAR AGORA É COMPARTILHADO E NÃO MAIS NULO NO DESKTOP ***
-        appBar: CustomAppBar(
-          userName: _userData?.nomeAnalise,
-          isDesktop: isDesktop,
-          isEditMode: _isEditMode,
-          onEditPressed: (_sidebarIndex == 0 && isDesktop)
-              ? () => setState(() => _isEditMode = !_isEditMode)
-              : null,
-          onMenuPressed: () => setState(() {
+    bool isDesktop = MediaQuery.of(context).size.width > 800;
+
+    if (_isLoading || _userData == null) {
+      return const Scaffold(
+          backgroundColor: AppColors.background,
+          body: Center(child: CustomLoadingSpinner()));
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: CustomAppBar(
+        userData: _userData,
+        menuAnimationController: _menuAnimationController,
+        isEditMode: _isEditMode,
+        onEditPressed: (_sidebarIndex == 0 && isDesktop)
+            ? () => setState(() => _isEditMode = !_isEditMode)
+            : null,
+        onMenuPressed: () {
+          setState(() {
             if (isDesktop) {
               _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
+              _isDesktopSidebarExpanded
+                  ? _menuAnimationController.forward()
+                  : _menuAnimationController.reverse();
             } else {
-              _isMobileDrawerOpen = true;
+              _isMobileDrawerOpen = !_isMobileDrawerOpen;
+              _isMobileDrawerOpen
+                  ? _menuAnimationController.forward()
+                  : _menuAnimationController.reverse();
             }
-          }),
-        ),
-        // *** DRAWER REMOVIDO PARA DAR LUGAR À SOLUÇÃO COM STACK ***
-        body: _isLoading
-            ? const Center(child: CustomLoadingSpinner())
-            : isDesktop
-                ? _buildDesktopLayout()
-                : _buildMobileLayout(),
-      );
-    });
+          });
+        },
+      ),
+      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+    );
   }
 
   Widget _buildDesktopLayout() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        DashboardSidebar(
-          isExpanded: _isDesktopSidebarExpanded,
-          selectedIndex: _sidebarIndex,
-          onDestinationSelected: (index) {
-            if (index < 5) {
-              setState(() {
-                _sidebarIndex = index;
-                _isEditMode = false;
-              });
-            }
-          },
-        ),
-        Expanded(child: _buildCurrentPage(isDesktop: true)),
+        if (_userData != null)
+          DashboardSidebar(
+            isExpanded: _isDesktopSidebarExpanded,
+            selectedIndex: _sidebarIndex,
+            userData: _userData!,
+            onDestinationSelected: (index) {
+              if (index < 5) {
+                setState(() {
+                  _sidebarIndex = index;
+                  _isEditMode = false;
+                });
+              }
+            },
+          ),
+        Expanded(child: _buildCurrentPage()),
       ],
     );
   }
 
-  // *** LAYOUT MOBILE TOTALMENTE REFEITO COM STACK PARA CORRIGIR SOBREPOSIÇÃO ***
   Widget _buildMobileLayout() {
     const double sidebarWidth = 280;
     return Stack(
       children: [
-        // Camada 1: Conteúdo Principal
         GestureDetector(
+          onTap: () {
+            if (_isMobileDrawerOpen) {
+              setState(() {
+                _isMobileDrawerOpen = false;
+                _menuAnimationController.reverse();
+              });
+            }
+          },
           onLongPress: (_isEditMode || _sidebarIndex != 0)
               ? null
               : () => setState(() => _isEditMode = true),
-          child: _buildCurrentPage(isDesktop: false),
+          child: _buildCurrentPage(),
         ),
-
-        // Camada 2: Scrim (fundo escurecido)
         if (_isMobileDrawerOpen)
           GestureDetector(
             onTap: () {
               setState(() {
                 _isMobileDrawerOpen = false;
+                _menuAnimationController.reverse();
               });
             },
-            child: Container(
-              color: Colors.black.withOpacity(0.5),
-            ),
+            child: Container(color: Colors.black.withOpacity(0.5)),
           ),
-
-        // Camada 3: Sidebar animado
         AnimatedPositioned(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -355,8 +362,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
           width: sidebarWidth,
           child: DashboardSidebar(
-            isExpanded: true, // Sempre expandido no mobile
+            isExpanded: true,
             selectedIndex: _sidebarIndex,
+            userData: _userData!,
             onDestinationSelected: (index) {
               if (index < 5) {
                 setState(() {
@@ -364,15 +372,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   _isEditMode = false;
                 });
               }
-              // Fecha o drawer ao selecionar um item
               setState(() {
                 _isMobileDrawerOpen = false;
+                _menuAnimationController.reverse();
               });
             },
           ),
         ),
-
-        // Camada 4: Botão de Edição (se aplicável)
         if (!_isMobileDrawerOpen && _isEditMode && _sidebarIndex == 0)
           Positioned(
             bottom: 16,
@@ -388,8 +394,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildDashboardContent({required bool isDesktop}) {
+    // ... (O restante do seu método _buildDashboardContent permanece o mesmo)
     if (_numerologyData == null) {
-      return const Center(child: Text("Não foi possível calcular os dados."));
+      return const Center(
+          child: Text("Não foi possível calcular os dados.",
+              style: TextStyle(color: Colors.white)));
     }
 
     Widget buildDragHandle(int index) {

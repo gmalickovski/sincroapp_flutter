@@ -1,39 +1,52 @@
+// lib/common/widgets/user_avatar.dart
+
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class UserAvatar extends StatelessWidget {
-  final String? name;
+  final String? photoUrl;
+  final String firstName;
+  final String lastName;
   final double radius;
 
   const UserAvatar({
     super.key,
-    this.name,
-    this.radius = 18.0,
+    this.photoUrl,
+    required this.firstName,
+    required this.lastName,
+    this.radius = 20.0,
   });
 
   String get _initials {
-    if (name == null || name!.isEmpty) return '';
-    final names = name!.split(' ').where((n) => n.isNotEmpty).toList();
-    if (names.length > 1) {
-      return '${names.first[0]}${names.last[0]}'.toUpperCase();
-    } else {
-      return names.first.substring(0, 1).toUpperCase();
-    }
+    String firstInitial = firstName.isNotEmpty ? firstName[0] : '';
+    String lastInitial = lastName.isNotEmpty ? lastName[0] : '';
+    return '$firstInitial$lastInitial'.toUpperCase();
   }
 
   @override
   Widget build(BuildContext context) {
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: AppColors.primaryAccent.withOpacity(0.3),
-      child: Text(
-        _initials,
-        style: TextStyle(
-          color: AppColors.primaryAccent,
-          fontWeight: FontWeight.bold,
-          fontSize: radius * 0.8,
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      return CircleAvatar(
+        radius: radius,
+        backgroundImage: NetworkImage(photoUrl!),
+        backgroundColor: AppColors.primary,
+      );
+    } else {
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: AppColors.primary,
+        child: Center(
+          // *** CORREÇÃO APLICADA AQUI ***
+          child: Text(
+            _initials,
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: radius * 0.8,
+            ),
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

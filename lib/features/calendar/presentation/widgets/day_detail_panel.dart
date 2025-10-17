@@ -1,4 +1,5 @@
 // lib/features/calendar/presentation/widgets/day_detail_panel.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -17,6 +18,7 @@ class DayDetailPanel extends StatelessWidget {
   final Function(TaskModel) onDeleteTask;
   final Function(TaskModel) onDuplicateTask;
   final Function(TaskModel, bool) onToggleTask;
+  final Function(JournalEntry) onJournalTap;
 
   const DayDetailPanel({
     super.key,
@@ -29,6 +31,7 @@ class DayDetailPanel extends StatelessWidget {
     required this.onDeleteTask,
     required this.onDuplicateTask,
     required this.onToggleTask,
+    required this.onJournalTap,
   });
 
   @override
@@ -40,62 +43,59 @@ class DayDetailPanel extends StatelessWidget {
     final formattedDate = toBeginningOfSentenceCase(
         DateFormat("EEEE, 'dia' d", 'pt_BR').format(selectedDay!));
 
-    return Container(
-      decoration: BoxDecoration(
-        color: isDesktop ? AppColors.cardBackground : Colors.transparent,
-        borderRadius: isDesktop ? BorderRadius.circular(12) : null,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  formattedDate!,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
-                ),
-                if (personalDayNumber != null)
-                  VibrationPill(vibrationNumber: personalDayNumber!),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                formattedDate!,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold),
+              ),
+              if (personalDayNumber != null)
+                VibrationPill(vibrationNumber: personalDayNumber!),
+            ],
           ),
-          const Divider(height: 32, color: AppColors.border),
-          if (events.isEmpty)
-            _buildEmptyStateMobile()
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: events.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final event = events[index];
-                if (event is TaskModel) {
-                  return TaskItem(
-                    task: event,
-                    showJourney: true,
-                    onToggle: (isCompleted) => onToggleTask(event, isCompleted),
-                    onEdit: () => onEditTask(event),
-                    onDelete: () => onDeleteTask(event),
-                    onDuplicate: () => onDuplicateTask(event),
-                  );
-                }
-                if (event is JournalEntry) {
-                  return _JournalListItem(entry: event);
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-        ],
-      ),
+        ),
+        const Divider(height: 32, color: AppColors.border),
+        Expanded(
+          child: events.isEmpty
+              ? _buildEmptyStateMobile()
+              : ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  shrinkWrap: true,
+                  itemCount: events.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final event = events[index];
+                    if (event is TaskModel) {
+                      return TaskItem(
+                        task: event,
+                        showJourney: true,
+                        onToggle: (isCompleted) =>
+                            onToggleTask(event, isCompleted),
+                        onEdit: () => onEditTask(event),
+                        onDelete: () => onDeleteTask(event),
+                        onDuplicate: () => onDuplicateTask(event),
+                      );
+                    }
+                    if (event is JournalEntry) {
+                      return _JournalListItem(
+                        entry: event,
+                        onTap: () => onJournalTap(event),
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -114,18 +114,16 @@ class DayDetailPanel extends StatelessWidget {
 
   Widget _buildEmptyStateMobile() {
     return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(vertical: 32.0),
-        child: Column(
-          children: [
-            Icon(Icons.inbox_outlined, color: AppColors.tertiaryText, size: 32),
-            SizedBox(height: 8),
-            Text(
-              "Nenhum item para este dia.",
-              style: TextStyle(color: AppColors.tertiaryText),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.inbox_outlined, color: AppColors.tertiaryText, size: 32),
+          SizedBox(height: 8),
+          Text(
+            "Nenhum item para este dia.",
+            style: TextStyle(color: AppColors.tertiaryText),
+          ),
+        ],
       ),
     );
   }
@@ -133,8 +131,9 @@ class DayDetailPanel extends StatelessWidget {
 
 class _JournalListItem extends StatelessWidget {
   final JournalEntry entry;
+  final VoidCallback onTap;
 
-  const _JournalListItem({required this.entry});
+  const _JournalListItem({required this.entry, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -142,10 +141,7 @@ class _JournalListItem extends StatelessWidget {
       color: AppColors.cardBackground.withOpacity(0.5),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: () {
-          // TODO: Implementar navegação para a tela de detalhes do diário
-          print('Visualizar anotação: ${entry.id}');
-        },
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),

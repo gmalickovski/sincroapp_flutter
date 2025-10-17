@@ -5,12 +5,12 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class CalendarFab extends StatefulWidget {
   final VoidCallback onAddTask;
-  // Pode adicionar um callback para anotações no futuro
-  // final VoidCallback onAddJournal;
+  final VoidCallback onAddJournalEntry;
 
   const CalendarFab({
     super.key,
     required this.onAddTask,
+    required this.onAddJournalEntry,
   });
 
   @override
@@ -46,40 +46,50 @@ class _CalendarFabState extends State<CalendarFab>
   }
 
   void _toggle() {
-    if (_isOpen) {
-      _animationController.reverse();
-    } else {
-      _animationController.forward();
+    if (mounted) {
+      if (_isOpen) {
+        _animationController.reverse();
+      } else {
+        _animationController.forward();
+      }
+      setState(() => _isOpen = !_isOpen);
     }
-    setState(() => _isOpen = !_isOpen);
   }
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       alignment: Alignment.bottomRight,
+      // *** CORREÇÃO APLICADA AQUI ***
       clipBehavior: Clip.none,
       children: [
         Transform.translate(
           offset: Offset(0, -_translateAnimation.value * 2),
-          child:
-              _buildSecondaryButton(Icons.book_outlined, "Nova Anotação", () {
-            print("Nova Anotação (a implementar)");
-            _toggle();
-          }),
+          child: _buildSecondaryButton(
+            Icons.book_outlined,
+            "Nova Anotação",
+            () {
+              widget.onAddJournalEntry();
+              _toggle();
+            },
+          ),
         ),
         Transform.translate(
           offset: Offset(0, -_translateAnimation.value),
-          child: _buildSecondaryButton(Icons.check_box_outlined, "Nova Tarefa",
-              () {
-            widget.onAddTask();
-            _toggle();
-          }),
+          child: _buildSecondaryButton(
+            Icons.check_box_outlined,
+            "Nova Tarefa",
+            () {
+              widget.onAddTask();
+              _toggle();
+            },
+          ),
         ),
         FloatingActionButton(
           onPressed: _toggle,
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
+          heroTag: 'calendar_main_fab',
           child: RotationTransition(
             turns: _rotateAnimation,
             child: const Icon(Icons.add),
@@ -99,7 +109,7 @@ class _CalendarFabState extends State<CalendarFab>
         onPressed: _isOpen ? onPressed : null,
         backgroundColor: Colors.white.withOpacity(0.1),
         foregroundColor: Colors.purple.shade200,
-        heroTag: null,
+        heroTag: tooltip,
         child: Icon(icon),
       ),
     );
