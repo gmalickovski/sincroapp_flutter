@@ -1,5 +1,4 @@
 // lib/features/dashboard/presentation/dashboard_screen.dart
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:reorderable_grid_view/reorderable_grid_view.dart';
@@ -19,7 +18,6 @@ import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 import '../../calendar/presentation/calendar_screen.dart';
 import '../../journal/presentation/journal_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
-// ADIÇÃO: Importa a nova tela de Metas
 import '../../goals/presentation/goals_screen.dart';
 
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -46,14 +44,16 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   UserModel? _userData;
   NumerologyResult? _numerologyData;
   bool _isLoading = true;
   int _sidebarIndex = 0;
   List<DashboardCardData> _cards = [];
   bool _isEditMode = false;
-  bool _isSidebarExpanded = false;
+
+  // *** VARIÁVEIS DE CONTROLE DO LAYOUT ATUALIZADAS ***
+  bool _isDesktopSidebarExpanded = false;
+  bool _isMobileDrawerOpen = false; // Novo controle para o drawer mobile
 
   @override
   void initState() {
@@ -257,7 +257,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return FocoDoDiaScreen(userData: currentUserData);
         }
         return const Center(child: CustomLoadingSpinner());
-      // *** ATUALIZAÇÃO: Adiciona o case para a tela de Metas ***
       case 4:
         if (currentUserData != null) {
           return GoalsScreen(userData: currentUserData);
@@ -273,96 +272,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return LayoutBuilder(builder: (context, constraints) {
       bool isDesktop = constraints.maxWidth > 800;
       return Scaffold(
-        key: _scaffoldKey,
         backgroundColor: AppColors.background,
-        appBar: isDesktop
-            ? null
-            : CustomAppBar(
-                userName: _userData?.nomeAnalise,
-                onMenuPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
-        drawer: isDesktop ? null : _buildMobileDrawer(),
+        // *** APPBAR AGORA É COMPARTILHADO E NÃO MAIS NULO NO DESKTOP ***
+        appBar: CustomAppBar(
+          userName: _userData?.nomeAnalise,
+          isDesktop: isDesktop,
+          isEditMode: _isEditMode,
+          onEditPressed: (_sidebarIndex == 0 && isDesktop)
+              ? () => setState(() => _isEditMode = !_isEditMode)
+              : null,
+          onMenuPressed: () => setState(() {
+            if (isDesktop) {
+              _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
+            } else {
+              _isMobileDrawerOpen = true;
+            }
+          }),
+        ),
+        // *** DRAWER REMOVIDO PARA DAR LUGAR À SOLUÇÃO COM STACK ***
         body: _isLoading
             ? const Center(child: CustomLoadingSpinner())
             : isDesktop
                 ? _buildDesktopLayout()
                 : _buildMobileLayout(),
-        floatingActionButton: (isDesktop == false &&
-                _isEditMode &&
-                _sidebarIndex == 0)
-            ? FloatingActionButton(
-                onPressed: () => setState(() => _isEditMode = false),
-                backgroundColor: Colors.green,
-                mini: true,
-                shape: const CircleBorder(),
-                child: const Icon(Icons.check, color: Colors.white, size: 24),
-              )
-            : null,
       );
     });
   }
 
-  Widget _buildMobileDrawer() {
-    return Drawer(
-      child: DashboardSidebar(
-        isExpanded: true,
-        selectedIndex: _sidebarIndex,
-        onDestinationSelected: (index) {
-          if (index < 5) {
-            setState(() {
-              _sidebarIndex = index;
-              _isEditMode = false;
-            });
-          }
-          Navigator.pop(context);
-        },
-      ),
-    );
-  }
-
   Widget _buildDesktopLayout() {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        CustomAppBar(
-          userName: _userData?.nomeAnalise,
-          isDesktop: true,
-          isEditMode: _isEditMode,
-          onEditPressed: _sidebarIndex == 0
-              ? () => setState(() => _isEditMode = !_isEditMode)
-              : null,
-          onMenuPressed: () =>
-              setState(() => _isSidebarExpanded = !_isSidebarExpanded),
+        DashboardSidebar(
+          isExpanded: _isDesktopSidebarExpanded,
+          selectedIndex: _sidebarIndex,
+          onDestinationSelected: (index) {
+            if (index < 5) {
+              setState(() {
+                _sidebarIndex = index;
+                _isEditMode = false;
+              });
+            }
+          },
         ),
-        Expanded(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              DashboardSidebar(
-                isExpanded: _isSidebarExpanded,
-                selectedIndex: _sidebarIndex,
-                onDestinationSelected: (index) {
-                  if (index < 5) {
-                    setState(() {
-                      _sidebarIndex = index;
-                      _isEditMode = false;
-                    });
-                  }
-                },
-              ),
-              Expanded(child: _buildCurrentPage(isDesktop: true)),
-            ],
-          ),
-        ),
+        Expanded(child: _buildCurrentPage(isDesktop: true)),
       ],
     );
   }
 
+  // *** LAYOUT MOBILE TOTALMENTE REFEITO COM STACK PARA CORRIGIR SOBREPOSIÇÃO ***
   Widget _buildMobileLayout() {
-    return GestureDetector(
-      onLongPress: (_isEditMode || _sidebarIndex != 0)
-          ? null
-          : () => setState(() => _isEditMode = true),
-      child: _buildCurrentPage(isDesktop: false),
+    const double sidebarWidth = 280;
+    return Stack(
+      children: [
+        // Camada 1: Conteúdo Principal
+        GestureDetector(
+          onLongPress: (_isEditMode || _sidebarIndex != 0)
+              ? null
+              : () => setState(() => _isEditMode = true),
+          child: _buildCurrentPage(isDesktop: false),
+        ),
+
+        // Camada 2: Scrim (fundo escurecido)
+        if (_isMobileDrawerOpen)
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isMobileDrawerOpen = false;
+              });
+            },
+            child: Container(
+              color: Colors.black.withOpacity(0.5),
+            ),
+          ),
+
+        // Camada 3: Sidebar animado
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          top: 0,
+          bottom: 0,
+          left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
+          width: sidebarWidth,
+          child: DashboardSidebar(
+            isExpanded: true, // Sempre expandido no mobile
+            selectedIndex: _sidebarIndex,
+            onDestinationSelected: (index) {
+              if (index < 5) {
+                setState(() {
+                  _sidebarIndex = index;
+                  _isEditMode = false;
+                });
+              }
+              // Fecha o drawer ao selecionar um item
+              setState(() {
+                _isMobileDrawerOpen = false;
+              });
+            },
+          ),
+        ),
+
+        // Camada 4: Botão de Edição (se aplicável)
+        if (!_isMobileDrawerOpen && _isEditMode && _sidebarIndex == 0)
+          Positioned(
+            bottom: 16,
+            right: 16,
+            child: FloatingActionButton(
+              onPressed: () => setState(() => _isEditMode = false),
+              backgroundColor: Colors.green,
+              child: const Icon(Icons.check, color: Colors.white),
+            ),
+          ),
+      ],
     );
   }
 
@@ -394,7 +415,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (!isDesktop) {
       return ReorderableListView.builder(
         buildDefaultDragHandles: false,
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 80),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 80),
         itemCount: _cards.length,
         proxyDecorator: (child, index, animation) =>
             Material(elevation: 8.0, color: Colors.transparent, child: child),

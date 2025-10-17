@@ -1,10 +1,9 @@
 // lib/features/calendar/presentation/calendar_screen.dart
-
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
+import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -35,31 +34,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay;
   late final String _userId;
 
-  Map<DateTime, List<CalendarEvent>> _events = {};
+  // Mapa para os marcadores do CustomCalendar
+  Map<DateTime, List<CalendarEvent>> _calendarEvents = {};
+  // Mapa com os dados brutos para o painel de detalhes
+  Map<DateTime, List<dynamic>> _rawEvents = {};
+
   bool _isLoading = true;
   int? _personalDayNumber;
-
-  final ScrollController _calendarScrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _selectedDay = DateTime.now();
+    final now = DateTime.now();
+    _selectedDay = DateTime(now.year, now.month, now.day);
     _userId = _authRepository.getCurrentUser()!.uid;
     _loadInitialData();
   }
 
-  @override
-  void dispose() {
-    _calendarScrollController.dispose();
-    super.dispose();
-  }
-
   Future<void> _loadInitialData() async {
     await _fetchEventsForMonth(_focusedDay);
-    if (_selectedDay != null) {
-      _updatePersonalDay(_selectedDay!);
-    }
     if (mounted) {
       setState(() => _isLoading = false);
     }
@@ -67,27 +60,66 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Future<void> _fetchEventsForMonth(DateTime month) async {
     if (!mounted) return;
-    final tasks = await _firestoreService.getTasksForCalendar(_userId, month);
-    final List<CalendarEvent> fetchedEvents = [];
-    for (final task in tasks) {
-      final DateTime eventDate = task.dueDate ?? task.createdAt;
-      final eventType = task.journeyId != null && task.journeyId!.isNotEmpty
-          ? EventType.goalTask
-          : EventType.task;
-      final event = CalendarEvent(
-        title: task.text,
-        type: eventType,
-        date: eventDate,
-      );
-      fetchedEvents.add(event);
-    }
-    final groupedEvents = groupBy(
-        fetchedEvents,
-        (event) =>
-            DateTime.utc(event.date.year, event.date.month, event.date.day));
+    setState(() => _isLoading = true);
+
+    final tasksFuture = _firestoreService.getTasksForCalendar(_userId, month);
+    final journalFuture =
+        _firestoreService.getJournalEntriesForMonth(_userId, month);
+
+    final results = await Future.wait([tasksFuture, journalFuture]);
+
+    final tasks = results[0] as List<TaskModel>;
+    final journalEntries = results[1] as List<JournalEntry>;
+
+    final allRawEvents = <dynamic>[...tasks, ...journalEntries];
+
+    _rawEvents = groupBy<dynamic, DateTime>(
+      allRawEvents,
+      (event) {
+        DateTime date;
+        if (event is TaskModel) {
+          date = event.dueDate ?? event.createdAt;
+        } else {
+          date = (event as JournalEntry).createdAt;
+        }
+        return DateTime.utc(date.year, date.month, date.day);
+      },
+    );
+
+    final allCalendarEvents = allRawEvents
+        .map((event) {
+          if (event is TaskModel) {
+            return CalendarEvent(
+              title: event.text,
+              date: event.dueDate ?? event.createdAt,
+              type: event.journeyId != null && event.journeyId!.isNotEmpty
+                  ? EventType.goalTask
+                  : EventType.task,
+            );
+          } else if (event is JournalEntry) {
+            return CalendarEvent(
+              title: event.content,
+              date: event.createdAt,
+              type: EventType.journal,
+            );
+          }
+          return null;
+        })
+        .whereType<CalendarEvent>()
+        .toList();
+
+    _calendarEvents = groupBy<CalendarEvent, DateTime>(
+      allCalendarEvents,
+      (event) =>
+          DateTime.utc(event.date.year, event.date.month, event.date.day),
+    );
+
     if (mounted) {
       setState(() {
-        _events = groupedEvents;
+        _isLoading = false;
+        if (_selectedDay != null) {
+          _updatePersonalDay(_selectedDay!);
+        }
       });
     }
   }
@@ -111,188 +143,124 @@ class _CalendarScreenState extends State<CalendarScreen> {
           _selectedDay = selectedDay;
           _focusedDay = focusedDay;
         });
+        _updatePersonalDay(selectedDay);
       }
-      _updatePersonalDay(selectedDay);
     }
   }
 
-  List<CalendarEvent> _getEventsForDay(DateTime day) {
-    return _events[DateTime.utc(day.year, day.month, day.day)] ?? [];
+  List<dynamic> _getRawEventsForDay(DateTime day) {
+    return _rawEvents[DateTime.utc(day.year, day.month, day.day)] ?? [];
   }
 
-  void _openAddTaskModalForSelectedDay() {
+  void _openAddTaskModal({TaskModel? task}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => TaskInputModal(
         userData: widget.userData,
-        preselectedDate: _selectedDay,
+        preselectedDate: task == null ? _selectedDay : null,
+        taskToEdit: task,
       ),
-    );
+    ).then((_) {
+      _fetchEventsForMonth(_focusedDay);
+    });
   }
 
-  void _onPageChanged({bool? isNext, DateTime? newFocusedDay}) {
-    final pageDay = newFocusedDay ??
-        (isNext == true
-            ? DateTime(_focusedDay.year, _focusedDay.month + 1)
-            : DateTime(_focusedDay.year, _focusedDay.month - 1));
+  void _onPageChanged(DateTime newFocusedDay) {
+    if (!mounted) return;
+    setState(() {
+      _focusedDay = newFocusedDay;
+      if (_selectedDay == null || !isSameMonth(_selectedDay, newFocusedDay)) {
+        _selectedDay = newFocusedDay;
+        _updatePersonalDay(newFocusedDay);
+      }
+    });
+    _fetchEventsForMonth(newFocusedDay);
+  }
 
-    setState(() => _focusedDay = pageDay);
-    _fetchEventsForMonth(pageDay);
+  void _onToggleTask(TaskModel task, bool isCompleted) async {
+    await _firestoreService.updateTaskCompletion(_userId, task.id,
+        completed: isCompleted);
+    _fetchEventsForMonth(_focusedDay);
+  }
+
+  void _onDeleteTask(TaskModel task) async {
+    await _firestoreService.deleteTask(_userId, task.id);
+    _fetchEventsForMonth(_focusedDay);
+  }
+
+  void _onDuplicateTask(TaskModel task) async {
+    final duplicatedTask = task.copyWith(
+      id: '',
+      completed: false,
+      createdAt: DateTime.now(),
+    );
+    await _firestoreService.addTask(_userId, duplicatedTask);
+    _fetchEventsForMonth(_focusedDay);
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 800;
-        return Scaffold(
-          backgroundColor: AppColors.background,
-          body: _isLoading
-              ? const Center(child: CustomLoadingSpinner())
-              : isDesktop
-                  ? _buildDesktopLayout(constraints)
-                  : _buildMobileLayout(),
-          floatingActionButton: isDesktop
-              ? null
-              : CalendarFab(onAddTask: _openAddTaskModalForSelectedDay),
-        );
-      },
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      body: SafeArea(
+        child: _isLoading
+            ? const Center(child: CustomLoadingSpinner())
+            : _buildMobileLayout(),
+      ),
+      floatingActionButton: CalendarFab(onAddTask: () => _openAddTaskModal()),
     );
   }
 
   Widget _buildMobileLayout() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
         children: [
           CalendarHeader(
             focusedDay: _focusedDay,
             onTodayButtonTap: () {
               final now = DateTime.now();
-              if (isSameDay(_focusedDay, now)) return;
-              setState(() {
-                _focusedDay = now;
-                _selectedDay = now;
-              });
-              _fetchEventsForMonth(_focusedDay);
-              _updatePersonalDay(_focusedDay);
+              if (!isSameMonth(_focusedDay, now)) {
+                _onPageChanged(now);
+              }
+              _onDaySelected(now, now);
             },
-            onLeftArrowTap: () => _onPageChanged(isNext: false),
-            onRightArrowTap: () => _onPageChanged(isNext: true),
+            onLeftArrowTap: () => _onPageChanged(
+                DateTime(_focusedDay.year, _focusedDay.month - 1)),
+            onRightArrowTap: () => _onPageChanged(
+                DateTime(_focusedDay.year, _focusedDay.month + 1)),
           ),
-          const SizedBox(height: 8),
           Expanded(
             child: SingleChildScrollView(
               child: Column(
                 children: [
+                  // *** CORREÇÃO FINAL APLICADA AQUI ***
                   CustomCalendar(
                     focusedDay: _focusedDay,
                     selectedDay: _selectedDay,
                     onDaySelected: _onDaySelected,
-                    onPageChanged: (day) => _onPageChanged(newFocusedDay: day),
-                    isDesktop: false,
-                    personalDayNumber: _personalDayNumber,
-                    events: _events,
+                    onPageChanged: _onPageChanged,
+                    events:
+                        _calendarEvents, // A propriedade 'events' está correta agora
                   ),
                   const SizedBox(height: 16),
                   DayDetailPanel(
                     selectedDay: _selectedDay,
                     personalDayNumber: _personalDayNumber,
                     events: _selectedDay != null
-                        ? _getEventsForDay(_selectedDay!)
+                        ? _getRawEventsForDay(_selectedDay!)
                         : [],
-                    onAddTask: _openAddTaskModalForSelectedDay,
+                    onAddTask: () => _openAddTaskModal(),
+                    onEditTask: (task) => _openAddTaskModal(task: task),
+                    onDeleteTask: _onDeleteTask,
+                    onDuplicateTask: _onDuplicateTask,
+                    onToggleTask: _onToggleTask,
                   ),
+                  const SizedBox(height: 80),
                 ],
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopLayout(BoxConstraints constraints) {
-    final availableWidth = (constraints.maxWidth - 48) * (3 / 5);
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 3,
-            child: Column(
-              children: [
-                CalendarHeader(
-                  focusedDay: _focusedDay,
-                  onTodayButtonTap: () {
-                    final now = DateTime.now();
-                    if (isSameDay(_focusedDay, now)) return;
-                    setState(() {
-                      _focusedDay = now;
-                      _selectedDay = now;
-                    });
-                    _fetchEventsForMonth(_focusedDay);
-                    _updatePersonalDay(_focusedDay);
-                  },
-                  onLeftArrowTap: () => _onPageChanged(isNext: false),
-                  onRightArrowTap: () => _onPageChanged(isNext: true),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  // *** INÍCIO DA ATUALIZAÇÃO ***
-                  // 1. Envelopamos o Scrollbar com um widget Theme.
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      // 2. Definimos um tema customizado para a barra de rolagem.
-                      scrollbarTheme: ScrollbarThemeData(
-                        // 3. A cor da barra agora usa a cor primária do app.
-                        thumbColor:
-                            MaterialStateProperty.all(AppColors.primary),
-                        // Opcional: Adicionamos um arredondamento suave.
-                        radius: const Radius.circular(10),
-                        // Opcional: Ajustamos a espessura.
-                        thickness: MaterialStateProperty.all(8),
-                      ),
-                    ),
-                    child: Scrollbar(
-                      controller: _calendarScrollController,
-                      // 4. Removemos 'thumbVisibility' e 'trackVisibility' para
-                      //    que a barra só apareça ao passar o mouse.
-                      child: SingleChildScrollView(
-                        controller: _calendarScrollController,
-                        padding: const EdgeInsets.only(right: 16.0),
-                        child: CustomCalendar(
-                          focusedDay: _focusedDay,
-                          selectedDay: _selectedDay,
-                          onDaySelected: _onDaySelected,
-                          onPageChanged: (day) =>
-                              _onPageChanged(newFocusedDay: day),
-                          isDesktop: true,
-                          calendarWidth: availableWidth - 16.0,
-                          personalDayNumber: _personalDayNumber,
-                          events: _events,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // *** FIM DA ATUALIZAÇÃO ***
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 24),
-          Expanded(
-            flex: 2,
-            child: DayDetailPanel(
-              selectedDay: _selectedDay,
-              personalDayNumber: _personalDayNumber,
-              events:
-                  _selectedDay != null ? _getEventsForDay(_selectedDay!) : [],
-              isDesktop: true,
-              onAddTask: _openAddTaskModalForSelectedDay,
             ),
           ),
         ],

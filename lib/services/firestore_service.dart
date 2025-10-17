@@ -1,5 +1,4 @@
 // lib/services/firestore_service.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -33,7 +32,8 @@ class FirestoreService {
     }
   }
 
-  // --- MÉTODOS DE TAREFAS (Foco do Dia / Calendário / Marcos de Metas) ---
+  // --- MÉTODOS DE TAREFAS ---
+
   Future<List<TaskModel>> getTasksForCalendar(
       String userId, DateTime month) async {
     final startOfMonth = DateTime.utc(month.year, month.month, 1);
@@ -73,30 +73,6 @@ class FirestoreService {
     }
   }
 
-  Future<List<TaskModel>> getTasksForToday(String userId) async {
-    final todayStart =
-        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
-    final todayEnd = todayStart.add(const Duration(days: 1));
-    try {
-      final querySnapshot = await _db
-          .collection('users')
-          .doc(userId)
-          .collection('tasks')
-          .where('dueDate',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(todayStart))
-          .where('dueDate', isLessThan: Timestamp.fromDate(todayEnd))
-          .get();
-      return querySnapshot.docs
-          .map((doc) => TaskModel.fromFirestore(doc))
-          .toList();
-    } catch (e) {
-      print("Erro ao buscar tarefas de hoje: $e");
-      return [];
-    }
-  }
-
-  // ALTERADO: Este stream agora busca TODAS as tarefas, tornando-o mais reutilizável.
-  // A filtragem por data ou meta será feita na UI.
   Stream<List<TaskModel>> getTasksStream(String userId) {
     return _db
         .collection('users')
@@ -107,6 +83,17 @@ class FirestoreService {
         .map((snapshot) {
       return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
     });
+  }
+
+  Stream<List<TaskModel>> getTasksForGoalStream(String userId, String goalId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('tasks')
+        .where('journeyId', isEqualTo: goalId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList());
   }
 
   Future<void> addTask(String userId, TaskModel task) async {
@@ -180,6 +167,32 @@ class FirestoreService {
     });
   }
 
+  // *** MÉTODO NOVO E CORRIGIDO ADICIONADO AQUI ***
+  Future<List<JournalEntry>> getJournalEntriesForMonth(
+      String userId, DateTime month) async {
+    try {
+      final startOfMonth = DateTime(month.year, month.month, 1);
+      final endOfMonth = DateTime(month.year, month.month + 1, 0, 23, 59, 59);
+
+      final querySnapshot = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('journalEntries') // Nome da coleção corrigido
+          .where('createdAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
+          .where('createdAt',
+              isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => JournalEntry.fromFirestore(doc))
+          .toList();
+    } catch (e) {
+      print("Erro ao buscar anotações do diário para o mês: $e");
+      return [];
+    }
+  }
+
   Future<void> addJournalEntry(String userId, Map<String, dynamic> data) async {
     await _db
         .collection('users')
@@ -222,6 +235,21 @@ class FirestoreService {
             snapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList());
   }
 
+  Future<List<Goal>> getActiveGoals(String userId) async {
+    try {
+      final querySnapshot = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('goals')
+          .orderBy('createdAt', descending: true)
+          .get();
+      return querySnapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList();
+    } catch (e) {
+      print("Erro ao buscar as jornadas ativas: $e");
+      return [];
+    }
+  }
+
   Future<DocumentReference> addGoal(
       String userId, Map<String, dynamic> data) async {
     return await _db
@@ -239,6 +267,28 @@ class FirestoreService {
         .collection('goals')
         .doc(goalId)
         .update(data);
+  }
+
+  Future<void> updateGoalProgress(String userId, String goalId) async {
+    final tasksSnapshot = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('tasks')
+        .where('journeyId', isEqualTo: goalId)
+        .get();
+
+    if (tasksSnapshot.docs.isEmpty) {
+      await updateGoal(userId, goalId, {'progress': 0});
+      return;
+    }
+
+    final totalTasks = tasksSnapshot.docs.length;
+    final completedTasks = tasksSnapshot.docs
+        .where((doc) => doc.data()['completed'] == true)
+        .length;
+
+    final progress = (completedTasks / totalTasks * 100).round();
+    await updateGoal(userId, goalId, {'progress': progress});
   }
 
   Future<void> deleteGoal(String userId, String goalId) async {
@@ -276,7 +326,6 @@ class FirestoreService {
     }
   }
 
-  // NOVO MÉTODO: Busca uma meta pela sua tag de texto simplificada.
   Future<Goal?> findGoalBySanitizedTitle(
       String userId, String sanitizedTitle) async {
     try {
@@ -287,10 +336,10 @@ class FirestoreService {
         final goal = Goal.fromFirestore(doc);
         if (StringSanitizer.toSimpleTag(goal.title).toLowerCase() ==
             sanitizedTitle.toLowerCase()) {
-          return goal; // Retorna a primeira meta que corresponder
+          return goal;
         }
       }
-      return null; // Retorna nulo se nenhuma for encontrada
+      return null;
     } catch (e) {
       print("Erro ao buscar meta pelo título simplificado: $e");
       return null;

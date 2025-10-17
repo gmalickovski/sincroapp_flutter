@@ -1,3 +1,4 @@
+// lib/common/widgets/dashboard_sidebar.dart
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
@@ -34,6 +35,8 @@ class DashboardSidebar extends StatelessWidget {
           right: BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
         ),
       ),
+      // *** SAFEAREA REMOVIDO DAQUI ***
+      // O Scaffold na tela principal agora gerencia o espaçamento.
       child: Column(
         children: [
           Expanded(
@@ -138,6 +141,7 @@ class _SidebarItemState extends State<_SidebarItem> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           height: 50,
+          margin: const EdgeInsets.symmetric(vertical: 4),
           padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
             color: widget.isSelected
@@ -152,7 +156,6 @@ class _SidebarItemState extends State<_SidebarItem> {
             children: [
               Icon(widget.icon,
                   size: 20, color: _isHovered ? hoverTextColor : iconColor),
-              // --- CORREÇÃO DO OVERFLOW DA ANIMAÇÃO ---
               if (widget.isExpanded)
                 Flexible(
                   child: AnimatedOpacity(

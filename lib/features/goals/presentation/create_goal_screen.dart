@@ -1,5 +1,4 @@
 // lib/features/goals/presentation/create_goal_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -27,12 +26,29 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   final _firestoreService = FirestoreService();
 
   Future<void> _pickDate() async {
+    // Esconde o teclado antes de abrir o seletor de data
+    FocusScope.of(context).unfocus();
+
     final pickedDate = await showDatePicker(
       context: context,
       initialDate: _targetDate ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
-      lastDate: DateTime.now()
-          .add(const Duration(days: 365 * 10)), // 10 anos no futuro
+      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+      locale: const Locale('pt', 'BR'),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: const ColorScheme.dark(
+              primary: AppColors.primary,
+              onPrimary: Colors.white,
+              surface: AppColors.cardBackground,
+              onSurface: AppColors.primaryText,
+            ),
+            dialogBackgroundColor: AppColors.background,
+          ),
+          child: child!,
+        );
+      },
     );
     if (pickedDate != null) {
       setState(() {
@@ -42,7 +58,6 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   }
 
   Future<void> _handleSave() async {
-    // Valida o formulário e verifica se já não está salvando
     if (!_formKey.currentState!.validate() || _isSaving) {
       return;
     }
@@ -82,7 +97,6 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     super.dispose();
   }
 
-  /// Helper para construir a decoração dos campos de texto de forma padronizada.
   InputDecoration _buildInputDecoration({
     required String labelText,
     required String hintText,
@@ -92,8 +106,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       labelStyle: const TextStyle(color: AppColors.secondaryText),
       hintText: hintText,
       hintStyle: const TextStyle(color: AppColors.tertiaryText),
-      filled: true,
-      fillColor: AppColors.background,
+      // *** REMOVIDO: fillColor para um look mais clean ***
+      filled: false,
       border: const OutlineInputBorder(
         borderRadius: BorderRadius.all(Radius.circular(8)),
         borderSide: BorderSide(color: AppColors.border),
@@ -112,9 +126,10 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.cardBackground,
+      // *** COR DE FUNDO E APPBAR ATUALIZADOS PARA CONSISTÊNCIA ***
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.cardBackground,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const CloseButton(color: AppColors.secondaryText),
         title: const Text('Nova Jornada',
@@ -122,81 +137,112 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(24.0),
-          children: [
-            TextFormField(
-              controller: _titleController,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold),
-              decoration: _buildInputDecoration(
-                labelText: 'Título da Jornada',
-                hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Por favor, insira um título.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _descriptionController,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              maxLines: 4,
-              decoration: _buildInputDecoration(
-                labelText: 'Descrição',
-                hintText:
-                    'Descreva o que você quer alcançar e por que isso é importante para você.',
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Por favor, insira uma descrição.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: ListTile(
-                onTap: _pickDate,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 8.0, horizontal: 12.0),
-                leading: const Icon(Icons.calendar_today,
-                    color: AppColors.secondaryText),
-                title: Text(
-                  _targetDate == null
-                      ? 'Definir Data Alvo (Opcional)'
-                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 16),
+        // *** USANDO SINGLECHILDSCROLLVIEW PARA MELHOR CONTROLE DO TECLADO ***
+        child: SingleChildScrollView(
+          // *** PADDING HORIZONTAL AJUSTADO ***
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _titleController,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold),
+                decoration: _buildInputDecoration(
+                  labelText: 'Título da Jornada',
+                  hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
                 ),
-                trailing: _targetDate != null
-                    ? IconButton(
-                        icon: const Icon(Icons.clear,
-                            color: AppColors.secondaryText),
-                        onPressed: () => setState(() => _targetDate = null))
-                    : null,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Por favor, insira um título.';
+                  }
+                  return null;
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _descriptionController,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+                maxLines: 5,
+                decoration: _buildInputDecoration(
+                  labelText: 'Descrição',
+                  hintText:
+                      'Descreva o que você quer alcançar e por que isso é importante para você.',
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return 'Por favor, insira uma descrição.';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 24),
+              // *** SELETOR DE DATA COM MELHOR VISUAL E TOQUE ***
+              Material(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(8),
+                child: InkWell(
+                  onTap: _pickDate,
+                  borderRadius: BorderRadius.circular(8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 16.0, horizontal: 12.0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.calendar_today,
+                            color: AppColors.secondaryText),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _targetDate == null
+                                ? 'Definir Data Alvo (Opcional)'
+                                : 'Data Alvo: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(_targetDate!)}',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 16),
+                          ),
+                        ),
+                        if (_targetDate != null)
+                          GestureDetector(
+                            onTap: () => setState(() => _targetDate = null),
+                            child: const Icon(Icons.clear,
+                                color: AppColors.secondaryText),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 100), // Espaço para o botão flutuante
+            ],
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _handleSave,
-        label: _isSaving
-            ? const CustomLoadingSpinner()
-            : const Text("Salvar Jornada"),
-        icon: _isSaving ? null : const Icon(Icons.check),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+      // *** BOTÃO DE SALVAR REPOSICIONADO PARA MELHOR UX ***
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: SizedBox(
+          width: double.infinity,
+          child: FloatingActionButton.extended(
+            onPressed: _handleSave,
+            label: _isSaving
+                ? const CustomLoadingSpinner()
+                : const Text(
+                    "Salvar Jornada",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+            icon: _isSaving ? null : const Icon(Icons.check),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+          ),
+        ),
       ),
     );
   }

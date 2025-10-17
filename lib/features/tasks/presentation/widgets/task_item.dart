@@ -1,5 +1,4 @@
 // lib/features/tasks/presentation/widgets/task_item.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -35,7 +34,6 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // CORRIGIDO: Usa a propriedade 'journeyTitle' do TaskModel atualizado
     final bool hasJourney =
         task.journeyTitle != null && task.journeyTitle!.isNotEmpty;
     final showDateIndicator = _isNotToday(task.dueDate);
@@ -51,33 +49,32 @@ class TaskItem extends StatelessWidget {
       splashColor: AppColors.primary.withOpacity(0.1),
       highlightColor: AppColors.primary.withOpacity(0.1),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        // *** PADDING AJUSTADO PARA REMOVER ESPAÇO INTERNO À DIREITA ***
+        padding: const EdgeInsets.only(left: 4, right: 0, top: 8, bottom: 8),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             GestureDetector(
               onTap: () => onToggle(!task.completed),
               child: Container(
-                padding: const EdgeInsets.fromLTRB(4, 6, 4, 4),
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
+                width: 24,
+                height: 24,
+                margin: const EdgeInsets.only(top: 6, right: 4),
+                decoration: BoxDecoration(
+                  color: task.completed
+                      ? Colors.green.shade500
+                      : Colors.transparent,
+                  shape: BoxShape.circle,
+                  border: Border.all(
                     color: task.completed
                         ? Colors.green.shade500
-                        : Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: task.completed
-                          ? Colors.green.shade500
-                          : AppColors.tertiaryText,
-                      width: 2,
-                    ),
+                        : AppColors.tertiaryText,
+                    width: 2,
                   ),
-                  child: task.completed
-                      ? const Icon(Icons.check, size: 14, color: Colors.white)
-                      : null,
                 ),
+                child: task.completed
+                    ? const Icon(Icons.check, size: 16, color: Colors.white)
+                    : null,
               ),
             ),
             const SizedBox(width: 8),
@@ -86,7 +83,7 @@ class TaskItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Padding(
-                    padding: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.only(top: 7),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -119,7 +116,7 @@ class TaskItem extends StatelessWidget {
                   if (showDateIndicator ||
                       task.tags.isNotEmpty ||
                       (showJourney && hasJourney))
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                   Wrap(
                     spacing: 12,
                     runSpacing: 8,
@@ -135,10 +132,9 @@ class TaskItem extends StatelessWidget {
                       if (showJourney && hasJourney)
                         _IndicatorIcon(
                           icon: Icons.flag_outlined,
-                          // CORRIGIDO: Usa 'journeyTitle' e o sanitizador
                           text:
                               '@${StringSanitizer.toSimpleTag(task.journeyTitle!)}',
-                          color: AppColors.primary.withOpacity(0.8),
+                          color: Colors.cyanAccent,
                         ),
                       ...task.tags.map((tag) => _TagChip(tag: tag)).toList(),
                     ],
@@ -205,7 +201,7 @@ class TaskItem extends StatelessWidget {
   }
 }
 
-// Widgets auxiliares (sem alterações)
+// Widgets auxiliares
 class _IndicatorIcon extends StatelessWidget {
   final IconData icon;
   final String text;

@@ -1,5 +1,4 @@
 // lib/features/tasks/presentation/widgets/tasks_list_view.dart
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
@@ -54,6 +53,7 @@ class TasksListView extends StatelessWidget {
     }
 
     return ListView.builder(
+      // *** PADDING HORIZONTAL REMOVIDO PARA SER CONTROLADO PELA TELA PAI ***
       padding: const EdgeInsets.only(top: 8, bottom: 80),
       itemCount: tasks.length,
       itemBuilder: (context, index) {

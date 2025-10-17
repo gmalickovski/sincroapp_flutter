@@ -1,3 +1,4 @@
+// lib/common/widgets/info_card.dart
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -12,7 +13,7 @@ class InfoCard extends StatefulWidget {
   final VoidCallback? onTap;
   final bool isEditMode;
   final Widget? dragHandle;
-  final bool isDesktopLayout; // Parâmetro para controlar o layout
+  final bool isDesktopLayout;
 
   const InfoCard({
     super.key,
@@ -24,7 +25,7 @@ class InfoCard extends StatefulWidget {
     this.onTap,
     this.isEditMode = false,
     this.dragHandle,
-    this.isDesktopLayout = false, // Padrão é o layout mobile
+    this.isDesktopLayout = false,
   });
 
   @override
@@ -66,8 +67,8 @@ class _InfoCardState extends State<InfoCard> {
           child: Stack(
             children: [
               Padding(
-                padding: const EdgeInsets.all(24.0),
-                // ESCOLHE O LAYOUT COM BASE NO PARÂMETRO
+                // *** PADDING INTERNO REDUZIDO PARA MELHOR LAYOUT ***
+                padding: const EdgeInsets.all(20.0),
                 child: widget.isDesktopLayout
                     ? _buildDesktopLayout(displayTitle)
                     : _buildMobileLayout(displayTitle),
@@ -105,11 +106,10 @@ class _InfoCardState extends State<InfoCard> {
     );
   }
 
-  // Layout antigo, que funciona perfeitamente no Mobile
   Widget _buildMobileLayout(String displayTitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min, // Chave para o layout mobile funcionar
+      mainAxisSize: MainAxisSize.min,
       children: [
         Row(children: [
           Icon(widget.icon, color: AppColors.primaryAccent, size: 24),
@@ -192,12 +192,10 @@ class _InfoCardState extends State<InfoCard> {
     );
   }
 
-  // Layout novo, que funciona perfeitamente no Desktop
   Widget _buildDesktopLayout(String displayTitle) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 1. Título (Topo)
         Row(
           children: [
             Icon(widget.icon, color: AppColors.primaryAccent, size: 24),
@@ -209,8 +207,6 @@ class _InfoCardState extends State<InfoCard> {
                     fontSize: 16)),
           ],
         ),
-
-        // 2. Conteúdo (Centralizado)
         Expanded(
           child: Center(
             child:
@@ -264,8 +260,6 @@ class _InfoCardState extends State<InfoCard> {
             ]),
           ),
         ),
-
-        // 3. Tags (Base)
         if (widget.info.tags.isNotEmpty)
           Wrap(
             spacing: 8.0,
