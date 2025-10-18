@@ -95,64 +95,63 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Dados da Análise',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            const Padding(
-              padding: EdgeInsets.only(top: 4, bottom: 16),
-              child: Text('Informações usadas para os cálculos numerológicos.',
-                  style: TextStyle(color: AppColors.secondaryText)),
-            ),
-            TextFormField(
-              controller: _analysisNameController,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Nome Completo (para análise)',
-                labelStyle: TextStyle(color: AppColors.secondaryText),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12.0),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Dados da Análise',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+              const Padding(
+                padding: EdgeInsets.only(top: 4, bottom: 16),
+                child: Text(
+                    'Informações usadas para os cálculos numerológicos.',
+                    style: TextStyle(color: AppColors.secondaryText)),
               ),
-              validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _birthDateController,
-              readOnly: true,
-              onTap: () => _selectDate(context),
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                labelText: 'Data de Nascimento',
-                labelStyle: TextStyle(color: AppColors.secondaryText),
-                suffixIcon:
-                    Icon(Icons.calendar_today, color: AppColors.secondaryText),
-                enabledBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.border)),
-                focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: AppColors.primary)),
+              TextFormField(
+                controller: _analysisNameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Nome Completo (para análise)',
+                ),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
-              validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isSaving ? null : _handleSaveChanges,
-              child: _isSaving
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Text('Salvar Alterações'),
-            ),
-          ],
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _birthDateController,
+                readOnly: true,
+                onTap: () => _selectDate(context),
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Data de Nascimento',
+                  suffixIcon: Icon(Icons.calendar_today,
+                      color: AppColors.secondaryText),
+                ),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _handleSaveChanges,
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Salvar Alterações'),
+              ),
+            ],
+          ),
         ),
       ),
     );

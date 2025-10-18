@@ -164,126 +164,151 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Seção Minha Conta
-          _buildSectionHeader(
-              'Minha Conta', 'Veja e edite suas informações pessoais.'),
-          Form(
-            key: _formKeyInfo,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _firstNameController,
-                  decoration: const InputDecoration(labelText: 'Nome'),
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _lastNameController,
-                  decoration: const InputDecoration(labelText: 'Sobrenome'),
-                ),
-              ],
+          _buildSectionCard(
+            title: 'Minha Conta',
+            subtitle: 'Veja e edite suas informações pessoais.',
+            content: Form(
+              key: _formKeyInfo,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _firstNameController,
+                    decoration: const InputDecoration(labelText: 'Nome'),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _lastNameController,
+                    decoration: const InputDecoration(labelText: 'Sobrenome'),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _isSavingInfo ? null : _handleSaveChanges,
+                    child: _isSavingInfo
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Salvar Alterações'),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _isSavingInfo ? null : _handleSaveChanges,
-            child: _isSavingInfo
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Salvar Alterações'),
-          ),
 
-          const Divider(height: 48),
+          const SizedBox(height: 24),
 
           // Seção Alterar Senha
-          _buildSectionHeader('Alterar Senha', ''),
-          Form(
-            key: _formKeyPassword,
-            child: Column(
-              children: [
-                TextFormField(
-                  controller: _currentPasswordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Senha Atual'),
-                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _newPasswordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(labelText: 'Nova Senha'),
-                  validator: (v) =>
-                      (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _confirmPasswordController,
-                  obscureText: true,
-                  decoration:
-                      const InputDecoration(labelText: 'Confirmar Nova Senha'),
-                  validator: (v) =>
-                      (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
-                ),
-              ],
+          _buildSectionCard(
+            title: 'Alterar Senha',
+            subtitle: 'Recomendamos o uso de uma senha forte e única.',
+            content: Form(
+              key: _formKeyPassword,
+              child: Column(
+                children: [
+                  TextFormField(
+                    controller: _currentPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Senha Atual'),
+                    validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _newPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(labelText: 'Nova Senha'),
+                    validator: (v) =>
+                        (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                        labelText: 'Confirmar Nova Senha'),
+                    validator: (v) =>
+                        (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _isSavingPassword ? null : _handleChangePassword,
+                    child: _isSavingPassword
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Text('Alterar Senha'),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _isSavingPassword ? null : _handleChangePassword,
-            child: _isSavingPassword
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Alterar Senha'),
-          ),
 
-          const Divider(height: 48),
+          const SizedBox(height: 24),
 
           // Seção Zona de Perigo
-          _buildSectionHeader('Zona de Perigo',
-              'Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.',
-              isDangerZone: true),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.2),
-                foregroundColor: Colors.red.shade300),
-            onPressed: _isDeleting ? null : _handleDeleteAccount,
-            child: _isDeleting
-                ? const SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Deletar minha conta'),
+          _buildSectionCard(
+            isDangerZone: true,
+            title: 'Zona de Perigo',
+            subtitle:
+                'Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.',
+            content: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade800.withOpacity(0.8),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 45)),
+              onPressed: _isDeleting ? null : _handleDeleteAccount,
+              child: _isDeleting
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Text('Deletar minha conta'),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title, String subtitle,
-      {bool isDangerZone = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            color: isDangerZone ? Colors.red.shade300 : Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
+  Widget _buildSectionCard({
+    required String title,
+    required String subtitle,
+    required Widget content,
+    bool isDangerZone = false,
+  }) {
+    final borderColor = isDangerZone ? Colors.red.shade400 : AppColors.border;
+    final titleColor =
+        isDangerZone ? Colors.red.shade300 : AppColors.primaryText;
+
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              color: titleColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
-        if (subtitle.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4, bottom: 16),
             child: Text(subtitle,
                 style: const TextStyle(color: AppColors.secondaryText)),
           ),
-      ],
+          content,
+        ],
+      ),
     );
   }
 }

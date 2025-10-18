@@ -1,4 +1,5 @@
 // lib/services/firestore_service.dart
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -19,8 +20,6 @@ class FirestoreService {
     }
   }
 
-  // *** NOVO MÉTODO ADICIONADO AQUI ***
-  /// Atualiza campos específicos do documento de um usuário.
   Future<void> updateUserData(String uid, Map<String, dynamic> data) async {
     try {
       await _db.collection('users').doc(uid).update(data);
@@ -44,6 +43,30 @@ class FirestoreService {
   }
 
   // --- MÉTODOS DE TAREFAS ---
+
+  // *** NOVA FUNÇÃO ADICIONADA AQUI ***
+  /// Busca as tarefas de um usuário com data para o dia de hoje,
+  /// seguindo a estrutura de sub-coleção.
+  Future<List<TaskModel>> getTasksForToday(String userId) async {
+    try {
+      final now = DateTime.now();
+      final startOfToday = DateTime(now.year, now.month, now.day);
+      final endOfToday = startOfToday.add(const Duration(days: 1));
+
+      final snapshot = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('tasks')
+          .where('dueDate', isGreaterThanOrEqualTo: startOfToday)
+          .where('dueDate', isLessThan: endOfToday)
+          .get();
+
+      return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
+    } catch (e) {
+      print("Erro ao buscar tarefas de hoje: $e");
+      return [];
+    }
+  }
 
   Future<List<TaskModel>> getTasksForCalendar(
       String userId, DateTime month) async {

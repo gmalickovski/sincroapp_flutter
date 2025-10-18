@@ -68,10 +68,13 @@ class DayDetailPanel extends StatelessWidget {
           child: events.isEmpty
               ? _buildEmptyStateMobile()
               : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  // Padding vertical da lista zerado
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   shrinkWrap: true,
                   itemCount: events.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  // Separador com altura 0, pois os itens controlam o próprio espaçamento
+                  separatorBuilder: (_, __) => const SizedBox(height: 0),
                   itemBuilder: (context, index) {
                     final event = events[index];
                     if (event is TaskModel) {
@@ -83,6 +86,8 @@ class DayDetailPanel extends StatelessWidget {
                         onEdit: () => onEditTask(event),
                         onDelete: () => onDeleteTask(event),
                         onDuplicate: () => onDuplicateTask(event),
+                        // Passamos o override de 3.0
+                        verticalPaddingOverride: 3.0,
                       );
                     }
                     if (event is JournalEntry) {
@@ -137,36 +142,44 @@ class _JournalListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.cardBackground.withOpacity(0.5),
-      borderRadius: BorderRadius.circular(8),
-      child: InkWell(
-        onTap: onTap,
+    // --- INÍCIO DA MODIFICAÇÃO (Adiciona padding externo) ---
+    // Envolvemos o Material com um Padding, exatamente como o TaskItem,
+    // para que ele também tenha um espaçamento externo.
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3.0),
+      child: Material(
+        color: AppColors.cardBackground.withOpacity(0.5),
         borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.only(top: 2.0),
-                child: Icon(Icons.book_outlined,
-                    color: AppColors.journalMarker, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  entry.content,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      color: AppColors.secondaryText, height: 1.5),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            // O padding interno original do seu código (16)
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2.0),
+                  child: Icon(Icons.book_outlined,
+                      color: AppColors.journalMarker, size: 20),
                 ),
-              ),
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    entry.content,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        color: AppColors.secondaryText, height: 1.5),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+    // --- FIM DA MODIFICAÇÃO ---
   }
 }

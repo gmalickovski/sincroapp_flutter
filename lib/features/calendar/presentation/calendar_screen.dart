@@ -30,6 +30,8 @@ class CalendarScreen extends StatefulWidget {
 }
 
 class _CalendarScreenState extends State<CalendarScreen> {
+  static const double kTabletBreakpoint = 768.0;
+
   final FirestoreService _firestoreService = FirestoreService();
   final AuthRepository _authRepository = AuthRepository();
 
@@ -39,8 +41,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Map<DateTime, List<CalendarEvent>> _events = {};
   Map<DateTime, List<dynamic>> _rawEvents = {};
-  bool _isLoading = true;
   int? _personalDayNumber;
+
+  // --- INÍCIO DA CORREÇÃO (Gerenciamento de Loading) ---
+
+  // Controla o loading inicial da tela inteira
+  bool _isScreenLoading = true;
+  // Controla o loading ao trocar de mês (sobre o calendário)
+  bool _isChangingMonth = false;
+
+  // --- FIM DA CORREÇÃO ---
 
   @override
   void initState() {
@@ -52,18 +62,24 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<void> _loadInitialData() async {
+    // _isScreenLoading já é true por padrão
     await _fetchEventsForMonth(_focusedDay);
     if (mounted && _selectedDay != null) {
       _updatePersonalDay(_selectedDay!);
     }
     if (mounted) {
-      setState(() => _isLoading = false);
+      // Desativa o loading de tela cheia
+      setState(() => _isScreenLoading = false);
     }
   }
 
   Future<void> _fetchEventsForMonth(DateTime month) async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+
+    // --- INÍCIO DA CORREÇÃO ---
+    // REMOVIDO: setState(() => _isLoading = true);
+    // Esta linha era a causa da "piscada" em todas as ações.
+    // --- FIM DA CORREÇÃO ---
 
     final tasksFuture = _firestoreService.getTasksForCalendar(_userId, month);
     final journalFuture =
@@ -113,9 +129,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     if (mounted) {
+      // --- INÍCIO DA CORREÇÃO ---
+      // Apenas atualiza o estado com os novos dados
+      // e desliga o loading de troca de mês.
       setState(() {
-        _isLoading = false;
+        _isChangingMonth = false;
       });
+      // --- FIM DA CORREÇÃO ---
     }
   }
 
@@ -157,6 +177,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         preselectedDate: task == null ? _selectedDay : null,
         taskToEdit: task,
       ),
+      // _fetchEventsForMonth agora apenas atualiza os dados, sem "piscar"
     ).then((_) => _fetchEventsForMonth(_focusedDay));
   }
 
@@ -183,19 +204,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   void _onPageChanged(DateTime newFocusedDay) {
     if (mounted) {
-      setState(() => _focusedDay = newFocusedDay);
+      // --- INÍCIO DA CORREÇÃO ---
+      // Ativa o loading de troca de mês
+      setState(() {
+        _focusedDay = newFocusedDay;
+        _isChangingMonth = true;
+      });
+      // Busca os eventos. O próprio _fetchEventsForMonth vai
+      // desligar o _isChangingMonth e chamar setState.
       _fetchEventsForMonth(newFocusedDay);
+      // --- FIM DA CORREÇÃO ---
     }
   }
 
   void _onToggleTask(TaskModel task, bool isCompleted) async {
     await _firestoreService.updateTaskCompletion(_userId, task.id,
         completed: isCompleted);
+    // Apenas atualiza os dados, sem "piscar"
     _fetchEventsForMonth(_focusedDay);
   }
 
   void _onDeleteTask(TaskModel task) async {
     await _firestoreService.deleteTask(_userId, task.id);
+    // Apenas atualiza os dados, sem "piscar"
     _fetchEventsForMonth(_focusedDay);
   }
 
@@ -203,6 +234,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final duplicatedTask =
         task.copyWith(id: '', completed: false, createdAt: DateTime.now());
     await _firestoreService.addTask(_userId, duplicatedTask);
+    // Apenas atualiza os dados, sem "piscar"
     _fetchEventsForMonth(_focusedDay);
   }
 
@@ -215,9 +247,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: _isLoading
+        // --- INÍCIO DA CORREÇÃO ---
+        // Usa a nova variável _isScreenLoading para o loading inicial
+        child: _isScreenLoading
             ? const Center(child: CustomLoadingSpinner())
-            : _buildMobileLayout(),
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  if (constraints.maxWidth >= kTabletBreakpoint) {
+                    return _buildWideLayout(context);
+                  } else {
+                    return _buildMobileLayout(context);
+                  }
+                },
+              ),
+        // --- FIM DA CORREÇÃO ---
       ),
       floatingActionButton: CalendarFab(
         onAddTask: () => _openAddTaskModal(),
@@ -226,7 +269,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
-  Widget _buildMobileLayout() {
+  // Layout padrão para mobile (vertical)
+  Widget _buildMobileLayout(BuildContext context) {
     return Column(
       children: [
         Padding(
@@ -248,18 +292,124 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     DateTime(_focusedDay.year, _focusedDay.month + 1)),
               ),
               const SizedBox(height: 8),
-              CustomCalendar(
-                focusedDay: _focusedDay,
-                selectedDay: _selectedDay,
-                onDaySelected: _onDaySelected,
-                onPageChanged: _onPageChanged,
-                isDesktop: false,
-                events: _events,
+              // --- INÍCIO DA CORREÇÃO ---
+              // Envolve o calendário em um Stack para mostrar o loading
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  CustomCalendar(
+                    focusedDay: _focusedDay,
+                    selectedDay: _selectedDay,
+                    onDaySelected: _onDaySelected,
+                    onPageChanged: _onPageChanged,
+                    isDesktop: false,
+                    events: _events,
+                    personalDayNumber: _personalDayNumber,
+                  ),
+                  // Mostra o spinner sobre o calendário se _isChangingMonth for true
+                  if (_isChangingMonth)
+                    Container(
+                      height: 300, // Altura aproximada do calendário
+                      decoration: BoxDecoration(
+                        color: AppColors.background.withOpacity(0.5),
+                        borderRadius: BorderRadius.circular(8.0),
+                      ),
+                      child: const Center(child: CustomLoadingSpinner()),
+                    ),
+                ],
               ),
+              // --- FIM DA CORREÇÃO ---
             ],
           ),
         ),
         Expanded(
+          child: DayDetailPanel(
+            selectedDay: _selectedDay,
+            personalDayNumber: _personalDayNumber,
+            events:
+                _selectedDay != null ? _getRawEventsForDay(_selectedDay!) : [],
+            onAddTask: () => _openAddTaskModal(),
+            onEditTask: (task) => _openAddTaskModal(task: task),
+            onDeleteTask: _onDeleteTask,
+            onDuplicateTask: _onDuplicateTask,
+            onToggleTask: _onToggleTask,
+            onJournalTap: _openJournalEditor,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Novo layout para telas largas (horizontal/split-view)
+  Widget _buildWideLayout(BuildContext context) {
+    return Row(
+      children: [
+        // Painel Esquerdo (Calendário)
+        Expanded(
+          flex: 2,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                CalendarHeader(
+                  focusedDay: _focusedDay,
+                  onTodayButtonTap: () {
+                    final now = DateTime.now();
+                    if (!_isSameMonth(_focusedDay, now)) {
+                      _onPageChanged(now);
+                    }
+                    _onDaySelected(now, now);
+                  },
+                  onLeftArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                  onRightArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                ),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    // --- INÍCIO DA CORREÇÃO ---
+                    // Envolve o calendário em um Stack para mostrar o loading
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        CustomCalendar(
+                          focusedDay: _focusedDay,
+                          selectedDay: _selectedDay,
+                          onDaySelected: _onDaySelected,
+                          onPageChanged: _onPageChanged,
+                          isDesktop: true,
+                          calendarWidth: constraints.maxWidth,
+                          events: _events,
+                          personalDayNumber: _personalDayNumber,
+                        ),
+                        // Mostra o spinner sobre o calendário se _isChangingMonth for true
+                        if (_isChangingMonth)
+                          Container(
+                            // Altura dinâmica baseada na largura (aprox. 6 linhas)
+                            height: (constraints.maxWidth / 7) * 6,
+                            decoration: BoxDecoration(
+                              color: AppColors.background.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: const Center(child: CustomLoadingSpinner()),
+                          ),
+                      ],
+                    );
+                    // --- FIM DA CORREÇÃO ---
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Divisor visual
+        VerticalDivider(
+            width: 1, thickness: 1, color: AppColors.border.withOpacity(0.5)),
+        // Painel Direito (Detalhes do Dia)
+        Expanded(
+          flex: 1,
           child: DayDetailPanel(
             selectedDay: _selectedDay,
             personalDayNumber: _personalDayNumber,
