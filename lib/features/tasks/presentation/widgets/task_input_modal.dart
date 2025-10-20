@@ -9,10 +9,22 @@ import 'package:sincro_app_flutter/features/authentication/data/content_data.dar
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
+// Importa o parser que você forneceu (que usa a classe ParsedTask)
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+
+// --- INÍCIO DA CORREÇÃO (Regex copiados do parser) ---
+const String _monthPattern =
+    "janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez";
+
+final RegExp _ddMmYyPattern = RegExp(r'/\s*(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?');
+
+final RegExp _fullDatePattern = RegExp(r'/\s*dia\s+(\d{1,2})(?:\s+de)?\s+(' +
+    _monthPattern +
+    r')(?:\s+de\s+(\d{4}))?');
+// --- FIM DA CORREÇÃO ---
 
 class _SyntaxHighlightingController extends TextEditingController {
   final Map<RegExp, TextStyle> patternMap;
@@ -65,7 +77,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
   late _SyntaxHighlightingController _textController;
   final FirestoreService _firestoreService = FirestoreService();
 
-  DateTime _selectedDate = DateTime.now();
+  // --- Correção de Sincronia ---
+  DateTime _dateForVibration = DateTime.now();
+  DateTime? _parsedDueDate;
+  // --- Fim Correção de Sincronia ---
+
   int _personalDay = 0;
   VibrationContent? _dayInfo;
 
@@ -79,20 +95,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
   @override
   void initState() {
     super.initState();
-    final monthPattern = TaskParser.getMonthPattern();
 
     _textController = _SyntaxHighlightingController(
       patternMap: {
         RegExp(r"#(\w+)"): const TextStyle(color: Colors.purpleAccent),
         RegExp(r"@(\w+)"): const TextStyle(color: Colors.cyanAccent),
-        RegExp(r"/\s*(?:dia\s+\d{1,2}(?:\s+de)?\s+(" +
-                monthPattern +
-                r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)"):
-            const TextStyle(color: Colors.orangeAccent),
+        // Usa as variáveis RegExp locais
+        _ddMmYyPattern: const TextStyle(color: Colors.orangeAccent),
+        _fullDatePattern: const TextStyle(color: Colors.orangeAccent),
       },
     );
 
     if (_isEditing) {
+      // Lógica de edição (permanece a mesma, mostra os dados)
       String editText = widget.taskToEdit!.text;
       if (widget.taskToEdit!.journeyTitle != null &&
           widget.taskToEdit!.journeyTitle!.isNotEmpty) {
@@ -106,26 +121,24 @@ class _TaskInputModalState extends State<TaskInputModal> {
         editText += ' /${formattedDate}';
       }
       _textController.text = editText;
-      _selectedDate = widget.taskToEdit!.dueDate ?? DateTime.now();
-    }
-    // *** CORREÇÃO DO BUG AQUI ***
-    else if (widget.preselectedGoal != null) {
-      final simplifiedTag =
-          StringSanitizer.toSimpleTag(widget.preselectedGoal!.title);
-      // Define o texto inicial diretamente, em vez de chamar a função que causava o erro
-      _textController.text = '@$simplifiedTag ';
-      // Move o cursor para o final do texto
-      _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _textController.text.length),
-      );
+
+      _parsedDueDate = widget.taskToEdit!.dueDate;
+      _dateForVibration = widget.taskToEdit!.dueDate ?? DateTime.now();
+    } else if (widget.preselectedGoal != null) {
+      // A meta é pré-selecionada, mas NÃO é mostrada no texto.
+      _dateForVibration = DateTime.now();
+      // (Não há texto para adicionar)
     } else if (widget.preselectedDate != null) {
-      _selectedDate = widget.preselectedDate!;
-      _updateDateInTextField(_selectedDate);
+      // A data é pré-selecionada, mas NÃO é mostrada no texto.
+      _parsedDueDate = widget.preselectedDate;
+      _dateForVibration = widget.preselectedDate!;
+      // (Não há texto para adicionar)
     }
 
     _textController.addListener(_onTextChanged);
     if (widget.userData != null) {
-      _updateVibrationForDate(_selectedDate);
+      // Define a vibração inicial baseada no que foi definido acima
+      _updateVibrationForDate(_dateForVibration);
       _loadGoals();
     }
   }
@@ -135,10 +148,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
   }
 
   void _onTextChanged() {
-    final parsedDate = TaskParser.parseDateFromText(_textController.text);
-    final currentDateToShow = parsedDate ?? DateTime.now();
+    // 1. Atualiza a variável _parsedDueDate (se o usuário digitar uma data)
+    _parsedDueDate = TaskParser.parseDateFromText(_textController.text);
 
-    if (!_isSameDay(_selectedDate, currentDateToShow)) {
+    // 2. Define qual data usar para a vibração
+    // (Prioridade: Data digitada > Data pré-selecionada "oculta" > Hoje)
+    final currentDateToShow =
+        _parsedDueDate ?? widget.preselectedDate ?? DateTime.now();
+
+    // 3. Atualiza a vibração se a data de referência mudou
+    if (!_isSameDay(_dateForVibration, currentDateToShow)) {
       _updateVibrationForDate(currentDateToShow);
     }
 
@@ -261,7 +280,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       final day = engine.calculatePersonalDayForDate(date);
       if (mounted) {
         setState(() {
-          _selectedDate = date;
+          _dateForVibration = date;
           _personalDay = day;
           _dayInfo = ContentData.vibracoes['diaPessoal']?[_personalDay];
         });
@@ -271,15 +290,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   void _updateDateInTextField(DateTime newDate) {
     _updateVibrationForDate(newDate);
+    _parsedDueDate = newDate;
+
     String currentText = _textController.text;
 
-    final datePattern = RegExp(
-        r"\s*/\s*(?:dia\s+\d{1,2}(?:\s+de)?\s+(" +
-            TaskParser.getMonthPattern() +
-            r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)",
-        caseSensitive: false);
+    // Remove qualquer data antiga
+    final textWithoutDate = currentText
+        .replaceAll(_ddMmYyPattern, '')
+        .replaceAll(_fullDatePattern, '')
+        .trim();
 
-    final textWithoutDate = currentText.replaceAll(datePattern, '').trim();
     final formattedDate = DateFormat('dd/MM/yyyy').format(newDate);
     final newText = '$textWithoutDate /${formattedDate}'.trim();
     _textController.text = newText;
@@ -316,7 +336,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
   Future<void> _selectDate(BuildContext context) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate,
+      initialDate: _dateForVibration,
       firstDate: DateTime(2020),
       lastDate: DateTime(2101),
       locale: const Locale('pt', 'BR'),
@@ -340,7 +360,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
         );
       },
     );
-    if (picked != null && !_isSameDay(picked, _selectedDate)) {
+    if (picked != null && !_isSameDay(picked, _dateForVibration)) {
       _updateDateInTextField(picked);
     }
   }
@@ -378,36 +398,57 @@ class _TaskInputModalState extends State<TaskInputModal> {
   void _submit() async {
     _removeAutocompleteOverlay();
     final rawText = _textController.text.trim();
-    if (rawText.isEmpty) return;
+    if (rawText.isEmpty && widget.preselectedGoal == null) {
+      // Se o texto estiver vazio E não for um marco de meta, não salva.
+      Navigator.of(context).pop(false);
+      return;
+    }
 
     final userId = AuthRepository().getCurrentUser()!.uid;
-    final parsedResult = await TaskParser.parse(rawText, userId);
+
+    final ParsedTask parsedResult = await TaskParser.parse(rawText, userId);
+
+    // 1. Lógica da Data (da última correção)
+    final DateTime? finalDueDate = _parsedDueDate ?? widget.preselectedDate;
+
+    // 2. Lógica da Meta (da última correção)
+    final String? finalJourneyId =
+        parsedResult.journeyId ?? widget.preselectedGoal?.id;
+    final String? finalJourneyTitle =
+        parsedResult.journeyTitle ?? widget.preselectedGoal?.title;
+
+    // 3. Lógica do Texto (Garante que marcos de meta não fiquem vazios)
+    String finalText = parsedResult.cleanText;
+    if (finalText.isEmpty && finalJourneyId != null) {
+      finalText = "Novo Marco"; // Texto padrão se for um marco e estiver vazio
+    }
 
     if (_isEditing) {
       final updatedTask = widget.taskToEdit!.copyWith(
-        text: parsedResult.cleanText,
-        dueDate: parsedResult.dueDate,
+        text: finalText,
+        dueDate: finalDueDate,
         tags: parsedResult.tags,
-        journeyId: parsedResult.journeyId,
-        journeyTitle: parsedResult.journeyTitle,
+        journeyId: finalJourneyId,
+        journeyTitle: finalJourneyTitle,
         personalDay: _personalDay,
       );
       _firestoreService.updateTask(userId, updatedTask);
     } else {
       final newTask = TaskModel(
         id: '',
-        text: parsedResult.cleanText,
+        text: finalText,
         completed: false,
         createdAt: DateTime.now(),
-        dueDate: parsedResult.dueDate,
+        dueDate: finalDueDate,
         tags: parsedResult.tags,
-        journeyId: parsedResult.journeyId,
-        journeyTitle: parsedResult.journeyTitle,
+        journeyId: finalJourneyId,
+        journeyTitle: finalJourneyTitle,
         personalDay: _personalDay,
       );
       _firestoreService.addTask(userId, newTask);
     }
-    Navigator.of(context).pop();
+
+    Navigator.of(context).pop(true);
   }
 
   @override
@@ -443,9 +484,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 autofocus: true,
                 style: const TextStyle(
                     fontSize: 16, color: AppColors.secondaryText),
-                decoration: const InputDecoration(
-                  hintText: "Adicionar tarefa, #tag, @meta, /data",
-                  hintStyle: TextStyle(color: AppColors.tertiaryText),
+                decoration: InputDecoration(
+                  // MUDANÇA: Hint text dinâmico
+                  hintText: widget.preselectedGoal != null
+                      ? "Adicionar novo marco..."
+                      : "Adicionar tarefa, #tag, @meta, /data",
+                  hintStyle: const TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
                 ),
                 onSubmitted: (_) => _submit(),
@@ -490,12 +534,21 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 _buildActionButton(
                     icon: Icons.label_outline,
                     onTap: () => _insertActionText('#')),
-                _buildActionButton(
-                    icon: Icons.track_changes_outlined,
-                    onTap: () => _selectGoal(context)),
-                _buildActionButton(
-                    icon: Icons.calendar_today_outlined,
-                    onTap: () => _selectDate(context)),
+
+                // --- INÍCIO DA MUDANÇA ---
+                // Só mostra o botão de Meta se NÃO tiver uma meta pré-selecionada
+                if (widget.preselectedGoal == null)
+                  _buildActionButton(
+                      icon: Icons.track_changes_outlined,
+                      onTap: () => _selectGoal(context)),
+
+                // Só mostra o botão de Calendário se NÃO tiver uma data pré-selecionada
+                if (widget.preselectedDate == null)
+                  _buildActionButton(
+                      icon: Icons.calendar_today_outlined,
+                      onTap: () => _selectDate(context)),
+                // --- FIM DA MUDANÇA ---
+
                 const Spacer(),
                 ElevatedButton(
                   onPressed: _submit,

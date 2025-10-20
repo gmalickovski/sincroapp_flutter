@@ -2,6 +2,7 @@
 
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
+import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
 class ParsedTask {
@@ -35,13 +36,35 @@ class TaskParser {
     'outubro': 10,
     'novembro': 11,
     'dezembro': 12,
+    // --- ADICIONADO (para bater com o regex do modal) ---
+    'jan': 1,
+    'fev': 2,
+    'mar': 3,
+    'abr': 4,
+    'mai': 5,
+    'jun': 6,
+    'jul': 7,
+    'ago': 8,
+    'set': 9,
+    'out': 10,
+    'nov': 11,
+    'dez': 12,
+    // --- FIM DA ADIÇÃO ---
   };
 
   static String getMonthPattern() {
     return _monthMap.keys.join('|');
   }
 
-  // ATENÇÃO: O parser agora é ASYNC e precisa do userId para fazer a busca.
+  // --- REGEX UNIFICADOS ---
+  static final String _monthPatternStr = getMonthPattern();
+  static final _ddMmYyPattern =
+      RegExp(r'/\s*(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?');
+  static final _fullDatePattern = RegExp(r'/\s*dia\s+(\d{1,2})(?:\s+de)?\s+(' +
+      _monthPatternStr +
+      r')(?:\s+de\s+(\d{4}))?');
+  // --- FIM ---
+
   static Future<ParsedTask> parse(String rawText, String userId) async {
     String cleanText = rawText;
     final tags = <String>[];
@@ -65,8 +88,8 @@ class TaskParser {
             userId, extractedTag);
 
         if (goal != null) {
-          journeyId = goal.id; // Salva o ID real
-          journeyTitle = goal.title; // Salva o título original para exibição
+          journeyId = goal.id;
+          journeyTitle = goal.title;
         }
         cleanText = cleanText.replaceAll(journeyMatch.group(0)!, '');
       }
@@ -74,11 +97,9 @@ class TaskParser {
 
     final dueDate = parseDateFromText(rawText);
     if (dueDate != null) {
-      final monthPattern = getMonthPattern();
-      final dateRegExp = RegExp(r"/\s*(?:dia\s+\d{1,2}(?:\s+de)?\s+(" +
-          monthPattern +
-          r")(?:\s+de\s+\d{4})?|\d{1,2}/\d{1,2}(?:/\d{2,4})?)");
-      cleanText = cleanText.replaceAll(dateRegExp, '');
+      // Remove ambos os padrões de data
+      cleanText = cleanText.replaceAll(_ddMmYyPattern, '');
+      cleanText = cleanText.replaceAll(_fullDatePattern, '');
     }
 
     return ParsedTask(
@@ -93,10 +114,10 @@ class TaskParser {
   static DateTime? parseDateFromText(String text) {
     final textLower = text.toLowerCase();
     final now = DateTime.now();
-    final monthPattern = getMonthPattern();
+    // final monthPattern = getMonthPattern(); // Removido, usando _fullDatePattern
 
-    var match =
-        RegExp(r'/\s*(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?').firstMatch(textLower);
+    // Usa o RegExp unificado
+    var match = _ddMmYyPattern.firstMatch(textLower);
     if (match != null) {
       try {
         final day = int.parse(match.group(1)!);
@@ -108,6 +129,7 @@ class TaskParser {
               ? 2000 + int.parse(yearStr)
               : int.parse(yearStr);
         }
+        // CRÍTICO: Usa DateTime() para criar data LOCAL
         var date = DateTime(year, month, day);
         if (match.group(3) == null &&
             date.isBefore(DateTime(now.year, now.month, now.day))) {
@@ -117,9 +139,8 @@ class TaskParser {
       } catch (e) {/* Ignora */}
     }
 
-    match = RegExp(
-            r'/\s*dia\s+(\d{1,2})(?:\s+de)?\s+($monthPattern)(?:\s+de\s+(\d{4}))?')
-        .firstMatch(textLower);
+    // Usa o RegExp unificado
+    match = _fullDatePattern.firstMatch(textLower);
     if (match != null) {
       try {
         final day = int.parse(match.group(1)!);
@@ -128,6 +149,7 @@ class TaskParser {
         if (month != null) {
           final year =
               match.group(3) != null ? int.parse(match.group(3)!) : now.year;
+          // CRÍTICO: Usa DateTime() para criar data LOCAL
           var date = DateTime(year, month, day);
           if (match.group(3) == null &&
               date.isBefore(DateTime(now.year, now.month, now.day))) {

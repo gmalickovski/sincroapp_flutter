@@ -12,8 +12,8 @@ class CustomCalendar extends StatelessWidget {
   final Function(DateTime) onPageChanged;
   final bool isDesktop;
   final double? calendarWidth;
-  final int? personalDayNumber;
-  final Map<DateTime, List<CalendarEvent>> events;
+  final int? personalDayNumber; // Necessário para _DayCell
+  final Map<DateTime, List<CalendarEvent>> events; // Espera chaves UTC
 
   const CustomCalendar({
     super.key,
@@ -21,93 +21,116 @@ class CustomCalendar extends StatelessWidget {
     this.selectedDay,
     required this.onDaySelected,
     required this.onPageChanged,
-    required this.isDesktop,
+    this.isDesktop = false,
     this.calendarWidth,
-    this.personalDayNumber,
-    required this.events,
+    this.personalDayNumber, // Recebe
+    required this.events, // Espera chaves UTC
   });
 
+  // Usa chave UTC (como no código antigo que funcionava)
   List<CalendarEvent> _getEventsForDay(DateTime day) {
-    return events[DateTime.utc(day.year, day.month, day.day)] ?? [];
+    final key = DateTime.utc(day.year, day.month, day.day);
+    return events[key] ?? [];
   }
 
   @override
   Widget build(BuildContext context) {
     final rowHeight =
         isDesktop && calendarWidth != null ? (calendarWidth! / 7) - 4 : 52.0;
+    // Removido borderRadius daqui, pois o container agora é transparente
 
-    return TableCalendar<CalendarEvent>(
-      locale: 'pt_BR',
-      firstDay: DateTime.utc(2020, 1, 1),
-      lastDay: DateTime.utc(2030, 12, 31),
-      focusedDay: focusedDay,
-      selectedDayPredicate: (day) => isSameDay(selectedDay, day),
-      onDaySelected: onDaySelected,
-      onPageChanged: onPageChanged,
-      calendarFormat: CalendarFormat.month,
-      headerVisible: false,
-      rowHeight: rowHeight,
-      daysOfWeekVisible: false,
-      eventLoader: _getEventsForDay,
-      calendarStyle: const CalendarStyle(
-        outsideDaysVisible: false,
-        // Manter estas decorações transparentes é uma boa prática
-        // para garantir que nenhum estilo padrão interfira.
-        todayDecoration: BoxDecoration(color: Colors.transparent),
-        selectedDecoration: BoxDecoration(color: Colors.transparent),
-        defaultDecoration: BoxDecoration(color: Colors.transparent),
-        weekendDecoration: BoxDecoration(color: Colors.transparent),
+    return Container(
+      // --- INÍCIO DA CORREÇÃO DE LAYOUT ---
+      // Tornar o container externo transparente ou remover a cor
+      decoration: BoxDecoration(
+        color: Colors.transparent, // Remove o fundo cinza indesejado
+        borderRadius:
+            BorderRadius.circular(8.0), // Mantém o arredondamento se necessário
       ),
-      calendarBuilders: CalendarBuilders(
-        // *** INÍCIO DA CORREÇÃO (Círculos Escuros) ***
-        // Adicionamos este builder. Ele sobrescreve o desenho
-        // padrão dos marcadores de evento (os círculos escuros).
-        // Ao retornar um widget vazio, nós efetivamente os removemos.
-        markerBuilder: (context, day, events) {
-          return const SizedBox.shrink();
-        },
-        // *** FIM DA CORREÇÃO ***
-        defaultBuilder: (context, day, focusedDay) {
-          return _DayCell(
-            day: day,
-            isDesktop: isDesktop,
-            events: _getEventsForDay(day),
-          );
-        },
-        selectedBuilder: (context, day, focusedDay) {
-          return _DayCell(
-            day: day,
-            isDesktop: isDesktop,
-            isSelected: true,
-            personalDayNumber: personalDayNumber,
-            events: _getEventsForDay(day),
-          );
-        },
-        todayBuilder: (context, day, focusedDay) {
-          return _DayCell(
-            day: day,
-            isDesktop: isDesktop,
-            isToday: true,
-            isSelected: isSameDay(day, selectedDay),
-            personalDayNumber: personalDayNumber,
-            events: _getEventsForDay(day),
-          );
-        },
-        outsideBuilder: (context, day, focusedDay) {
-          return Container(
-            margin: const EdgeInsets.all(2.0),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.01),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-          );
-        },
+      // --- FIM DA CORREÇÃO DE LAYOUT ---
+      padding: const EdgeInsets.only(bottom: 8), // Mantém padding inferior
+      child: TableCalendar<CalendarEvent>(
+        locale: 'pt_BR',
+        firstDay: DateTime.utc(2010, 1, 1),
+        lastDay: DateTime.utc(2100, 12, 31), // Aumentado limite final
+        focusedDay: focusedDay,
+        calendarFormat: CalendarFormat.month,
+        startingDayOfWeek: StartingDayOfWeek.sunday,
+        availableGestures: AvailableGestures.horizontalSwipe,
+        headerVisible:
+            false, // Cabeçalho INTERNO desabilitado (externo cuida disso)
+        calendarStyle: const CalendarStyle(
+          outsideDaysVisible: false,
+          // Decorações transparentes (mantidas)
+          todayDecoration: BoxDecoration(color: Colors.transparent),
+          selectedDecoration: BoxDecoration(color: Colors.transparent),
+          defaultDecoration: BoxDecoration(color: Colors.transparent),
+          weekendDecoration: BoxDecoration(color: Colors.transparent),
+          // Estilos de texto (ajuste cores se necessário)
+          weekendTextStyle: TextStyle(
+              color: AppColors.secondaryText), // Cor para Fim de Semana
+          defaultTextStyle:
+              TextStyle(color: AppColors.primaryText), // Cor para Dias Normais
+          markerDecoration: BoxDecoration(), // Remove marcador padrão
+        ),
+        // --- INÍCIO DA CORREÇÃO DE LAYOUT ---
+        daysOfWeekVisible:
+            false, // Esconde o cabeçalho de dias padrão (Dom, Seg...)
+        // --- FIM DA CORREÇÃO DE LAYOUT ---
+        daysOfWeekStyle:
+            const DaysOfWeekStyle(/* Estilos não são mais visíveis */),
+        rowHeight: rowHeight,
+        daysOfWeekHeight: 0, // Altura zero, pois está invisível
+        selectedDayPredicate: (day) => isSameDay(selectedDay, day),
+        eventLoader: _getEventsForDay, // Usa a função com chave UTC
+        onDaySelected: onDaySelected,
+        onPageChanged: onPageChanged,
+
+        // Usa builders de célula (_DayCell desenha marcadores)
+        calendarBuilders: CalendarBuilders(
+          // REMOVIDO markerBuilder
+          defaultBuilder: (context, day, focusedDay) {
+            return _DayCell(
+              day: day, isDesktop: isDesktop,
+              events: _getEventsForDay(day), // Passa eventos
+            );
+          },
+          selectedBuilder: (context, day, focusedDay) {
+            return _DayCell(
+              day: day, isDesktop: isDesktop, isSelected: true,
+              personalDayNumber: personalDayNumber, // Passa
+              events: _getEventsForDay(day), // Passa eventos
+            );
+          },
+          todayBuilder: (context, day, focusedDay) {
+            return _DayCell(
+              day: day, isDesktop: isDesktop, isToday: true,
+              isSelected: isSameDay(day, selectedDay),
+              personalDayNumber:
+                  isSameDay(day, selectedDay) ? personalDayNumber : null,
+              events: _getEventsForDay(day), // Passa eventos
+            );
+          },
+          outsideBuilder: (context, day, focusedDay) {
+            return Container(
+              // Mantém célula esmaecida
+              margin: const EdgeInsets.all(2.0), alignment: Alignment.center,
+              child: Text(
+                '${day.day}',
+                style:
+                    TextStyle(color: AppColors.tertiaryText.withOpacity(0.3)),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
-}
 
-// O widget _DayCell permanece o mesmo
+  // Removidas funções _buildEventsMarker, _buildMarker, _buildMoreMarker
+} // Fim da classe CustomCalendar
+
+// --- WIDGET _DayCell (Desenha marcadores - sem alterações nesta etapa) ---
 class _DayCell extends StatefulWidget {
   final DateTime day;
   final bool isDesktop;
@@ -135,11 +158,11 @@ class _DayCellState extends State<_DayCell> {
   Color _getColorForEventType(EventType type) {
     switch (type) {
       case EventType.task:
-        return AppColors.taskMarker;
+        return AppColors.taskMarker ?? Colors.blue;
       case EventType.goalTask:
-        return AppColors.goalTaskMarker;
+        return AppColors.goalTaskMarker ?? Colors.purple;
       case EventType.journal:
-        return AppColors.journalMarker;
+        return AppColors.journalMarker ?? Colors.green;
       default:
         return Colors.transparent;
     }
@@ -177,7 +200,8 @@ class _DayCellState extends State<_DayCell> {
 
   @override
   Widget build(BuildContext context) {
-    Color backgroundColor = Colors.white.withOpacity(0.03);
+    Color backgroundColor =
+        Colors.white.withOpacity(0.03); // Fundo padrão sutil
     if (widget.isToday && !widget.isSelected) {
       backgroundColor = AppColors.cardBackground.withOpacity(0.8);
     }
@@ -185,11 +209,19 @@ class _DayCellState extends State<_DayCell> {
       backgroundColor = AppColors.cardBackground.withOpacity(0.6);
     }
 
-    Color borderColor = AppColors.border.withOpacity(0.5);
+    Color borderColor = AppColors.border.withOpacity(0.5); // Borda padrão
     if (widget.isSelected) {
       borderColor = _getPersonalDayColor();
     } else if (widget.isToday) {
       borderColor = AppColors.primary.withOpacity(0.7);
+    }
+
+    Color textColor = AppColors.secondaryText; // Cor padrão texto
+    if (widget.isToday && !widget.isSelected) {
+      textColor = AppColors.primary;
+    }
+    if (widget.isSelected) {
+      textColor = Colors.white;
     }
 
     return MouseRegion(
@@ -203,15 +235,16 @@ class _DayCellState extends State<_DayCell> {
       child: Container(
         margin: const EdgeInsets.all(2.0),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: backgroundColor, // Fundo da célula
           borderRadius: BorderRadius.circular(8.0),
           border: Border.all(
-            color: borderColor,
-            width: widget.isSelected ? 2.0 : 1.0,
+            color: borderColor, // Borda da célula
+            width: widget.isSelected ? 2.0 : (widget.isToday ? 1.0 : 0.5),
           ),
         ),
         child: Stack(
           children: [
+            // Número do dia
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
@@ -219,15 +252,17 @@ class _DayCellState extends State<_DayCell> {
                 child: Text(
                   '${widget.day.day}',
                   style: TextStyle(
-                    color: widget.isToday && !widget.isSelected
-                        ? AppColors.primary
-                        : AppColors.secondaryText,
-                    fontWeight: FontWeight.bold,
+                    color: textColor, // Cor do número
+                    fontWeight: widget.isSelected || widget.isToday
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                     fontSize: widget.isDesktop ? 14 : 12,
                   ),
                 ),
               ),
             ),
+
+            // Marcadores (desenhados pelo _DayCell)
             if (widget.events.isNotEmpty)
               Positioned(
                 bottom: widget.isDesktop ? 8 : 4,
@@ -235,18 +270,24 @@ class _DayCellState extends State<_DayCell> {
                 right: 0,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children:
-                      widget.events.map((e) => e.type).toSet().map((type) {
-                    return Container(
-                      width: widget.isDesktop ? 8 : 6,
-                      height: widget.isDesktop ? 8 : 6,
-                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: _getColorForEventType(type),
-                      ),
-                    );
-                  }).toList(),
+                  children: widget.events
+                      .map((e) => e.type)
+                      .toSet() // Tipos únicos
+                      .map((type) {
+                        final markerSize =
+                            widget.isDesktop ? 6.0 : 5.0; // Ajustado
+                        return Container(
+                          width: markerSize,
+                          height: markerSize,
+                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _getColorForEventType(type),
+                          ),
+                        );
+                      })
+                      .take(widget.isDesktop ? 5 : 3) // Limita
+                      .toList(),
                 ),
               ),
           ],

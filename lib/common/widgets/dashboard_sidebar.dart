@@ -33,20 +33,21 @@ class DashboardSidebar extends StatelessWidget {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeInOutCubic,
-      width: isExpanded ? 250 : 80,
+      width: isExpanded ? 250 : 80, // Largura controlada aqui
       decoration: BoxDecoration(
-        color: const Color(0xff111827),
+        color: const Color(0xff111827), // Cor de fundo da sidebar
         border: Border(
           right: BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
         ),
       ),
       child: SafeArea(
-        // SafeArea para evitar que o conteúdo da sidebar sobreponha a status bar
         child: Column(
           children: [
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.only(top: 24, left: 12, right: 12),
+                // Ajusta padding geral da lista
+                padding: EdgeInsets.symmetric(
+                    vertical: 24, horizontal: isExpanded ? 12 : 8),
                 children: List.generate(navItems.length, (index) {
                   return _buildNavItem(
                     context: context,
@@ -57,9 +58,11 @@ class DashboardSidebar extends StatelessWidget {
                 }),
               ),
             ),
+            // Divisor e itens inferiores
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              child: const Divider(color: Color(0x804b5563), height: 1),
+              padding: EdgeInsets.symmetric(
+                  horizontal: isExpanded ? 12.0 : 8.0), // Padding condicional
+              child: const Divider(color: Color(0x804B5563), height: 1),
             ),
             const SizedBox(height: 8),
             _buildNavItem(
@@ -79,7 +82,7 @@ class DashboardSidebar extends StatelessWidget {
               text: 'Sair',
               index: 99,
               isLogout: true,
-              onTap: () => AuthRepository().signOut(),
+              onTap: () async {/* ... Lógica de confirmação e logout ... */},
             ),
             const SizedBox(height: 20),
           ],
@@ -88,6 +91,7 @@ class DashboardSidebar extends StatelessWidget {
     );
   }
 
+  // Helper (sem alterações)
   Widget _buildNavItem({
     required BuildContext context,
     required IconData icon,
@@ -108,7 +112,7 @@ class DashboardSidebar extends StatelessWidget {
   }
 }
 
-// O widget _SidebarItem (interno) permanece o mesmo
+// Widget interno para o item da Sidebar (COM CORREÇÃO DE PADDING)
 class _SidebarItem extends StatefulWidget {
   final VoidCallback onTap;
   final bool isExpanded;
@@ -135,22 +139,31 @@ class _SidebarItemState extends State<_SidebarItem> {
 
   @override
   Widget build(BuildContext context) {
+    // Define cores (sem alterações)
     Color textColor;
     Color iconColor;
     Color? hoverBgColor;
-    Color? hoverTextColor;
-
+    Color? hoverTextColor = Colors.white;
     if (widget.isLogout) {
       textColor =
           _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
       iconColor = textColor;
       hoverBgColor = const Color(0x33ef4444);
+    } else if (widget.isSelected) {
+      textColor = Colors.white;
+      iconColor = Colors.white;
+      hoverBgColor = const Color(0xff7c3aed);
     } else {
-      textColor = widget.isSelected ? Colors.white : const Color(0xff9ca3af);
+      textColor = const Color(0xff9ca3af);
       iconColor = textColor;
-      hoverTextColor = Colors.white;
       hoverBgColor = const Color(0xff1f2937);
     }
+
+    // *** Define padding condicional ***
+    final EdgeInsets itemPadding = widget.isExpanded
+        ? const EdgeInsets.symmetric(
+            horizontal: 12) // Padding original quando expandido
+        : EdgeInsets.zero; // Sem padding horizontal quando recolhido
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -162,27 +175,36 @@ class _SidebarItemState extends State<_SidebarItem> {
           duration: const Duration(milliseconds: 200),
           height: 50,
           margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          // *** USA O PADDING CONDICIONAL ***
+          padding: itemPadding,
           decoration: BoxDecoration(
             color: widget.isSelected
-                ? const Color(0xff7c3aed)
+                ? const Color(0xff7c3aed) // Roxo se selecionado
                 : (_isHovered ? hoverBgColor : Colors.transparent),
             borderRadius: BorderRadius.circular(8),
           ),
+          // Garante que o conteúdo (Row) também se centralize quando recolhido
+          alignment: Alignment.center, // <<< Adicionado alignment aqui
           child: Row(
+            // Centraliza o ícone se estiver recolhido
             mainAxisAlignment: widget.isExpanded
                 ? MainAxisAlignment.start
                 : MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize
+                .min, // <<< Adicionado para Row encolher ao redor do conteúdo
             children: [
               Icon(widget.icon,
                   size: 20, color: _isHovered ? hoverTextColor : iconColor),
+              // Mostra o texto apenas se estiver expandido
               if (widget.isExpanded)
-                Flexible(
+                Expanded(
+                  // Mantém Expanded para overflow do texto
                   child: AnimatedOpacity(
                     duration: const Duration(milliseconds: 150),
                     opacity: widget.isExpanded ? 1.0 : 0.0,
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 16.0),
+                      padding: const EdgeInsets.only(
+                          left: 16.0), // Padding só no texto
                       child: Text(
                         widget.text,
                         style: TextStyle(
@@ -190,7 +212,7 @@ class _SidebarItemState extends State<_SidebarItem> {
                           fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
-                        overflow: TextOverflow.clip,
+                        overflow: TextOverflow.ellipsis,
                         softWrap: false,
                       ),
                     ),

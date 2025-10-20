@@ -1,9 +1,11 @@
 // lib/features/dashboard/presentation/dashboard_screen.dart
 
+import 'dart:async'; // Importar async para StreamSubscription
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:reorderable_grid_view/reorderable_grid_view.dart';
-import 'package:collection/collection.dart'; // Necessário para ListEquality
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:collection/collection.dart'; // Usado para ListEquality
+// Removido import desnecessário de rxdart (só é usado no service)
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -24,8 +26,10 @@ import '../../journal/presentation/journal_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
 import '../../goals/presentation/goals_screen.dart';
 import '../../goals/presentation/goal_detail_screen.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart'; // Import necessário
+import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reorder_dashboard_modal.dart';
 
+// Comportamento de scroll customizado (sem alterações)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -34,12 +38,6 @@ class MyCustomScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.stylus,
         PointerDeviceKind.invertedStylus,
       };
-}
-
-class DashboardCardData {
-  final String id;
-  final Widget Function(bool isEditMode, {Widget? dragHandle}) cardBuilder;
-  DashboardCardData({required this.id, required this.cardBuilder});
 }
 
 class DashboardScreen extends StatefulWidget {
@@ -55,17 +53,23 @@ class _DashboardScreenState extends State<DashboardScreen>
   NumerologyResult? _numerologyData;
   bool _isLoading = true;
   int _sidebarIndex = 0;
-  List<DashboardCardData> _cards = [];
+  List<Widget> _cards = []; // A lista de widgets é construída dinamicamente
   bool _isEditMode = false;
+  bool _isUpdatingLayout = false;
 
-  List<TaskModel> _todayTasks = [];
   List<Goal> _userGoals = [];
 
-  bool _isDesktopSidebarExpanded = true;
+  bool _isDesktopSidebarExpanded = false; // Começa recolhido
   bool _isMobileDrawerOpen = false;
 
   late AnimationController _menuAnimationController;
   final FirestoreService _firestoreService = FirestoreService();
+
+  Key _masonryGridKey = UniqueKey();
+
+  // --- MUDANÇA: Adiciona StreamSubscription e lista para tarefas do dia ---
+  StreamSubscription<List<TaskModel>>? _todayTasksSubscription;
+  List<TaskModel> _currentTodayTasks = []; // Mantém a lista atual do stream
 
   @override
   void initState() {
@@ -74,315 +78,533 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    if (_isDesktopSidebarExpanded) {
-      _menuAnimationController.forward();
-    }
-    _loadData();
+    // Não inicia animação aqui, pois começa recolhido
+    _loadInitialData(); // Carrega dados iniciais e inicia o stream
   }
 
   @override
   void dispose() {
     _menuAnimationController.dispose();
+    _todayTasksSubscription
+        ?.cancel(); // Cancela a inscrição do stream ao sair da tela
     super.dispose();
   }
 
-  Future<void> _loadData() async {
+  // Carrega dados iniciais (UserData, Goals, Numerology) e inicia o stream de Tarefas
+  Future<void> _loadInitialData() async {
+    // Mostra spinner apenas se ainda não houver dados carregados
+    if (mounted && _userData == null) setState(() => _isLoading = true);
+
     final authRepository = AuthRepository();
     final currentUser = authRepository.getCurrentUser();
 
-    if (currentUser != null) {
+    if (currentUser == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return; // Sai se não houver usuário
+    }
+
+    try {
+      // Carrega UserData e Goals em paralelo (SEM as tarefas de hoje)
       final results = await Future.wait([
         _firestoreService.getUserData(currentUser.uid),
         _firestoreService.getActiveGoals(currentUser.uid),
-        _firestoreService.getTasksForToday(currentUser.uid),
+        // REMOVIDO: _firestoreService.getTasksForToday(currentUser.uid), // Será carregado pelo stream
       ]);
+
+      if (!mounted) return; // Verifica se o widget ainda está montado
 
       final userData = results[0] as UserModel?;
       _userGoals = results[1] as List<Goal>;
-      _todayTasks = results[2] as List<TaskModel>;
+      // REMOVIDO: _todayTasks = results[2] as List<TaskModel>; // Será gerenciado pelo stream
 
-      if (mounted) {
-        if (userData != null &&
-            userData.nomeAnalise.isNotEmpty &&
-            userData.dataNasc.isNotEmpty) {
-          final engine = NumerologyEngine(
-            nomeCompleto: userData.nomeAnalise,
-            dataNascimento: userData.dataNasc,
-          );
-          _numerologyData = engine.calcular();
-        }
+      _userData = userData; // Guarda userData primeiro
 
-        setState(() {
-          _userData = userData;
-          _isLoading = false;
-        });
+      // Calcula Numerologia (depende de userData)
+      if (userData != null &&
+          userData.nomeAnalise.isNotEmpty &&
+          userData.dataNasc.isNotEmpty) {
+        final engine = NumerologyEngine(
+          nomeCompleto: userData.nomeAnalise,
+          dataNascimento: userData.dataNasc,
+        );
+        _numerologyData = engine.calcular();
+      } else {
+        _numerologyData = null; // Garante que não use dados antigos
       }
-    } else if (mounted) {
-      setState(() => _isLoading = false);
+
+      // --- MUDANÇA: Inicia o Stream de tarefas DEPOIS de carregar outros dados ---
+      _initializeTasksStream(currentUser.uid);
+
+      // _buildCardList() e setState são chamados pelo listener do stream agora
+      // Não desligamos o _isLoading aqui, o listener do stream fará isso
+    } catch (e, stackTrace) {
+      print(
+          "Erro detalhado ao carregar dados iniciais do dashboard: $e\n$stackTrace");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isUpdatingLayout = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao carregar dados."),
+              backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
-  void _handleTaskStatusChange(TaskModel task, bool isCompleted) {
-    if (_userData == null) return;
-    setState(() {
-      final taskIndex = _todayTasks.indexWhere((t) => t.id == task.id);
-      if (taskIndex != -1) {
-        _todayTasks[taskIndex] = task.copyWith(completed: isCompleted);
-      }
-    });
+  // --- MUDANÇA: Nova função para iniciar e ouvir o stream de tarefas ---
+  void _initializeTasksStream(String userId) {
+    _todayTasksSubscription?.cancel(); // Cancela subscrição anterior se houver
+    _todayTasksSubscription =
+        _firestoreService.getTasksStreamForToday(userId).listen(
+      (tasks) {
+        // Callback chamado sempre que as tarefas de hoje mudam no Firestore
+        if (mounted) {
+          setState(() {
+            _currentTodayTasks = tasks; // Atualiza a lista local
+            // Só desliga o loading principal na primeira vez que o stream emite dados
+            if (_isLoading) {
+              _isLoading = false;
+            }
+            _buildCardList(); // Reconstrói a lista de cards com as novas tarefas
+          });
+        }
+      },
+      onError: (error, stackTrace) {
+        // Callback chamado em caso de erro no stream
+        print("Erro no stream de tarefas do dia: $error\n$stackTrace");
+        if (mounted) {
+          setState(() {
+            _currentTodayTasks = []; // Limpa tarefas em caso de erro
+            _isLoading = false; // Garante que o loading saia
+            _buildCardList(); // Reconstrói sem tarefas
+          });
+          // Mostra um erro para o usuário
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Erro ao carregar tarefas do dia."),
+                backgroundColor: Colors.red),
+          );
+        }
+      },
+    );
+  }
 
+  // --- Recarrega apenas dados que não são streams (Goals, UserData, Numerology) ---
+  Future<void> _reloadDataNonStream({bool rebuildCards = true}) async {
+    final authRepository = AuthRepository();
+    final currentUser = authRepository.getCurrentUser();
+    if (currentUser == null || !mounted) return;
+
+    // Opcional: Mostrar um indicador sutil de recarga se necessário
+    // setState(() => _isUpdatingLayout = true);
+
+    try {
+      // Recarrega UserData e Goals
+      final results = await Future.wait([
+        _firestoreService.getUserData(currentUser.uid),
+        _firestoreService.getActiveGoals(currentUser.uid),
+      ]);
+      if (!mounted) return;
+
+      final userData = results[0] as UserModel?;
+      _userGoals = results[1] as List<Goal>;
+
+      _userData = userData; // Atualiza userData
+
+      // Recalcula Numerologia
+      if (userData != null &&
+          userData.nomeAnalise.isNotEmpty &&
+          userData.dataNasc.isNotEmpty) {
+        final engine = NumerologyEngine(
+          nomeCompleto: userData.nomeAnalise,
+          dataNascimento: userData.dataNasc,
+        );
+        _numerologyData = engine.calcular();
+      } else {
+        _numerologyData = null;
+      }
+
+      // Reconstrói a lista de cards se solicitado (padrão é true)
+      // Chama dentro de setState para garantir a atualização da UI
+      if (rebuildCards && mounted) {
+        setState(() {
+          _buildCardList();
+          // _isUpdatingLayout = false; // Desliga indicador de recarga se usado
+        });
+      }
+    } catch (e, stackTrace) {
+      print("Erro ao recarregar dados (não stream): $e\n$stackTrace");
+      if (mounted) {
+        // setState(() => _isUpdatingLayout = false); // Desliga indicador de recarga
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao recarregar dados."),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // --- MUDANÇA: Handlers simplificados (sem setState para _todayTasks) ---
+  // --- Adicionado updateGoalProgress ---
+  void _handleTaskStatusChange(TaskModel task, bool isCompleted) {
+    if (!mounted || _userData == null) return;
+    // A UI será atualizada automaticamente pelo Stream quando o Firestore notificar
     _firestoreService
         .updateTaskCompletion(_userData!.uid, task.id, completed: isCompleted)
-        .catchError((error) {
-      // Reverte e mostra erro
-      setState(() {
-        final taskIndex = _todayTasks.indexWhere((t) => t.id == task.id);
-        if (taskIndex != -1) {
-          _todayTasks[taskIndex] = task.copyWith(completed: !isCompleted);
-        }
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Erro ao atualizar a tarefa.'),
-            backgroundColor: Colors.red),
-      );
+        .then((_) {
+      // Atualiza progresso da meta associada, se houver, APÓS sucesso
+      if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+        // Não precisa 'await' aqui, pode rodar em background
+        _firestoreService.updateGoalProgress(_userData!.uid, task.journeyId!);
+      }
+    }).catchError((error) {
+      print("Erro ao atualizar status da tarefa: $error");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao atualizar tarefa."),
+              backgroundColor: Colors.red),
+        );
+      }
+      // Poderia tentar reverter a UI otimista se tivesse uma
     });
   }
 
   void _handleTaskDeleted(TaskModel task) {
-    if (_userData == null) return;
+    if (!mounted || _userData == null) return;
+    // A UI será atualizada automaticamente pelo Stream
     _firestoreService.deleteTask(_userData!.uid, task.id).then((_) {
-      setState(() {
-        _todayTasks.removeWhere((t) => t.id == task.id);
-      });
-      if (task.journeyId != null) {
+      // Atualiza progresso da meta associada, se houver, APÓS sucesso
+      if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+        // Não precisa 'await' aqui
         _firestoreService.updateGoalProgress(_userData!.uid, task.journeyId!);
       }
+      // Feedback visual opcional
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Tarefa excluída."),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2)),
+        );
+      }
     }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Erro ao deletar tarefa.'),
-            backgroundColor: Colors.red),
-      );
+      print("Erro ao deletar tarefa: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao excluir tarefa."),
+              backgroundColor: Colors.red),
+        );
+      }
     });
   }
 
+  // Edit e Duplicate: Chamam _reloadDataNonStream pois podem afetar a lista de Goals
   void _handleTaskEdited(TaskModel task) {
     if (_userData == null) return;
-    showModalBottomSheet(
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => TaskInputModal(
-        userData: _userData!,
-        taskToEdit: task,
-      ),
-    ).then((_) => _loadData());
+      builder: (context) =>
+          TaskInputModal(userData: _userData!, taskToEdit: task),
+    ).then((didUpdate) {
+      // Se o modal retornou 'true' (salvou), recarrega dados não-stream
+      // (a tarefa em si já foi atualizada pelo stream)
+      if (didUpdate == true && mounted) _reloadDataNonStream();
+    });
   }
 
   void _handleTaskDuplicated(TaskModel task) {
     if (_userData == null) return;
     final duplicatedTask = task.copyWith(
-      id: '',
-      text: '${task.text} (cópia)',
-      createdAt: DateTime.now(),
-      completed: false,
-    );
+        id: '', // ID vazio para criar novo documento
+        // text: '${task.text} (cópia)', // Removido para manter texto original
+        createdAt: DateTime.now(), // Nova data de criação
+        completed: false); // Começa como não completada
     _firestoreService.addTask(_userData!.uid, duplicatedTask).then((_) {
-      _loadData();
+      // Atualiza o progresso da meta, se houver, APÓS sucesso
+      if (duplicatedTask.journeyId != null &&
+          duplicatedTask.journeyId!.isNotEmpty) {
+        // Não precisa 'await'
+        _firestoreService.updateGoalProgress(
+            _userData!.uid, duplicatedTask.journeyId!);
+      }
+      // Recarrega dados não-stream (afeta visualmente GoalsProgressCard)
+      if (mounted) _reloadDataNonStream();
     }).catchError((e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Erro ao duplicar tarefa.'),
-            backgroundColor: Colors.red),
-      );
+      print("Erro ao duplicar tarefa: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao duplicar tarefa."),
+              backgroundColor: Colors.red),
+        );
+      }
     });
   }
 
+  // --- INÍCIO DA ADIÇÃO: Função para abrir o modal de adicionar tarefa ---
+  void _handleAddTask() {
+    if (_userData == null) return; // Precisa de userData para o modal
+    // Obtém a data de hoje (sem horas/minutos/segundos)
+    final today =
+        DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day);
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TaskInputModal(
+        userData: _userData!,
+        // Passa a data de hoje como pré-selecionada (oculta)
+        preselectedDate: today,
+        // Não passamos preselectedGoal
+      ),
+    ).then((didCreate) {
+      // O stream já atualizará a lista (_currentTodayTasks),
+      // mas recarregamos goals/user para caso a nova tarefa
+      // tenha sido associada a uma meta, atualizando o GoalsProgressCard.
+      if (didCreate == true && mounted) {
+        // Não precisamos mais chamar _reloadDataNonStream aqui se o único
+        // efeito visual for no GoalsProgressCard, pois ele também usa Stream.
+        // Se a associação da tarefa à meta afetar _userGoals de alguma forma
+        // que não seja via stream, mantenha a linha abaixo.
+        // _reloadDataNonStream();
+      }
+    });
+  }
+  // --- FIM DA ADIÇÃO ---
+
+  // --- Navegação (sem alterações na lógica interna, apenas ajuste no _navigateToPage) ---
   void _navigateToPage(int index) {
+    if (!mounted) return;
     setState(() {
       _sidebarIndex = index;
-      _isEditMode = false;
+      _isEditMode = false; // Sempre sai do modo edição ao navegar
+      _isUpdatingLayout =
+          false; // Cancela qualquer atualização de layout pendente
+      // Fecha o drawer mobile se estiver aberto
+      if (_isMobileDrawerOpen) {
+        _isMobileDrawerOpen = false;
+        _menuAnimationController.reverse();
+      }
     });
   }
 
   void _navigateToGoalDetail(Goal goal) {
     if (_userData == null) return;
-    Navigator.of(context).push(
+    Navigator.of(context)
+        .push(
       MaterialPageRoute(
-        builder: (context) => GoalDetailScreen(
-          initialGoal: goal,
-          userData: _userData!,
-        ),
-      ),
-    );
+          builder: (context) =>
+              GoalDetailScreen(initialGoal: goal, userData: _userData!)),
+    )
+        .then((_) {
+      // Recarrega goals e user data ao voltar, pois o progresso pode ter mudado
+      // O stream de goals na GoalsScreen cuidará da atualização lá, mas
+      // aqui precisamos atualizar _userGoals para o GoalsProgressCard.
+      if (mounted) _reloadDataNonStream();
+    });
   }
 
-  // *** MÉTODO ATUALIZADO PARA INCLUIR TODOS OS CARDS ***
+  // --- MUDANÇA: Constrói a lista _cards, calcula dia pessoal, usa _currentTodayTasks ---
   void _buildCardList() {
-    if (_userData == null) {
-      _cards = [];
+    if (!mounted || _userData == null) {
+      _cards = []; // Limpa a lista se não tiver dados
       return;
     }
 
-    final List<DashboardCardData> allCards = [
-      DashboardCardData(
-        id: 'goalsProgress',
-        cardBuilder: (isEditMode, {dragHandle}) => GoalsProgressCard(
-          goals: _userGoals,
-          onViewAll: () => _navigateToPage(4),
-          onGoalSelected: _navigateToGoalDetail,
-          // *** Passando dragHandle e isEditMode ***
-          dragHandle: dragHandle,
-          isEditMode: isEditMode,
-        ),
-      ),
-      DashboardCardData(
-        id: 'focusDay',
-        cardBuilder: (isEditMode, {dragHandle}) => FocusDayCard(
-          tasks: _todayTasks,
-          onViewAll: () => _navigateToPage(3),
-          onTaskStatusChanged: _handleTaskStatusChange,
-          userData: _userData!,
-          onTaskDeleted: _handleTaskDeleted,
-          onTaskEdited: _handleTaskEdited,
-          onTaskDuplicated: _handleTaskDuplicated,
-          // *** Passando dragHandle e isEditMode ***
-          dragHandle: dragHandle,
-          isEditMode: isEditMode,
-        ),
-      ),
-    ];
-
+    // Calcula o dia pessoal para HOJE
+    int? todayPersonalDay;
     if (_numerologyData != null) {
-      final diaPessoalNum = _numerologyData!.numeros['diaPessoal']!;
-      final diaPessoal = _getInfoContent('diaPessoal', diaPessoalNum);
-      final mesPessoal = _getInfoContent(
-          'mesPessoal', _numerologyData!.numeros['mesPessoal']!);
-      final anoPessoal = _getInfoContent(
-          'anoPessoal', _numerologyData!.numeros['anoPessoal']!);
-      // *** CARDS RESTAURADOS ***
-      final arcanoRegente =
-          _getArcanoContent(_numerologyData!.estruturas['arcanoRegente']);
-      final arcanoVigente = _getArcanoContent(
-          _numerologyData!.estruturas['arcanoAtual']['numero'] ?? 0);
-      final cicloDeVida = _getCicloDeVidaContent(
-          _numerologyData!.estruturas['cicloDeVidaAtual']['regente']);
-      final bussola = _getBussolaContent(diaPessoalNum);
-
-      allCards.addAll([
-        DashboardCardData(
-            id: 'vibracaoDia',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Vibração do Dia",
-                number: diaPessoalNum.toString(),
-                info: diaPessoal,
-                icon: Icons.sunny,
-                color: Colors.cyan.shade300,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        DashboardCardData(
-            id: 'vibracaoMes',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Vibração do Mês",
-                number: _numerologyData!.numeros['mesPessoal']!.toString(),
-                info: mesPessoal,
-                icon: Icons.nightlight_round,
-                color: Colors.indigo.shade300,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        DashboardCardData(
-            id: 'vibracaoAno',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Vibração do Ano",
-                number: _numerologyData!.numeros['anoPessoal']!.toString(),
-                info: anoPessoal,
-                icon: Icons.star,
-                color: Colors.amber.shade300,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        // *** CARD RESTAURADO ***
-        DashboardCardData(
-            id: 'arcanoRegente',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Arcano Regente",
-                number: _numerologyData!.estruturas['arcanoRegente'].toString(),
-                info: arcanoRegente,
-                icon: Icons.shield_moon,
-                color: Colors.purple.shade300,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        // *** CARD RESTAURADO ***
-        DashboardCardData(
-            id: 'arcanoVigente',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Arcano Vigente",
-                number: (_numerologyData!.estruturas['arcanoAtual']['numero'] ??
-                        '-')
-                    .toString(),
-                info: arcanoVigente,
-                icon: Icons.shield_moon_outlined,
-                color: Colors.purple.shade200,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        // *** CARD RESTAURADO ***
-        DashboardCardData(
-            id: 'cicloVida',
-            cardBuilder: (isEditMode, {dragHandle}) => InfoCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                title: "Ciclo de Vida",
-                number: _numerologyData!.estruturas['cicloDeVidaAtual']
-                        ['regente']
-                    .toString(),
-                info: cicloDeVida,
-                icon: Icons.repeat,
-                color: Colors.green.shade300,
-                isEditMode: isEditMode,
-                onTap: () {})),
-        DashboardCardData(
-            id: 'bussola',
-            cardBuilder: (isEditMode, {dragHandle}) => BussolaCard(
-                dragHandle: dragHandle, // Passa o dragHandle
-                bussolaContent: bussola,
-                isEditMode: isEditMode,
-                onTap: () {})),
-      ]);
+      // Acessa o mapa 'numeros' e a chave 'diaPessoal' de forma segura
+      // Verifica se a chave existe antes de acessar
+      if (_numerologyData!.numeros.containsKey('diaPessoal')) {
+        todayPersonalDay = _numerologyData!.numeros['diaPessoal'];
+      }
     }
 
-    if (!ListEquality().equals(
-        _cards.map((c) => c.id).toList(), allCards.map((c) => c.id).toList())) {
-      // Atualiza o estado apenas se a lista de IDs mudou
-      // Isso evita rebuilds desnecessários se a ordem for a mesma
-      setState(() {
-        _cards = allCards;
-      });
-    } else {
-      // Se apenas a ordem mudou (drag n drop), atualiza sem setState completo
-      // para evitar piscar, a ReorderableListView/GridView já cuida da UI
-      _cards = allCards;
+    // Mapa com todos os cards disponíveis (a chave é o ID usado na ordem)
+    // O dragHandle é adicionado aqui
+    final Map<String, Widget> allCardsMap = {
+      'goalsProgress': GoalsProgressCard(
+        key: const ValueKey('goalsProgress'), // Key para reordenação
+        goals: _userGoals,
+        onViewAll: () => _navigateToPage(4),
+        onGoalSelected: _navigateToGoalDetail,
+        isEditMode: _isEditMode,
+        dragHandle: _isEditMode ? _buildDragHandle('goalsProgress') : null,
+      ),
+      'focusDay': FocusDayCard(
+        key: const ValueKey('focusDay'), // Key para reordenação
+        tasks: _currentTodayTasks, // <<< USA A LISTA ATUALIZADA DO STREAM
+        onViewAll: () => _navigateToPage(3),
+        onTaskStatusChanged: _handleTaskStatusChange,
+        userData: _userData!, // Garantido que não é nulo aqui
+        onTaskDeleted: _handleTaskDeleted,
+        onTaskEdited: _handleTaskEdited,
+        onTaskDuplicated: _handleTaskDuplicated,
+        // --- CORREÇÃO AQUI ---
+        onAddTask: _handleAddTask, // <<< PASSA A FUNÇÃO CORRETA
+        // --- FIM DA CORREÇÃO ---
+        personalDayNumber: todayPersonalDay, // <<< PASSA O DIA PESSOAL DE HOJE
+        isEditMode: _isEditMode,
+        dragHandle: _isEditMode ? _buildDragHandle('focusDay') : null,
+      ),
+      // Cards de Numerologia (só adiciona se _numerologyData não for nulo)
+      if (_numerologyData != null) ...{
+        'vibracaoDia': InfoCard(
+            key: const ValueKey('vibracaoDia'),
+            title: "Vibração do Dia",
+            number: (_numerologyData!.numeros['diaPessoal'] ?? '-')
+                .toString(), // Tratamento nulo seguro
+            info: _getInfoContent(
+                'diaPessoal',
+                _numerologyData!.numeros['diaPessoal'] ??
+                    0), // Tratamento nulo seguro
+            icon: Icons.sunny,
+            color: Colors.cyan.shade300,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('vibracaoDia') : null,
+            onTap: () {}),
+        'vibracaoMes': InfoCard(
+            key: const ValueKey('vibracaoMes'),
+            title: "Vibração do Mês",
+            number: (_numerologyData!.numeros['mesPessoal'] ?? '-').toString(),
+            info: _getInfoContent(
+                'mesPessoal', _numerologyData!.numeros['mesPessoal'] ?? 0),
+            icon: Icons.nightlight_round,
+            color: Colors.indigo.shade300,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('vibracaoMes') : null,
+            onTap: () {}),
+        'vibracaoAno': InfoCard(
+            key: const ValueKey('vibracaoAno'),
+            title: "Vibração do Ano",
+            number: (_numerologyData!.numeros['anoPessoal'] ?? '-').toString(),
+            info: _getInfoContent(
+                'anoPessoal', _numerologyData!.numeros['anoPessoal'] ?? 0),
+            icon: Icons.star,
+            color: Colors.amber.shade300,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('vibracaoAno') : null,
+            onTap: () {}),
+        'arcanoRegente': InfoCard(
+            key: const ValueKey('arcanoRegente'),
+            title: "Arcano Regente",
+            number: (_numerologyData!.estruturas['arcanoRegente'] ?? '-')
+                .toString(),
+            info: _getArcanoContent(
+                _numerologyData!.estruturas['arcanoRegente'] ?? 0),
+            icon: Icons.shield_moon,
+            color: Colors.purple.shade300,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('arcanoRegente') : null,
+            onTap: () {}),
+        'arcanoVigente': InfoCard(
+            key: const ValueKey('arcanoVigente'),
+            title: "Arcano Vigente",
+            number:
+                (_numerologyData!.estruturas['arcanoAtual']?['numero'] ?? '-')
+                    .toString(), // Acesso seguro ao mapa aninhado
+            info: _getArcanoContent(
+                _numerologyData!.estruturas['arcanoAtual']?['numero'] ?? 0),
+            icon: Icons.shield_moon_outlined,
+            color: Colors.purple.shade200,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('arcanoVigente') : null,
+            onTap: () {}),
+        'cicloVida': InfoCard(
+            key: const ValueKey('cicloVida'),
+            title: "Ciclo de Vida",
+            number: (_numerologyData!.estruturas['cicloDeVidaAtual']
+                        ?['regente'] ??
+                    '-')
+                .toString(),
+            info: _getCicloDeVidaContent(
+                _numerologyData!.estruturas['cicloDeVidaAtual']?['regente'] ??
+                    0),
+            icon: Icons.repeat,
+            color: Colors.green.shade300,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('cicloVida') : null,
+            onTap: () {}),
+        'bussola': BussolaCard(
+            key: const ValueKey('bussola'),
+            bussolaContent: _getBussolaContent(
+                _numerologyData!.numeros['diaPessoal'] ??
+                    0), // Tratamento nulo seguro
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('bussola') : null,
+            onTap: () {}),
+      }
+    };
+
+    // Lógica para ordenar os cards (pega a ordem do _userData)
+    final List<String> cardOrder = _userData!.dashboardCardOrder;
+    final List<Widget> orderedCards = [];
+    Set<String> addedKeys = {};
+    // Adiciona cards na ordem salva
+    for (String cardId in cardOrder) {
+      // Verifica se o card existe no mapa (pode ter sido removido ou não calculado, ex: numerologia)
+      if (allCardsMap.containsKey(cardId) && !addedKeys.contains(cardId)) {
+        orderedCards.add(allCardsMap[cardId]!);
+        addedKeys.add(cardId);
+      }
     }
+    // Adiciona cards novos (que não estavam na ordem salva ou não existiam antes) no final
+    allCardsMap.forEach((key, value) {
+      if (!addedKeys.contains(key)) {
+        orderedCards.add(value);
+      }
+    });
+    // Atualiza a lista final que será usada no build
+    // Não chama setState aqui, pois _buildCardList é chamado dentro de setState ou Stream listener
+    _cards = orderedCards;
   }
 
+  // --- Função auxiliar para criar o DragHandle (passado para os cards) ---
+  Widget _buildDragHandle(String cardKey) {
+    // Encontra o índice ATUAL do card na lista _cards para o ReorderableDragStartListener
+    // Usa firstWhereOrNull para evitar erro se a key não for encontrada
+    int index = _cards.indexWhere((card) => card.key == ValueKey(cardKey));
+    // Se não encontrar (improvável, mas por segurança), retorna um placeholder ou ícone desabilitado
+    if (index == -1) {
+      print(
+          "AVISO: Não foi possível encontrar o índice para a key '$cardKey' em _buildDragHandle.");
+      return const SizedBox(width: 24, height: 24); // Placeholder
+      // return const Icon(Icons.drag_handle_disabled, color: AppColors.tertiaryText); // Ícone desabilitado
+    }
+    // O ReorderableDragStartListener precisa do índice correto na lista _cards atual
+    return ReorderableDragStartListener(
+      index: index, // Usa o índice encontrado
+      child: const MouseRegion(
+          // Melhora a indicação visual no desktop
+          cursor: SystemMouseCursors.grab,
+          child: Icon(Icons.drag_handle, color: AppColors.secondaryText)),
+    );
+  }
+
+  // --- Getters de conteúdo (sem alterações na lógica interna) ---
   VibrationContent _getInfoContent(String category, int number) {
     return ContentData.vibracoes[category]?[number] ??
         const VibrationContent(
             titulo: 'Indisponível',
-            descricaoCurta: 'Não foi possível carregar os dados.',
+            descricaoCurta: '...',
             descricaoCompleta: '',
             inspiracao: '');
   }
 
-  // *** NOVAS FUNÇÕES GETTER RESTAURADAS ***
   VibrationContent _getArcanoContent(int number) {
     return ContentData.textosArcanos[number] ??
         const VibrationContent(
             titulo: 'Arcano Desconhecido',
-            descricaoCurta: 'Não foi possível carregar os dados do arcano.',
+            descricaoCurta: '...',
             descricaoCompleta: '',
             inspiracao: '');
   }
@@ -391,7 +613,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return ContentData.textosCiclosDeVida[number] ??
         const VibrationContent(
             titulo: 'Ciclo Desconhecido',
-            descricaoCurta: 'Não foi possível carregar os dados do ciclo.',
+            descricaoCurta: '...',
             descricaoCompleta: '',
             inspiracao: '');
   }
@@ -401,44 +623,154 @@ class _DashboardScreenState extends State<DashboardScreen>
         ContentData.bussolaAtividades[0]!;
   }
 
+  // --- Constrói a página ativa (sem alterações na lógica do IndexedStack, mas ajusta fallbacks) ---
   Widget _buildCurrentPage() {
-    if (_userData == null) return const Center(child: CustomLoadingSpinner());
+    // Mostra loading inicial apenas se _cards ainda não foi populado pelo stream/load inicial
+    // E se não estivermos atualizando o layout após reordenação
+    if (_isLoading && _cards.isEmpty && !_isUpdatingLayout) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+    // Se não está carregando mas não tem user data (erro no load inicial)
+    if (_userData == null && !_isLoading) {
+      return const Center(
+          child: Text("Erro ao carregar dados do usuário.",
+              style: TextStyle(color: Colors.red)));
+    }
+
+    // Se não está carregando, temos user data, mas _cards está vazio (ex: erro no stream, ou usuário sem cards)
+    // E estamos na aba do dashboard (_sidebarIndex == 0)
+    // E não estamos atualizando o layout
+    if (!_isLoading &&
+        _userData != null &&
+        _cards.isEmpty &&
+        _sidebarIndex == 0 &&
+        !_isUpdatingLayout) {
+      // Poderia mostrar o _buildEmptyState geral do dashboard aqui, se desejado
+      return const Center(
+          child: Text("Nenhum card para exibir.",
+              style: TextStyle(color: AppColors.secondaryText)));
+    }
+
     return IndexedStack(
       index: _sidebarIndex,
       children: [
+        // Aba 0: Dashboard Content
         _buildDashboardContent(
             isDesktop: MediaQuery.of(context).size.width > 800),
-        CalendarScreen(userData: _userData!),
-        JournalScreen(userData: _userData!),
-        FocoDoDiaScreen(userData: _userData!),
-        GoalsScreen(userData: _userData!),
+
+        // Outras Abas (garante que _userData não seja nulo ANTES de construir a tela)
+        // Usar um placeholder como CustomLoadingSpinner enquanto _userData é nulo evita erros
+        _userData != null
+            ? CalendarScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 1
+        _userData != null
+            ? JournalScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 2
+        _userData != null
+            ? FocoDoDiaScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 3
+        _userData != null
+            ? GoalsScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 4
       ],
     );
+  }
+
+  // --- Abre o modal de reordenação (lógica ajustada) ---
+  void _openReorderModal() {
+    if (!mounted || _userData == null || _isUpdatingLayout) return;
+    final BuildContext currentContext =
+        context; // Guarda o contexto antes do showModalBottomSheet
+    setState(() => _isEditMode = true); // Entra no modo edição (mostra handles)
+
+    showModalBottomSheet<void>(
+      context: currentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) {
+          // Passa uma CÓPIA da ordem atual para o modal, não a referência direta
+          final currentOrder = List<String>.from(_userData!.dashboardCardOrder);
+          return ReorderDashboardModal(
+            userId: _userData!.uid,
+            initialOrder: currentOrder, // Usa a cópia
+            scrollController: scrollController,
+            onSaveComplete: (bool success) async {
+              // Este callback é chamado DEPOIS que o Firestore foi atualizado (ou falhou) DENTRO do modal
+
+              // Garante que o widget ainda está montado
+              if (!mounted) return;
+
+              // Fecha o modal ANTES de recarregar os dados para evitar conflitos de contexto
+              // Usa o contexto guardado (currentContext) que ainda é válido
+              try {
+                Navigator.of(currentContext).pop();
+              } catch (e) {
+                print("Erro ao fechar modal: $e");
+              }
+              await Future.delayed(const Duration(
+                  milliseconds:
+                      50)); // Pequeno delay para garantir fechamento visual
+              if (!mounted) return;
+
+              if (success) {
+                // 1. Ativa o estado de loading para a atualização do layout
+                setState(() => _isUpdatingLayout = true);
+                // 2. Recarrega UserData (para pegar a nova ordem salva do Firestore)
+                //    e reconstrói a lista _cards com a nova ordem.
+                //    O stream de tarefas continua rodando independentemente.
+                await _reloadDataNonStream(
+                    rebuildCards:
+                        true); // Força rebuildCards que chama _buildCardList
+
+                // 3. Pequeno delay para garantir rebuild completo antes de esconder loading
+                await Future.delayed(const Duration(milliseconds: 100));
+                if (mounted) {
+                  // 4. Desativa loading e modo edição, atualiza a key da Grid
+                  setState(() {
+                    _masonryGridKey =
+                        UniqueKey(); // Nova key para forçar rebuild da Grid Desktop
+                    _isUpdatingLayout = false; // Desativa loading
+                    _isEditMode = false; // Sai do modo edição
+                  });
+                }
+              } else {
+                // Se cancelou ou deu erro ao salvar no modal
+                // Apenas sai do modo edição, não precisa recarregar nada
+                if (mounted) setState(() => _isEditMode = false);
+              }
+            },
+          );
+        },
+      ),
+    ).whenComplete(() {
+      // Chamado sempre que o modal fecha (por pop, dismiss, etc.)
+      // Garante resetar estados (_isEditMode, _isUpdatingLayout) se o usuário fechar o modal arrastando, etc.
+      if (mounted && (_isEditMode || _isUpdatingLayout)) {
+        setState(() {
+          _isEditMode = false;
+          _isUpdatingLayout = false;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
-
-    if (_isLoading) {
-      return const Scaffold(
-          backgroundColor: AppColors.background,
-          body: Center(child: CustomLoadingSpinner()));
-    }
-
-    // Chama _buildCardList no build para garantir que a lista esteja
-    // atualizada com os dados mais recentes (_userGoals, _todayTasks)
-    _buildCardList();
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: CustomAppBar(
         userData: _userData,
         menuAnimationController: _menuAnimationController,
         isEditMode: _isEditMode,
-        onEditPressed: (_sidebarIndex == 0 &&
-                isDesktop) // Só permite editar o dashboard (index 0)
-            ? () => setState(() => _isEditMode = !_isEditMode)
+        // Habilita o botão de editar apenas na aba Dashboard (index 0) e se não estiver carregando/atualizando
+        onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+            ? _openReorderModal
             : null,
         onMenuPressed: () {
           setState(() {
@@ -456,29 +788,24 @@ class _DashboardScreenState extends State<DashboardScreen>
           });
         },
       ),
+      // Body seleciona o layout baseado na largura
       body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
     );
   }
 
+  // --- Layouts Desktop e Mobile (sem alterações na estrutura) ---
   Widget _buildDesktopLayout() {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Mostra sidebar apenas se userData estiver carregado
         if (_userData != null)
           DashboardSidebar(
-            isExpanded: _isDesktopSidebarExpanded,
-            selectedIndex: _sidebarIndex,
-            userData: _userData!,
-            onDestinationSelected: (index) {
-              if (index < 5) {
-                setState(() {
-                  _sidebarIndex = index;
-                  _isEditMode = false; // Sai do modo edição ao trocar de página
-                });
-              }
-              // Ações para Configurações e Sair são tratadas dentro do Sidebar
-            },
-          ),
+              isExpanded: _isDesktopSidebarExpanded,
+              selectedIndex: _sidebarIndex,
+              userData: _userData!,
+              onDestinationSelected: _navigateToPage),
+        // Conteúdo principal ocupa o resto
         Expanded(child: _buildCurrentPage()),
       ],
     );
@@ -488,8 +815,10 @@ class _DashboardScreenState extends State<DashboardScreen>
     const double sidebarWidth = 280;
     return Stack(
       children: [
+        // Conteúdo principal com GestureDetector para fechar drawer e long press
         GestureDetector(
           onTap: () {
+            // Fecha drawer ao tocar fora
             if (_isMobileDrawerOpen) {
               setState(() {
                 _isMobileDrawerOpen = false;
@@ -497,186 +826,124 @@ class _DashboardScreenState extends State<DashboardScreen>
               });
             }
           },
-          // Long press só ativa edição no dashboard (index 0)
-          onLongPress: (_isEditMode || _sidebarIndex != 0)
+          // Ativa o long press para reordenar apenas na aba Dashboard e se não estiver carregando/atualizando
+          onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
               ? null
-              : () => setState(() => _isEditMode = true),
+              : _openReorderModal,
           child: _buildCurrentPage(),
         ),
+        // Overlay escuro quando o drawer está aberto
         if (_isMobileDrawerOpen)
           GestureDetector(
-            onTap: () {
-              setState(() {
-                _isMobileDrawerOpen = false;
-                _menuAnimationController.reverse();
-              });
-            },
-            child: Container(color: Colors.black.withOpacity(0.5)),
-          ),
+              // GestureDetector para fechar o drawer
+              onTap: () {
+                setState(() {
+                  _isMobileDrawerOpen = false;
+                  _menuAnimationController.reverse();
+                });
+              },
+              child: Container(
+                  color:
+                      Colors.black.withOpacity(0.5)) // Fundo semi-transparente
+              ),
+        // Drawer animado (Sidebar no modo mobile)
         AnimatedPositioned(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          top: 0,
-          bottom: 0,
-          left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
+          top: 0, bottom: 0,
+          left:
+              _isMobileDrawerOpen ? 0 : -sidebarWidth, // Anima a posição 'left'
           width: sidebarWidth,
           child: _userData != null
               ? DashboardSidebar(
-                  isExpanded: true,
+                  isExpanded: true, // Sempre expandido no modo drawer
                   selectedIndex: _sidebarIndex,
                   userData: _userData!,
                   onDestinationSelected: (index) {
-                    // Atualiza o estado da página selecionada
-                    if (index < 5) {
-                      setState(() {
-                        _sidebarIndex = index;
-                        _isEditMode = false; // Sai do modo edição
-                      });
-                    }
-                    // Fecha o drawer
-                    setState(() {
-                      _isMobileDrawerOpen = false;
-                      _menuAnimationController.reverse();
-                    });
+                    // Navega para a página E fecha o drawer (a lógica está em _navigateToPage)
+                    _navigateToPage(index);
                   },
                 )
-              : const SizedBox.shrink(),
+              : const SizedBox.shrink(), // Não mostra nada se userData for nulo
         ),
-        // Botão de concluir edição (FAB)
-        if (!_isMobileDrawerOpen && _isEditMode && _sidebarIndex == 0)
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              onPressed: () => setState(() => _isEditMode = false),
-              backgroundColor: Colors.green,
-              child: const Icon(Icons.check, color: Colors.white),
-            ),
-          ),
       ],
     );
   }
 
+  // --- Constrói o conteúdo do Dashboard (sem alterações na lógica de layout) ---
   Widget _buildDashboardContent({required bool isDesktop}) {
-    if (_cards.isEmpty) {
-      if (_isLoading || _userData == null) {
-        return const Center(child: CustomLoadingSpinner());
-      }
+    // A lista _cards já foi atualizada pelo listener do stream ou _reloadDataNonStream/reorder
+
+    // Mostra loading inicial apenas se _cards ainda estiver vazio E _isLoading for true
+    if (_isLoading && _cards.isEmpty) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+    // Mostra loading durante a atualização pós-reordenação
+    if (_isUpdatingLayout) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+
+    // Se, após carregar/atualizar, a lista _cards ainda estiver vazia
+    if (!_isLoading && !_isUpdatingLayout && _cards.isEmpty) {
       return const Center(
           child: Text("Nenhum card para exibir.",
               style: TextStyle(color: AppColors.secondaryText)));
     }
 
-    // Função para construir o Drag Handle
-    Widget buildDragHandle(int index) {
-      return ReorderableDragStartListener(
-        index: index,
-        child: MouseRegion(
-          cursor: SystemMouseCursors.grab,
-          child: Container(
-            // Área sensível ao toque para arrastar
-            // Aumentei a área para facilitar em mobile
-            padding: const EdgeInsets.all(8),
-            color: Colors.transparent, // Invisível
-            child: Icon(
-              Icons.drag_indicator,
-              color: AppColors.secondaryText.withOpacity(0.7),
-              size: 24,
-            ),
-          ),
-        ),
-      );
-    }
-
     if (!isDesktop) {
-      return ReorderableListView.builder(
-        // Desativa o handle padrão do ListView, usaremos o nosso
-        buildDefaultDragHandles: false,
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 80), // Ajuste no padding
+      // Mobile: ListView
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 80), // Padding padrão
         itemCount: _cards.length,
-        proxyDecorator: (child, index, animation) =>
-            Material(elevation: 8.0, color: Colors.transparent, child: child),
-        onReorder: (oldIndex, newIndex) {
-          setState(() {
-            if (newIndex > oldIndex) newIndex -= 1;
-            final item = _cards.removeAt(oldIndex);
-            _cards.insert(newIndex, item);
-            // Aqui você poderia salvar a nova ordem no Firestore/preferências
-          });
-        },
         itemBuilder: (context, index) {
-          final item = _cards[index];
-          // *** PASSANDO O dragHandle CORRETAMENTE ***
+          final itemWidget = _cards[index];
+          // Garante uma key única se o widget não tiver uma, importante para reordenação
           return Padding(
-            key: ValueKey(item.id),
-            padding: const EdgeInsets.only(bottom: 20.0),
-            // Chama o cardBuilder passando o dragHandle apenas se estiver em modo edição
-            child: item.cardBuilder(
-              _isEditMode,
-              dragHandle: _isEditMode ? buildDragHandle(index) : null,
-            ),
-          );
+              key: itemWidget.key ?? ValueKey('card_$index'),
+              padding: const EdgeInsets.only(bottom: 20.0),
+              child: itemWidget);
         },
       );
     } else {
-      // Layout Desktop com ReorderableGridView
+      // Desktop: MasonryGridView
       final screenWidth = MediaQuery.of(context).size.width;
-      const double cardMaxWidth = 420.0;
       const double spacing = 24.0;
-      // Ajusta o número de colunas baseado na largura da sidebar
-      final availableWidth =
-          screenWidth - (_isDesktopSidebarExpanded ? 250 : 80);
-      final crossAxisCount =
-          (availableWidth > cardMaxWidth * 3 + spacing * 2) ? 3 : 2;
-      final double gridMaxWidth =
-          (crossAxisCount * cardMaxWidth) + ((crossAxisCount - 1) * spacing);
-      // Ajuste no aspect ratio pode ser necessário dependendo da altura dos cards
-      const double childAspectRatio = 1.2;
+      final sidebarWidth = _isDesktopSidebarExpanded ? 250.0 : 80.0;
+      final availableWidth = screenWidth -
+          sidebarWidth -
+          (spacing * 2); // Subtrai padding laterais
+      int crossAxisCount = 1; // Mínimo 1 coluna
+      // Define número de colunas baseado na largura disponível
+      if (availableWidth > 1300)
+        crossAxisCount = 3;
+      else if (availableWidth > 850) crossAxisCount = 2;
+      // Garante que não haja mais colunas que o número de cards
+      crossAxisCount = crossAxisCount.clamp(1, _cards.length);
 
       return ScrollConfiguration(
         behavior: MyCustomScrollBehavior(),
-        child: SingleChildScrollView(
-          child: Center(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: gridMaxWidth),
-              child: Padding(
-                padding: const EdgeInsets.all(spacing),
-                child: ReorderableGridView.builder(
-                  itemCount: _cards.length,
-                  shrinkWrap: true, // Essencial dentro de SingleChildScrollView
-                  physics:
-                      const NeverScrollableScrollPhysics(), // Desativa scroll interno
-                  // Habilita arrastar apenas no modo de edição
-                  dragEnabled: _isEditMode,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    crossAxisSpacing: spacing,
-                    mainAxisSpacing: spacing,
-                    childAspectRatio: childAspectRatio,
-                  ),
-                  onReorder: (oldIndex, newIndex) => setState(() {
-                    final item = _cards.removeAt(oldIndex);
-                    _cards.insert(newIndex, item);
-                    // Salvar nova ordem
-                  }),
-                  itemBuilder: (context, index) {
-                    final item = _cards[index];
-                    // *** PASSANDO O dragHandle CORRETAMENTE ***
-                    return Container(
-                      key: ValueKey(item.id),
-                      // Chama o cardBuilder passando o dragHandle apenas se estiver em modo edição
-                      child: item.cardBuilder(
-                        _isEditMode,
-                        dragHandle: _isEditMode ? buildDragHandle(index) : null,
-                      ),
-                    );
-                  },
-                ),
-              ),
+        child: ListView(
+          // Usando ListView como wrapper para garantir scroll vertical se necessário
+          padding: const EdgeInsets.all(spacing),
+          children: [
+            MasonryGridView.count(
+              key: _masonryGridKey, // Usa a key que é atualizada na reordenação
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              itemCount: _cards.length,
+              itemBuilder: (context, index) {
+                return _cards[index]; // Exibe os cards da lista _cards
+              },
+              shrinkWrap:
+                  true, // Necessário para funcionar dentro de um ListView/ScrollView
+              physics:
+                  const NeverScrollableScrollPhysics(), // Desabilita scroll interno da Grid
             ),
-          ),
+            const SizedBox(height: 60), // Espaço no final abaixo da grid
+          ],
         ),
       );
     }
   }
-}
+} // Fim da classe _DashboardScreenState

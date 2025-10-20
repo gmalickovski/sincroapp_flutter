@@ -22,6 +22,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final String _userId = AuthRepository().getCurrentUser()!.uid;
 
+  static const double kDesktopBreakpoint = 768.0;
+
   void _navigateToCreateGoal() {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (context) => CreateGoalScreen(userData: widget.userData),
@@ -32,8 +34,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
   void _navigateToGoalDetail(Goal goal) {
     Navigator.of(context).push(MaterialPageRoute(
       builder: (context) => GoalDetailScreen(
-        initialGoal:
-            goal, // O nome do parâmetro foi atualizado para initialGoal
+        initialGoal: goal,
         userData: widget.userData,
       ),
     ));
@@ -41,50 +42,82 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobile = screenWidth < 600;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: StreamBuilder<List<Goal>>(
-                  stream: _firestoreService.getGoalsStream(_userId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CustomLoadingSpinner());
-                    }
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Erro: ${snapshot.error}'));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return _buildEmptyState();
-                    }
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
+            final double horizontalPadding = isDesktop ? 24.0 : 12.0;
 
-                    final goals = snapshot.data!;
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(),
+                  Expanded(
+                    child: StreamBuilder<List<Goal>>(
+                      stream: _firestoreService.getGoalsStream(_userId),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Center(child: CustomLoadingSpinner());
+                        }
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Erro: ${snapshot.error}'));
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return _buildEmptyState();
+                        }
 
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(top: 8, bottom: 80),
-                      itemCount: goals.length,
-                      itemBuilder: (context, index) {
-                        final goal = goals[index];
-                        return GoalCard(
-                          goal: goal,
-                          onTap: () => _navigateToGoalDetail(goal),
-                        );
+                        final goals = snapshot.data!;
+
+                        if (isDesktop) {
+                          int crossAxisCount =
+                              (constraints.maxWidth / 350).floor().clamp(1, 4);
+                          return GridView.builder(
+                            padding: const EdgeInsets.only(top: 8, bottom: 80),
+                            gridDelegate:
+                                SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: crossAxisCount,
+                              crossAxisSpacing: 16,
+                              mainAxisSpacing: 16,
+                              // --- INÍCIO DA CORREÇÃO ---
+                              // Aumenta a altura relativa do card diminuindo o aspect ratio
+                              childAspectRatio: 1.9,
+                              // --- FIM DA CORREÇÃO ---
+                            ),
+                            itemCount: goals.length,
+                            itemBuilder: (context, index) {
+                              final goal = goals[index];
+                              return GoalCard(
+                                goal: goal,
+                                onTap: () => _navigateToGoalDetail(goal),
+                              );
+                            },
+                          );
+                        } else {
+                          // Layout Mobile (ListView original)
+                          return ListView.builder(
+                            padding: const EdgeInsets.only(top: 8, bottom: 80),
+                            itemCount: goals.length,
+                            itemBuilder: (context, index) {
+                              final goal = goals[index];
+                              return GoalCard(
+                                goal: goal,
+                                onTap: () => _navigateToGoalDetail(goal),
+                              );
+                            },
+                          );
+                        }
                       },
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -112,44 +145,47 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(
-            Icons.flag_outlined,
-            color: AppColors.tertiaryText,
-            size: 48,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Nenhuma jornada iniciada',
-            style: TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 18,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.flag_outlined,
+              color: AppColors.tertiaryText,
+              size: 48,
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Crie sua primeira jornada para começar a evoluir.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.tertiaryText),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _navigateToCreateGoal,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Criar Jornada',
-              style: TextStyle(color: Colors.white),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            const SizedBox(height: 16),
+            const Text(
+              'Nenhuma jornada iniciada',
+              style: TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 18,
               ),
             ),
-          )
-        ],
+            const SizedBox(height: 8),
+            const Text(
+              'Crie sua primeira jornada para começar a evoluir.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.tertiaryText),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _navigateToCreateGoal,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                'Criar Jornada',
+                style: TextStyle(color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            )
+          ],
+        ),
       ),
     );
   }

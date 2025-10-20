@@ -11,7 +11,8 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onMenuPressed;
   final AnimationController menuAnimationController;
   final bool isEditMode;
-  final VoidCallback? onEditPressed;
+  final VoidCallback?
+      onEditPressed; // Callback remains, but button visibility changes
 
   const CustomAppBar({
     super.key,
@@ -39,21 +40,17 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
-      leading: isDesktop
-          ? IconButton(
-              icon: AnimatedIcon(
-                icon: AnimatedIcons.menu_close,
-                progress: menuAnimationController,
-                color: AppColors.secondaryText,
-              ),
-              onPressed: onMenuPressed,
-              tooltip: 'Menu',
-            )
-          : IconButton(
-              icon: const Icon(Icons.menu, color: AppColors.secondaryText),
-              onPressed: onMenuPressed,
-              tooltip: 'Menu',
-            ),
+      leading: IconButton(
+        // Use IconButton consistently
+        icon: AnimatedIcon(
+          // Use AnimatedIcon for desktop, simple Menu icon for mobile driven by controller state
+          icon: AnimatedIcons.menu_close,
+          progress: menuAnimationController, // Animation driven by controller
+          color: AppColors.secondaryText,
+        ),
+        onPressed: onMenuPressed,
+        tooltip: 'Menu',
+      ),
       title: const Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -71,47 +68,58 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       centerTitle: true,
       actions: [
-        if (onEditPressed != null)
-          TextButton.icon(
-            icon: Icon(
-              isEditMode ? Icons.check : Icons.edit_outlined,
-              color: isEditMode ? Colors.green : AppColors.secondaryText,
-              size: 18,
-            ),
-            label: Text(
-              isEditMode ? 'Concluir' : 'Editar',
-              style: TextStyle(
+        // *** CHANGE HERE: Only show Edit button if on Desktop AND callback is provided ***
+        if (isDesktop && onEditPressed != null)
+          Padding(
+            // Add padding for better spacing on desktop
+            padding: const EdgeInsets.only(right: 8.0),
+            child: TextButton.icon(
+              icon: Icon(
+                // Logic remains the same: show check when isEditMode is true (modal open)
+                isEditMode ? Icons.check : Icons.edit_outlined,
                 color: isEditMode ? Colors.green : AppColors.secondaryText,
+                size: 18,
               ),
-            ),
-            onPressed: onEditPressed,
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(
-                  color: isEditMode
-                      ? Colors.green.withOpacity(0.5)
-                      : AppColors.border,
+              label: Text(
+                isEditMode ? 'Concluir' : 'Editar',
+                style: TextStyle(
+                  color: isEditMode ? Colors.green : AppColors.secondaryText,
+                ),
+              ),
+              onPressed: onEditPressed, // This still calls _openReorderModal
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: isEditMode
+                        ? Colors.green.withOpacity(0.5)
+                        : AppColors.border,
+                  ),
                 ),
               ),
             ),
           ),
-        const SizedBox(width: 8),
+        // *** END CHANGE ***
+
+        // User Avatar / Settings Navigation
         if (userData != null)
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: GestureDetector(
               onTap: () => _navigateToSettings(context),
               child: UserAvatar(
-                // *** CORREÇÃO FINAL APLICADA AQUI ***
-                photoUrl: userData!.photoUrl, // Propriedade corrigida
+                photoUrl: userData!.photoUrl,
                 firstName: userData!.primeiroNome,
                 lastName: userData!.sobrenome,
                 radius: 18,
               ),
             ),
           ),
+        // Add SizedBox if on mobile and userData is null to prevent title shift
+        if (!isDesktop && userData == null)
+          const SizedBox(
+              width: kToolbarHeight), // Approx. width of avatar action
       ],
       shape: const Border(
         bottom: BorderSide(color: AppColors.border, width: 1.0),
@@ -120,5 +128,6 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 1.0);
+  Size get preferredSize =>
+      const Size.fromHeight(kToolbarHeight + 1.0); // Keep border height
 }

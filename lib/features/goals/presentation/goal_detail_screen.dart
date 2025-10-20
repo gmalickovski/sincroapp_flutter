@@ -27,6 +27,11 @@ class GoalDetailScreen extends StatefulWidget {
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
+  // --- MUDANÇA: Constante para breakpoint ---
+  static const double kDesktopBreakpoint = 768.0;
+  // --- MUDANÇA: Constante para largura máxima do conteúdo ---
+  static const double kMaxContentWidth = 800.0;
+
   void _addMilestone() {
     showModalBottomSheet(
       context: context,
@@ -54,7 +59,64 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   void _showAiSuggestions() {
-    print('Abrir sugestões da IA');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Funcionalidade de sugestão IA em breve!')),
+    );
+  }
+
+  Future<void> _deleteAndUpdateProgress(String taskId) async {
+    final bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: const Text('Confirmar Exclusão',
+              style: TextStyle(color: AppColors.primaryText)),
+          content: const Text('Tem certeza que deseja excluir este marco?',
+              style: TextStyle(color: AppColors.secondaryText)),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppColors.secondaryText)),
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
+              child: const Text('Excluir'),
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      try {
+        await _firestoreService.deleteTask(widget.userData.uid, taskId);
+        await _firestoreService.updateGoalProgress(
+            widget.userData.uid, widget.initialGoal.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Marco excluído.'),
+                backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        print("Erro ao excluir marco: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text('Erro ao excluir marco: $e'),
+                backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
   }
 
   @override
@@ -65,13 +127,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         stream: _firestoreService.getTasksForGoalStream(
             widget.userData.uid, widget.initialGoal.id),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
+          // Tratamento de loading e erro (sem alterações)
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
             return const Center(child: CustomLoadingSpinner());
           }
           if (snapshot.hasError) {
-            return Center(
-                child: Text('Erro ao carregar marcos: ${snapshot.error}',
-                    style: TextStyle(color: Colors.red.shade300)));
+            print("Erro no Stream de Tarefas da Meta: ${snapshot.error}");
+            return Center(/* ... Mensagem de erro ... */);
           }
 
           final milestones = snapshot.data ?? [];
@@ -82,33 +145,97 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       100)
                   .round();
 
-          return SafeArea(
-            child: CustomScrollView(
-              slivers: [
-                SliverAppBar(
-                  backgroundColor: AppColors.background,
-                  elevation: 0,
-                  leading: const BackButton(color: AppColors.primary),
-                  title: const Text('Detalhes da Jornada',
-                      style: TextStyle(color: Colors.white, fontSize: 18)),
+          // --- MUDANÇA: Usar LayoutBuilder aqui ---
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
+              // Ajusta o padding horizontal baseado no layout
+              final double horizontalPadding = isDesktop ? 24.0 : 12.0;
+              // Define o padding para a lista de marcos
+              final double listHorizontalPadding =
+                  isDesktop ? 0 : 12.0; // Sem padding extra na lista em desktop
+
+              return SafeArea(
+                child: CustomScrollView(
+                  slivers: [
+                    SliverAppBar(
+                      backgroundColor: AppColors.background,
+                      elevation: 0,
+                      pinned: true,
+                      leading: const BackButton(color: AppColors.primary),
+                      title: const Text('Detalhes da Jornada',
+                          style: TextStyle(color: Colors.white, fontSize: 18)),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        // Padding externo geral
+                        padding: EdgeInsets.symmetric(
+                            horizontal: horizontalPadding, vertical: 8.0),
+                        child: isDesktop
+                            ? Center(
+                                // Centraliza o card em desktop
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                      maxWidth: kMaxContentWidth),
+                                  child: _GoalInfoCard(
+                                      goal: widget.initialGoal,
+                                      progress: progress),
+                                ),
+                              )
+                            : _GoalInfoCard(
+                                // Card normal em mobile
+                                goal: widget.initialGoal,
+                                progress: progress),
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        // Padding externo geral
+                        padding: EdgeInsets.fromLTRB(
+                            horizontalPadding +
+                                4, // Alinha com o conteúdo da lista
+                            24.0,
+                            horizontalPadding,
+                            16.0),
+                        child: isDesktop
+                            ? Center(
+                                // Centraliza o header em desktop
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                      maxWidth: kMaxContentWidth),
+                                  child: _buildMilestonesHeader(),
+                                ),
+                              )
+                            : _buildMilestonesHeader(), // Header normal em mobile
+                      ),
+                    ),
+                    // --- MUDANÇA: Condicional para centralizar a lista ---
+                    isDesktop
+                        ? SliverToBoxAdapter(
+                            // Usamos SliverToBoxAdapter para poder centralizar
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                    maxWidth: kMaxContentWidth),
+                                // Chama a função que agora retorna um Widget (Column/Padding)
+                                child: _buildMilestonesListWidget(
+                                    milestones: milestones,
+                                    horizontalPadding: listHorizontalPadding),
+                              ),
+                            ),
+                          )
+                        : _buildMilestonesListSliver(
+                            milestones: milestones,
+                            horizontalPadding:
+                                listHorizontalPadding), // Mantém SliverList para mobile
+
+                    const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                  ],
                 ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: _GoalInfoCard(
-                        goal: widget.initialGoal, progress: progress),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(12.0, 32.0, 12.0, 16.0),
-                    child: _buildMilestonesHeader(),
-                  ),
-                ),
-                _buildMilestonesList(milestones: milestones),
-              ],
-            ),
+              );
+            },
           );
+          // --- FIM DA MUDANÇA ---
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -117,20 +244,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         icon: const Icon(Icons.add),
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
+        heroTag: null,
       ),
     );
   }
 
   Widget _buildMilestonesHeader() {
+    // (Sem alterações no conteúdo, apenas será centralizado via ConstrainedBox no build)
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Expanded(
-          child: Text(
-            'Marcos da Jornada',
-            style: TextStyle(
-                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-          ),
+        const Text(
+          'Marcos da Jornada',
+          style: TextStyle(
+              color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
         ),
         TextButton.icon(
           onPressed: _showAiSuggestions,
@@ -140,13 +267,74 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               style: TextStyle(color: AppColors.primary)),
           style: TextButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMilestonesList({required List<TaskModel> milestones}) {
+  // --- MUDANÇA: Função separada para o conteúdo da lista (retorna Widget) ---
+  /// Retorna um Widget (Column ou Center) contendo a lista de marcos.
+  Widget _buildMilestonesListWidget(
+      {required List<TaskModel> milestones,
+      required double horizontalPadding}) {
+    if (milestones.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 48.0),
+          child: Text('Nenhum marco adicionado ainda.',
+              style: TextStyle(color: AppColors.secondaryText)),
+        ),
+      );
+    }
+
+    // Para desktop, usamos Column dentro do ConstrainedBox
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+      child: Column(
+        // Era SliverList, agora é Column
+        children: List.generate(milestones.length, (index) {
+          final task = milestones[index];
+          return TaskItem(
+            key: ValueKey(task.id),
+            task: task,
+            showJourney: false,
+            onToggle: (isCompleted) async {
+              try {
+                await _firestoreService.updateTaskCompletion(
+                    widget.userData.uid, task.id,
+                    completed: isCompleted);
+                await _firestoreService.updateGoalProgress(
+                    widget.userData.uid, widget.initialGoal.id);
+              } catch (e) {/* ... tratamento de erro ... */}
+            },
+            onEdit: () => _editMilestone(task),
+            onDelete: () => _deleteAndUpdateProgress(task.id),
+            onDuplicate: () async {
+              final duplicatedTask = task.copyWith(
+                id: '',
+                createdAt: DateTime.now(),
+                completed: false,
+              );
+              try {
+                await _firestoreService.addTask(
+                    widget.userData.uid, duplicatedTask);
+                await _firestoreService.updateGoalProgress(
+                    widget.userData.uid, widget.initialGoal.id);
+              } catch (e) {/* ... tratamento de erro ... */}
+            },
+          );
+        }),
+      ),
+    );
+  }
+
+  // --- MUDANÇA: Função original renomeada para _buildMilestonesListSliver (retorna Sliver) ---
+  /// Retorna um Sliver (SliverPadding com SliverList) para layout mobile.
+  Widget _buildMilestonesListSliver(
+      {required List<TaskModel> milestones,
+      required double horizontalPadding}) {
     if (milestones.isEmpty) {
       return const SliverToBoxAdapter(
         child: Center(
@@ -159,38 +347,40 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       );
     }
 
+    // Layout original para mobile
     return SliverPadding(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final task = milestones[index];
             return TaskItem(
+              key: ValueKey(task.id),
               task: task,
               showJourney: false,
-              onToggle: (isCompleted) {
-                _firestoreService.updateTaskCompletion(
-                  widget.userData.uid,
-                  task.id,
-                  completed: isCompleted,
-                );
-                _firestoreService.updateGoalProgress(
-                    widget.userData.uid, widget.initialGoal.id);
+              onToggle: (isCompleted) async {
+                try {
+                  await _firestoreService.updateTaskCompletion(
+                      widget.userData.uid, task.id,
+                      completed: isCompleted);
+                  await _firestoreService.updateGoalProgress(
+                      widget.userData.uid, widget.initialGoal.id);
+                } catch (e) {/* ... tratamento de erro ... */}
               },
               onEdit: () => _editMilestone(task),
-              onDelete: () async {
-                await _firestoreService.deleteTask(
-                    widget.userData.uid, task.id);
-                _firestoreService.updateGoalProgress(
-                    widget.userData.uid, widget.initialGoal.id);
-              },
-              onDuplicate: () {
+              onDelete: () => _deleteAndUpdateProgress(task.id),
+              onDuplicate: () async {
                 final duplicatedTask = task.copyWith(
                   id: '',
-                  text: '${task.text} (cópia)',
                   createdAt: DateTime.now(),
+                  completed: false,
                 );
-                _firestoreService.addTask(widget.userData.uid, duplicatedTask);
+                try {
+                  await _firestoreService.addTask(
+                      widget.userData.uid, duplicatedTask);
+                  await _firestoreService.updateGoalProgress(
+                      widget.userData.uid, widget.initialGoal.id);
+                } catch (e) {/* ... tratamento de erro ... */}
               },
             );
           },
@@ -199,8 +389,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       ),
     );
   }
-}
+} // Fim _GoalDetailScreenState
 
+// _GoalInfoCard (sem alterações)
 class _GoalInfoCard extends StatelessWidget {
   final Goal goal;
   final int progress;

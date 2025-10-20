@@ -61,13 +61,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      // *** ADICIONADO SAFEAREA PARA GERENCIAR ESPAÇO SUPERIOR AUTOMATICAMENTE ***
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Padding(
-              // *** PADDING HORIZONTAL REDUZIDO PARA APROXIMAR DAS BORDAS ***
               padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -93,17 +91,27 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           final now = DateTime.now();
                           final todayStart =
                               DateTime(now.year, now.month, now.day);
+                          // Define o fim do dia de hoje (meia-noite de amanhã)
+                          final todayEnd =
+                              todayStart.add(const Duration(days: 1));
+
+                          // --- ESTE É O FILTRO CORRETO ---
                           filteredTasks = allTasks.where((task) {
-                            if (task.dueDate == null) return true;
-                            return task.dueDate!.isAtSameMomentAs(todayStart) ||
-                                (task.dueDate!.isAfter(todayStart) &&
-                                    task.dueDate!.isBefore(todayStart
-                                        .add(const Duration(days: 1))));
+                            // 1. Define qual data vamos comparar
+                            //    (dueDate ou createdAt como fallback)
+                            final DateTime dateToCompare =
+                                task.dueDate ?? task.createdAt;
+
+                            // 2. Compara se essa data está dentro de "hoje"
+                            return !dateToCompare.isBefore(todayStart) &&
+                                dateToCompare.isBefore(todayEnd);
                           }).toList();
+                          // --- FIM DO FILTRO ---
                         } else {
                           filteredTasks = allTasks;
                         }
 
+                        // Passa a lista filtrada para o TasksListView
                         return TasksListView(
                           tasks: filteredTasks,
                           userData: widget.userData,
@@ -154,7 +162,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // *** ESPAÇAMENTO SUPERIOR REDUZIDO APÓS USO DO SAFEAREA ***
         const SizedBox(height: 16),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
