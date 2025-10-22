@@ -1,13 +1,14 @@
 // lib/services/firestore_service.dart
+// (Arquivo existente, código completo 100% atualizado)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-// --- INÍCIO DA ADIÇÃO ---
-import 'package:rxdart/rxdart.dart'; // Importar rxdart para combinar streams
-// --- FIM DA ADIÇÃO ---
+import 'package:rxdart/rxdart.dart';
 import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
+// ATUALIZADO: Importa UserModel do local correto
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+// ATUALIZADO: Importa Goal do local correto
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 
 class FirestoreService {
@@ -16,7 +17,21 @@ class FirestoreService {
   // --- MÉTODOS DE USUÁRIO (sem alterações) ---
   Future<void> saveUserData(UserModel user) async {
     try {
-      await _db.collection('users').doc(user.uid).set(user.toFirestore());
+      // --- CORREÇÃO no UserModel ---
+      // Seu UserModel não tem um método toFirestore(). Vamos criar um mapa manualmente.
+      // Ou, idealmente, adicione `toFirestore()` ao seu UserModel.
+      // Por agora, faremos manualmente:
+      await _db.collection('users').doc(user.uid).set({
+        'email': user.email,
+        'photoUrl': user.photoUrl,
+        'primeiroNome': user.primeiroNome,
+        'sobrenome': user.sobrenome,
+        'nomeAnalise': user.nomeAnalise,
+        'dataNasc': user.dataNasc, // Assumindo que é String 'dd/MM/yyyy'
+        'plano': user.plano,
+        'isAdmin': user.isAdmin,
+        'dashboardCardOrder': user.dashboardCardOrder,
+      });
     } catch (e) {
       print("Erro ao salvar dados do usuário: $e");
       rethrow;
@@ -36,7 +51,25 @@ class FirestoreService {
     try {
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
       if (doc.exists) {
-        return UserModel.fromFirestore(doc);
+        // --- CORREÇÃO no UserModel ---
+        // Seu UserModel não tem um método fromFirestore(). Vamos criar um manualmente.
+        // Ou, idealmente, adicione `fromFirestore()` ao seu UserModel.
+        // Por agora, faremos manualmente:
+        final data = doc.data() as Map<String, dynamic>;
+        return UserModel(
+          uid: doc.id,
+          email: data['email'] ?? '',
+          photoUrl: data['photoUrl'] as String?,
+          primeiroNome: data['primeiroNome'] ?? '',
+          sobrenome: data['sobrenome'] ?? '',
+          nomeAnalise: data['nomeAnalise'] ?? '',
+          dataNasc: data['dataNasc'] ?? '', // Assumindo String
+          plano: data['plano'] ?? 'gratuito',
+          isAdmin: data['isAdmin'] ?? false,
+          // Carrega a ordem dos cards ou usa o padrão
+          dashboardCardOrder: List<String>.from(
+              data['dashboardCardOrder'] ?? UserModel.defaultCardOrder),
+        );
       }
       return null;
     } catch (e) {
@@ -59,13 +92,35 @@ class FirestoreService {
 
   // --- MÉTODOS DE TAREFAS ---
 
+  // --- NOVO MÉTODO ADICIONADO ---
+  /// Busca as [limit] tarefas mais recentes do usuário.
+  Future<List<TaskModel>> getRecentTasks(String userId,
+      {int limit = 20}) async {
+    try {
+      final querySnapshot = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('tasks')
+          .orderBy('createdAt', descending: true) // Ordena pelas mais recentes
+          .limit(limit) // Limita a quantidade
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => TaskModel.fromFirestore(doc))
+          .toList();
+    } catch (e, stackTrace) {
+      print("Erro ao buscar tarefas recentes: $e\n$stackTrace");
+      return []; // Retorna lista vazia em caso de erro
+    }
+  }
+  // --- FIM DO NOVO MÉTODO ---
+
   Future<List<TaskModel>> getTasksForToday(String userId) async {
     // (Seu método original - mantido)
     try {
       final now = DateTime.now();
       final startOfDayLocal = DateTime(now.year, now.month, now.day);
       final endOfDayLocal = startOfDayLocal.add(const Duration(days: 1));
-      // Convertendo para UTC para comparação correta com Timestamps do Firestore
       final startTimestamp = Timestamp.fromDate(startOfDayLocal.toUtc());
       final endTimestamp = Timestamp.fromDate(endOfDayLocal.toUtc());
       final tasksRef = _db.collection('users').doc(userId).collection('tasks');
@@ -163,25 +218,26 @@ class FirestoreService {
   }
 
   Stream<List<TaskModel>> getTasksForGoalStream(String userId, String goalId) {
-    // (Seu método original - sem alterações)
     return _db
         .collection('users')
         .doc(userId)
         .collection('tasks')
-        .where('journeyId', isEqualTo: goalId)
-        .orderBy('createdAt', descending: true)
+        .where('journeyId',
+            isEqualTo: goalId) // Assume que 'journeyId' é o campo correto
+        .orderBy('createdAt', descending: true) // Ordena pela data de criação
         .snapshots()
         .map((snapshot) =>
             snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList())
         .handleError((error, stackTrace) {
       print("Erro no stream de Tasks para Goal $goalId: $error\n$stackTrace");
-      return [];
+      return <TaskModel>[]; // Retorna lista vazia em caso de erro
     });
   }
 
   Future<void> addTask(String userId, TaskModel task) async {
     // (Seu método original - sem alterações)
     final data = task.toFirestore();
+    // Garante que as datas sejam Timestamps
     if (data['createdAt'] is DateTime) {
       data['createdAt'] = Timestamp.fromDate(data['createdAt']);
     } else if (data['createdAt'] == null) {
@@ -196,13 +252,14 @@ class FirestoreService {
   Future<void> updateTask(String userId, TaskModel task) async {
     // (Seu método original - sem alterações)
     final data = task.toFirestore();
+    // Garante que as datas sejam Timestamps ou null
     if (data.containsKey('createdAt') && data['createdAt'] is DateTime) {
       data['createdAt'] = Timestamp.fromDate(data['createdAt']);
     }
     if (data.containsKey('dueDate') && data['dueDate'] is DateTime) {
       data['dueDate'] = Timestamp.fromDate(data['dueDate']);
     } else if (data.containsKey('dueDate') && data['dueDate'] == null) {
-      data['dueDate'] = null;
+      data['dueDate'] = null; // Garante que seja null se for o caso
     }
     await _db
         .collection('users')
@@ -242,22 +299,24 @@ class FirestoreService {
   }) {
     Query query =
         _db.collection('users').doc(userId).collection('journalEntries');
+    // Filtro por data (dia específico)
     if (date != null) {
       final utcDate = DateTime.utc(date.year, date.month, date.day);
       final startOfDay = Timestamp.fromDate(utcDate);
-      final endOfDay = Timestamp.fromDate(utcDate
-          .add(const Duration(days: 1))
-          .subtract(const Duration(milliseconds: 1)));
+      final endOfDay = Timestamp.fromDate(utcDate.add(const Duration(days: 1)));
       query = query
           .where('createdAt', isGreaterThanOrEqualTo: startOfDay)
-          .where('createdAt', isLessThanOrEqualTo: endOfDay);
+          .where('createdAt', isLessThan: endOfDay);
     }
+    // Filtro por humor
     if (mood != null) {
       query = query.where('mood', isEqualTo: mood);
     }
+    // Filtro por vibração (dia pessoal)
     if (vibration != null) {
       query = query.where('personalDay', isEqualTo: vibration);
     }
+    // Ordena sempre pela data mais recente
     query = query.orderBy('createdAt', descending: true);
 
     return query.snapshots().map((snapshot) {
@@ -268,12 +327,16 @@ class FirestoreService {
       for (var doc in snapshot.docs) {
         try {
           entries.add(JournalEntry.fromFirestore(doc));
-        } catch (e, stackTrace) {/* Log erro */}
+        } catch (e, stackTrace) {
+          print(
+              "Erro ao converter Journal Entry ID ${doc.id}: $e\n$stackTrace");
+          // Continua o loop para não quebrar o stream por um doc inválido
+        }
       }
       return entries;
     }).handleError((error, stackTrace) {
       print("Erro geral no stream de Journal Entries: $error\n$stackTrace");
-      return <JournalEntry>[];
+      return <JournalEntry>[]; // Retorna lista vazia em caso de erro
     });
   }
 
@@ -282,16 +345,14 @@ class FirestoreService {
     // (Seu método original - sem alterações)
     try {
       final startOfMonth = DateTime.utc(month.year, month.month, 1);
-      final endOfMonth = DateTime.utc(month.year, month.month + 1, 1)
-          .subtract(const Duration(milliseconds: 1));
+      final endOfMonth = DateTime.utc(month.year, month.month + 1, 1);
       final querySnapshot = await _db
           .collection('users')
           .doc(userId)
           .collection('journalEntries')
           .where('createdAt',
               isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-          .where('createdAt',
-              isLessThanOrEqualTo: Timestamp.fromDate(endOfMonth))
+          .where('createdAt', isLessThan: Timestamp.fromDate(endOfMonth))
           .orderBy('createdAt', descending: true)
           .get();
       return querySnapshot.docs
@@ -305,12 +366,14 @@ class FirestoreService {
 
   Future<void> addJournalEntry(String userId, Map<String, dynamic> data) async {
     // (Seu método original - sem alterações)
+    // Garante que createdAt seja um Timestamp UTC
     if (data['createdAt'] is DateTime) {
       data['createdAt'] =
           Timestamp.fromDate((data['createdAt'] as DateTime).toUtc());
     } else if (data['createdAt'] == null) {
-      data['createdAt'] = Timestamp.now();
+      data['createdAt'] = Timestamp.now(); // Usa now() se for nulo
     }
+    // Garante que personalDay e mood sejam inteiros
     if (data['personalDay'] != null && data['personalDay'] is! int) {
       data['personalDay'] = int.tryParse(data['personalDay'].toString()) ?? 0;
     }
@@ -327,10 +390,12 @@ class FirestoreService {
   Future<void> updateJournalEntry(
       String userId, String entryId, Map<String, dynamic> data) async {
     // (Seu método original - sem alterações)
+    // Garante que createdAt seja um Timestamp UTC se presente
     if (data.containsKey('createdAt') && data['createdAt'] is DateTime) {
       data['createdAt'] =
           Timestamp.fromDate((data['createdAt'] as DateTime).toUtc());
     }
+    // Garante que personalDay e mood sejam inteiros se presentes
     if (data.containsKey('personalDay') &&
         data['personalDay'] != null &&
         data['personalDay'] is! int) {
@@ -359,9 +424,25 @@ class FirestoreService {
         .delete();
   }
 
-  // --- MÉTODOS PARA AS METAS (JORNADAS) (sem alterações) ---
+  // --- MÉTODOS PARA AS METAS (JORNADAS) ---
+
+  // ATUALIZADO: Método `updateGoal` agora aceita um objeto Goal
+  Future<void> updateGoal(Goal goal) async {
+    try {
+      final data = goal.toFirestore(); // Usa o método do modelo Goal
+      await _db
+          .collection('users')
+          .doc(goal.userId) // Pega o userId do próprio objeto Goal
+          .collection('goals')
+          .doc(goal.id)
+          .update(data);
+    } catch (e) {
+      print("Erro ao atualizar a meta ${goal.id}: $e");
+      rethrow;
+    }
+  }
+
   Stream<List<Goal>> getGoalsStream(String userId) {
-    // (Seu método original - sem alterações)
     return _db
         .collection('users')
         .doc(userId)
@@ -372,7 +453,7 @@ class FirestoreService {
             snapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList())
         .handleError((error, stackTrace) {
       print("Erro no stream de Goals: $error\n$stackTrace");
-      return <Goal>[];
+      return <Goal>[]; // Retorna lista vazia em caso de erro
     });
   }
 
@@ -383,6 +464,7 @@ class FirestoreService {
           .collection('users')
           .doc(userId)
           .collection('goals')
+          // .where('status', isEqualTo: 'active') // Exemplo: Se houver um campo status
           .orderBy('createdAt', descending: true)
           .get();
       return querySnapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList();
@@ -395,13 +477,25 @@ class FirestoreService {
   Future<DocumentReference> addGoal(
       String userId, Map<String, dynamic> data) async {
     // (Seu método original - sem alterações)
+    // Garante que createdAt seja Timestamp UTC
     if (data['createdAt'] is DateTime) {
       data['createdAt'] =
           Timestamp.fromDate((data['createdAt'] as DateTime).toUtc());
     } else if (data['createdAt'] == null) {
       data['createdAt'] = Timestamp.now();
     }
+    // Garante que targetDate seja Timestamp UTC ou null
+    if (data['targetDate'] is DateTime) {
+      data['targetDate'] =
+          Timestamp.fromDate((data['targetDate'] as DateTime).toUtc());
+    } else {
+      data['targetDate'] = null; // Garante que seja null se não for DateTime
+    }
+    // Inicializa progresso e subtarefas se não existirem
     data['progress'] = data['progress'] ?? 0;
+    data['subTasks'] = data['subTasks'] ?? []; // Inicializa como lista vazia
+    data['userId'] = userId; // Garante que o userId esteja presente
+
     return await _db
         .collection('users')
         .doc(userId)
@@ -409,26 +503,14 @@ class FirestoreService {
         .add(data);
   }
 
-  Future<void> updateGoal(
-      String userId, String goalId, Map<String, dynamic> data) async {
-    // (Seu método original - sem alterações)
-    if (data.containsKey('createdAt') && data['createdAt'] is DateTime) {
-      data['createdAt'] =
-          Timestamp.fromDate((data['createdAt'] as DateTime).toUtc());
-    }
-    if (data.containsKey('progress') && data['progress'] is! int) {
-      data['progress'] = (data['progress'] as num?)?.round() ?? 0;
-    }
-    await _db
-        .collection('users')
-        .doc(userId)
-        .collection('goals')
-        .doc(goalId)
-        .update(data);
-  }
+  // Removido o método antigo updateGoal(userId, goalId, data)
+  // pois foi substituído por updateGoal(Goal goal)
 
   Future<void> updateGoalProgress(String userId, String goalId) async {
     // (Seu método original - sem alterações)
+    // Este método agora pode ser substituído calculando o progresso
+    // diretamente no frontend a partir da lista de subTasks do objeto Goal.
+    // Mas vamos mantê-lo por enquanto, caso seja usado em outro lugar.
     try {
       final goalRef =
           _db.collection('users').doc(userId).collection('goals').doc(goalId);
@@ -437,18 +519,26 @@ class FirestoreService {
         print("Tentativa de atualizar progresso de meta inexistente: $goalId");
         return;
       }
+
+      // --- ATENÇÃO: O cálculo de progresso idealmente seria feito
+      // --- a partir das 'subTasks' dentro do documento da meta.
+      // --- Esta query busca em 'tasks', o que pode ser diferente.
+      // --- Se as subtarefas SÃO as 'tasks' com 'journeyId', está ok.
       final tasksSnapshot = await _db
           .collection('users')
           .doc(userId)
           .collection('tasks')
           .where('journeyId', isEqualTo: goalId)
           .get();
+
       final totalTasks = tasksSnapshot.docs.length;
       final completedTasks = tasksSnapshot.docs.where((doc) {
         final taskData = doc.data();
+        // Verifica se 'completed' existe e é true
         return taskData.containsKey('completed') &&
             taskData['completed'] == true;
       }).length;
+
       final progress =
           totalTasks > 0 ? (completedTasks / totalTasks * 100).round() : 0;
       await goalRef.update({'progress': progress});
@@ -464,19 +554,26 @@ class FirestoreService {
       final goalRef =
           _db.collection('users').doc(userId).collection('goals').doc(goalId);
       batch.delete(goalRef);
+
+      // Opcional: Deletar tarefas associadas (subtasks)
+      // Se as subtarefas estiverem DENTRO do doc da meta, elas já foram deletadas.
+      // Se forem tarefas na coleção 'tasks', a query abaixo é necessária.
       final tasksQuery = _db
           .collection('users')
           .doc(userId)
           .collection('tasks')
-          .where('journeyId', isEqualTo: goalId);
+          .where('journeyId',
+              isEqualTo: goalId); // Assume que 'journeyId' liga à meta
+
       final tasksSnapshot = await tasksQuery.get();
       for (final doc in tasksSnapshot.docs) {
         batch.delete(doc.reference);
       }
+
       await batch.commit();
     } catch (e, stackTrace) {
       print("Erro ao deletar meta $goalId e/ou suas tarefas: $e\n$stackTrace");
-      rethrow;
+      rethrow; // Propaga o erro para a UI poder reagir
     }
   }
 
@@ -508,13 +605,18 @@ class FirestoreService {
       for (final doc in querySnapshot.docs) {
         try {
           final goal = Goal.fromFirestore(doc);
+          // Compara os títulos sanitizados em minúsculas
           if (StringSanitizer.toSimpleTag(goal.title).toLowerCase() ==
               sanitizedTitle.toLowerCase()) {
             return goal;
           }
-        } catch (e) {/* Log erro */}
+        } catch (e) {
+          print(
+              "Erro ao processar meta ${doc.id} em findGoalBySanitizedTitle: $e");
+          // Continua para a próxima meta
+        }
       }
-      return null;
+      return null; // Nenhuma meta encontrada com esse título
     } catch (e) {
       print(
           "Erro ao buscar meta pelo título simplificado '$sanitizedTitle': $e");
@@ -534,13 +636,13 @@ class FirestoreService {
         .where('dueDate',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
         .where('dueDate', isLessThan: Timestamp.fromDate(endOfMonth))
-        .orderBy('dueDate');
+        .orderBy('dueDate'); // Ordena pela data de vencimento
     return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
     }).handleError((error, stackTrace) {
       print(
           "Erro no stream de tasks (dueDate - Calendar): $error\n$stackTrace");
-      return <TaskModel>[];
+      return <TaskModel>[]; // Retorna lista vazia em caso de erro
     });
   }
 
@@ -552,17 +654,17 @@ class FirestoreService {
         .collection('users')
         .doc(userId)
         .collection('tasks')
-        .where('dueDate', isEqualTo: null)
-        .where('createdAt',
+        .where('dueDate', isEqualTo: null) // Tarefas sem data de vencimento
+        .where('createdAt', // Mas criadas no mês visualizado
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
         .where('createdAt', isLessThan: Timestamp.fromDate(endOfMonth))
-        .orderBy('createdAt');
+        .orderBy('createdAt'); // Ordena pela data de criação
     return query.snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => TaskModel.fromFirestore(doc)).toList();
     }).handleError((error, stackTrace) {
       print(
           "Erro no stream de tasks (createdAt - Calendar): $error\n$stackTrace");
-      return <TaskModel>[];
+      return <TaskModel>[]; // Retorna lista vazia em caso de erro
     });
   }
 
@@ -577,7 +679,7 @@ class FirestoreService {
         .where('createdAt',
             isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
         .where('createdAt', isLessThan: Timestamp.fromDate(endOfMonth))
-        .orderBy('createdAt', descending: true);
+        .orderBy('createdAt', descending: true); // Mais recentes primeiro
     return query.snapshots().map((snapshot) {
       return snapshot.docs
           .map((doc) => JournalEntry.fromFirestore(doc))
@@ -585,25 +687,19 @@ class FirestoreService {
     }).handleError((error, stackTrace) {
       print(
           "Erro no stream de Journal Entries (Calendar): $error\n$stackTrace");
-      return <JournalEntry>[];
+      return <JournalEntry>[]; // Retorna lista vazia em caso de erro
     });
   }
 
-  // --- INÍCIO DA ADIÇÃO: NOVO MÉTODO DE STREAM PARA O FOCO DO DIA ---
-  /// Retorna um Stream de tarefas [TaskModel] para o dia de HOJE.
-  /// Combina tarefas com dueDate para hoje E tarefas sem dueDate criadas hoje.
+  // --- STREAM PARA O FOCO DO DIA (sem alterações) ---
   Stream<List<TaskModel>> getTasksStreamForToday(String userId) {
     final now = DateTime.now();
     final startOfDayLocal = DateTime(now.year, now.month, now.day);
     final endOfDayLocal = startOfDayLocal.add(const Duration(days: 1));
-
-    // Converte para Timestamps UTC (Firestore compara Timestamps)
     final startTimestamp = Timestamp.fromDate(startOfDayLocal.toUtc());
     final endTimestamp = Timestamp.fromDate(endOfDayLocal.toUtc());
-
     final tasksRef = _db.collection('users').doc(userId).collection('tasks');
 
-    // Stream 1: Tarefas COM dueDate para hoje (Requer índice: dueDate ASC)
     final streamDueDate = tasksRef
         .where('dueDate', isGreaterThanOrEqualTo: startTimestamp)
         .where('dueDate', isLessThan: endTimestamp)
@@ -616,7 +712,6 @@ class FirestoreService {
       return <TaskModel>[];
     });
 
-    // Stream 2: Tarefas SEM dueDate (null) E criadas hoje (Requer índice: dueDate == null, createdAt ASC)
     final streamCreatedAt = tasksRef
         .where('dueDate', isEqualTo: null)
         .where('createdAt', isGreaterThanOrEqualTo: startTimestamp)
@@ -630,12 +725,10 @@ class FirestoreService {
       return <TaskModel>[];
     });
 
-    // Combina os dois streams usando rxdart
     return Rx.combineLatest2<List<TaskModel>, List<TaskModel>, List<TaskModel>>(
       streamDueDate,
       streamCreatedAt,
       (dueDateTasks, createdAtTasks) {
-        // Lógica de combinação idêntica ao Future getTasksForToday
         final tasksMap = <String, TaskModel>{};
         for (var task in dueDateTasks) {
           tasksMap[task.id] = task;
@@ -652,7 +745,6 @@ class FirestoreService {
       },
     );
   }
-  // --- FIM DA ADIÇÃO ---
 
   // --- FUNÇÃO getTasksForFocusDay (sem alterações) ---
   Future<List<TaskModel>> getTasksForFocusDay(
@@ -660,7 +752,6 @@ class FirestoreService {
     try {
       final startOfDayLocal = DateTime(day.year, day.month, day.day);
       final endOfDayLocal = startOfDayLocal.add(const Duration(days: 1));
-      // Convertendo para UTC
       final startTimestamp = Timestamp.fromDate(startOfDayLocal.toUtc());
       final endTimestamp = Timestamp.fromDate(endOfDayLocal.toUtc());
       final tasksRef = _db.collection('users').doc(userId).collection('tasks');

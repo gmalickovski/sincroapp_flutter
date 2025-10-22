@@ -45,3 +45,16 @@ android {
 flutter {
     source = "../.."
 }
+
+// ✅ ADIÇÃO CRÍTICA (A CORREÇÃO PRINCIPAL)
+// Este bloco implementa o "Bill of Materials" (BoM) do Firebase.
+// Ele força todas as dependências nativas do Firebase (auth, firestore, ai, etc.)
+// a usarem versões compatíveis entre si, resolvendo o conflito nativo.
+dependencies {
+    // Importa o BoM do Firebase (usando a versão estável mais recente)
+    implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+
+    // Você não precisa adicionar mais nada aqui (ex: firebase-auth, firebase-ai).
+    // Os plugins do Flutter farão isso automaticamente, e o BoM acima
+    // garantirá que as versões sejam compatíveis.
+}
