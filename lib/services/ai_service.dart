@@ -1,9 +1,10 @@
-// lib/services/ai_service.dart (CORRIGIDO)
+// lib/services/ai_service.dart
 
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_ai/firebase_ai.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // IMPORTANTE!
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_app_check/firebase_app_check.dart'; // ⬅️ ADICIONE ESTE IMPORT
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
@@ -14,7 +15,7 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 class AIService {
   static GenerativeModel? _cachedModel;
 
-  // --- MÉTODO _getModel CORRIGIDO ---
+  /// Método corrigido para inicializar o modelo Gemini com App Check
   static GenerativeModel _getModel() {
     if (_cachedModel != null) {
       return _cachedModel!;
@@ -23,39 +24,46 @@ class AIService {
     try {
       debugPrint("=== Inicializando modelo Gemini ===");
 
-      // Verifica se o usuário está autenticado
+      // 1. Verifica autenticação
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception(
-            "Usuário não autenticado. FirebaseAuth.instance.currentUser é null.");
+            "❌ Usuário não autenticado. FirebaseAuth.instance.currentUser é null.");
       }
-      debugPrint("Usuário autenticado: ${currentUser.uid}");
+      debugPrint("✅ Usuário autenticado: ${currentUser.uid}");
+      debugPrint("📧 Email: ${currentUser.email}");
 
-      // Inicializa o modelo com autenticação
-      final model = FirebaseAI.googleAI(
+      // 2. CORREÇÃO CRÍTICA: Use vertexAI() para Web em vez de googleAI()
+      // E PASSE O APP CHECK EXPLICITAMENTE (obrigatório para Flutter)
+      final model = FirebaseAI.vertexAI(
         auth: FirebaseAuth.instance,
+        appCheck: FirebaseAppCheck.instance, // ⬅️ CRÍTICO PARA FLUTTER!
       ).generativeModel(
         model: 'gemini-2.5-flash-lite',
       );
 
       _cachedModel = model;
       debugPrint("✅ Modelo Gemini inicializado com sucesso!");
-      debugPrint("Modelo: gemini-2.5-flash-lite");
+      debugPrint("📦 Provider: vertexAI (com App Check)");
+      debugPrint("🤖 Modelo: gemini-2.5-flash-lite");
       debugPrint("===================================");
+
       return model;
     } catch (e, stackTrace) {
-      debugPrint("❌ Erro ao inicializar o modelo Gemini: $e");
-      debugPrint("StackTrace: $stackTrace");
-      throw Exception("Falha ao inicializar o modelo de IA. Verifique:\n"
-          "1. Firebase Auth está configurado?\n"
-          "2. Usuário está autenticado?\n"
-          "3. Firebase AI Logic API está habilitada?\n"
-          "4. App Check está configurado?\n"
-          "Erro: ${e.toString()}");
+      debugPrint("❌ ERRO ao inicializar o modelo Gemini: $e");
+      debugPrint("📍 StackTrace: $stackTrace");
+
+      throw Exception("Falha ao inicializar o modelo de IA.\n\n"
+          "Checklist de verificação:\n"
+          "✓ Firebase Auth configurado? ${FirebaseAuth.instance.currentUser != null ? 'SIM' : 'NÃO'}\n"
+          "✓ App Check ativado? Verifique o console\n"
+          "✓ Vertex AI API habilitada no Cloud Console?\n"
+          "✓ Token de debug registrado no Firebase Console?\n\n"
+          "Erro técnico: ${e.toString()}");
     }
   }
 
-  // Helper _getDesc (sem alterações)
+  // Helper para obter descrições (sem alterações)
   static String _getDesc(String type, int? number) {
     if (number == null) return "Não disponível.";
     VibrationContent? content;
@@ -76,7 +84,7 @@ class AIService {
     return "${content.titulo}: ${content.descricaoCompleta}";
   }
 
-  // _buildPrompt (sem alterações)
+  // Monta o prompt (sem alterações)
   static String _buildPrompt({
     required String goalTitle,
     required String goalDescription,
@@ -127,29 +135,29 @@ class AIService {
         : "Nenhum marco foi criado para esta meta ainda.";
 
     return """
-    Você é um Coach de Produtividade e Estrategista Pessoal...
+Você é um Coach de Produtividade e Estrategista Pessoal...
 
-    **DOSSIÊ DO USUÁRIO:**
-    ... (igual antes) ...
-    **5. FERRAMENTA PARA DATAS (A VIBRAÇÃO DO DIA):**
-    - Data de Início do Planejamento: $formattedStartDate
-    - Data de Nascimento do Usuário: $userBirthDate
-    - Guia do Dia Pessoal: $diaPessoalContext
+**DOSSIÊ DO USUÁRIO:**
+... (igual antes) ...
+**5. FERRAMENTA PARA DATAS (A VIBRAÇÃO DO DIA):**
+- Data de Início do Planejamento: $formattedStartDate
+- Data de Nascimento do Usuário: $userBirthDate
+- Guia do Dia Pessoal: $diaPessoalContext
 
-    ---
-    **SUA TAREFA ESTRATÉGICA:**
-    ... (igual antes) ...
-    5.  **FORMATO DA RESPOSTA:** Responda **APENAS** com um array de objetos JSON...
+---
+**SUA TAREFA ESTRATÉGICA:**
+... (igual antes) ...
+5.  **FORMATO DA RESPOSTA:** Responda **APENAS** com um array de objetos JSON...
 
-    **Exemplo de Resposta Esperada:**
-    [
-      {"title": "Marco 1", "date": "YYYY-MM-DD"},
-      {"title": "Marco 2", "date": "YYYY-MM-DD"}
-    ]
-    """;
+**Exemplo de Resposta Esperada:**
+[
+  {"title": "Marco 1", "date": "YYYY-MM-DD"},
+  {"title": "Marco 2", "date": "YYYY-MM-DD"}
+]
+""";
   }
 
-  // generateSuggestions (sem alterações no corpo, apenas melhor tratamento de erros)
+  /// Gera sugestões de marcos usando IA
   static Future<List<Map<String, String>>> generateSuggestions({
     required Goal goal,
     required UserModel user,
@@ -158,15 +166,16 @@ class AIService {
     String additionalInfo = '',
   }) async {
     try {
-      // Verifica se o usuário está autenticado
+      debugPrint("🚀 AIService: Iniciando geração de sugestões...");
+
+      // Verifica autenticação
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception(
-            "Usuário não autenticado. Por favor, faça login novamente.");
+            "❌ Usuário não autenticado. Por favor, faça login novamente.");
       }
 
-      debugPrint(
-          "AIService: Gerando sugestões para usuário: ${currentUser.uid}");
+      debugPrint("✅ Usuário autenticado: ${currentUser.uid}");
 
       final userBirthDate = user.dataNasc;
 
@@ -181,33 +190,40 @@ class AIService {
         userTasks: userTasks,
       );
 
+      debugPrint("📝 Prompt preparado (${prompt.length} caracteres)");
+
       final generativeModel = _getModel();
       final content = [Content.text(prompt)];
 
-      debugPrint("AIService: Chamando modelo Gemini...");
+      debugPrint("🤖 Chamando modelo Gemini...");
       final response = await generativeModel.generateContent(content);
-      debugPrint("AIService: Resposta recebida do modelo");
+      debugPrint("✅ Resposta recebida do modelo");
 
       String text = response.text ?? '';
-      debugPrint("AIService Resposta Bruta: $text");
+      debugPrint(
+          "📄 Resposta bruta (${text.length} caracteres): ${text.substring(0, text.length > 200 ? 200 : text.length)}...");
 
+      // Limpa a resposta
       text = text.replaceAll('```json', '').replaceAll('```', '').trim();
 
+      // Valida formato JSON
       if (!text.startsWith('[') || !text.endsWith(']')) {
         debugPrint(
-            "AIService Erro: Resposta da IA não é um JSON array válido.");
+            "⚠️ Resposta não é um JSON array válido. Tentando extrair...");
         final jsonMatch =
             RegExp(r'\[\s*\{.*\}\s*\]', dotAll: true).firstMatch(text);
         if (jsonMatch != null) {
           text = jsonMatch.group(0)!;
-          debugPrint("AIService Info: JSON extraído da resposta: $text");
+          debugPrint("✅ JSON extraído com sucesso");
         } else {
           throw Exception("A IA retornou um formato de texto inesperado.");
         }
       }
 
+      // Parse do JSON em isolate
       final List<dynamic> suggestionsJson = await compute(parseJsonList, text);
 
+      // Converte para formato esperado
       final List<Map<String, String>> suggestions = suggestionsJson
           .map((item) {
             if (item is Map &&
@@ -218,63 +234,68 @@ class AIService {
                 'date': item['date'].toString(),
               };
             } else {
-              debugPrint(
-                  "AIService Warning: Item inválido recebido da IA: $item");
+              debugPrint("⚠️ Item inválido ignorado: $item");
               return null;
             }
           })
           .whereType<Map<String, String>>()
           .toList();
 
-      debugPrint(
-          "AIService: ${suggestions.length} sugestões geradas com sucesso");
+      debugPrint("✅ ${suggestions.length} sugestões geradas com sucesso!");
       return suggestions;
     } catch (e, s) {
-      debugPrint("Erro ao gerar sugestões estratégicas: $e");
-      debugPrint("StackTrace: $s");
+      debugPrint("❌ ERRO ao gerar sugestões: $e");
+      debugPrint("📍 StackTrace: $s");
 
       final errorString = e.toString().toLowerCase();
 
-      // Erros relacionados ao App Check ou autenticação
+      // Tratamento específico de erros
       if (errorString.contains("app check") ||
           errorString.contains("unauthenticated") ||
           errorString.contains("401") ||
-          errorString.contains("unauthorized")) {
-        throw Exception(
-            "Erro de autenticação: Verifique se você está logado e se o Firebase App Check está configurado corretamente.");
+          errorString.contains("unauthorized") ||
+          errorString.contains("invalid")) {
+        throw Exception("🔒 Erro de Autenticação Firebase App Check\n\n"
+            "Possíveis causas:\n"
+            "1. Token de debug não foi registrado no Firebase Console\n"
+            "2. App Check não está configurado corretamente\n"
+            "3. reCAPTCHA v3 não está ativo para Web\n"
+            "4. Usuário não está autenticado\n\n"
+            "Ações:\n"
+            "• Verifique o console do navegador para o token de debug\n"
+            "• Registre o token em: Firebase Console > App Check\n"
+            "• Limpe o cache e recarregue a página (Ctrl+Shift+R)");
       }
 
-      // Erros de formato JSON
       if (e is FormatException) {
         throw Exception(
-            "A IA retornou um formato JSON inválido. Tente novamente.");
+            "📋 A IA retornou um formato JSON inválido. Tente novamente.");
       }
 
-      if (errorString.contains("formato de texto inesperado")) {
-        throw Exception("A IA retornou um formato inválido. Tente novamente.");
-      }
-
-      // Erros de modelo não encontrado
       if (errorString.contains("model not found") ||
           errorString.contains("invalid model") ||
           errorString.contains("404")) {
-        throw Exception("Modelo 'gemini-2.5-flash-lite' não encontrado. "
-            "Verifique a configuração da extensão Firebase.");
+        throw Exception("🤖 Modelo 'gemini-2.5-flash-lite' não encontrado.\n\n"
+            "Verifique:\n"
+            "• Vertex AI API está habilitada no Google Cloud Console\n"
+            "• O nome do modelo está correto\n"
+            "• Sua região suporta este modelo");
       }
 
       // Erro genérico
-      throw Exception(
-          "Ocorreu um erro ao se comunicar com a IA. Detalhes: ${e.toString()}");
+      throw Exception("💥 Erro ao comunicar com a IA\n\n"
+          "Detalhes técnicos: ${e.toString()}\n\n"
+          "Se o problema persistir, entre em contato com o suporte.");
     }
   }
 
-  // parseJsonList (sem alterações)
+  /// Parse JSON em isolate para não bloquear a UI
   static List<dynamic> parseJsonList(String text) {
     try {
       return jsonDecode(text) as List<dynamic>;
     } catch (e) {
-      debugPrint("Erro ao decodificar JSON: $e");
-      debugPrint("Texto recebido: $text");
+      debugPrint("❌ Erro ao decodificar JSON: $e");
+      debugPrint("📄 Texto recebido: $text");
       throw FormatException("JSON inválido recebido da IA.");
     }
   }

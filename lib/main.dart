@@ -1,11 +1,11 @@
-// lib/main.dart (CORRIGIDO E RESTAURADO)
+// lib/main.dart
 
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart'; // Importação principal
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:sincro_app_flutter/firebase_options.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
@@ -24,45 +24,106 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
 
+  // Inicializa Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
   try {
-    // --- LÓGICA DE ATIVAÇÃO CORRETA E SIMPLIFICADA ---
-    // O Flutter é inteligente o suficiente para usar o provedor
-    // correto com base na plataforma (kIsWeb, Android, etc.)
+    debugPrint('🔧 Inicializando Firebase App Check...');
+
+    // ========================================
+    // CONFIGURAÇÃO AUTOMÁTICA DO APP CHECK
+    // ========================================
+    // O Flutter detecta automaticamente se está em:
+    // - Modo debug (desenvolvimento)
+    // - Modo release (produção)
+    // E escolhe o provedor correto!
 
     await FirebaseAppCheck.instance.activate(
-      // Provedor para Web (usado apenas se kIsWeb for true)
+      // ===== WEB =====
+      // Em debug: usa debug token (definido no index.html)
+      // Em release: usa reCAPTCHA v3 automaticamente
       webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
 
-      // Provedor para Android (usado apenas em Android)
+      // ===== ANDROID =====
+      // Em debug (kDebugMode = true): usa debug provider
+      // Em release (kDebugMode = false): usa Play Integrity (requer app na Play Store)
       androidProvider:
           kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
 
-      // Provedor para Apple (usado apenas em iOS/macOS)
-      // appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+      // ===== iOS/macOS =====
+      // Em debug: usa debug provider
+      // Em release: usa App Attest (requer app na App Store)
+      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
     );
 
-    debugPrint('✅ Firebase App Check ativado com sucesso!');
-
-    // Lógica de log de debug (INTACTA)
-    if (kDebugMode && defaultTargetPlatform == TargetPlatform.android) {
-      debugPrint(
-          '⚠️ [Android] PROCURE NO LOGCAT POR: "Firebase App Check debug token"');
-      debugPrint('⚠️ Adicione esse token no Firebase Console > App Check');
-    }
+    debugPrint('✅ Firebase App Check ativado!');
+    _logAppCheckStatus();
   } catch (e, s) {
-    debugPrint('❌ Erro ao ativar Firebase App Check: $e');
+    debugPrint('');
+    debugPrint('❌ ===== ERRO NO APP CHECK =====');
+    debugPrint('Erro: $e');
     debugPrint('StackTrace: $s');
+    debugPrint('================================');
+    debugPrint('');
   }
 
   runApp(const SincroApp());
 }
 
-// O restante do arquivo (SincroApp, AuthCheck, etc.) permanece
-// exatamente como você o enviou, pois está correto.
+/// Função helper para logar o status do App Check
+void _logAppCheckStatus() {
+  if (!kDebugMode) {
+    // Em produção, não logamos detalhes
+    return;
+  }
+
+  debugPrint('');
+  debugPrint('📱 ===== APP CHECK STATUS =====');
+  debugPrint('Modo: ${kDebugMode ? "DEBUG 🛠️" : "RELEASE 🚀"}');
+  debugPrint('Plataforma: ${defaultTargetPlatform.name}');
+
+  if (kIsWeb) {
+    debugPrint('');
+    debugPrint('🌐 WEB:');
+    if (kDebugMode) {
+      debugPrint('  ✓ Usando: Debug Token');
+      debugPrint('  ℹ️ Procure no console por:');
+      debugPrint('     "Firebase App Check debug token: XXXX..."');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+    } else {
+      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
+      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
+    }
+  } else if (defaultTargetPlatform == TargetPlatform.android) {
+    debugPrint('');
+    debugPrint('🤖 ANDROID:');
+    if (kDebugMode) {
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
+      debugPrint('     "Firebase App Check debug token"');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+    } else {
+      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na Play Store');
+    }
+  } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS) {
+    debugPrint('');
+    debugPrint('🍎 iOS/macOS:');
+    if (kDebugMode) {
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ℹ️ Registre o token no Firebase Console');
+    } else {
+      debugPrint('  ✓ Usando: App Attest (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na App Store');
+    }
+  }
+
+  debugPrint('================================');
+  debugPrint('');
+}
 
 class SincroApp extends StatelessWidget {
   const SincroApp({super.key});

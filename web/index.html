@@ -11,16 +11,42 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="apple-mobile-web-app-title" content="sincro_app_flutter">
   <link rel="apple-touch-icon" href="icons/Icon-192.png">
-
   <link rel="icon" type="image/png" href="favicon.png"/>
 
   <title>sincro_app_flutter</title>
   <link rel="manifest" href="manifest.json">
 
-<script>
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = 'ce2d35d3-2263-4493-8978-d179b3709abc';
-</script>
-  </head>
+  <!-- 
+    ========================================
+    DETECÇÃO AUTOMÁTICA DE AMBIENTE
+    ========================================
+    Este script detecta se está rodando em localhost
+    e ativa o debug token APENAS em desenvolvimento
+  -->
+  <script>
+    // Detecta se está em localhost (desenvolvimento)
+    const isLocalhost = Boolean(
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '[::1]' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+    );
+
+    // ===== MODO DEBUG (localhost) =====
+    if (isLocalhost) {
+      // Ativa o debug token automaticamente
+      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+      console.log('🛠️ Modo DEBUG: App Check debug token ativado');
+      console.log('📝 Procure no console pelo token gerado e registre no Firebase Console');
+    } 
+    // ===== MODO PRODUÇÃO (domínio real) =====
+    else {
+      console.log('🚀 Modo PRODUÇÃO: Usando reCAPTCHA v3');
+      // Em produção, o reCAPTCHA v3 funciona automaticamente
+      // Não é necessário configurar nada aqui
+    }
+  </script>
+</head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
 </body>
