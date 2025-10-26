@@ -7,26 +7,33 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 
 class TasksListView extends StatelessWidget {
   final List<TaskModel> tasks;
-  final UserModel? userData;
-  final bool showJourney;
+  final UserModel? userData; // Pode ser necessário para a tela de detalhes
+  // Removido showJourney pois TaskItem não usa mais diretamente para texto
+  // final bool showJourney;
   final String emptyListMessage;
   final String emptyListSubMessage;
   final Function(TaskModel, bool) onToggle;
-  final Function(TaskModel) onTaskDeleted;
-  final Function(TaskModel) onTaskEdited;
-  final Function(TaskModel) onTaskDuplicated;
+  // --- INÍCIO DA MUDANÇA ---
+  final Function(TaskModel)? onTaskTap; // Callback para abrir detalhes
+  // REMOVIDO: final Function(TaskModel) onTaskDeleted;
+  // REMOVIDO: final Function(TaskModel) onTaskEdited;
+  // REMOVIDO: final Function(TaskModel) onTaskDuplicated;
+  // --- FIM DA MUDANÇA ---
 
   const TasksListView({
     super.key,
     required this.tasks,
     required this.userData,
-    this.showJourney = true,
+    // this.showJourney = true, // Removido
     this.emptyListMessage = 'Tudo limpo por aqui!',
     this.emptyListSubMessage = 'Nenhuma tarefa encontrada.',
     required this.onToggle,
-    required this.onTaskDeleted,
-    required this.onTaskEdited,
-    required this.onTaskDuplicated,
+    // --- INÍCIO DA MUDANÇA ---
+    this.onTaskTap, // Adicionado como opcional
+    // REMOVIDO: required this.onTaskDeleted,
+    // REMOVIDO: required this.onTaskEdited,
+    // REMOVIDO: required this.onTaskDuplicated,
+    // --- FIM DA MUDANÇA ---
   });
 
   @override
@@ -53,18 +60,26 @@ class TasksListView extends StatelessWidget {
     }
 
     return ListView.builder(
-      // *** PADDING HORIZONTAL REMOVIDO PARA SER CONTROLADO PELA TELA PAI ***
       padding: const EdgeInsets.only(top: 8, bottom: 80),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
         return TaskItem(
+          key: ValueKey(task.id), // Boa prática adicionar key
           task: task,
-          showJourney: showJourney,
+          // showJourney não é mais um parâmetro direto relevante para TaskItem como antes
+          // showGoalIconFlag, showTagsIconFlag, showVibrationPillFlag podem ser passados aqui se necessário
+          // controlar a exibição desses ícones de forma diferente em listas diferentes.
+          // Por enquanto, usaremos os defaults do TaskItem.
           onToggle: (isCompleted) => onToggle(task, isCompleted),
-          onEdit: () => onTaskEdited(task),
-          onDelete: () => onTaskDeleted(task),
-          onDuplicate: () => onTaskDuplicated(task),
+          // --- INÍCIO DA MUDANÇA ---
+          onTap: onTaskTap != null
+              ? () => onTaskTap!(task)
+              : null, // Passa o onTap
+          // REMOVIDO: onEdit: () => onTaskEdited(task),
+          // REMOVIDO: onDelete: () => onTaskDeleted(task),
+          // REMOVIDO: onDuplicate: () => onTaskDuplicated(task),
+          // --- FIM DA MUDANÇA ---
         );
       },
     );

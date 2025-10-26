@@ -1,10 +1,10 @@
-// lib/features/calendar/presentation/widgets/day_detail_panel.dart
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
-import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+// --- MUDANÇA (TAREFA 3): Import removido ---
+// import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+// --- FIM MUDANÇA ---
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 
@@ -14,11 +14,14 @@ class DayDetailPanel extends StatelessWidget {
   final List<dynamic> events;
   final bool isDesktop;
   final VoidCallback onAddTask;
-  final Function(TaskModel) onEditTask;
-  final Function(TaskModel) onDeleteTask;
-  final Function(TaskModel) onDuplicateTask;
   final Function(TaskModel, bool) onToggleTask;
-  final Function(JournalEntry) onJournalTap;
+  // --- MUDANÇA: onTaskTap agora é o único callback para clique em tarefa ---
+  final Function(TaskModel) onTaskTap;
+  // --- FIM MUDANÇA ---
+  // --- MUDANÇA (TAREFA 3): Callback removido ---
+  // final Function(JournalEntry) onJournalTap;
+  // --- FIM MUDANÇA ---
+  final ScrollController? scrollController;
 
   const DayDetailPanel({
     super.key,
@@ -27,11 +30,14 @@ class DayDetailPanel extends StatelessWidget {
     required this.events,
     this.isDesktop = false,
     required this.onAddTask,
-    required this.onEditTask,
-    required this.onDeleteTask,
-    required this.onDuplicateTask,
     required this.onToggleTask,
-    required this.onJournalTap,
+    // --- MUDANÇA: Tornou-se o callback principal ---
+    required this.onTaskTap,
+    // --- FIM MUDANÇA ---
+    // --- MUDANÇA (TAREFA 3): Callback removido ---
+    // required this.onJournalTap,
+    // --- FIM MUDANÇA ---
+    this.scrollController,
   });
 
   @override
@@ -51,15 +57,33 @@ class DayDetailPanel extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                formattedDate!,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold),
+              Expanded(
+                // Garante que a data não estoure
+                child: Text(
+                  formattedDate!,
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
+                  overflow:
+                      TextOverflow.ellipsis, // Evita quebra se muito longo
+                ),
               ),
-              if (personalDayNumber != null)
-                VibrationPill(vibrationNumber: personalDayNumber!),
+              if (personalDayNumber != null && personalDayNumber! > 0)
+                Padding(
+                  // Adiciona padding para não colar no botão add
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: VibrationPill(vibrationNumber: personalDayNumber!),
+                ),
+              // --- MUDANÇA (TAREFA 1): Botão de adicionar tarefa removido ---
+              // IconButton(
+              //   icon: const Icon(Icons.add_circle_outline,
+              //       color: AppColors.primary),
+              //   tooltip:
+              //       'Adicionar Tarefa para ${DateFormat('dd/MM').format(selectedDay!)}',
+              //   onPressed: onAddTask,
+              // ),
+              // --- FIM MUDANÇA ---
             ],
           ),
         ),
@@ -68,34 +92,42 @@ class DayDetailPanel extends StatelessWidget {
           child: events.isEmpty
               ? _buildEmptyStateMobile()
               : ListView.separated(
-                  // Padding vertical da lista zerado
+                  controller: scrollController,
                   padding:
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
                   shrinkWrap: true,
                   itemCount: events.length,
-                  // Separador com altura 0, pois os itens controlam o próprio espaçamento
-                  separatorBuilder: (_, __) => const SizedBox(height: 0),
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: 0), // TaskItem controla o padding
                   itemBuilder: (context, index) {
                     final event = events[index];
                     if (event is TaskModel) {
+                      // --- MUDANÇA: Usar onTaskTap e remover callbacks antigos ---
                       return TaskItem(
+                        key: ValueKey('task_${event.id}'),
                         task: event,
-                        showJourney: true,
                         onToggle: (isCompleted) =>
                             onToggleTask(event, isCompleted),
-                        onEdit: () => onEditTask(event),
-                        onDelete: () => onDeleteTask(event),
-                        onDuplicate: () => onDuplicateTask(event),
-                        // Passamos o override de 3.0
-                        verticalPaddingOverride: 3.0,
+                        onTap: () =>
+                            onTaskTap(event), // Chama o callback principal
+                        // Flags de exibição (mantidos)
+                        showGoalIconFlag: true,
+                        showTagsIconFlag: true,
+                        showVibrationPillFlag: true,
+                        // Padding customizado (mantido)
+                        verticalPaddingOverride: 4.0,
                       );
+                      // --- FIM MUDANÇA ---
                     }
-                    if (event is JournalEntry) {
-                      return _JournalListItem(
-                        entry: event,
-                        onTap: () => onJournalTap(event),
-                      );
-                    }
+                    // --- MUDANÇA (TAREFA 3): Bloco do JournalEntry removido ---
+                    // if (event is JournalEntry) {
+                    //   return _JournalListItem(
+                    //     key: ValueKey('journal_${event.id}'),
+                    //     entry: event,
+                    //     onTap: () => onJournalTap(event),
+                    //   );
+                    // }
+                    // --- FIM MUDANÇA ---
                     return const SizedBox.shrink();
                   },
                 ),
@@ -104,29 +136,29 @@ class DayDetailPanel extends StatelessWidget {
     );
   }
 
+  // Estados vazios (inalterados)
   Widget _buildEmptyStateDesktop() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: Text("Selecione um dia para ver os detalhes.",
-            style: TextStyle(color: AppColors.secondaryText)),
+    // Implementação do estado vazio para desktop (inalterada)
+    return const Center(
+      child: Text(
+        'Selecione um dia',
+        style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
       ),
     );
   }
 
   Widget _buildEmptyStateMobile() {
+    // Implementação do estado vazio para mobile (inalterada)
     return const Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.inbox_outlined, color: AppColors.tertiaryText, size: 32),
-          SizedBox(height: 8),
+          Icon(Icons.calendar_today_outlined,
+              color: AppColors.secondaryText, size: 48),
+          SizedBox(height: 16),
           Text(
-            "Nenhum item para este dia.",
-            style: TextStyle(color: AppColors.tertiaryText),
+            'Nenhum evento para este dia.',
+            style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
           ),
         ],
       ),
@@ -134,52 +166,8 @@ class DayDetailPanel extends StatelessWidget {
   }
 }
 
-class _JournalListItem extends StatelessWidget {
-  final JournalEntry entry;
-  final VoidCallback onTap;
-
-  const _JournalListItem({required this.entry, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    // --- INÍCIO DA MODIFICAÇÃO (Adiciona padding externo) ---
-    // Envolvemos o Material com um Padding, exatamente como o TaskItem,
-    // para que ele também tenha um espaçamento externo.
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Material(
-        color: AppColors.cardBackground.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(8),
-          child: Padding(
-            // O padding interno original do seu código (16)
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
-                  padding: EdgeInsets.only(top: 2.0),
-                  child: Icon(Icons.book_outlined,
-                      color: AppColors.journalMarker, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    entry.content,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        color: AppColors.secondaryText, height: 1.5),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-    // --- FIM DA MODIFICAÇÃO ---
-  }
-}
+// --- MUDANÇA (TAREFA 3): Widget _JournalListItem removido ---
+// class _JournalListItem extends StatelessWidget {
+// ...
+// }
+// --- FIM MUDANÇA ---

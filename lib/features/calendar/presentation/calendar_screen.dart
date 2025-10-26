@@ -1,15 +1,17 @@
-// lib/features/calendar/presentation/calendar_screen.dart
-
 import 'dart:async'; // Necessário para StreamSubscription
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:collection/collection.dart';
-import 'package:sincro_app_flutter/features/journal/presentation/journal_editor_screen.dart';
+// --- MUDANÇA (TAREFA 3): Import removido ---
+// import 'package:sincro_app_flutter/features/journal/presentation/journal_editor_screen.dart';
+// --- FIM MUDANÇA ---
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart'; // Import correto
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
-import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+// --- MUDANÇA (TAREFA 3): Import removido ---
+// import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+// --- FIM MUDANÇA ---
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -19,6 +21,10 @@ import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/day_detail_panel.dart';
+
+// --- INÍCIO DA MUDANÇA: Importar o TaskDetailModal ---
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
+// --- FIM DA MUDANÇA ---
 
 class CalendarScreen extends StatefulWidget {
   final UserModel userData;
@@ -38,7 +44,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   DateTime? _selectedDay;
   late final String _userId;
 
-  // Chaves UTC para marcadores (_events), Chaves LOCAIS para painel (_rawEvents)
   Map<DateTime, List<CalendarEvent>> _events = {}; // Chave UTC
   Map<DateTime, List<dynamic>> _rawEvents = {}; // Chave LOCAL
 
@@ -46,15 +51,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isScreenLoading = true;
   bool _isChangingMonth = false;
 
-  // Variáveis para gerenciar os streams
   StreamSubscription? _tasksDueDateSubscription;
   StreamSubscription? _tasksCreatedAtSubscription;
-  StreamSubscription? _journalSubscription;
+  // --- MUDANÇA (TAREFA 3): Stream removida ---
+  // StreamSubscription? _journalSubscription;
+  // --- FIM MUDANÇA ---
 
-  // Listas para armazenar os dados dos streams
   List<TaskModel> _currentTasksDueDate = [];
   List<TaskModel> _currentTasksCreatedAt = [];
-  List<JournalEntry> _currentJournalEntries = [];
+  // --- MUDANÇA (TAREFA 3): Lista removida ---
+  // List<JournalEntry> _currentJournalEntries = [];
+  // --- FIM MUDANÇA ---
 
   @override
   void initState() {
@@ -63,21 +70,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _focusedDay = DateTime(now.year, now.month, now.day);
     _selectedDay = DateTime(now.year, now.month, now.day);
     _userId = _authRepository.getCurrentUser()!.uid;
-
-    // Trocamos _loadInitialData por _initializeStreams
     _initializeStreams(_focusedDay, isInitialLoad: true);
   }
 
   @override
   void dispose() {
-    // Limpar as inscrições dos streams para evitar memory leaks
     _tasksDueDateSubscription?.cancel();
     _tasksCreatedAtSubscription?.cancel();
-    _journalSubscription?.cancel();
+    // --- MUDANÇA (TAREFA 3): Cancelamento removido ---
+    // _journalSubscription?.cancel();
+    // --- FIM MUDANÇA ---
     super.dispose();
   }
 
-  /// Inicia os listeners dos streams para o mês fornecido.
+  // initializeStreams
   Future<void> _initializeStreams(DateTime month,
       {bool isInitialLoad = false}) async {
     if (mounted) {
@@ -89,14 +95,18 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _rawEvents = {};
         _currentTasksDueDate = [];
         _currentTasksCreatedAt = [];
-        _currentJournalEntries = [];
+        // --- MUDANÇA (TAREFA 3): Limpeza removida ---
+        // _currentJournalEntries = [];
+        // --- FIM MUDANÇA ---
       });
     }
 
     // Cancela subscriptions anteriores
     await _tasksDueDateSubscription?.cancel();
     await _tasksCreatedAtSubscription?.cancel();
-    await _journalSubscription?.cancel();
+    // --- MUDANÇA (TAREFA 3): Cancelamento removido ---
+    // await _journalSubscription?.cancel();
+    // --- FIM MUDANÇA ---
 
     final monthUtc = DateTime.utc(month.year, month.month);
 
@@ -116,13 +126,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _onTasksCreatedAtUpdated([]); // Trata erro como lista vazia
     });
 
-    // Inicia stream de Journal
-    _journalSubscription = _firestoreService
-        .getJournalEntriesStreamForMonth(_userId, monthUtc)
-        .listen(_onJournalUpdated, onError: (e, s) {
-      print("Erro no stream de journal: $e\n$s");
-      _onJournalUpdated([]); // Trata erro como lista vazia
-    });
+    // --- MUDANÇA (TAREFA 3): Stream do Journal removida ---
+    // // Inicia stream de Journal
+    // _journalSubscription = _firestoreService
+    //     .getJournalEntriesStreamForMonth(_userId, monthUtc)
+    //     .listen(_onJournalUpdated, onError: (e, s) {
+    //   print("Erro no stream de journal: $e\n$s");
+    //   _onJournalUpdated([]); // Trata erro como lista vazia
+    // });
+    // --- FIM MUDANÇA ---
 
     // Atualiza o dia pessoal após o primeiro carregamento
     if (isInitialLoad && mounted && _selectedDay != null) {
@@ -135,25 +147,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // Chamado quando o stream de Tasks (DueDate) entrega novos dados
+  // Handlers de update dos streams
   void _onTasksDueDateUpdated(List<TaskModel> tasks) {
     _currentTasksDueDate = tasks;
-    _processEvents(); // Processa os dados combinados
+    _processEvents();
   }
 
-  // Chamado quando o stream de Tasks (CreatedAt) entrega novos dados
   void _onTasksCreatedAtUpdated(List<TaskModel> tasks) {
     _currentTasksCreatedAt = tasks;
-    _processEvents(); // Processa os dados combinados
+    _processEvents();
   }
 
-  // Chamado quando o stream de Journal entrega novos dados
-  void _onJournalUpdated(List<JournalEntry> entries) {
-    _currentJournalEntries = entries;
-    _processEvents(); // Processa os dados combinados
-  }
+  // --- MUDANÇA (TAREFA 3): Método removido ---
+  // void _onJournalUpdated(List<JournalEntry> entries) {
+  //   _currentJournalEntries = entries;
+  //   _processEvents();
+  // }
+  // --- FIM MUDANÇA ---
 
-  /// Processa os dados e atualiza a UI.
+  // Processa e combina os eventos
   void _processEvents() {
     // Mapas temporários
     Map<DateTime, List<CalendarEvent>> newEvents = {};
@@ -173,7 +185,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final allTasks = tasksMap.values.toList();
       // --- FIM DA LÓGICA DE COMBINAÇÃO ---
 
-      final allRawData = <dynamic>[...allTasks, ..._currentJournalEntries];
+      // --- MUDANÇA (TAREFA 3): Lista de Journal removida ---
+      final allRawData = <dynamic>[...allTasks]; //, ..._currentJournalEntries];
+      // --- FIM MUDANÇA ---
 
       // Agrupa por LOCAL para newRawEvents (Painel)
       newRawEvents = groupBy<dynamic, DateTime>(allRawData, (event) {
@@ -181,7 +195,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
         if (event is TaskModel) {
           localDate = event.dueDate ?? event.createdAt;
         } else {
-          localDate = (event as JournalEntry).createdAt;
+          // --- MUDANÇA (TAREFA 3): Lógica do Journal removida ---
+          // localDate = (event as JournalEntry).createdAt;
+          // Como fallback, mas não deve acontecer
+          localDate = DateTime.now();
+          // --- FIM MUDANÇA ---
         }
         return DateTime(localDate.year, localDate.month, localDate.day);
       });
@@ -198,12 +216,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ? EventType.goalTask
                   : EventType.task;
               title = event.text;
-            } else if (event is JournalEntry) {
-              eventDate = event.createdAt;
-              eventType = EventType.journal;
-              title = event.content.length > 20
-                  ? '${event.content.substring(0, 17)}...'
-                  : event.content;
+              // --- MUDANÇA (TAREFA 3): Bloco else if removido ---
+              // } else if (event is JournalEntry) {
+              //   eventDate = event.createdAt;
+              //   eventType = EventType.journal;
+              //   title = event.content.length > 20
+              //       ? '${event.content.substring(0, 17)}...'
+              //       : event.content;
+              // --- FIM MUDANÇA ---
             } else {
               return null;
             }
@@ -236,7 +256,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // Calcula dia pessoal (sem alterações)
+  // _updatePersonalDay (inalterado)
   void _updatePersonalDay(DateTime date) {
     if (widget.userData.dataNasc.isNotEmpty) {
       final engine = NumerologyEngine(
@@ -256,7 +276,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // Seleciona dia (sem alterações)
+  // _onDaySelected (inalterado)
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     final selectedLocalMidnight =
         DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
@@ -272,13 +292,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
-  // Busca eventos para o painel (USA CHAVE LOCAL)
+  // _getRawEventsForDay (inalterado)
   List<dynamic> _getRawEventsForDay(DateTime day) {
     final localMidnightKey = DateTime(day.year, day.month, day.day);
     return _rawEvents[localMidnightKey] ?? [];
   }
 
-  // Abre modal de tarefa (sem alterações)
+  // _openAddTaskModal (inalterado)
   void _openAddTaskModal({TaskModel? task}) async {
     final preselectedDateMidnight = _selectedDay != null
         ? DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)
@@ -289,25 +309,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => TaskInputModal(
-        userData: widget.userData,
+        userData: widget.userData, // Já é não nulo aqui
         preselectedDate: task == null ? preselectedDateMidnight : null,
         taskToEdit: task,
       ),
     );
   }
 
-  // Abre editor de diário (sem alterações)
-  void _openJournalEditor(JournalEntry entry) async {
-    await Navigator.of(context).push<bool>(MaterialPageRoute(
-      builder: (context) => JournalEditorScreen(
-        userData: widget.userData,
-        entry: entry,
-      ),
-      fullscreenDialog: true,
-    ));
-  }
+  // --- MUDANÇA (TAREFA 3): Método removido ---
+  // // _openJournalEditor (inalterado)
+  // void _openJournalEditor(JournalEntry entry) async {
+  //   await Navigator.of(context).push<bool>(MaterialPageRoute(
+  //     builder: (context) => JournalEditorScreen(
+  //       userData: widget.userData,
+  //       entry: entry,
+  //     ),
+  //     fullscreenDialog: true,
+  //   ));
+  // }
+  // --- FIM MUDANÇA ---
 
-  // Muda página/mês (sem alterações)
+  // _onPageChanged (inalterado)
   void _onPageChanged(DateTime newFocusedDay) {
     if (!mounted) return;
     final localMidnightFocusedDay =
@@ -317,11 +339,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       setState(() {
         _focusedDay = localMidnightFocusedDay;
         _isChangingMonth = true;
-        _selectedDay = null;
+        _selectedDay = null; // Desseleciona o dia ao mudar de mês
         _personalDayNumber = null;
       });
       _initializeStreams(localMidnightFocusedDay);
     } else {
+      // Se apenas focou em outro dia do mesmo mês, atualiza _focusedDay
       if (!isSameDay(_focusedDay, localMidnightFocusedDay)) {
         setState(() {
           _focusedDay = localMidnightFocusedDay;
@@ -332,130 +355,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // --- Handlers ---
 
-  // (onToggleTask e onDuplicateTask sem alterações)
+  // _onToggleTask (inalterado)
   void _onToggleTask(TaskModel task, bool isCompleted) async {
     try {
       await _firestoreService.updateTaskCompletion(_userId, task.id,
           completed: isCompleted);
-      if (mounted) {
-        if (_selectedDay != null) {
-          final dayKey = DateTime(
-              _selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-          final dayEvents = _rawEvents[dayKey];
-          if (dayEvents != null) {
-            final taskIndex =
-                dayEvents.indexWhere((e) => e is TaskModel && e.id == task.id);
-            if (taskIndex != -1) {
-              final newRawEvents =
-                  Map<DateTime, List<dynamic>>.from(_rawEvents);
-              final newList = List<dynamic>.from(dayEvents);
-              newList[taskIndex] = task.copyWith(completed: isCompleted);
-              newRawEvents[dayKey] = newList;
-              setState(() {
-                _rawEvents = newRawEvents;
-              });
-            }
-          }
-        }
+      // Opcional: Atualizar progresso da meta se necessário (pode ser feito na tela de detalhes tbm)
+      if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+        _firestoreService.updateGoalProgress(_userId, task.journeyId!);
       }
     } catch (e) {
       print("Erro ao atualizar conclusão: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Erro ao atualizar tarefa: $e'),
+            backgroundColor: Colors.red));
+      }
     }
   }
 
-  // --- INÍCIO DA CORREÇÃO ---
-  void _onDeleteTask(TaskModel task) async {
-    // MUDANÇA: Implementa um diálogo de confirmação funcional
-    final bool? confirmed = await showDialog<bool>(
+  // --- INÍCIO DA MUDANÇA: Implementar _handleTaskTap ---
+  // Abre o modal de detalhes da tarefa
+  void _handleTaskTap(TaskModel task) {
+    print("Calendário: Tarefa tocada: ${task.id} - ${task.text}");
+
+    // Abre o modal de detalhes/edição
+    showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
-        // Usamos dialogContext para fechar o dialog
-        return AlertDialog(
-          backgroundColor: AppColors.cardBackground, // Estilizando o dialog
-          title: const Text(
-            'Confirmar Exclusão',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: const Text(
-            'Você tem certeza que deseja excluir esta tarefa?',
-            style: TextStyle(color: AppColors.secondaryText),
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar',
-                  style: TextStyle(color: Colors.white70)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(false); // Retorna false
-              },
-            ),
-            TextButton(
-              child: const Text('Excluir',
-                  style: TextStyle(color: Colors.redAccent)),
-              onPressed: () {
-                Navigator.of(dialogContext).pop(true); // Retorna true
-              },
-            ),
-          ],
+        return TaskDetailModal(
+          task: task,
+          userData: widget.userData, // Passa os dados do usuário
         );
       },
     );
-
-    // Se o usuário confirmou (retornou true)
-    if (confirmed == true && mounted) {
-      try {
-        await _firestoreService.deleteTask(_userId, task.id);
-
-        // O Stream já cuidará da atualização, mas podemos mostrar um SnackBar
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa excluída.'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } catch (e) {
-        print("Erro ao deletar: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao excluir tarefa: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    }
   }
-  // --- FIM DA CORREÇÃO ---
+  // --- FIM DA MUDANÇA ---
 
-  void _onDuplicateTask(TaskModel task) async {
-    final duplicatedTask =
-        task.copyWith(id: '', completed: false, createdAt: DateTime.now());
-    try {
-      await _firestoreService.addTask(_userId, duplicatedTask);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa duplicada.'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      print("Erro ao duplicar: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao duplicar tarefa: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-  // --- FIM Handlers ---
+  // --- Funções _onDeleteTask e _onDuplicateTask foram REMOVIDAS ---
 
+  // _isSameMonth (inalterado)
   bool _isSameMonth(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
   }
@@ -466,16 +405,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: _isScreenLoading
-            ? const Center(child: CustomLoadingSpinner())
+            ? const Center(
+                child: CustomLoadingSpinner()) // <-- CORRIGIDO AQUI (sem size)
             : LayoutBuilder(
                 builder: (context, constraints) {
                   final bool isWideLayout =
                       constraints.maxWidth >= kTabletBreakpoint;
                   return isWideLayout
-                      ? _buildWideLayout(
-                          context, _events) // Passa _events (UTC)
-                      : _buildMobileLayout(
-                          context, _events); // Passa _events (UTC)
+                      ? _buildWideLayout(context, _events)
+                      : _buildMobileLayout(context, _events);
                 },
               ),
       ),
@@ -492,24 +430,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   // --- BUILD LAYOUTS ---
-  // (Layouts idênticos ao seu código original, apenas
-  //  com a função _handleTodayTap implementada)
 
   Widget _buildMobileLayout(
       BuildContext context, Map<DateTime, List<CalendarEvent>> eventsMapUtc) {
     final orientation = MediaQuery.of(context).orientation;
 
     void _handleTodayTap() {
+      // ... (código inalterado) ...
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
-        _onPageChanged(today);
+        // Se não estiver no mês atual, navega para o mês e depois seleciona
+        _onPageChanged(
+            today); // Isso já vai chamar _onDaySelected indiretamente? Não, precisa chamar depois
+        // A _onPageChanged pode levar um tempo para atualizar o stream,
+        // então selecionamos o dia imediatamente para a UI responder rápido.
+        _onDaySelected(today, today);
+      } else {
+        // Se já está no mês certo, apenas seleciona o dia
+        _onDaySelected(today, today);
       }
-      _onDaySelected(today, today);
     }
 
     if (orientation == Orientation.landscape) {
-      // Layout Paisagem (Estrutura como antes)
+      // Layout Paisagem
       return Row(
         children: [
           Expanded(
@@ -517,58 +461,77 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  CalendarHeader(
-                    focusedDay: _focusedDay,
-                    onTodayButtonTap: _handleTodayTap,
-                    onLeftArrowTap: () => _onPageChanged(
-                        DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                    onRightArrowTap: () => _onPageChanged(
-                        DateTime(_focusedDay.year, _focusedDay.month + 1)),
-                  ),
-                  const SizedBox(height: 8),
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      CustomCalendar(
-                        focusedDay: _focusedDay,
-                        selectedDay: _selectedDay,
-                        onDaySelected: _onDaySelected,
-                        onPageChanged: _onPageChanged,
-                        isDesktop: false,
-                        events: eventsMapUtc, // Usa mapa UTC
-                        personalDayNumber: _personalDayNumber,
-                      ),
-                      if (_isChangingMonth)
-                        Positioned.fill(
-                          child: Container(/* Loading */),
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        CalendarHeader(
+                          // ... (inalterado) ...
+                          focusedDay: _focusedDay,
+                          onTodayButtonTap: _handleTodayTap,
+                          onLeftArrowTap: () => _onPageChanged(DateTime(
+                              _focusedDay.year, _focusedDay.month - 1)),
+                          onRightArrowTap: () => _onPageChanged(DateTime(
+                              _focusedDay.year, _focusedDay.month + 1)),
                         ),
-                    ],
+                        const SizedBox(height: 8),
+                        Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            CustomCalendar(
+                              // ... (inalterado) ...
+                              focusedDay: _focusedDay,
+                              selectedDay: _selectedDay,
+                              onDaySelected: _onDaySelected,
+                              onPageChanged: _onPageChanged,
+                              isDesktop: false, // É mobile landscape
+                              events: eventsMapUtc, // Usa mapa UTC
+                              personalDayNumber: _personalDayNumber,
+                            ),
+                            if (_isChangingMonth)
+                              Positioned.fill(
+                                child: Container(
+                                  color: AppColors.background.withOpacity(0.5),
+                                  child: const Center(
+                                    child:
+                                        CustomLoadingSpinner(), // <-- CORRIGIDO AQUI (sem size)
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          VerticalDivider(/* ... */),
+          const VerticalDivider(
+              width: 1, thickness: 1, color: AppColors.border),
           Expanded(
             flex: 4,
             child: DayDetailPanel(
+              // Chamada Atualizada
               selectedDay: _selectedDay,
               personalDayNumber: _personalDayNumber,
               events: _selectedDay != null
                   ? _getRawEventsForDay(_selectedDay!)
                   : [],
+              isDesktop: false,
               onAddTask: _openAddTaskModal,
-              onEditTask: (task) => _openAddTaskModal(task: task),
-              onDeleteTask: _onDeleteTask,
-              onDuplicateTask: _onDuplicateTask,
               onToggleTask: _onToggleTask,
-              onJournalTap: _openJournalEditor,
+              onTaskTap: _handleTaskTap, // Passa o novo handler
+              // --- MUDANÇA (TAREFA 3): Callback removido ---
+              // onJournalTap: _openJournalEditor,
+              // --- FIM MUDANÇA ---
+              // Callbacks removidos
             ),
           ),
         ],
       );
     } else {
-      // Retrato (Estrutura como antes)
+      // Layout Retrato
       return Column(
         children: [
           Padding(
@@ -576,6 +539,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             child: Column(
               children: [
                 CalendarHeader(
+                  // ... (inalterado) ...
                   focusedDay: _focusedDay,
                   onTodayButtonTap: _handleTodayTap,
                   onLeftArrowTap: () => _onPageChanged(
@@ -588,36 +552,56 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   alignment: Alignment.center,
                   children: [
                     CustomCalendar(
+                      // ... (inalterado) ...
                       focusedDay: _focusedDay,
                       selectedDay: _selectedDay,
                       onDaySelected: _onDaySelected,
                       onPageChanged: _onPageChanged,
-                      isDesktop: false,
+                      isDesktop: false, // É mobile portrait
                       events: eventsMapUtc, // Usa mapa UTC
                       personalDayNumber: _personalDayNumber,
                     ),
                     if (_isChangingMonth)
                       Positioned.fill(
-                        child: Container(/* Loading */),
+                        child: Container(
+                          color: AppColors.background.withOpacity(0.5),
+                          child: const Center(
+                            child:
+                                CustomLoadingSpinner(), // <-- CORRIGIDO AQUI (sem size)
+                          ),
+                        ),
                       ),
                   ],
                 ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
           Expanded(
-            child: DayDetailPanel(
-              selectedDay: _selectedDay,
-              personalDayNumber: _personalDayNumber,
-              events: _selectedDay != null
-                  ? _getRawEventsForDay(_selectedDay!)
-                  : [],
-              onAddTask: _openAddTaskModal,
-              onEditTask: (task) => _openAddTaskModal(task: task),
-              onDeleteTask: _onDeleteTask,
-              onDuplicateTask: _onDuplicateTask,
-              onToggleTask: _onToggleTask,
-              onJournalTap: _openJournalEditor,
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.4,
+              minChildSize: 0.15,
+              maxChildSize: 0.9,
+              builder:
+                  (BuildContext context, ScrollController scrollController) {
+                return DayDetailPanel(
+                  // Chamada Atualizada
+                  selectedDay: _selectedDay,
+                  personalDayNumber: _personalDayNumber,
+                  events: _selectedDay != null
+                      ? _getRawEventsForDay(_selectedDay!)
+                      : [],
+                  isDesktop: false,
+                  onAddTask: _openAddTaskModal,
+                  onToggleTask: _onToggleTask,
+                  onTaskTap: _handleTaskTap, // Passa o novo handler
+                  // --- MUDANÇA (TAREFA 3): Callback removido ---
+                  // onJournalTap: _openJournalEditor,
+                  // --- FIM MUDANÇA ---
+                  scrollController: scrollController,
+                  // Callbacks removidos
+                );
+              },
             ),
           ),
         ],
@@ -628,15 +612,17 @@ class _CalendarScreenState extends State<CalendarScreen> {
   Widget _buildWideLayout(
       BuildContext context, Map<DateTime, List<CalendarEvent>> eventsMapUtc) {
     void _handleTodayTap() {
+      // ... (código inalterado) ...
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
         _onPageChanged(today);
+        _onDaySelected(today, today); // Seleciona imediatamente
+      } else {
+        _onDaySelected(today, today);
       }
-      _onDaySelected(today, today);
     }
 
-    // Estrutura como antes
     return Row(
       children: [
         Expanded(
@@ -647,6 +633,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               mainAxisAlignment: MainAxisAlignment.start,
               children: [
                 CalendarHeader(
+                  // ... (inalterado) ...
                   focusedDay: _focusedDay,
                   onTodayButtonTap: _handleTodayTap,
                   onLeftArrowTap: () => _onPageChanged(
@@ -661,18 +648,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       alignment: Alignment.center,
                       children: [
                         CustomCalendar(
+                          // ... (inalterado) ...
                           focusedDay: _focusedDay,
                           selectedDay: _selectedDay,
                           onDaySelected: _onDaySelected,
                           onPageChanged: _onPageChanged,
-                          isDesktop: true,
-                          calendarWidth: constraints.maxWidth,
+                          isDesktop: true, // É Desktop
+                          calendarWidth:
+                              constraints.maxWidth, // Passa a largura
                           events: eventsMapUtc, // Usa mapa UTC
                           personalDayNumber: _personalDayNumber,
                         ),
                         if (_isChangingMonth)
                           Positioned.fill(
-                            child: Container(/* Loading */),
+                            child: Container(
+                              color: AppColors.background.withOpacity(0.5),
+                              child: const Center(
+                                child:
+                                    CustomLoadingSpinner(), // <-- CORRIGIDO AQUI (sem size)
+                              ),
+                            ),
                           ),
                       ],
                     );
@@ -682,21 +677,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
         ),
-        VerticalDivider(/* ... */),
+        const VerticalDivider(width: 1, thickness: 1, color: AppColors.border),
         Expanded(
           flex: 1,
-          child: DayDetailPanel(
-            selectedDay: _selectedDay,
-            personalDayNumber: _personalDayNumber,
-            events:
-                _selectedDay != null ? _getRawEventsForDay(_selectedDay!) : [],
-            isDesktop: true,
-            onAddTask: _openAddTaskModal,
-            onEditTask: (task) => _openAddTaskModal(task: task),
-            onDeleteTask: _onDeleteTask,
-            onDuplicateTask: _onDuplicateTask,
-            onToggleTask: _onToggleTask,
-            onJournalTap: _openJournalEditor,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 24, 24),
+            child: DayDetailPanel(
+              // Chamada Atualizada
+              selectedDay: _selectedDay,
+              personalDayNumber: _personalDayNumber,
+              events: _selectedDay != null
+                  ? _getRawEventsForDay(_selectedDay!)
+                  : [],
+              isDesktop: true,
+              onAddTask: _openAddTaskModal,
+              onToggleTask: _onToggleTask,
+              onTaskTap: _handleTaskTap, // Passa o novo handler
+              // --- MUDANÇA (TAREFA 3): Callback removido ---
+              // onJournalTap: _openJournalEditor,
+              // --- FIM MUDANÇA ---
+              // Callbacks removidos
+            ),
           ),
         ),
       ],

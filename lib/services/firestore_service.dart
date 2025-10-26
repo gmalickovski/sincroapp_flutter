@@ -1,5 +1,5 @@
 // lib/services/firestore_service.dart
-// (Arquivo existente, código completo 100% atualizado)
+// (Seu arquivo 100% atualizado, com a nova função adicionada)
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:rxdart/rxdart.dart';
@@ -268,6 +268,38 @@ class FirestoreService {
         .doc(task.id)
         .update(data);
   }
+
+  // --- INÍCIO DA MUDANÇA (Correção Bug #3) ---
+  /// Atualiza campos específicos de uma tarefa usando um Map.
+  ///
+  /// Isso é crucial para definir campos como nulos (ex: remover uma meta),
+  /// o que `task.toFirestore()` (usado em `updateTask`) omite.
+  Future<void> updateTaskFields(
+      String userId, String taskId, Map<String, dynamic> updates) async {
+    try {
+      // Garante que as datas sejam Timestamps ou null
+      if (updates.containsKey('createdAt') &&
+          updates['createdAt'] is DateTime) {
+        updates['createdAt'] = Timestamp.fromDate(updates['createdAt']);
+      }
+      if (updates.containsKey('dueDate') && updates['dueDate'] is DateTime) {
+        updates['dueDate'] = Timestamp.fromDate(updates['dueDate']);
+      } else if (updates.containsKey('dueDate') && updates['dueDate'] == null) {
+        updates['dueDate'] = null; // Garante que seja null se for o caso
+      }
+
+      await _db
+          .collection('users')
+          .doc(userId)
+          .collection('tasks')
+          .doc(taskId)
+          .update(updates);
+    } catch (e) {
+      print("Erro ao atualizar campos da tarefa: $e");
+      rethrow;
+    }
+  }
+  // --- FIM DA MUDANÇA ---
 
   Future<void> updateTaskCompletion(String userId, String taskId,
       {required bool completed}) async {
@@ -612,7 +644,7 @@ class FirestoreService {
           }
         } catch (e) {
           print(
-              "Erro ao processar meta ${doc.id} em findGoalBySanitizedTitle: $e");
+              "Erro ao processar meta ${doc.id} em findGoalBySanititizedTitle: $e");
           // Continua para a próxima meta
         }
       }

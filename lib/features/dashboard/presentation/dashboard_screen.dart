@@ -5,12 +5,11 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:collection/collection.dart'; // Usado para ListEquality
-// Removido import desnecessário de rxdart (só é usado no service)
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
-import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/focus_day_card.dart';
+import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/focus_day_card.dart'; // Import atualizado
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/goals_progress_card.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
@@ -26,11 +25,12 @@ import '../../journal/presentation/journal_screen.dart';
 import '../../tasks/presentation/foco_do_dia_screen.dart';
 import '../../goals/presentation/goals_screen.dart';
 import '../../goals/presentation/goal_detail_screen.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart'; // Import necessário
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reorder_dashboard_modal.dart';
 
-// Comportamento de scroll customizado (sem alterações)
+// Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
+  // ... (código inalterado)
   @override
   Set<PointerDeviceKind> get dragDevices => {
         PointerDeviceKind.touch,
@@ -53,23 +53,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   NumerologyResult? _numerologyData;
   bool _isLoading = true;
   int _sidebarIndex = 0;
-  List<Widget> _cards = []; // A lista de widgets é construída dinamicamente
+  List<Widget> _cards = [];
   bool _isEditMode = false;
   bool _isUpdatingLayout = false;
-
   List<Goal> _userGoals = [];
-
-  bool _isDesktopSidebarExpanded = false; // Começa recolhido
+  bool _isDesktopSidebarExpanded = false;
   bool _isMobileDrawerOpen = false;
-
   late AnimationController _menuAnimationController;
   final FirestoreService _firestoreService = FirestoreService();
-
   Key _masonryGridKey = UniqueKey();
-
-  // --- MUDANÇA: Adiciona StreamSubscription e lista para tarefas do dia ---
   StreamSubscription<List<TaskModel>>? _todayTasksSubscription;
-  List<TaskModel> _currentTodayTasks = []; // Mantém a lista atual do stream
+  List<TaskModel> _currentTodayTasks = [];
 
   @override
   void initState() {
@@ -78,20 +72,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    // Não inicia animação aqui, pois começa recolhido
-    _loadInitialData(); // Carrega dados iniciais e inicia o stream
+    _loadInitialData();
   }
 
   @override
   void dispose() {
     _menuAnimationController.dispose();
-    _todayTasksSubscription
-        ?.cancel(); // Cancela a inscrição do stream ao sair da tela
+    _todayTasksSubscription?.cancel();
     super.dispose();
   }
 
-  // Carrega dados iniciais (UserData, Goals, Numerology) e inicia o stream de Tarefas
+  // Carrega dados iniciais (inalterado)
   Future<void> _loadInitialData() async {
+    // ... (código inalterado)
     // Mostra spinner apenas se ainda não houver dados carregados
     if (mounted && _userData == null) setState(() => _isLoading = true);
 
@@ -154,8 +147,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // --- MUDANÇA: Nova função para iniciar e ouvir o stream de tarefas ---
+  // Inicializa stream de tarefas (inalterado)
   void _initializeTasksStream(String userId) {
+    // ... (código inalterado)
     _todayTasksSubscription?.cancel(); // Cancela subscrição anterior se houver
     _todayTasksSubscription =
         _firestoreService.getTasksStreamForToday(userId).listen(
@@ -192,8 +186,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- Recarrega apenas dados que não são streams (Goals, UserData, Numerology) ---
+  // Recarrega dados não-stream (inalterado)
   Future<void> _reloadDataNonStream({bool rebuildCards = true}) async {
+    // ... (código inalterado)
     final authRepository = AuthRepository();
     final currentUser = authRepository.getCurrentUser();
     if (currentUser == null || !mounted) return;
@@ -248,9 +243,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
-  // --- MUDANÇA: Handlers simplificados (sem setState para _todayTasks) ---
-  // --- Adicionado updateGoalProgress ---
+  // Handle para marcar/desmarcar tarefa (inalterado)
   void _handleTaskStatusChange(TaskModel task, bool isCompleted) {
+    // ... (código inalterado)
     if (!mounted || _userData == null) return;
     // A UI será atualizada automaticamente pelo Stream quando o Firestore notificar
     _firestoreService
@@ -274,83 +269,27 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  void _handleTaskDeleted(TaskModel task) {
-    if (!mounted || _userData == null) return;
-    // A UI será atualizada automaticamente pelo Stream
-    _firestoreService.deleteTask(_userData!.uid, task.id).then((_) {
-      // Atualiza progresso da meta associada, se houver, APÓS sucesso
-      if (task.journeyId != null && task.journeyId!.isNotEmpty) {
-        // Não precisa 'await' aqui
-        _firestoreService.updateGoalProgress(_userData!.uid, task.journeyId!);
-      }
-      // Feedback visual opcional
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Tarefa excluída."),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 2)),
-        );
-      }
-    }).catchError((e) {
-      print("Erro ao deletar tarefa: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Erro ao excluir tarefa."),
-              backgroundColor: Colors.red),
-        );
-      }
-    });
+  // --- INÍCIO DA MUDANÇA ---
+  // Placeholder para lidar com o toque na tarefa (abrir detalhes)
+  void _handleTaskTap(TaskModel task) {
+    // TODO: Implementar navegação para a nova tela/modal de detalhes/edição
+    print("Dashboard: Tarefa tocada: ${task.id} - ${task.text}");
+    // Exemplo: Navigator.push(context, MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task, userId: _userData!.uid)));
   }
 
-  // Edit e Duplicate: Chamam _reloadDataNonStream pois podem afetar a lista de Goals
-  void _handleTaskEdited(TaskModel task) {
-    if (_userData == null) return;
-    showModalBottomSheet<bool>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) =>
-          TaskInputModal(userData: _userData!, taskToEdit: task),
-    ).then((didUpdate) {
-      // Se o modal retornou 'true' (salvou), recarrega dados não-stream
-      // (a tarefa em si já foi atualizada pelo stream)
-      if (didUpdate == true && mounted) _reloadDataNonStream();
-    });
-  }
+  // REMOVIDO: _handleTaskDeleted
+  // void _handleTaskDeleted(TaskModel task) { ... }
 
-  void _handleTaskDuplicated(TaskModel task) {
-    if (_userData == null) return;
-    final duplicatedTask = task.copyWith(
-        id: '', // ID vazio para criar novo documento
-        // text: '${task.text} (cópia)', // Removido para manter texto original
-        createdAt: DateTime.now(), // Nova data de criação
-        completed: false); // Começa como não completada
-    _firestoreService.addTask(_userData!.uid, duplicatedTask).then((_) {
-      // Atualiza o progresso da meta, se houver, APÓS sucesso
-      if (duplicatedTask.journeyId != null &&
-          duplicatedTask.journeyId!.isNotEmpty) {
-        // Não precisa 'await'
-        _firestoreService.updateGoalProgress(
-            _userData!.uid, duplicatedTask.journeyId!);
-      }
-      // Recarrega dados não-stream (afeta visualmente GoalsProgressCard)
-      if (mounted) _reloadDataNonStream();
-    }).catchError((e) {
-      print("Erro ao duplicar tarefa: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Erro ao duplicar tarefa."),
-              backgroundColor: Colors.red),
-        );
-      }
-    });
-  }
+  // REMOVIDO: _handleTaskEdited
+  // void _handleTaskEdited(TaskModel task) { ... }
 
-  // --- INÍCIO DA ADIÇÃO: Função para abrir o modal de adicionar tarefa ---
+  // REMOVIDO: _handleTaskDuplicated
+  // void _handleTaskDuplicated(TaskModel task) { ... }
+  // --- FIM DA MUDANÇA ---
+
+  // Handle para adicionar tarefa (inalterado)
   void _handleAddTask() {
+    // ... (código inalterado)
     if (_userData == null) return; // Precisa de userData para o modal
     // Obtém a data de hoje (sem horas/minutos/segundos)
     final today =
@@ -378,10 +317,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     });
   }
-  // --- FIM DA ADIÇÃO ---
 
-  // --- Navegação (sem alterações na lógica interna, apenas ajuste no _navigateToPage) ---
+  // Navegação (inalterada)
   void _navigateToPage(int index) {
+    // ... (código inalterado)
     if (!mounted) return;
     setState(() {
       _sidebarIndex = index;
@@ -397,6 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _navigateToGoalDetail(Goal goal) {
+    // ... (código inalterado)
     if (_userData == null) return;
     Navigator.of(context)
         .push(
@@ -412,15 +352,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  // --- MUDANÇA: Constrói a lista _cards, calcula dia pessoal, usa _currentTodayTasks ---
+  // Constrói a lista de cards
   void _buildCardList() {
     if (!mounted || _userData == null) {
-      _cards = []; // Limpa a lista se não tiver dados
+      _cards = [];
       return;
     }
 
-    // Calcula o dia pessoal para HOJE
+    // Calcula dia pessoal (inalterado)
     int? todayPersonalDay;
+    // ... (código inalterado)
     if (_numerologyData != null) {
       // Acessa o mapa 'numeros' e a chave 'diaPessoal' de forma segura
       // Verifica se a chave existe antes de acessar
@@ -429,10 +370,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     }
 
-    // Mapa com todos os cards disponíveis (a chave é o ID usado na ordem)
-    // O dragHandle é adicionado aqui
+    // Mapa de todos os cards
     final Map<String, Widget> allCardsMap = {
       'goalsProgress': GoalsProgressCard(
+        // ... (inalterado) ...
         key: const ValueKey('goalsProgress'), // Key para reordenação
         goals: _userGoals,
         onViewAll: () => _navigateToPage(4),
@@ -440,24 +381,27 @@ class _DashboardScreenState extends State<DashboardScreen>
         isEditMode: _isEditMode,
         dragHandle: _isEditMode ? _buildDragHandle('goalsProgress') : null,
       ),
+
+      // --- INÍCIO DA MUDANÇA ---
       'focusDay': FocusDayCard(
-        key: const ValueKey('focusDay'), // Key para reordenação
-        tasks: _currentTodayTasks, // <<< USA A LISTA ATUALIZADA DO STREAM
+        key: const ValueKey('focusDay'),
+        tasks: _currentTodayTasks,
         onViewAll: () => _navigateToPage(3),
         onTaskStatusChanged: _handleTaskStatusChange,
-        userData: _userData!, // Garantido que não é nulo aqui
-        onTaskDeleted: _handleTaskDeleted,
-        onTaskEdited: _handleTaskEdited,
-        onTaskDuplicated: _handleTaskDuplicated,
-        // --- CORREÇÃO AQUI ---
-        onAddTask: _handleAddTask, // <<< PASSA A FUNÇÃO CORRETA
-        // --- FIM DA CORREÇÃO ---
-        personalDayNumber: todayPersonalDay, // <<< PASSA O DIA PESSOAL DE HOJE
+        userData: _userData!,
+        onAddTask: _handleAddTask,
+        onTaskTap: _handleTaskTap, // Passa o novo handler de tap
+        // REMOVIDO: onTaskDeleted: _handleTaskDeleted,
+        // REMOVIDO: onTaskEdited: _handleTaskEdited,
+        // REMOVIDO: onTaskDuplicated: _handleTaskDuplicated,
         isEditMode: _isEditMode,
         dragHandle: _isEditMode ? _buildDragHandle('focusDay') : null,
       ),
-      // Cards de Numerologia (só adiciona se _numerologyData não for nulo)
+      // --- FIM DA MUDANÇA ---
+
+      // Cards de Numerologia (inalterados)
       if (_numerologyData != null) ...{
+        // ... (código inalterado)
         'vibracaoDia': InfoCard(
             key: const ValueKey('vibracaoDia'),
             title: "Vibração do Dia",
@@ -545,8 +489,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     };
 
-    // Lógica para ordenar os cards (pega a ordem do _userData)
+    // Lógica de ordenação (inalterada)
     final List<String> cardOrder = _userData!.dashboardCardOrder;
+    // ... (código inalterado)
     final List<Widget> orderedCards = [];
     Set<String> addedKeys = {};
     // Adiciona cards na ordem salva
@@ -568,8 +513,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     _cards = orderedCards;
   }
 
-  // --- Função auxiliar para criar o DragHandle (passado para os cards) ---
+  // Build Drag Handle (inalterado)
   Widget _buildDragHandle(String cardKey) {
+    // ... (código inalterado)
     // Encontra o índice ATUAL do card na lista _cards para o ReorderableDragStartListener
     // Usa firstWhereOrNull para evitar erro se a key não for encontrada
     int index = _cards.indexWhere((card) => card.key == ValueKey(cardKey));
@@ -590,8 +536,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- Getters de conteúdo (sem alterações na lógica interna) ---
+  // Getters de conteúdo (inalterados)
   VibrationContent _getInfoContent(String category, int number) {
+    // ... (código inalterado)
     return ContentData.vibracoes[category]?[number] ??
         const VibrationContent(
             titulo: 'Indisponível',
@@ -601,6 +548,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   VibrationContent _getArcanoContent(int number) {
+    // ... (código inalterado)
     return ContentData.textosArcanos[number] ??
         const VibrationContent(
             titulo: 'Arcano Desconhecido',
@@ -610,6 +558,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   VibrationContent _getCicloDeVidaContent(int number) {
+    // ... (código inalterado)
     return ContentData.textosCiclosDeVida[number] ??
         const VibrationContent(
             titulo: 'Ciclo Desconhecido',
@@ -619,12 +568,14 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   BussolaContent _getBussolaContent(int number) {
+    // ... (código inalterado)
     return ContentData.bussolaAtividades[number] ??
         ContentData.bussolaAtividades[0]!;
   }
 
-  // --- Constrói a página ativa (sem alterações na lógica do IndexedStack, mas ajusta fallbacks) ---
+  // Build Current Page (inalterado)
   Widget _buildCurrentPage() {
+    // ... (código inalterado)
     // Mostra loading inicial apenas se _cards ainda não foi populado pelo stream/load inicial
     // E se não estivermos atualizando o layout após reordenação
     if (_isLoading && _cards.isEmpty && !_isUpdatingLayout) {
@@ -676,8 +627,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- Abre o modal de reordenação (lógica ajustada) ---
+  // Abrir Modal de Reordenação (inalterado)
   void _openReorderModal() {
+    // ... (código inalterado)
     if (!mounted || _userData == null || _isUpdatingLayout) return;
     final BuildContext currentContext =
         context; // Guarda o contexto antes do showModalBottomSheet
@@ -721,8 +673,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 // 1. Ativa o estado de loading para a atualização do layout
                 setState(() => _isUpdatingLayout = true);
                 // 2. Recarrega UserData (para pegar a nova ordem salva do Firestore)
-                //    e reconstrói a lista _cards com a nova ordem.
-                //    O stream de tarefas continua rodando independentemente.
+                // ...e reconstrói a lista _cards com a nova ordem.
+                // ...O stream de tarefas continua rodando independentemente.
                 await _reloadDataNonStream(
                     rebuildCards:
                         true); // Força rebuildCards que chama _buildCardList
@@ -761,6 +713,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    // ... (build principal inalterado) ...
     bool isDesktop = MediaQuery.of(context).size.width > 800;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -793,8 +746,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- Layouts Desktop e Mobile (sem alterações na estrutura) ---
+  // Layouts Desktop/Mobile (inalterados)
   Widget _buildDesktopLayout() {
+    // ... (código inalterado)
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -812,6 +766,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildMobileLayout() {
+    // ... (código inalterado)
     const double sidebarWidth = 280;
     return Stack(
       children: [
@@ -870,8 +825,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  // --- Constrói o conteúdo do Dashboard (sem alterações na lógica de layout) ---
+  // Build Dashboard Content (inalterado)
   Widget _buildDashboardContent({required bool isDesktop}) {
+    // ... (código inalterado)
     // A lista _cards já foi atualizada pelo listener do stream ou _reloadDataNonStream/reorder
 
     // Mostra loading inicial apenas se _cards ainda estiver vazio E _isLoading for true
