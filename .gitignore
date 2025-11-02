@@ -45,3 +45,14 @@ app.*.map.json
 /android/app/release
 
 .env
+
+# === Firebase Functions (Node.js) ===
+# Ignora a pasta de dependências do Node.js
+/functions/node_modules/
+
+# Ignora logs de debug
+/functions/npm-debug.log
+/functions/firebase-debug.log
+
+# Ignora configurações de emulador local (pode conter chaves)
+/functions/.runtimeconfig.json
