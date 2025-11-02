@@ -1,72 +1,40 @@
+// lib/features/tasks/presentation/widgets/task_input_modal.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-// --- INÍCIO DA MUDANÇA: Importar o novo modal ---
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
-// --- FIM DA MUDANÇA ---
-import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
-import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
-// import 'package:sincro_app_flutter/features/authentication/data/content_data.dart'; // Não usado aqui
+import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-// REMOVIDO: import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tag_selection_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
-// --- Regex (inalterados) ---
-const String _monthPattern =
-    "janeiro|fevereiro|março|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro|jan|fev|mar|abr|mai|jun|jul|ago|set|out|nov|dez";
-final RegExp _ddMmYyPattern = RegExp(r'/\s*(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?');
-final RegExp _fullDatePattern = RegExp(r'/\s*dia\s+(\d{1,2})(?:\s+de)?\s+(' +
-    _monthPattern +
-    r')(?:\s+de\s+(\d{4}))?');
-// --- Fim Regex ---
-
-// --- _SyntaxHighlightingController (inalterado) ---
-class _SyntaxHighlightingController extends TextEditingController {
-  final Map<RegExp, TextStyle> patternMap;
-  _SyntaxHighlightingController({required this.patternMap});
-
-  @override
-  TextSpan buildTextSpan(
-      {required BuildContext context,
-      TextStyle? style,
-      required bool withComposing}) {
-    final List<InlineSpan> children = [];
-    text.splitMapJoin(
-      RegExp(patternMap.keys.map((e) => e.pattern).join('|'),
-          caseSensitive: false),
-      onMatch: (Match match) {
-        final pattern = patternMap.entries
-            .firstWhere((element) => element.key.hasMatch(match[0]!));
-        children
-            .add(TextSpan(text: match[0], style: style?.merge(pattern.value)));
-        return '';
-      },
-      onNonMatch: (String nonMatch) {
-        children.add(TextSpan(text: nonMatch, style: style));
-        return '';
-      },
-    );
-    return TextSpan(style: style, children: children);
-  }
-}
-// --- Fim _SyntaxHighlightingController ---
+// --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
 
 class TaskInputModal extends StatefulWidget {
+  final Function(ParsedTask parsedTask) onAddTask;
   final UserModel? userData;
+  final String userId;
+  final String? initialTaskText;
+  final DateTime? initialDueDate;
   final TaskModel? taskToEdit;
-  final DateTime? preselectedDate;
   final Goal? preselectedGoal;
 
   const TaskInputModal({
     super.key,
+    required this.onAddTask,
     required this.userData,
+    required this.userId,
+    this.initialTaskText,
+    this.initialDueDate,
     this.taskToEdit,
-    this.preselectedDate,
     this.preselectedGoal,
   });
 
@@ -75,393 +43,100 @@ class TaskInputModal extends StatefulWidget {
 }
 
 class _TaskInputModalState extends State<TaskInputModal> {
-  late _SyntaxHighlightingController _textController;
-  final FirestoreService _firestoreService = FirestoreService();
+  // --- INÍCIO DA MUDANÇA: Controller Padrão ---
+  late TextEditingController _textController;
+  // --- FIM DA MUDANÇA ---
 
-  DateTime _dateForVibration = DateTime.now();
-  DateTime? _parsedDueDate;
+  DateTime _selectedDateForPill = DateTime.now();
   int _personalDay = 0;
+  VibrationContent? _dayInfo;
+  late RecurrenceRule _selectedRecurrenceRule;
+  TimeOfDay? _selectedTime;
+  final FocusNode _textFieldFocusNode = FocusNode();
 
-  OverlayEntry? _goalOverlayEntry;
-  final LayerLink _layerLink = LayerLink();
-  List<Goal> _allGoals = [];
-  List<Goal> _filteredGoals = [];
-
-  OverlayEntry? _tagOverlayEntry;
-  List<String> _allTags = [];
-  List<String> _filteredTags = [];
-  bool _isLoadingTags = false;
+  // --- ESTADO PARA OS "PILLS" ---
+  String? _selectedGoalId;
+  String? _selectedGoalTitle;
+  DateTime? _selectedDate; // Novo estado para a data
+  List<String> _selectedTags = []; // Novo estado para as tags
 
   bool get _isEditing => widget.taskToEdit != null;
-
-  // --- NOVO: FocusNode para o TextField principal ---
-  final FocusNode _textFieldFocusNode = FocusNode();
-  // --- FIM NOVO ---
 
   @override
   void initState() {
     super.initState();
 
-    _textController = _SyntaxHighlightingController(
-      patternMap: {
-        RegExp(r"#(\w+)", caseSensitive: false):
-            const TextStyle(color: Colors.purpleAccent),
-        RegExp(r"@([\w-]+)", caseSensitive: false):
-            const TextStyle(color: Colors.cyanAccent),
-        _ddMmYyPattern: const TextStyle(color: Colors.orangeAccent),
-        _fullDatePattern: const TextStyle(color: Colors.orangeAccent),
-      },
-    );
+    // --- INÍCIO DA MUDANÇA: Controller Padrão ---
+    _textController = TextEditingController();
+    // --- FIM DA MUDANÇA ---
 
-    // Lógica de inicialização (com ajustes para pré-seleção)
+    DateTime initialDateForPill = DateTime.now();
+
     if (_isEditing) {
-      String editText = widget.taskToEdit!.text;
-      if (widget.taskToEdit!.tags.isNotEmpty) {
-        editText += widget.taskToEdit!.tags.map((tag) => ' #$tag').join('');
-      }
-      if (widget.taskToEdit!.journeyTitle != null &&
-          widget.taskToEdit!.journeyTitle!.isNotEmpty) {
-        final simplifiedTag =
-            StringSanitizer.toSimpleTag(widget.taskToEdit!.journeyTitle!);
-        editText += ' @$simplifiedTag';
-      }
-      if (widget.taskToEdit!.dueDate != null) {
-        final formattedDate =
-            DateFormat('dd/MM/yyyy').format(widget.taskToEdit!.dueDate!);
-        editText += ' /${formattedDate}';
-      }
-      _textController.text = editText.trim();
-      _parsedDueDate = widget.taskToEdit!.dueDate;
-      _dateForVibration = widget.taskToEdit!.dueDate ?? DateTime.now();
-    }
-    // Alterado para não pré-preencher a meta no campo de texto
-    else if (widget.preselectedGoal != null) {
-      _dateForVibration = DateTime.now();
-      // A meta @nomedametaatual agora está "por baixo dos panos".
-      // Não definimos mais o _textController.text aqui.
-      // O hintText será atualizado no build() para refletir isso.
-    }
-    // Alterado para não pré-preencher a data no campo de texto
-    else if (widget.preselectedDate != null) {
-      _parsedDueDate = widget.preselectedDate; // Data "por baixo dos panos"
-      _dateForVibration = widget.preselectedDate!; // Para a pílula de vibração
-      // Não definimos mais o _textController.text aqui
+      _textController.text = widget.taskToEdit!.text;
+
+      // --- INÍCIO DA MUDANÇA: Popula os "pills" em vez do texto ---
+      _selectedTags = List.from(widget.taskToEdit!.tags);
+      _selectedDate = widget.taskToEdit!.dueDate?.toLocal();
+      // --- FIM DA MUDANÇA ---
+
+      initialDateForPill =
+          widget.taskToEdit!.dueDate?.toLocal() ?? initialDateForPill;
+      _selectedTime = widget.taskToEdit!.reminderTime;
+      _selectedRecurrenceRule = RecurrenceRule(
+        type: widget.taskToEdit!.recurrenceType,
+        daysOfWeek: widget.taskToEdit!.recurrenceDaysOfWeek,
+        endDate: widget.taskToEdit!.recurrenceEndDate,
+      );
+
+      _selectedGoalId = widget.taskToEdit!.journeyId;
+      _selectedGoalTitle = widget.taskToEdit!.journeyTitle;
     } else {
-      // Se não houver data pré-selecionada, define _dateForVibration para hoje
-      _dateForVibration = DateTime.now();
+      _textController.text = widget.initialTaskText ?? '';
+      _selectedTime = null;
+      _selectedRecurrenceRule = RecurrenceRule();
+      _selectedTags = []; // Começa vazio
+
+      if (widget.preselectedGoal != null) {
+        _selectedGoalId = widget.preselectedGoal!.id;
+        _selectedGoalTitle = widget.preselectedGoal!.title;
+      }
+
+      // --- INÍCIO DA MUDANÇA: Define _selectedDate em vez de adicionar ao texto ---
+      if (widget.initialDueDate != null) {
+        initialDateForPill = widget.initialDueDate!.toLocal();
+        _selectedDate = initialDateForPill; // Define o estado
+      }
+      // --- FIM DA MUDANÇA ---
     }
 
-    _textController.addListener(_onTextChanged);
+    // --- REMOVIDO: _textController.addListener(_onTextChanged) ---
+
+    // Define a data para a pílula de vibração (usa data selecionada ou hoje)
+    _selectedDateForPill = _selectedDate ?? DateTime.now();
     if (widget.userData != null) {
-      _updateVibrationForDate(_dateForVibration);
-      _loadGoals();
-      _loadTags();
+      _updateVibrationForDate(_selectedDateForPill);
     }
 
-    // --- NOVO: Focar o campo de texto após a build inicial ---
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Usa o FocusNode associado ao TextField
       _textFieldFocusNode.requestFocus();
-      // Se pré-selecionou algo (exceto meta ou data), move o cursor para o final
-      if (widget.preselectedDate != null) {
-        _textController.selection = TextSelection.fromPosition(
-            TextPosition(offset: _textController.text.length));
-      }
+      _textController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _textController.text.length));
     });
-    // --- FIM NOVO ---
   }
 
-  Future<void> _loadGoals() async {
-    // ... (inalterado) ...
-    if (widget.userData != null && widget.userData!.uid.isNotEmpty) {
-      _allGoals = await _firestoreService.getActiveGoals(widget.userData!.uid);
-      if (mounted) {
-        setState(() {});
-      }
-    } else {
-      print("Erro: UID do usuário não disponível para carregar metas.");
-      _allGoals = [];
-    }
+  // --- REMOVIDO: _onTextChanged ---
+
+  // isSameDay (inalterada)
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  Future<void> _loadTags() async {
-    // ... (inalterado) ...
-    if (widget.userData == null || widget.userData!.uid.isEmpty) return;
-    setState(() => _isLoadingTags = true);
-    try {
-      final recentTasks = await _firestoreService
-          .getRecentTasks(widget.userData!.uid, limit: 50);
-      final tagSet = <String>{};
-      for (var task in recentTasks) {
-        tagSet.addAll(task.tags);
-      }
-      _allTags = tagSet.toList();
-      _allTags.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-    } catch (e) {
-      print("Erro ao carregar tags recentes: $e");
-      _allTags = [];
-    } finally {
-      if (mounted) {
-        setState(() => _isLoadingTags = false);
-      }
-    }
-  }
-
-  void _onTextChanged() {
-    // ... (código inalterado) ...
-    _parsedDueDate = TaskParser.parseDateFromText(_textController.text);
-    final currentDateToShow =
-        _parsedDueDate ?? widget.preselectedDate ?? DateTime.now();
-
-    if (!_isSameDay(_dateForVibration, currentDateToShow)) {
-      _updateVibrationForDate(currentDateToShow);
-    }
-    _handleGoalAutocomplete();
-    _handleTagAutocomplete();
-  }
-
-  // --- Lógica de Autocomplete (inalterada) ---
-  void _handleGoalAutocomplete() {
-    if (widget.preselectedGoal != null) {
-      _removeGoalOverlay();
-      return;
-    }
-    final text = _textController.text;
-    final cursorPos = _textController.selection.start;
-    if (cursorPos < 0) {
-      _removeGoalOverlay();
-      return;
-    }
-    final atMatch = RegExp(r"@([\w-]*)$", caseSensitive: false)
-        .firstMatch(text.substring(0, cursorPos));
-    if (atMatch != null) {
-      final query = atMatch.group(1) ?? '';
-      _filteredGoals = _allGoals.where((goal) {
-        final simpleTitle = StringSanitizer.toSimpleTag(goal.title);
-        return simpleTitle.toLowerCase().contains(query.toLowerCase());
-      }).toList();
-      if (_filteredGoals.isNotEmpty) {
-        _showGoalOverlay();
-      } else {
-        _removeGoalOverlay();
-      }
-    } else {
-      _removeGoalOverlay();
-    }
-  }
-
-  void _handleTagAutocomplete() {
-    final text = _textController.text;
-    final cursorPos = _textController.selection.start;
-    if (cursorPos < 0) {
-      _removeTagOverlay();
-      return;
-    }
-    final hashMatch = RegExp(r"#(\w*)$", caseSensitive: false)
-        .firstMatch(text.substring(0, cursorPos));
-    if (hashMatch != null) {
-      final query = hashMatch.group(1) ?? '';
-      _filteredTags = _allTags.where((tag) {
-        return tag.toLowerCase().contains(query.toLowerCase());
-      }).toList();
-      if (_filteredTags.isNotEmpty) {
-        _showTagOverlay();
-      } else {
-        _removeTagOverlay();
-      }
-    } else {
-      _removeTagOverlay();
-    }
-  }
-
-  void _showGoalOverlay() {
-    _removeTagOverlay();
-    _removeGoalOverlay();
-    _goalOverlayEntry = _createGoalOverlayEntry();
-    Overlay.of(context).insert(_goalOverlayEntry!);
-  }
-
-  void _showTagOverlay() {
-    _removeGoalOverlay();
-    _removeTagOverlay();
-    _tagOverlayEntry = _createTagOverlayEntry();
-    Overlay.of(context).insert(_tagOverlayEntry!);
-  }
-
-  void _removeGoalOverlay() {
-    _goalOverlayEntry?.remove();
-    _goalOverlayEntry = null;
-  }
-
-  void _removeTagOverlay() {
-    _tagOverlayEntry?.remove();
-    _tagOverlayEntry = null;
-  }
-
-  OverlayEntry _createGoalOverlayEntry() {
-    final List<Goal> goalsToShow = _filteredGoals;
-    const double overlayHeight = 174.0;
-    const double verticalGap = 10.0;
-    const Offset overlayOffset = Offset(0, -(overlayHeight + verticalGap));
-
-    return OverlayEntry(
-      builder: (context) {
-        return Positioned(
-          width: 250,
-          child: CompositedTransformFollower(
-            link: _layerLink,
-            showWhenUnlinked: false,
-            offset: overlayOffset,
-            child: Material(
-              elevation: 4.0,
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: overlayHeight),
-                child: goalsToShow.isEmpty
-                    ? const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(
-                          child: Text('Nenhuma jornada encontrada.',
-                              style: TextStyle(color: AppColors.secondaryText)),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(4),
-                        shrinkWrap: true,
-                        itemCount: goalsToShow.length,
-                        itemBuilder: (context, index) =>
-                            _buildGoalSuggestionItem(goalsToShow[index]),
-                      ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  OverlayEntry _createTagOverlayEntry() {
-    final List<String> tagsToShow = _filteredTags;
-    const double overlayHeight = 174.0;
-    const double verticalGap = 10.0;
-    const Offset overlayOffset = Offset(0, -(overlayHeight + verticalGap));
-
-    return OverlayEntry(
-      builder: (context) {
-        return Positioned(
-          width: 200,
-          child: CompositedTransformFollower(
-            link: _layerLink,
-            showWhenUnlinked: false,
-            offset: overlayOffset,
-            child: Material(
-              elevation: 4.0,
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(12),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: overlayHeight),
-                child: _isLoadingTags
-                    ? const Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.primary)),
-                      )
-                    : tagsToShow.isEmpty
-                        ? const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Center(
-                              child: Text('Nenhuma tag encontrada.',
-                                  style: TextStyle(
-                                      color: AppColors.secondaryText)),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(4),
-                            shrinkWrap: true,
-                            itemCount: tagsToShow.length,
-                            itemBuilder: (context, index) =>
-                                _buildTagSuggestionItem(tagsToShow[index]),
-                          ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGoalSuggestionItem(Goal goal) {
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          splashColor: AppColors.primary.withOpacity(0.2),
-          hoverColor: AppColors.primary.withOpacity(0.1),
-          onTap: () {
-            _updateGoalInTextField(goal);
-            _removeGoalOverlay();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Text(
-              goal.title,
-              style:
-                  const TextStyle(color: AppColors.primaryText, fontSize: 15),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTagSuggestionItem(String tag) {
-    return Container(
-      margin: const EdgeInsets.all(2),
-      decoration: BoxDecoration(
-        color: AppColors.background.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(8),
-          splashColor: Colors.purpleAccent.withOpacity(0.2),
-          hoverColor: Colors.purpleAccent.withOpacity(0.1),
-          onTap: () {
-            _updateTagInTextField(tag);
-            _removeTagOverlay();
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Text(
-              '#$tag',
-              style: const TextStyle(color: Colors.purpleAccent, fontSize: 15),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  // --- Fim Autocomplete ---
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
+  // _updateVibrationForDate (inalterada)
   void _updateVibrationForDate(DateTime date) {
-    // ... (inalterado) ...
+    // Consistent with Firestore: convert to UTC midnight for calculation
+    final dateMidnight = DateTime.utc(date.year, date.month, date.day);
     if (widget.userData != null &&
         widget.userData!.dataNasc.isNotEmpty &&
         widget.userData!.nomeAnalise.isNotEmpty) {
@@ -469,308 +144,231 @@ class _TaskInputModalState extends State<TaskInputModal> {
         nomeCompleto: widget.userData!.nomeAnalise,
         dataNascimento: widget.userData!.dataNasc,
       );
-      final day = engine.calculatePersonalDayForDate(date);
-      if (mounted) {
-        setState(() {
-          _dateForVibration = date;
-          _personalDay = day;
-        });
+      try {
+        final day = engine.calculatePersonalDayForDate(dateMidnight);
+        if (mounted) {
+          setState(() {
+            _selectedDateForPill = dateMidnight;
+            _personalDay = day;
+            _dayInfo =
+                ContentData.vibracoes['diaPessoal']?.containsKey(day) ?? false
+                    ? ContentData.vibracoes['diaPessoal']![day]
+                    : null;
+          });
+        }
+      } catch (e) {
+        print("Erro ao calcular dia pessoal: $e");
+        if (mounted) {
+          setState(() {
+            _selectedDateForPill = dateMidnight;
+            _personalDay = 0;
+            _dayInfo = null;
+          });
+        }
       }
     } else {
       if (mounted) {
         setState(() {
-          _dateForVibration = date;
+          _selectedDateForPill = dateMidnight;
           _personalDay = 0;
+          _dayInfo = null;
         });
       }
     }
   }
 
-  // --- Funções de atualização de texto (inalteradas) ---
-  void _updateDateInTextField(DateTime newDate) {
-    _updateVibrationForDate(newDate);
-    _parsedDueDate = newDate;
-    String currentText = _textController.text;
-    final textWithoutDate = currentText
-        .replaceAll(RegExp(r'/\s*\d{1,2}/\d{1,2}(?:/\d{2,4})?\s*'), '')
-        .replaceAll(
-            RegExp(
-                r'/\s*dia\s+\d{1,2}(?:\s+de)?\s+' +
-                    _monthPattern +
-                    r'(?:\s+de\s+\d{4})?\s*',
-                caseSensitive: false),
-            '')
-        .trim();
-    final formattedDate = DateFormat('dd/MM/yyyy').format(newDate);
-    final newText = '$textWithoutDate /${formattedDate}'.trim();
-    _textController.text = newText;
-    _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _textController.text.length));
-  }
+  // --- REMOVIDO: _insertActionText ---
 
-  void _updateGoalInTextField(Goal goal) {
-    final simplifiedTag = StringSanitizer.toSimpleTag(goal.title);
-    final currentText = _textController.text;
-    final selection = _textController.selection;
-    final textBeforeCursor = currentText.substring(0, selection.start);
-    final atMatch = RegExp(r"@([\w-]*)$", caseSensitive: false)
-        .firstMatch(textBeforeCursor);
-    String newText;
-    int cursorPosition;
-    if (atMatch != null) {
-      final textBeforeTag = textBeforeCursor.substring(0, atMatch.start);
-      final textAfterCursor = currentText.substring(selection.end);
-      newText = '$textBeforeTag@$simplifiedTag $textAfterCursor'.trim();
-      cursorPosition = textBeforeTag.length + simplifiedTag.length + 2;
-    } else {
-      final textWithoutGoal = currentText
-          .replaceAll(RegExp(r"@[\w-]+\s*", caseSensitive: false), '')
-          .trim();
-      newText = '$textWithoutGoal @$simplifiedTag'.trim();
-      cursorPosition = newText.length;
-    }
-    _textController.text = newText;
-    _textController.selection =
-        TextSelection.fromPosition(TextPosition(offset: cursorPosition));
-    _textFieldFocusNode.requestFocus();
-  }
+  // _selectGoal (inalterada - já está correta)
+  void _selectGoal() async {
+    if (widget.preselectedGoal != null) return;
+    if (widget.userData == null) return;
 
-  void _updateTagInTextField(String tag) {
-    final currentText = _textController.text;
-    final selection = _textController.selection;
-    final textBeforeCursor = currentText.substring(0, selection.start);
-    final hashMatch =
-        RegExp(r"#(\w*)$", caseSensitive: false).firstMatch(textBeforeCursor);
-    String newText;
-    int cursorPosition;
-    if (hashMatch != null) {
-      final textBeforeTag = textBeforeCursor.substring(0, hashMatch.start);
-      final textAfterCursor = currentText.substring(selection.end);
-      newText = '$textBeforeTag#$tag $textAfterCursor'.trim();
-      cursorPosition = textBeforeTag.length + tag.length + 2;
-    } else {
-      final textBefore = currentText.substring(0, selection.start);
-      final textAfter = currentText.substring(selection.end);
-      newText = '$textBefore#$tag $textAfter'.trim();
-      cursorPosition = textBefore.length + tag.length + 2;
-    }
-    _textController.text = newText;
-    _textController.selection =
-        TextSelection.fromPosition(TextPosition(offset: cursorPosition));
-    _textFieldFocusNode.requestFocus();
-  }
-  // --- Fim atualização texto ---
+    FocusScope.of(context).unfocus();
 
-  // --- Funções _selectDate, _selectGoal, _selectTag ---
-
-  // --- INÍCIO DA MUDANÇA: Substituir showDatePicker pelo novo modal ---
-  Future<void> _selectDate(BuildContext context) async {
-    _removeGoalOverlay();
-    _removeTagOverlay();
-
-    // Proteção para garantir que temos os dados do usuário para o motor
-    if (widget.userData == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text("Erro ao carregar dados do usuário."),
-          backgroundColor: Colors.red));
-      return;
-    }
-
-    final picked = await showModalBottomSheet<DateTime>(
+    final result = await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor:
-          Colors.transparent, // O modal_custom tem seu próprio fundo
-      builder: (modalContext) => CustomDatePickerModal(
-        initialDate: _parsedDueDate ?? _dateForVibration,
-        userData: widget.userData!, // Já verificamos que não é nulo
-      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return GoalSelectionModal(
+          userId: widget.userId,
+        );
+      },
     );
 
-    if (picked != null && !_isSameDay(picked, _dateForVibration)) {
-      _updateDateInTextField(picked);
+    if (result == null) return;
+
+    if (result is Goal) {
+      setState(() {
+        _selectedGoalId = result.id;
+        _selectedGoalTitle = result.title;
+      });
+    } else if (result == '_CREATE_NEW_GOAL_') {
+      _openCreateGoalWidget();
+    }
+  }
+
+  // _openCreateGoalWidget (inalterada - já está correta)
+  void _openCreateGoalWidget() async {
+    if (widget.userData == null) return;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    bool isMobile = screenWidth < 600;
+
+    bool? creationSuccess;
+
+    if (isMobile) {
+      creationSuccess = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (context) => CreateGoalScreen(userData: widget.userData!),
+          fullscreenDialog: true,
+        ),
+      );
+    } else {
+      creationSuccess = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return CreateGoalDialog(userData: widget.userData!);
+        },
+      );
+    }
+
+    if (creationSuccess == true) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      if (mounted) {
+        _selectGoal();
+      }
+    }
+  }
+
+  // --- INÍCIO DA MUDANÇA: _showTagSelectionModal atualizada ---
+  void _showTagSelectionModal() async {
+    FocusScope.of(context).unfocus();
+
+    // Abre o modal e espera o retorno (String)
+    final String? tagName = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return TagSelectionModal(
+          userId: widget.userId,
+        );
+      },
+    );
+
+    // Adiciona a tag ao estado se ela for válida e não existir
+    if (tagName != null &&
+        tagName.isNotEmpty &&
+        !_selectedTags.contains(tagName)) {
+      setState(() {
+        _selectedTags.add(tagName);
+      });
     }
   }
   // --- FIM DA MUDANÇA ---
 
-  void _selectGoal(BuildContext context) {
-    // ... (inalterado, já usa overlay) ...
-    _removeTagOverlay();
-    if (_goalOverlayEntry != null) {
-      _removeGoalOverlay();
-      return;
-    }
-    _filteredGoals = List.from(_allGoals);
-    _filteredGoals
-        .sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
-    if (mounted) {
-      _showGoalOverlay();
-    }
-  }
+  // --- INÍCIO DA MUDANÇA: _showDatePickerModal atualizada ---
+  void _showDatePickerModal() {
+    FocusScope.of(context).unfocus();
+    if (widget.userData == null) return;
 
-  void _selectTag(BuildContext context) {
-    // ... (inalterado, já usa overlay) ...
-    _removeGoalOverlay();
-    _textFieldFocusNode.requestFocus();
-    if (_tagOverlayEntry != null) {
-      _removeTagOverlay();
-      return;
-    }
-    _filteredTags = List.from(_allTags);
-    if (mounted) {
-      _showTagOverlay();
-    }
-  }
-  // --- Fim seletores ---
+    // A data inicial é a data já selecionada, ou a data do "pill", ou hoje
+    DateTime initialPickerDate = _selectedDate ?? _selectedDateForPill;
 
-  void _insertActionText(String char) {
-    // ... (inalterado) ...
-    _removeGoalOverlay();
-    _removeTagOverlay();
-    final text = _textController.text;
-    final selection = _textController.selection;
-    final newText = text.replaceRange(selection.start, selection.end, char);
-    final newOffset = selection.start + char.length;
-
-    _textController.value = TextEditingValue(
-      text: newText,
-      selection: TextSelection.collapsed(offset: newOffset),
+    // Adiciona a hora (se já houver uma)
+    initialPickerDate = DateTime(
+      initialPickerDate.year,
+      initialPickerDate.month,
+      initialPickerDate.day,
+      _selectedTime?.hour ?? 0,
+      _selectedTime?.minute ?? 0,
     );
 
-    Future.delayed(const Duration(milliseconds: 50), () {
-      if (!mounted) return;
-      _textController.selection = TextSelection.collapsed(offset: newOffset);
-      if (char == '@') {
-        _handleGoalAutocomplete();
+    RecurrenceRule ruleToPass = _selectedRecurrenceRule;
+
+    showModalBottomSheet<DatePickerResult>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CustomDatePickerModal(
+        initialDate: initialPickerDate,
+        userData: widget.userData!,
+        initialRecurrenceRule: ruleToPass,
+      ),
+    ).then((result) {
+      if (result != null) {
+        final selectedDateTime = result.dateTime;
+        final selectedDateMidnight = DateTime(selectedDateTime.year,
+            selectedDateTime.month, selectedDateTime.day);
+
+        // --- REMOVIDO: Lógica de adicionar ao _textController ---
+
+        // Atualiza a pílula de vibração
+        _updateVibrationForDate(selectedDateMidnight);
+
+        // Atualiza o estado
+        setState(() {
+          _selectedDate = selectedDateMidnight; // Armazena a data selecionada
+          _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+          _selectedRecurrenceRule = result.recurrenceRule;
+        });
       }
     });
   }
+  // --- FIM DA MUDANÇA ---
 
+  // --- INÍCIO DA MUDANÇA: _submit atualizado ---
   void _submit() async {
-    // ... (inalterado) ...
-    _removeGoalOverlay();
-    _removeTagOverlay();
     final rawText = _textController.text.trim();
 
-    if (rawText.isEmpty && widget.preselectedGoal == null) {
-      Navigator.of(context).pop(false);
-      return;
-    }
-
-    final userId = AuthRepository().getCurrentUser()?.uid;
-    if (userId == null) {
-      print("Erro: Usuário não logado ao submeter tarefa.");
+    // 1. Validação de texto obrigatório
+    if (rawText.isEmpty) {
+      // Mostra um feedback
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Erro de autenticação ao salvar.'),
-            backgroundColor: Colors.red),
+          content: Text('Por favor, digite o nome da tarefa.'),
+          backgroundColor: Colors.orangeAccent,
+          duration: Duration(seconds: 2),
+        ),
       );
+      _textFieldFocusNode.requestFocus(); // Foca no campo de texto
       return;
     }
 
-    try {
-      final ParsedTask parsedResult = await TaskParser.parse(rawText, userId);
+    // 2. Parser simplificado (síncrono)
+    final ParsedTask textParseResult = TaskParser.parse(rawText);
 
-      final DateTime? finalDueDate = _parsedDueDate ?? widget.preselectedDate;
+    // 3. Define a data
+    final ParsedTask finalParsedTask = textParseResult.copyWith(
+      // cleanText já está correto vindo do parse
+      dueDate: _selectedDate, // Envia a data do "pill" (pode ser null)
+      reminderTime: _selectedTime,
+      recurrenceRule: _selectedRecurrenceRule,
+      tags: _selectedTags, // Envia a lista de tags
+      journeyId: _selectedGoalId, // Envia o ID da meta
+      journeyTitle: _selectedGoalTitle, // Envia o Título da meta
+      // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
+    );
 
-      final String? finalJourneyId =
-          parsedResult.journeyId ?? widget.preselectedGoal?.id;
-      final String? finalJourneyTitle =
-          parsedResult.journeyTitle ?? widget.preselectedGoal?.title;
+    widget.onAddTask(finalParsedTask);
 
-      String finalText = parsedResult.cleanText;
-
-      if (finalText.isEmpty && finalJourneyId != null) {
-        finalText = "Novo Marco";
-      }
-
-      final List<String> finalTags = parsedResult.tags;
-
-      int? finalPersonalDay;
-      if (widget.userData != null &&
-          widget.userData!.dataNasc.isNotEmpty &&
-          widget.userData!.nomeAnalise.isNotEmpty) {
-        final engine = NumerologyEngine(
-          nomeCompleto: widget.userData!.nomeAnalise,
-          dataNascimento: widget.userData!.dataNasc,
-        );
-        final dateForCalc = finalDueDate ?? DateTime.now();
-        finalPersonalDay = engine.calculatePersonalDayForDate(dateForCalc);
-      } else {
-        finalPersonalDay = _personalDay > 0
-            ? _personalDay
-            : null; // Usa o _personalDay calculado no init
-      }
-
-      if (_isEditing) {
-        if (widget.taskToEdit == null) {
-          print("Erro: Tentando editar tarefa nula.");
-          throw Exception("Task a ser editada não encontrada.");
-        }
-        final Map<String, dynamic> updates = {
-          'text': finalText,
-          'dueDate': finalDueDate,
-          'tags': finalTags,
-          'journeyId': finalJourneyId,
-          'journeyTitle': finalJourneyTitle,
-          'personalDay': finalPersonalDay,
-        };
-        await _firestoreService.updateTaskFields(
-            userId, widget.taskToEdit!.id, updates);
-
-        final originalGoalId = widget.taskToEdit!.journeyId;
-        if (originalGoalId != finalJourneyId) {
-          if (originalGoalId != null && originalGoalId.isNotEmpty) {
-            _firestoreService.updateGoalProgress(userId, originalGoalId);
-          }
-          if (finalJourneyId != null && finalJourneyId.isNotEmpty) {
-            _firestoreService.updateGoalProgress(userId, finalJourneyId);
-          }
-        } else if (finalJourneyId != null && finalJourneyId.isNotEmpty) {
-          _firestoreService.updateGoalProgress(userId, finalJourneyId);
-        }
-      } else {
-        final newTask = TaskModel(
-          id: '',
-          text: finalText,
-          completed: false,
-          createdAt: DateTime.now(),
-          dueDate: finalDueDate,
-          tags: finalTags,
-          journeyId: finalJourneyId,
-          journeyTitle: finalJourneyTitle,
-          personalDay: finalPersonalDay,
-        );
-        await _firestoreService.addTask(userId, newTask);
-        if (newTask.journeyId != null && newTask.journeyId!.isNotEmpty) {
-          _firestoreService.updateGoalProgress(userId, newTask.journeyId!);
-        }
-      }
-
-      Navigator.of(context).pop(true); // Sucesso
-    } catch (e) {
-      print("Erro detalhado ao salvar/processar tarefa: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text('Ocorreu um erro ao salvar a tarefa: $e'),
-            backgroundColor: Colors.red),
-      );
-    }
+    if (mounted) Navigator.of(context).pop();
   }
+  // --- FIM DA MUDANÇA ---
 
   @override
   void dispose() {
-    _removeGoalOverlay();
-    _removeTagOverlay();
-    _textController.removeListener(_onTextChanged);
+    // _textController.removeListener(_onTextChanged); // Removido
     _textController.dispose();
     _textFieldFocusNode.dispose();
     super.dispose();
   }
 
+  // --- INÍCIO DA MUDANÇA: build() atualizado com "Pills" ---
   @override
   Widget build(BuildContext context) {
-    // ... (build method inalterado) ...
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -785,8 +383,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
       child: GestureDetector(
         onTap: () {
           FocusScope.of(context).unfocus();
-          _removeGoalOverlay();
-          _removeTagOverlay();
         },
         behavior: HitTestBehavior.opaque,
         child: SingleChildScrollView(
@@ -794,46 +390,111 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CompositedTransformTarget(
-                link: _layerLink,
-                child: TextField(
-                  focusNode: _textFieldFocusNode,
-                  controller: _textController,
-                  style: const TextStyle(
-                      fontSize: 16, color: AppColors.primaryText),
-                  decoration: InputDecoration(
-                    hintText: widget.preselectedGoal != null
-                        ? "Adicionar novo marco..."
-                        : "Adicionar tarefa, #tag, @meta, /data",
-                    hintStyle: const TextStyle(color: AppColors.tertiaryText),
-                    border: InputBorder.none,
-                  ),
-                  onTap: () {
-                    _removeGoalOverlay();
-                    _removeTagOverlay();
-                  },
-                  onSubmitted: (_) => _submit(),
-                  maxLines: null,
-                  keyboardType: TextInputType.multiline,
-                  textCapitalization: TextCapitalization.sentences,
+              TextField(
+                focusNode: _textFieldFocusNode,
+                controller: _textController, // Controller padrão
+                style:
+                    const TextStyle(fontSize: 16, color: AppColors.primaryText),
+                decoration: InputDecoration(
+                  hintText: _selectedGoalId != null
+                      ? "Adicionar novo marco..."
+                      : "Adicionar tarefa...", // Hint simplificado
+                  hintStyle: const TextStyle(color: AppColors.tertiaryText),
+                  border: InputBorder.none,
+                ),
+                onTap: () {},
+                onSubmitted: (_) => _submit(),
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+              ),
+
+              // --- INÍCIO: ÁREA DE "PILLS" ---
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                child: Wrap(
+                  spacing: 6.0, // Espaço horizontal entre os pills
+                  runSpacing: 4.0, // Espaço vertical entre as linhas de pills
+                  children: [
+                    // Pill da Meta (lógica que já tínhamos)
+                    if (_selectedGoalTitle != null &&
+                        _selectedGoalTitle!.isNotEmpty)
+                      _buildPill(
+                        label: _selectedGoalTitle!,
+                        icon: Icons.flag_rounded,
+                        color: Colors.cyanAccent,
+                        onDeleted: widget.preselectedGoal != null
+                            ? null
+                            : () {
+                                setState(() {
+                                  _selectedGoalId = null;
+                                  _selectedGoalTitle = null;
+                                });
+                              },
+                      ),
+
+                    // Pill da Data
+                    if (_selectedDate != null)
+                      _buildPill(
+                        label: DateFormat('dd/MM/yy', 'pt_BR')
+                            .format(_selectedDate!),
+                        icon: Icons.calendar_today_rounded,
+                        color: Colors.orangeAccent,
+                        onDeleted: () {
+                          setState(() {
+                            _selectedDate = null;
+                            _selectedTime = null; // Reseta a hora também
+                            _selectedRecurrenceRule =
+                                RecurrenceRule(); // Reseta recorrência
+                            _updateVibrationForDate(
+                                DateTime.now()); // Atualiza pílula de vibração
+                          });
+                        },
+                      ),
+
+                    // Pills das Tags
+                    ..._selectedTags.map(
+                      (tag) => _buildPill(
+                        label: tag,
+                        icon: Icons.label_rounded,
+                        color: Colors.purpleAccent,
+                        onDeleted: () {
+                          setState(() {
+                            _selectedTags.remove(tag);
+                          });
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              // --- FIM: ÁREA DE "PILLS" ---
+
               const SizedBox(height: 12),
               const Divider(color: AppColors.border, height: 1),
               const SizedBox(height: 4),
               Row(
                 children: [
                   _buildActionButton(
-                      icon: Icons.label_outline,
-                      onTap: () => _selectTag(context)),
-                  if (widget.preselectedGoal == null)
-                    _buildActionButton(
-                        icon: Icons.flag_outlined,
-                        onTap: () => _selectGoal(context)),
-                  if (widget.preselectedDate == null)
-                    _buildActionButton(
-                        icon: Icons.calendar_today_outlined,
-                        onTap: () => _selectDate(context)),
+                    icon: Icons.label_outline,
+                    onTap: _showTagSelectionModal, // Chama o novo modal
+                    color:
+                        _selectedTags.isNotEmpty ? Colors.purpleAccent : null,
+                  ),
+                  _buildActionButton(
+                    icon: Icons.flag_outlined,
+                    onTap: widget.preselectedGoal != null ? null : _selectGoal,
+                    color: _selectedGoalId != null
+                        ? Colors.cyanAccent
+                        : (widget.preselectedGoal != null
+                            ? AppColors.tertiaryText.withOpacity(0.3)
+                            : AppColors.tertiaryText),
+                  ),
+                  _buildActionButton(
+                    icon: Icons.calendar_today_outlined,
+                    onTap: _showDatePickerModal, // Chama o novo modal
+                    color: _selectedDate != null ? Colors.orangeAccent : null,
+                  ),
                   const Spacer(),
                   if (_personalDay > 0)
                     Padding(
@@ -841,8 +502,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
                       child: VibrationPill(
                         vibrationNumber: _personalDay,
                         onTap: () {
-                          _removeGoalOverlay();
-                          _removeTagOverlay();
                           showVibrationInfoModal(context,
                               vibrationNumber: _personalDay);
                         },
@@ -852,7 +511,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     padding:
                         EdgeInsets.only(left: _personalDay > 0 ? 8.0 : 0.0),
                     child: ElevatedButton(
-                      onPressed: _submit,
+                      onPressed: _submit, // Chama o submit atualizado
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           shape: RoundedRectangleBorder(
@@ -875,16 +534,54 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ),
     );
   }
+  // --- FIM DA MUDANÇA: build() ---
 
+  // Helper _buildActionButton (modificado para aceitar cor opcional)
   Widget _buildActionButton(
-      {required IconData icon, required VoidCallback onTap}) {
-    // ... (helper inalterado) ...
+      {required IconData icon, required VoidCallback? onTap, Color? color}) {
     return IconButton(
       onPressed: onTap,
-      icon: Icon(icon, color: AppColors.tertiaryText),
+      icon: Icon(icon, color: color ?? AppColors.tertiaryText),
       splashRadius: 20,
       constraints: const BoxConstraints(),
       padding: const EdgeInsets.all(8),
+    );
+  }
+
+  // --- NOVO HELPER: _buildPill ---
+  /// Cria um "pill" (etiqueta) customizado.
+  Widget _buildPill({
+    required String label,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onDeleted, // torna a remoção opcional
+  }) {
+    return InputChip(
+      label: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
+      avatar: Icon(
+        icon,
+        size: 16,
+        color: color,
+      ),
+      backgroundColor: AppColors.background.withOpacity(0.5),
+      onDeleted: onDeleted,
+      deleteIconColor: AppColors.secondaryText.withOpacity(0.7),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8.0),
+        side: BorderSide(
+          color: color.withOpacity(0.3),
+        ),
+      ),
     );
   }
 }

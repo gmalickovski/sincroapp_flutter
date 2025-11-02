@@ -214,20 +214,27 @@ class NumerologyEngine {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return 0;
 
-    int diaNascReduzido = _reduzirNumero(dataNasc.day, mestre: true);
-    int mesNascReduzido = _reduzirNumero(dataNasc.month, mestre: true);
+    // Ensure we work with UTC date consistently
+    final utcDate = DateTime.utc(date.year, date.month, date.day);
+    final dataNascUtc =
+        DateTime.utc(dataNasc.year, dataNasc.month, dataNasc.day);
 
-    int diaAtualReduzido = _reduzirNumero(date.day, mestre: true);
-    int mesAtualReduzido = _reduzirNumero(date.month, mestre: true);
-    int anoAtualReduzido = _reduzirNumero(date.year, mestre: true);
+    // Redução inicial dos números
+    int diaNascReduzido = _reduzirNumero(dataNascUtc.day);
+    int mesNascReduzido = _reduzirNumero(dataNascUtc.month);
+    int anoNascReduzido = _reduzirNumero(dataNascUtc.year);
 
-    // Lógica para o dia pessoal baseada na soma das vibrações do dia e do ano pessoal do momento.
-    int anoPessoalDoDia = _reduzirNumero(
-        diaNascReduzido + mesNascReduzido + anoAtualReduzido,
-        mestre: true);
-    int mesPessoalDoDia =
-        _reduzirNumero(anoPessoalDoDia + mesAtualReduzido, mestre: true);
+    // Redução do ano atual
+    int anoAtualReduzido = _reduzirNumero(utcDate.year);
 
-    return _reduzirNumero(mesPessoalDoDia + diaAtualReduzido, mestre: true);
+    // Cálculo do ano pessoal
+    int anoPessoal =
+        _reduzirNumero(diaNascReduzido + mesNascReduzido + anoAtualReduzido);
+
+    // Cálculo do mês pessoal
+    int mesPessoal = _reduzirNumero(anoPessoal + _reduzirNumero(utcDate.month));
+
+    // Cálculo final do dia pessoal
+    return _reduzirNumero(mesPessoal + _reduzirNumero(utcDate.day));
   }
 }

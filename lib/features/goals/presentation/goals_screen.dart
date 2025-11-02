@@ -1,14 +1,16 @@
 // lib/features/goals/presentation/goals_screen.dart
 
-import 'package:flutter/foundation.dart'; // NECESSÁRIO PARA debugPrint
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
-import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart'; // Necessário para obter UID
+import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart'; // Tela de criação
-import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_screen.dart'; // Tela de detalhe
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_card.dart'; // Widget do Card
+import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_screen.dart';
+// IMPORT ADICIONADO
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_card.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
@@ -22,7 +24,6 @@ class GoalsScreen extends StatefulWidget {
 
 class _GoalsScreenState extends State<GoalsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
-  // Obtém o UID do usuário logado de forma segura
   final String _userId = AuthRepository().getCurrentUser()?.uid ?? '';
 
   static const double kDesktopBreakpoint = 768.0;
@@ -30,44 +31,66 @@ class _GoalsScreenState extends State<GoalsScreen> {
   @override
   void initState() {
     super.initState();
-    // Verifica se o _userId é válido no início
     if (_userId.isEmpty) {
-      // TODO: Tratar caso onde o usuário não está logado ou UID é inválido
-      // Ex: Redirecionar para login ou mostrar mensagem de erro.
       debugPrint("GoalsScreen: Erro crítico - UID do usuário não encontrado!");
     }
   }
 
-  void _navigateToCreateGoal() {
-    // Verifica se o contexto ainda é válido
+  // *** MÉTODO ATUALIZADO PARA LIDAR COM DESKTOP/MOBILE ***
+  void _navigateToCreateGoal([Goal? goalToEdit]) {
     if (!mounted) return;
-    Navigator.of(context).push(MaterialPageRoute(
-      builder: (context) => CreateGoalScreen(userData: widget.userData),
-      fullscreenDialog: true, // Abre como um modal
-    ));
+
+    final bool isDesktop =
+        MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+
+    if (isDesktop) {
+      // --- VERSÃO DESKTOP: CHAMA O DIÁLOGO ---
+      showDialog(
+        context: context,
+        barrierDismissible: false, // Impede fechar clicando fora
+        builder: (BuildContext dialogContext) {
+          return CreateGoalDialog(
+            userData: widget.userData,
+            goalToEdit: goalToEdit,
+          );
+        },
+      ).then((result) {
+        if (result == true) {
+          // Meta salva com sucesso, opcionalmente mostrar um SnackBar
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(goalToEdit != null
+                  ? "Jornada atualizada com sucesso!"
+                  : "Nova jornada criada com sucesso!"),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      });
+    } else {
+      // --- VERSÃO MOBILE: CHAMA A TELA CHEIA ---
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => CreateGoalScreen(
+          userData: widget.userData,
+          goalToEdit: goalToEdit,
+        ),
+        fullscreenDialog: true,
+      ));
+    }
   }
 
   void _navigateToGoalDetail(Goal goal) {
     if (!mounted) return;
-    // --- LOG ANTES DA NAVEGAÇÃO ---
-    debugPrint(
-        "GoalsScreen: Navegando para GoalDetailScreen com Goal ID: ${goal.id}");
-    debugPrint("GoalsScreen: Título da Meta: ${goal.title}");
-    debugPrint("GoalsScreen: UserData UID: ${widget.userData.uid}");
     try {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => GoalDetailScreen(
           initialGoal: goal,
-          userData: widget.userData, // Passando userData
+          userData: widget.userData,
         ),
       ));
-      // --- LOG DEPOIS DA NAVEGAÇÃO (só aparecerá se a navegação em si não crashar) ---
-      debugPrint(
-          "GoalsScreen: Navegação para GoalDetailScreen iniciada com sucesso.");
     } catch (e, s) {
       debugPrint("GoalsScreen: ERRO durante Navigator.push: $e");
       debugPrint("GoalsScreen: StackTrace: $s");
-      // Mostra um erro para o usuário se a navegação falhar
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao abrir detalhes da meta: $e"),
@@ -77,9 +100,63 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
   }
 
+  // *** NOVO MÉTODO PARA DELETAR JORNADA ***
+  Future<void> _handleDeleteGoal(BuildContext context, Goal goal) async {
+    // 1. Mostrar diálogo de confirmação
+    final bool? confirmDelete = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: const Text('Confirmar Exclusão',
+              style: TextStyle(color: AppColors.primaryText)),
+          content: Text(
+              'Tem certeza que deseja excluir a jornada "${goal.title}"? Esta ação não pode ser desfeita.',
+              style: const TextStyle(color: AppColors.secondaryText)),
+          actions: [
+            TextButton(
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppColors.secondaryText)),
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+            ),
+            TextButton(
+              child:
+                  Text('Excluir', style: TextStyle(color: Colors.red.shade400)),
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+            ),
+          ],
+        );
+      },
+    );
+
+    // 2. Se confirmado, deletar do Firestore
+    if (confirmDelete == true && mounted) {
+      try {
+        await _firestoreService.deleteGoal(_userId, goal.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Jornada excluída com sucesso.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        debugPrint("Erro ao deletar meta: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir jornada: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Se userId for inválido, mostra um estado de erro ou vazio
     if (_userId.isEmpty) {
       return const Scaffold(
         backgroundColor: AppColors.background,
@@ -98,25 +175,20 @@ class _GoalsScreenState extends State<GoalsScreen> {
             final double horizontalPadding = isDesktop ? 24.0 : 12.0;
 
             return Padding(
-              // Padding geral da tela
               padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader(), // Título "Jornadas"
+                  _buildHeader(),
                   Expanded(
-                    // StreamBuilder para ouvir as metas do Firestore
                     child: StreamBuilder<List<Goal>>(
-                      // Usa o _userId validado
                       stream: _firestoreService.getGoalsStream(_userId),
                       builder: (context, snapshot) {
-                        // Estado de carregamento inicial
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting &&
                             !snapshot.hasData) {
                           return const Center(child: CustomLoadingSpinner());
                         }
-                        // Estado de erro no stream
                         if (snapshot.hasError) {
                           debugPrint(
                               "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
@@ -125,41 +197,36 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   'Erro ao carregar jornadas: ${snapshot.error}',
                                   style: const TextStyle(color: Colors.red)));
                         }
-                        // Estado sem dados ou lista vazia
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return _buildEmptyState(); // Mostra mensagem "Nenhuma jornada"
+                          return _buildEmptyState();
                         }
 
-                        // Dados recebidos com sucesso
                         final goals = snapshot.data!;
-                        debugPrint(
-                            "GoalsScreen: StreamBuilder reconstruído com ${goals.length} metas.");
 
                         // Layout em Grid para Desktop
                         if (isDesktop) {
-                          // Calcula quantas colunas cabem, no mínimo 1, no máximo 4
                           int crossAxisCount =
                               (constraints.maxWidth / 350).floor().clamp(1, 4);
                           return GridView.builder(
-                            padding: const EdgeInsets.only(
-                                top: 8, bottom: 80), // Espaço para FAB
+                            padding: const EdgeInsets.only(top: 8, bottom: 80),
                             gridDelegate:
                                 SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: crossAxisCount,
                               crossAxisSpacing: 16,
                               mainAxisSpacing: 16,
                               childAspectRatio:
-                                  1.9, // Ajusta altura relativa do card
+                                  1.9, // Ajustado para card com mais info
                             ),
                             itemCount: goals.length,
                             itemBuilder: (context, index) {
                               final goal = goals[index];
-                              debugPrint(
-                                  "GoalsScreen: Construindo GoalCard (Grid) para ID: ${goal.id}");
                               return GoalCard(
                                 goal: goal,
-                                onTap: () => _navigateToGoalDetail(
-                                    goal), // Navega ao clicar
+                                userId: _userId,
+                                onTap: () => _navigateToGoalDetail(goal),
+                                onDelete: () =>
+                                    _handleDeleteGoal(context, goal),
+                                onEdit: () => _navigateToCreateGoal(goal),
                               );
                             },
                           );
@@ -167,20 +234,19 @@ class _GoalsScreenState extends State<GoalsScreen> {
                         // Layout em Lista para Mobile
                         else {
                           return ListView.builder(
-                            padding: const EdgeInsets.only(
-                                top: 8, bottom: 80), // Espaço para FAB
+                            padding: const EdgeInsets.only(top: 8, bottom: 80),
                             itemCount: goals.length,
                             itemBuilder: (context, index) {
                               final goal = goals[index];
-                              debugPrint(
-                                  "GoalsScreen: Construindo GoalCard (List) para ID: ${goal.id}");
                               return Padding(
-                                // Adiciona padding entre os cards na lista
                                 padding: const EdgeInsets.only(bottom: 12.0),
                                 child: GoalCard(
                                   goal: goal,
-                                  onTap: () => _navigateToGoalDetail(
-                                      goal), // Navega ao clicar
+                                  userId: _userId,
+                                  onTap: () => _navigateToGoalDetail(goal),
+                                  onDelete: () =>
+                                      _handleDeleteGoal(context, goal),
+                                  onEdit: () => _navigateToCreateGoal(goal),
                                 ),
                               );
                             },
@@ -195,38 +261,34 @@ class _GoalsScreenState extends State<GoalsScreen> {
           },
         ),
       ),
-      // Botão Flutuante para criar nova meta
       floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCreateGoal,
+        onPressed: _navigateToCreateGoal, // MÉTODO ATUALIZADO
         backgroundColor: AppColors.primary,
         tooltip: 'Nova Jornada',
-        // Tag única para este FAB para evitar conflito de Hero
         heroTag: 'fab_goals_screen',
         child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // Widget para o título "Jornadas"
   Widget _buildHeader() {
     return const Padding(
-      padding: EdgeInsets.only(top: 16, bottom: 16), // Espaçamento vertical
+      padding: EdgeInsets.only(top: 16, bottom: 16),
       child: Text(
-        'Jornadas',
+        'Meta',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 28, // Tamanho maior
+          fontSize: 28,
           fontWeight: FontWeight.bold,
         ),
       ),
     );
   }
 
-  // Widget para estado vazio (sem metas)
   Widget _buildEmptyState() {
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 400), // Limita largura
+        constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -251,7 +313,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: _navigateToCreateGoal, // Botão para criar
+              onPressed: _navigateToCreateGoal, // MÉTODO ATUALIZADO
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
                 'Criar Jornada',

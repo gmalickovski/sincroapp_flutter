@@ -12,15 +12,23 @@ class StringSanitizer {
     return str;
   }
 
-  /// Converte uma string como "Aprender a Tocar Violão"
-  /// para uma tag simplificada como "AprenderaTocarViolao".
+  /// Converte uma string como "Minha Meta"
+  /// para uma tag simplificada como "minhameta".
+  /// Garante minúsculas, remove acentos, espaços e caracteres não alfanuméricos.
   static String toSimpleTag(String text) {
     // 1. Remove acentos
     String sanitized = _unaccent(text);
-    // 2. Remove espaços
+
+    // 2. Converte para minúsculas PRIMEIRO
+    sanitized = sanitized.toLowerCase();
+
+    // 3. Remove espaços
     sanitized = sanitized.replaceAll(' ', '');
-    // 3. Remove qualquer outro caractere que não seja letra ou número para segurança
-    sanitized = sanitized.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-    return sanitized;
+
+    // 4. Remove qualquer outro caractere que não seja letra ou número
+    //    (agora [^a-z0-9] pois já garantimos minúsculas)
+    sanitized = sanitized.replaceAll(RegExp(r'[^a-z0-9]'), '');
+
+    return sanitized; // Ex: "minhameta"
   }
 }

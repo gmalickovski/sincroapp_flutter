@@ -4,13 +4,21 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
+// IMPORT ADICIONADO
+import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
 class CreateGoalDialog extends StatefulWidget {
   final UserModel userData;
+  final Goal? goalToEdit;
 
-  const CreateGoalDialog({super.key, required this.userData});
+  const CreateGoalDialog({
+    super.key,
+    required this.userData,
+    this.goalToEdit,
+  });
 
   @override
   State<CreateGoalDialog> createState() => _CreateGoalDialogState();
@@ -23,15 +31,40 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
   DateTime? _targetDate;
   bool _isSaving = false;
 
+  @override
+  void initState() {
+    super.initState();
+
+    // Initialize fields if editing
+    if (widget.goalToEdit != null) {
+      _titleController.text = widget.goalToEdit!.title;
+      _descriptionController.text = widget.goalToEdit!.description;
+      _targetDate = widget.goalToEdit!.targetDate;
+    }
+  }
+
   final _firestoreService = FirestoreService();
 
+  // *** MÉTODO _pickDate ATUALIZADO ***
   Future<void> _pickDate() async {
-    final pickedDate = await showDatePicker(
+    // Esconde o teclado antes de abrir o seletor de data
+    FocusScope.of(context).unfocus();
+
+    final pickedDate = await showDialog<DateTime>(
       context: context,
-      initialDate: _targetDate ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+      builder: (context) {
+        // Chama o seu novo widget de calendário flutuante
+        return CustomEndDatePickerDialog(
+          userData: widget.userData,
+          // Abrir o seletor focado na data atual por padrão (ou na data alvo
+          // já definida), assim evitamos pular para o mês seguinte.
+          initialDate: _targetDate ?? DateTime.now(),
+          firstDate: DateTime.now(),
+          lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+        );
+      },
     );
+
     if (pickedDate != null) {
       setState(() {
         _targetDate = pickedDate;
@@ -40,7 +73,17 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
   }
 
   Future<void> _handleSave() async {
-    if (!_formKey.currentState!.validate() || _isSaving) {
+    if (!_formKey.currentState!.validate() ||
+        _isSaving ||
+        _targetDate == null) {
+      if (_targetDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Por favor, defina uma data alvo para sua jornada.'),
+          ),
+        );
+      }
       return;
     }
 
@@ -51,21 +94,45 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       'description': _descriptionController.text.trim(),
       'targetDate':
           _targetDate != null ? Timestamp.fromDate(_targetDate!) : null,
-      'progress': 0,
-      'createdAt': Timestamp.now(),
       'userId': widget.userData.uid,
+      // Preserva dados existentes ao editar
+      if (widget.goalToEdit != null) ...{
+        'progress': widget.goalToEdit!.progress,
+        'createdAt': Timestamp.fromDate(widget.goalToEdit!.createdAt),
+        'subTasks': widget.goalToEdit!.subTasks,
+      } else ...{
+        'progress': 0,
+        'createdAt': Timestamp.now(),
+        'subTasks': [],
+      },
     };
 
     try {
-      await _firestoreService.addGoal(widget.userData.uid, dataToSave);
-      if (mounted) Navigator.of(context).pop();
+      if (widget.goalToEdit != null) {
+        await _firestoreService.updateGoal(Goal(
+          id: widget.goalToEdit!.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          targetDate: _targetDate,
+          progress: widget.goalToEdit!.progress,
+          userId: widget.userData.uid,
+          createdAt: widget.goalToEdit!.createdAt,
+          subTasks: widget.goalToEdit!.subTasks,
+        ));
+      } else {
+        await _firestoreService.addGoal(widget.userData.uid, dataToSave);
+      }
+      // Retorna true para indicar sucesso (útil para a tela anterior)
+      if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
         setState(() => _isSaving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red.shade400,
-            content: const Text('Erro ao criar a jornada. Tente novamente.'),
+            content: Text(widget.goalToEdit != null
+                ? 'Erro ao atualizar a jornada. Tente novamente.'
+                : 'Erro ao criar a jornada. Tente novamente.'),
           ),
         );
       }
@@ -79,31 +146,28 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     super.dispose();
   }
 
-  /// Helper para construir a decoração dos campos de texto.
-  /// Agora, o foco colore apenas a borda, sem preenchimento de fundo.
   InputDecoration _buildInputDecoration({
     required String labelText,
     String? hintText,
+    String? errorText,
   }) {
     return InputDecoration(
       labelText: labelText,
       labelStyle: const TextStyle(color: AppColors.secondaryText),
-      hintText: hintText,
+      hintText: hintText ?? '',
+      errorText: errorText,
+      errorStyle: const TextStyle(color: Colors.redAccent),
       hintStyle: const TextStyle(color: AppColors.tertiaryText),
-      // Removemos o preenchimento para que apenas a borda seja afetada no foco
       filled: false,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      // Borda padrão (quando não está focado)
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.border),
       ),
-      // Borda quando o campo está focado (selecionado)
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
-      // Borda para o caso de erro de validação
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide(color: Colors.red.shade400),
@@ -134,61 +198,84 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('Criar Nova Jornada',
-                          style: TextStyle(
+                      Text(
+                          widget.goalToEdit != null
+                              ? 'Editar Jornada'
+                              : 'Criar Nova Jornada',
+                          style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold)),
                       IconButton(
                         icon: const Icon(Icons.close,
                             color: AppColors.secondaryText),
-                        onPressed: () => Navigator.of(context).pop(),
+                        // Retorna false para indicar cancelamento
+                        onPressed: () => Navigator.of(context).pop(false),
                       ),
                     ],
                   ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _titleController,
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
                     decoration: _buildInputDecoration(
-                      labelText: 'Título da Jornada',
+                      labelText: 'Título da Jornada *',
+                      hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
                     ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? 'Por favor, insira um título.'
-                            : null,
+                    textCapitalization: TextCapitalization.sentences,
+                    maxLength: 80,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Por favor, insira um título.';
+                      }
+                      if (value.trim().length < 3) {
+                        return 'O título deve ter pelo menos 3 caracteres.';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    style: const TextStyle(color: Colors.white, fontSize: 15),
                     maxLines: 4,
+                    minLines: 2,
+                    maxLength: 500,
                     decoration: _buildInputDecoration(
                       labelText: 'Descrição',
-                      hintText: 'O que você quer alcançar?',
+                      hintText:
+                          'O que você quer alcançar com essa jornada? Quais são seus objetivos?',
                     ),
-                    validator: (value) =>
-                        (value == null || value.trim().isEmpty)
-                            ? 'Por favor, insira uma descrição.'
-                            : null,
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Por favor, insira uma descrição.';
+                      }
+                      if (value.trim().length < 10) {
+                        return 'A descrição deve ter pelo menos 10 caracteres.';
+                      }
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 16),
-                  // Seletor de data com aparência de botão
                   Container(
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
-                      color: AppColors
-                          .background, // Cor de fundo para destacar como botão
+                      // Removida a cor de fundo para um visual mais limpo
+                      // A borda será adicionada pelo _buildInputDecoration "falso"
                     ),
                     child: Material(
                       color: Colors.transparent,
                       child: InkWell(
                         onTap: _pickDate,
                         borderRadius: BorderRadius.circular(8),
-                        child: Padding(
+                        child: Container(
+                          // Container para simular o InputDecoration
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 14), // Mais padding vertical
+                              horizontal: 16, vertical: 14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: AppColors.border),
+                          ),
                           child: Row(
                             children: [
                               const Icon(Icons.calendar_today,
@@ -197,24 +284,15 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                               Expanded(
                                 child: Text(
                                   _targetDate == null
-                                      ? 'Definir Data Alvo (Opcional)'
-                                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy').format(_targetDate!)}',
+                                      ? 'Definir Data Alvo *'
+                                      // Formatando a data
+                                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(_targetDate!)}',
                                   style: const TextStyle(
                                       color: Colors.white, fontSize: 16),
                                 ),
                               ),
-                              if (_targetDate != null)
-                                // Usando um InkWell menor para o ícone de limpar para melhorar a área de toque
-                                InkWell(
-                                  onTap: () =>
-                                      setState(() => _targetDate = null),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4.0),
-                                    child: Icon(Icons.clear,
-                                        color: AppColors.secondaryText,
-                                        size: 20),
-                                  ),
-                                ),
+                              const Icon(Icons.chevron_right,
+                                  color: AppColors.secondaryText, size: 20),
                             ],
                           ),
                         ),
@@ -237,7 +315,12 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                               ),
                             )
                           : const Icon(Icons.check, color: Colors.white),
-                      label: Text(_isSaving ? "Salvando..." : "Salvar Jornada",
+                      label: Text(
+                          _isSaving
+                              ? "Salvando..."
+                              : (widget.goalToEdit != null
+                                  ? "Atualizar Jornada"
+                                  : "Salvar Jornada"),
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold)),

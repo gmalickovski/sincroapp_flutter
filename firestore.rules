@@ -1,0 +1,11 @@
+// firestore.rules
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Para o emulador, permitimos todas as leituras e escritas para facilitar os testes.
+    // Em produção, você deve configurar regras de segurança detalhadas.
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

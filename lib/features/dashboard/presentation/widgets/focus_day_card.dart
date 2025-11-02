@@ -6,7 +6,8 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart'; // Import atualizado
 import 'package:sincro_app_flutter/models/user_model.dart';
 // Import do TaskInputModal ainda é usado para o botão '+' no header
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
+// Numerology engine to compute personal day when needed
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class FocusDayCard extends StatelessWidget {
   final List<TaskModel> tasks;
@@ -162,7 +163,48 @@ class FocusDayCard extends StatelessWidget {
   }
 
   Widget _buildTaskList(BuildContext context) {
-    final tasksToShow = tasks.take(3).toList();
+    // Show tasks that belong to TODAY (LOCAL date comparison) and also
+    // match today's personal day. Use dueDate when present, otherwise
+    // fall back to createdAt. Exclude completed tasks.
+    final nowLocal = DateTime.now().toLocal();
+    final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+
+    // Prepare numerology engine to compute personal day for today and
+    // to compute per-task personal day if the task doesn't have it saved.
+    final engine = NumerologyEngine(
+      nomeCompleto: userData.nomeAnalise,
+      dataNascimento: userData.dataNasc,
+    );
+    final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
+
+    DateTime? _localDateOnly(DateTime? d) {
+      if (d == null) return null;
+      final dl = d.toLocal();
+      return DateTime(dl.year, dl.month, dl.day);
+    }
+
+    final filtered = tasks.where((task) {
+      if (task.completed) return false;
+
+      final DateTime? taskDate = task.dueDate ?? task.createdAt;
+      final taskDateOnly = _localDateOnly(taskDate);
+      if (taskDateOnly == null) return false;
+
+      // Must be the same LOCAL day
+      if (!(taskDateOnly.year == todayLocal.year &&
+          taskDateOnly.month == todayLocal.month &&
+          taskDateOnly.day == todayLocal.day)) {
+        return false;
+      }
+
+      // Determine the task's personal day (use saved value if present)
+      final int taskPersonalDay =
+          task.personalDay ?? engine.calculatePersonalDayForDate(taskDateOnly);
+
+      return taskPersonalDay == todayPersonalDay;
+    }).toList();
+
+    final tasksToShow = filtered.take(3).toList();
 
     if (tasksToShow.isEmpty) {
       return _buildEmptyState();

@@ -1,8 +1,6 @@
-// -----------------------------------------------------------------
-// ARQUIVO ATUALIZADO: custom_month_year_picker.dart
-// (Com layout de duas colunas)
-// -----------------------------------------------------------------
+// lib/common/widgets/custom_month_year_picker.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
@@ -26,63 +24,70 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
   late int _selectedYear;
   late int _selectedMonth;
   late List<int> _years;
-  late List<String> _months; // Lista de nomes dos meses
-  late ScrollController _yearScrollController;
-  late ScrollController _monthScrollController; // Controller para os meses
+  late List<String> _months;
+  late FixedExtentScrollController _yearController;
+  late FixedExtentScrollController _monthController;
 
-  final double _itemHeight = 50.0; // Altura padrão para itens de lista
+  // --- ALTERAÇÃO: Variáveis para rastrear os índices atuais ---
+  late int _currentYearIndex;
+  late int _currentMonthIndex;
+  // --- FIM DA ALTERAÇÃO ---
+
+  final double _itemHeight = 60.0;
+  // --- ALTERAÇÃO: Reduzido o wheelHeight para dar espaço para os botões ---
+  final double _wheelHeight = 60.0 * 3; // Eram 5 itens
+  // --- FIM DA ALTERAÇÃO ---
 
   @override
   void initState() {
     super.initState();
     _selectedYear = widget.initialDate.year;
-    _selectedMonth = widget.initialDate.month; // Meses são 1-12
+    _selectedMonth = widget.initialDate.month;
 
-    // Gera a lista de anos
     _years = List<int>.generate(
       widget.lastDate.year - widget.firstDate.year + 1,
       (index) => widget.firstDate.year + index,
     );
 
-    // Gera a lista de meses abreviados
     _months = List.generate(12, (index) {
       return DateFormat('MMM', 'pt_BR')
-          .format(DateTime(2000, index + 1)) // Ano não importa
+          .format(DateTime(2000, index + 1))
           .toUpperCase();
     });
 
-    // Calcula índices iniciais
-    int initialYearIndex =
+    // --- ALTERAÇÃO: Define os índices iniciais ---
+    _currentYearIndex =
         _years.indexOf(_selectedYear).clamp(0, _years.length - 1);
-    int initialMonthIndex =
-        (_selectedMonth - 1).clamp(0, 11); // Meses 0-11 internamente
+    _currentMonthIndex = (_selectedMonth - 1).clamp(0, 11);
 
-    // Inicializa controllers com offset para centralizar (aproximadamente)
-    _yearScrollController = ScrollController(
-        initialScrollOffset: (initialYearIndex * _itemHeight) -
-            _itemHeight * 1.5); // Tenta centralizar
-    _monthScrollController = ScrollController(
-        initialScrollOffset: (initialMonthIndex * _itemHeight) -
-            _itemHeight * 1.5); // Tenta centralizar
-
-    // Scroll para os itens selecionados após o build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToIndex(_yearScrollController, initialYearIndex);
-      _scrollToIndex(_monthScrollController, initialMonthIndex);
-    });
+    _yearController =
+        FixedExtentScrollController(initialItem: _currentYearIndex);
+    _monthController =
+        FixedExtentScrollController(initialItem: _currentMonthIndex);
+    // --- FIM DA ALTERAÇÃO ---
   }
 
-  // Função helper para scroll animado
-  void _scrollToIndex(ScrollController controller, int index) {
-    if (controller.hasClients) {
-      // Calcula o offset para tentar centralizar o item
-      // (alturaContainer / 2) - (alturaItem / 2) + (index * alturaItem)
-      // Considerando alturaContainer ~ 150 (3 * _itemHeight)
-      final targetOffset =
-          (index * _itemHeight) - (_itemHeight * 1.0); // Ajuste fino aqui
+  /// Função helper para animar a roda
+  void _animateWheel(
+      FixedExtentScrollController controller, int jump, int itemCount) {
+    if (!controller.hasClients) return;
 
-      controller.animateTo(
-        targetOffset.clamp(0.0, controller.position.maxScrollExtent),
+    final int newIndex =
+        (controller.selectedItem + jump).clamp(0, itemCount - 1);
+
+    if (newIndex != controller.selectedItem) {
+      controller.animateToItem(
+        newIndex,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  void _scrollToIndex(FixedExtentScrollController controller, int index) {
+    if (controller.hasClients) {
+      controller.animateToItem(
+        index,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
@@ -91,16 +96,17 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
 
   @override
   void dispose() {
-    _yearScrollController.dispose();
-    _monthScrollController.dispose(); // Dispose do novo controller
+    _yearController.dispose();
+    _monthController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      // Altura ajustada para o novo layout
-      height: 380, // Pode precisar de ajuste fino
+      // --- ALTERAÇÃO: Altura ajustada para o novo layout ---
+      height: 480,
+      // --- FIM DA ALTERAÇÃO ---
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.only(
@@ -124,83 +130,82 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
-              "Selecione Mês e Ano",
+              "Selecionar Mês e Ano",
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   color: AppColors.primaryText, fontWeight: FontWeight.bold),
             ),
           ),
-          const Divider(color: AppColors.border),
+          const Divider(color: AppColors.border, height: 1),
 
-          // <-- LAYOUT ALTERADO PARA Row COM DUAS COLUNAS -->
+          // Layout de Duas Colunas com Rodas
           Expanded(
-            child: Row(
-              children: [
-                // Coluna Esquerda: Meses
-                Expanded(
-                  child: _buildScrollableList(
-                    controller: _monthScrollController,
-                    itemCount: _months.length,
-                    itemBuilder: (context, index) {
-                      final monthValue = index + 1; // 1-12
-                      final monthName = _months[index];
-                      final isSelected = monthValue == _selectedMonth;
-                      return _buildListItem(
-                        text: monthName,
-                        isSelected: isSelected,
-                        onTap: () {
-                          setState(() {
-                            _selectedMonth = monthValue;
-                          });
-                          _scrollToIndex(_monthScrollController, index);
-                        },
-                      );
-                    },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Coluna Esquerda: Meses
+                  Expanded(
+                    child: _buildWheel(
+                      controller: _monthController,
+                      itemCount: _months.length,
+                      items: _months,
+                      // --- ALTERAÇÃO: Passa o índice atual ---
+                      currentIndex: _currentMonthIndex,
+                      onSelectedItemChanged: (index) {
+                        setState(() {
+                          _selectedMonth = index + 1;
+                          _currentMonthIndex = index; // Atualiza o índice
+                          HapticFeedback.lightImpact();
+                        });
+                        _scrollToIndex(
+                            _monthController, index); // Centraliza ao mudar
+                      },
+                      isMonth: true,
+                    ),
                   ),
-                ),
 
-                // Divisor Vertical
-                const VerticalDivider(width: 1, color: AppColors.border),
-
-                // Coluna Direita: Anos
-                Expanded(
-                  child: _buildScrollableList(
-                    controller: _yearScrollController,
-                    itemCount: _years.length,
-                    itemBuilder: (context, index) {
-                      final year = _years[index];
-                      final isSelected = year == _selectedYear;
-                      return _buildListItem(
-                        text: year.toString(),
-                        isSelected: isSelected,
-                        onTap: () {
-                          setState(() {
-                            _selectedYear = year;
-                          });
-                          _scrollToIndex(_yearScrollController, index);
-                        },
-                      );
-                    },
+                  // Coluna Direita: Anos
+                  Expanded(
+                    child: _buildWheel(
+                      controller: _yearController,
+                      itemCount: _years.length,
+                      items: _years.map((y) => y.toString()).toList(),
+                      // --- ALTERAÇÃO: Passa o índice atual ---
+                      currentIndex: _currentYearIndex,
+                      onSelectedItemChanged: (index) {
+                        setState(() {
+                          _selectedYear = _years[index];
+                          _currentYearIndex = index; // Atualiza o índice
+                          HapticFeedback.lightImpact();
+                        });
+                        _scrollToIndex(
+                            _yearController, index); // Centraliza ao mudar
+                      },
+                      isMonth: false,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-          // <-- FIM DO LAYOUT ALTERADO -->
 
           const Divider(color: AppColors.border, height: 1),
           // Botões de Ação
           Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 12.0 + 16.0),
             child: Row(
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context), // Retorna null
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () => Navigator.pop(context),
                     child: const Text(
                       "Cancelar",
                       style: TextStyle(
-                        color: AppColors.primaryText,
+                        color: AppColors.secondaryText,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -235,54 +240,106 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
               ],
             ),
           ),
+          SizedBox(height: MediaQuery.of(context).padding.bottom)
         ],
       ),
     );
   }
 
-  // Widget helper para criar as listas de scroll
-  Widget _buildScrollableList({
-    required ScrollController controller,
+  // --- ALTERAÇÃO GERAL: _buildWheel agora inclui setas ---
+  Widget _buildWheel({
+    required FixedExtentScrollController controller,
     required int itemCount,
-    required IndexedWidgetBuilder itemBuilder,
+    required List<String> items,
+    required ValueChanged<int> onSelectedItemChanged,
+    required int currentIndex, // Índice atual para lógica de UI
+    required bool isMonth,
   }) {
-    return SizedBox(
-      // Define uma altura explícita para o ListView funcionar dentro do Expanded/Row
-      height: double.infinity, // Ocupa toda a altura disponível na Row
-      child: ListView.builder(
-        controller: controller,
-        itemCount: itemCount,
-        itemExtent: _itemHeight, // Usa a altura definida
-        itemBuilder: itemBuilder,
-      ),
-    );
-  }
+    // Define se os botões de seta estão habilitados
+    final bool isAtStart = currentIndex == 0;
+    final bool isAtEnd = currentIndex == (itemCount - 1);
 
-  // Widget helper para criar os itens da lista (Mês ou Ano)
-  Widget _buildListItem({
-    required String text,
-    required bool isSelected,
-    required VoidCallback onTap,
-  }) {
-    return Center(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+    return SizedBox(
+      width: isMonth ? 130 : 100, // Largura da coluna
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Seta para Cima
+          IconButton(
+            icon: const Icon(Icons.keyboard_arrow_up_rounded),
+            iconSize: 32.0,
+            color: isAtStart
+                ? AppColors.tertiaryText // Cor desabilitada
+                : AppColors.primaryText, // Cor habilitada
+            onPressed: isAtStart
+                ? null // Desabilita o botão
+                : () => _animateWheel(controller, -1, itemCount),
           ),
-          child: Text(
-            text,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.primaryText,
-              fontSize: 18,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+
+          // A Roda (Spinner)
+          SizedBox(
+            width: isMonth ? 130 : 100, // Largura da coluna
+            height: _wheelHeight, // Altura da área de scroll
+            child: ListWheelScrollView.useDelegate(
+              controller: controller,
+              itemExtent: _itemHeight, // Altura de cada item
+              physics: const FixedExtentScrollPhysics(),
+              onSelectedItemChanged: onSelectedItemChanged,
+              childDelegate: ListWheelChildBuilderDelegate(
+                builder: (context, index) {
+                  final String text = items[index];
+                  bool isSelected = (index == currentIndex);
+
+                  return Container(
+                    height: _itemHeight,
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: isMonth
+                          ? 100
+                          : 65, // Largura do fundo (maior para meses)
+                      height: _itemHeight *
+                          0.8, // Altura um pouco menor que o itemExtent
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary
+                            : Colors.transparent, // Fundo roxo
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        text,
+                        style: TextStyle(
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.primaryText
+                                  .withOpacity(0.6), // Texto branco ou opaco
+                          fontSize: isSelected ? 20 : 18, // Tamanho da fonte
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                childCount: itemCount,
+              ),
             ),
           ),
-        ),
+
+          // Seta para Baixo
+          IconButton(
+            icon: const Icon(Icons.keyboard_arrow_down_rounded),
+            iconSize: 32.0,
+            color: isAtEnd
+                ? AppColors.tertiaryText // Cor desabilitada
+                : AppColors.primaryText, // Cor habilitada
+            onPressed: isAtEnd
+                ? null // Desabilita o botão
+                : () => _animateWheel(controller, 1, itemCount),
+          ),
+        ],
       ),
     );
   }
+  // --- FIM DA ALTERAÇÃO ---
 }

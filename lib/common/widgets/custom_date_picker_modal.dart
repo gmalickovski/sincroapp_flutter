@@ -1,7 +1,6 @@
-// -----------------------------------------------------------------
-// ARQUIVO ATUALIZADO: custom_date_picker_modal.dart
-// -----------------------------------------------------------------
+// lib/common/widgets/custom_date_picker_modal.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -10,24 +9,34 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:table_calendar/table_calendar.dart';
 
-// Importa os dois seletores personalizados
 import 'custom_time_picker_modal.dart';
-import 'custom_month_year_picker.dart'; // <-- NOVA IMPORTAÇÃO
+import 'custom_month_year_picker.dart';
+import 'custom_recurrence_picker_modal.dart'; // Import necessário
 
+// Classe interna para dados da lista de datas
 class _DateWithVibration {
   final DateTime date;
   final int personalDay;
   _DateWithVibration(this.date, this.personalDay);
 }
 
+// Classe de retorno do modal, incluindo data/hora e regra de recorrência
+class DatePickerResult {
+  final DateTime dateTime;
+  final RecurrenceRule recurrenceRule;
+  DatePickerResult(this.dateTime, this.recurrenceRule);
+}
+
 class CustomDatePickerModal extends StatefulWidget {
-  final DateTime initialDate;
-  final UserModel userData;
+  final DateTime initialDate; // Data inicial para focar/selecionar
+  final RecurrenceRule? initialRecurrenceRule; // Regra de recorrência atual
+  final UserModel userData; // Dados do usuário para cálculo de numerologia
 
   const CustomDatePickerModal({
     super.key,
     required this.initialDate,
     required this.userData,
+    this.initialRecurrenceRule,
   });
 
   @override
@@ -35,35 +44,51 @@ class CustomDatePickerModal extends StatefulWidget {
 }
 
 class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
-  bool _isExpanded = false;
-  late DateTime _selectedDate;
-  late DateTime _calendarFocusedDay;
-  TimeOfDay? _selectedTime;
-  late NumerologyEngine _engine;
-  final List<_DateWithVibration> _dateList = [];
-  final ScrollController _scrollController = ScrollController();
-  final double _datePillWidth = 68.0;
-  bool _isScrollingProgrammatically = false;
-  late DateTime _todayMidnight;
+  // --- Estados do Widget ---
+  bool _isExpanded =
+      false; // Controla se a visão compacta ou expandida é mostrada
+  late DateTime _selectedDate; // Data selecionada (dia/mês/ano)
+  late DateTime
+      _calendarFocusedDay; // Mês/Ano atualmente focado nos calendários
+  TimeOfDay? _selectedTime; // Hora selecionada (opcional)
+  late NumerologyEngine _engine; // Motor para calcular dia pessoal
+  final List<_DateWithVibration> _dateList =
+      []; // Lista para o scroller horizontal
+  final ScrollController _scrollController =
+      ScrollController(); // Controlador do scroller
+  final double _datePillWidth = 68.0; // Largura fixa das pílulas de data
+  late DateTime _todayMidnight; // Data de hoje à meia-noite para comparações
+  late RecurrenceRule _recurrenceRule; // Regra de recorrência selecionada
 
   @override
   void initState() {
     super.initState();
+
+    // Define 'hoje'
+    final now = DateTime.now();
+    _todayMidnight = DateTime(now.year, now.month, now.day);
+
+    // Define data selecionada (sem hora inicial)
     _selectedDate = DateTime(
       widget.initialDate.year,
       widget.initialDate.month,
       widget.initialDate.day,
     );
 
-    final now = DateTime.now();
-    _todayMidnight = DateTime(now.year, now.month, now.day);
+    // Define a hora inicial SE ela existir na initialDate (relevante para TaskDetailModal)
+    if (widget.initialDate.hour != 0 || widget.initialDate.minute != 0) {
+      _selectedTime = TimeOfDay.fromDateTime(widget.initialDate);
+    } else {
+      _selectedTime = null; // Mantém nulo se não houver hora específica
+    }
 
-    _calendarFocusedDay =
-        DateTime(_todayMidnight.year, _todayMidnight.month, 1);
+    // Foca o calendário no mês da data selecionada
+    _calendarFocusedDay = DateTime(_selectedDate.year, _selectedDate.month, 1);
 
-    // Campo de horário começa em branco
-    // (O 'if' que lia initialDate.hour foi removido)
+    // Inicializa a regra de recorrência
+    _recurrenceRule = widget.initialRecurrenceRule ?? RecurrenceRule();
 
+    // Configura motor de numerologia
     if (widget.userData.nomeAnalise.isNotEmpty &&
         widget.userData.dataNasc.isNotEmpty) {
       _engine = NumerologyEngine(
@@ -71,27 +96,51 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         dataNascimento: widget.userData.dataNasc,
       );
     } else {
+      // Fallback se dados do usuário não estiverem completos
       _engine = NumerologyEngine(
         nomeCompleto: "Sincro App",
         dataNascimento: "01/01/2000",
       );
     }
 
+    // Gera a lista de datas para o scroller (sem atualizar a UI ainda)
     _regenerateDateListForCurrentMonth(doSetState: false);
+
+    // --- ALTERAÇÃO (TASK 2): Lógica de scroll inicial modificada ---
+    // Agenda o scroll inicial para "Hoje" (se visível) após o primeiro frame
+    SchedulerBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _scrollController.hasClients) {
+        // Prioriza rolar para "Hoje" se estiver no mês focado
+        if (_isSameMonth(_todayMidnight, _calendarFocusedDay)) {
+          final todayIndex =
+              (_todayMidnight.day - 1).clamp(0, _dateList.length - 1);
+          _scrollToIndexInCurrentMonth(todayIndex, animated: false);
+        }
+        // Se "Hoje" não estiver no mês, rola para a data selecionada (ex: editando tarefa futura)
+        else if (_isSameMonth(_selectedDate, _calendarFocusedDay)) {
+          final selectedIndex =
+              (_selectedDate.day - 1).clamp(0, _dateList.length - 1);
+          _scrollToIndexInCurrentMonth(selectedIndex, animated: false);
+        }
+      }
+    });
+    // --- FIM DA ALTERAÇÃO ---
   }
 
+  // --- Funções Helper ---
+
+  /// Capitaliza a primeira letra de uma string.
+  String _capitalize(String s) {
+    if (s.isEmpty) return s;
+    return s[0].toUpperCase() + s.substring(1);
+  }
+
+  /// Regenera a lista `_dateList` para o mês atual em `_calendarFocusedDay`.
   void _regenerateDateListForCurrentMonth({bool doSetState = true}) {
     _dateList.clear();
     final int year = _calendarFocusedDay.year;
     final int month = _calendarFocusedDay.month;
     final int daysInMonth = DateTime(year, month + 1, 0).day;
-
-    int targetScrollIndex = 0;
-    if (_todayMidnight.year == year && _todayMidnight.month == month) {
-      targetScrollIndex = (_todayMidnight.day - 1).clamp(0, daysInMonth - 1);
-    } else if (_selectedDate.year == year && _selectedDate.month == month) {
-      targetScrollIndex = (_selectedDate.day - 1).clamp(0, daysInMonth - 1);
-    }
 
     for (int day = 1; day <= daysInMonth; day++) {
       final date = DateTime(year, month, day);
@@ -99,10 +148,12 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       _dateList.add(_DateWithVibration(date, personalDay));
     }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollToIndexInCurrentMonth(targetScrollIndex, animated: false);
-    });
+    // Reseta o scroll para o início ao mudar de mês (se o controller estiver pronto)
+    if (_scrollController.hasClients) {
+      _scrollController.jumpTo(0);
+    }
 
+    // Atualiza a UI se solicitado e o widget estiver montado
     if (doSetState && mounted) {
       setState(() {});
     }
@@ -110,51 +161,63 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
 
   @override
   void dispose() {
-    _scrollController.dispose();
+    _scrollController.dispose(); // Libera o controlador de scroll
     super.dispose();
   }
 
+  /// Alterna entre a visão compacta e expandida do calendário.
   void _toggleExpand() {
     setState(() {
       _isExpanded = !_isExpanded;
     });
   }
 
-  void _selectAndPop(DateTime date) {
+  /// Atualiza `_selectedDate` quando um dia é selecionado.
+  /// Impede a seleção de dias anteriores a hoje.
+  void _handleDateSelection(DateTime date) {
+    // Permite selecionar 'hoje'
     if (date.isBefore(_todayMidnight) && !_isSameDay(date, _todayMidnight)) {
-      return;
+      return; // Ignora dias passados
     }
+    setState(() {
+      _selectedDate = date; // Atualiza a data selecionada
+    });
+  }
 
-    DateTime finalDateTime = date;
+  /// Combina a data e hora selecionadas, cria o `DatePickerResult` e fecha o modal.
+  void _confirmSelection() {
+    DateTime finalDateTime = _selectedDate; // Começa só com a data
+    // Adiciona a hora se ela foi selecionada
     if (_selectedTime != null) {
       finalDateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
         _selectedTime!.hour,
         _selectedTime!.minute,
       );
     }
-    setState(() {
-      _selectedDate = date;
-      _calendarFocusedDay = DateTime(date.year, date.month, 1);
-    });
-    Navigator.of(context).pop(finalDateTime);
+    // Cria o objeto de resultado com data/hora e regra de recorrência
+    final result = DatePickerResult(finalDateTime, _recurrenceRule);
+    Navigator.of(context).pop(result); // Fecha o modal retornando o resultado
   }
 
-  // Função que chama o modal de HORÁRIO personalizado
+  /// Abre o modal customizado para seleção de horário.
   Future<void> _showCustomTimePicker(BuildContext context) async {
     final TimeOfDay? picked = await showModalBottomSheet<TimeOfDay>(
       context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
+      backgroundColor:
+          Colors.transparent, // O modal filho tem seu próprio fundo
+      isScrollControlled:
+          true, // Permite que o modal cresça conforme necessário
       builder: (BuildContext builderContext) {
         return CustomTimePickerModal(
+          // Passa a hora atual selecionada ou a hora atual como inicial
           initialTime: _selectedTime ?? TimeOfDay.now(),
         );
       },
     );
-
+    // Atualiza o estado se uma hora foi selecionada
     if (picked != null) {
       setState(() {
         _selectedTime = picked;
@@ -162,42 +225,79 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     }
   }
 
+  /// Verifica se dois `DateTime` representam o mesmo dia (ignora hora).
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
+  /// Verifica se dois `DateTime` estão no mesmo mês e ano.
   bool _isSameMonth(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
   }
 
-  // <-- FUNÇÃO SUBSTITUÍDA: Agora chama o NOVO modal de Mês/Ano -->
+  /// Abre o modal customizado para seleção de mês e ano.
   Future<void> _showCustomMonthYearPicker(BuildContext context) async {
-    HapticFeedback.lightImpact();
+    HapticFeedback.lightImpact(); // Feedback tátil
     final DateTime? picked = await showModalBottomSheet<DateTime>(
       context: context,
-      backgroundColor: Colors.transparent, // Fundo do sheet transparente
-      isScrollControlled: true, // Permite que o modal cresça se necessário
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (BuildContext builderContext) {
         return CustomMonthYearPicker(
-          initialDate: _calendarFocusedDay, // Usa o mês/ano focado atualmente
-          firstDate: DateTime(2020), // Defina seu limite inferior
-          lastDate: DateTime(2101), // Defina seu limite superior
+          initialDate: _calendarFocusedDay, // Mês/ano focado atualmente
+          firstDate: DateTime(2020), // Limite inferior
+          lastDate: DateTime(2101), // Limite superior
         );
       },
     );
-
-    // Se o usuário selecionou OK e retornou uma data
+    // Atualiza o mês focado e regenera a lista de dias se um mês/ano foi selecionado
     if (picked != null) {
       setState(() {
-        // Atualiza o foco do calendário para o novo mês/ano selecionado
         _calendarFocusedDay = DateTime(picked.year, picked.month, 1);
-        // Regenera a lista de dias para o novo mês
         _regenerateDateListForCurrentMonth();
+      });
+
+      // --- ALTERAÇÃO (TASK 2): Rola para "Hoje" se o usuário navegar para o mês atual ---
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (mounted &&
+            _scrollController.hasClients &&
+            _isSameMonth(_todayMidnight, _calendarFocusedDay)) {
+          final todayIndex =
+              (_todayMidnight.day - 1).clamp(0, _dateList.length - 1);
+          _scrollToIndexInCurrentMonth(todayIndex, animated: true);
+        }
+      });
+      // --- FIM DA ALTERAÇÃO ---
+    }
+  }
+
+  /// Abre o modal customizado para seleção da regra de recorrência.
+  Future<void> _showRecurrencePicker() async {
+    // Garante que a data passada não tenha hora/minuto
+    final startDate =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+
+    final RecurrenceRule? newRule = await showModalBottomSheet<RecurrenceRule>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext builderContext) {
+        return CustomRecurrencePickerModal(
+          initialRule: _recurrenceRule, // Passa a regra atual
+          userData: widget.userData, // Necessário para o seletor de data final
+          startDate: startDate, // Passa a data de início da tarefa
+        );
+      },
+    );
+    // Atualiza o estado se uma nova regra foi selecionada
+    if (newRule != null) {
+      setState(() {
+        _recurrenceRule = newRule;
       });
     }
   }
-  // <-- Fim da função substituída -->
 
+  /// Navega para o mês anterior no calendário.
   void _previousMonth() {
     HapticFeedback.lightImpact();
     setState(() {
@@ -206,10 +306,11 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         _calendarFocusedDay.month - 1,
         1,
       );
-      _regenerateDateListForCurrentMonth();
+      _regenerateDateListForCurrentMonth(); // Atualiza a lista de pílulas
     });
   }
 
+  /// Navega para o próximo mês no calendário.
   void _nextMonth() {
     HapticFeedback.lightImpact();
     setState(() {
@@ -218,103 +319,202 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         _calendarFocusedDay.month + 1,
         1,
       );
-      _regenerateDateListForCurrentMonth();
+      _regenerateDateListForCurrentMonth(); // Atualiza a lista de pílulas
     });
   }
 
+  // --- ALTERAÇÃO (TASK 1): Nova função para rolar os dias ---
+  /// Rola a lista de dias horizontalmente.
+  void _scrollDays(int direction) {
+    if (!_scrollController.hasClients || !mounted) return;
+    HapticFeedback.lightImpact();
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Rola 70% da tela para manter algum contexto visual
+    final double jump = (screenWidth * 0.7) * direction;
+    final double newOffset = (_scrollController.offset + jump)
+        .clamp(0.0, _scrollController.position.maxScrollExtent);
+
+    _scrollController.animateTo(
+      newOffset,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+  // --- FIM DA ALTERAÇÃO ---
+
+  /// Faz o scroll horizontal na lista de dias (`_dateList`) para centralizar o `index` fornecido.
   void _scrollToIndexInCurrentMonth(int index, {bool animated = true}) {
+    // Verifica se o widget está montado, o controller está pronto e o índice é válido
     if (mounted &&
         _scrollController.hasClients &&
         index >= 0 &&
         index < _dateList.length) {
-      _isScrollingProgrammatically = true;
-
       final screenWidth = MediaQuery.of(context).size.width;
+      // Calcula o offset necessário para centralizar o item
       final scrollOffset =
           (index * _datePillWidth) - (screenWidth / 2) + (_datePillWidth / 2);
-
       final maxScroll = _scrollController.position.maxScrollExtent;
+      // Garante que o offset esteja dentro dos limites do scroll
       final targetOffset =
-          scrollOffset.clamp(0.0, maxScroll > 0 ? maxScroll : 0.0);
+          scrollOffset.clamp(0.0, maxScroll < 0 ? 0.0 : maxScroll);
 
-      final resetFlag = () => Future.delayed(
-            const Duration(milliseconds: 100),
-            () {
-              if (mounted) {
-                _isScrollingProgrammatically = false;
-              }
-            },
-          );
-
-      if (animated) {
-        _scrollController
-            .animateTo(
-              targetOffset,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            )
-            .whenComplete(resetFlag);
+      if (!animated) {
+        _scrollController.jumpTo(targetOffset); // Scroll instantâneo
       } else {
-        _scrollController.jumpTo(targetOffset);
-        resetFlag();
-      }
-    } else {
-      if (mounted) {
-        _isScrollingProgrammatically = false;
+        _scrollController.animateTo(
+          // Scroll com animação
+          targetOffset,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
     }
   }
+  // --- Fim Funções Helper ---
 
   @override
   Widget build(BuildContext context) {
     return AnimatedSize(
+      // Anima a altura do modal ao expandir/recolher
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      child: Container(
-        padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
-        decoration: const BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24.0),
-            topRight: Radius.circular(24.0),
-          ),
-        ),
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildDragHandle(),
-            _buildQuickActions(context),
-            AnimatedCrossFade(
-              duration: const Duration(milliseconds: 300),
-              crossFadeState: _isExpanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              firstChild: _buildCompactView(),
-              secondChild: _buildExpandedView(),
+      child: Padding(
+        // Empurra o conteúdo para cima quando o teclado aparece
+        padding:
+            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          // Container principal do modal
+          padding: const EdgeInsets.only(top: 8.0),
+          decoration: const BoxDecoration(
+            color: AppColors.cardBackground, // Cor de fundo definida
+            borderRadius: BorderRadius.only(
+              // Cantos arredondados no topo
+              topLeft: Radius.circular(24.0),
+              topRight: Radius.circular(24.0),
             ),
-            const Divider(
-                color: AppColors.border, height: 24, indent: 16, endIndent: 16),
-            _buildTimePickerButton(context),
-            _buildRecurrenceSection(context),
-          ],
+          ),
+          constraints: BoxConstraints(
+            // Limita a altura máxima
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          // Adiciona Material para garantir contexto aos widgets filhos
+          child: Material(
+            type: MaterialType.transparency,
+            child: Column(
+              // Layout principal em coluna
+              mainAxisSize: MainAxisSize.min, // Encolhe para o conteúdo
+              children: [
+                // Conteúdo rolável (calendários, botões de hora/recorrência)
+                Flexible(
+                  // Permite que o conteúdo interno cresça até o limite
+                  child: SingleChildScrollView(
+                    // Permite rolagem se o conteúdo exceder
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDragHandle(), // Alça para fechar/expandir
+                        // Anima a transição entre visão compacta e expandida
+                        AnimatedCrossFade(
+                          duration: const Duration(milliseconds: 300),
+                          crossFadeState: _isExpanded
+                              ? CrossFadeState
+                                  .showSecond // Mostra calendário completo
+                              : CrossFadeState
+                                  .showFirst, // Mostra scroller horizontal
+                          firstChild: _buildCompactView(),
+                          secondChild: _buildExpandedView(),
+                        ),
+                        // Divisor antes dos botões de hora/recorrência
+                        const Divider(
+                            color: AppColors.border,
+                            height: 24,
+                            indent: 16,
+                            endIndent: 16),
+                        _buildTimePickerButton(
+                            context), // Botão para adicionar/editar hora
+                        _buildRecurrenceSection(
+                            context), // Botão para adicionar/editar recorrência
+                        const SizedBox(height: 16), // Espaçamento inferior
+                      ],
+                    ),
+                  ),
+                ),
+                // Rodapé fixo com botões de ação
+                const Divider(color: AppColors.border, height: 1),
+                Padding(
+                  // Botões Cancelar/Selecionar
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 12.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(
+                              context), // Fecha sem retornar valor
+                          child: const Text(
+                            "Cancelar",
+                            style: TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed:
+                              _confirmSelection, // Chama a função que retorna o resultado
+                          child: const Text(
+                            "Selecionar",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Espaçamento extra na base para safe area (entalhes, etc.)
+                SizedBox(
+                    height: MediaQuery.of(context).padding.bottom > 0
+                        ? MediaQuery.of(context)
+                            .padding
+                            .bottom // Usa o padding da safe area
+                        : 16) // Ou um padding padrão
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 
+  // --- Widgets Internos ---
+
+  /// Constrói a alça ("drag handle") no topo do modal.
   Widget _buildDragHandle() {
     return GestureDetector(
-      onTap: _toggleExpand,
+      onTap: _toggleExpand, // Toca para expandir/recolher
       onVerticalDragUpdate: (details) {
-        if (details.primaryDelta! < -4) {
-          if (!_isExpanded) _toggleExpand();
-        } else if (details.primaryDelta! > 4) {
-          if (_isExpanded) _toggleExpand();
-        }
+        // Arrasta para expandir/recolher
+        if (details.primaryDelta! < -4 && !_isExpanded)
+          _toggleExpand(); // Arrasta pra cima
+        else if (details.primaryDelta! > 4 && _isExpanded)
+          _toggleExpand(); // Arrasta pra baixo
       },
       child: Container(
         color: Colors.transparent,
@@ -325,7 +525,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.tertiaryText,
+              color: AppColors.tertiaryText.withOpacity(0.5),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -334,42 +534,51 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
+  /// Constrói o título "Definir Data".
   Widget _buildTitle(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
       child: Text(
-        "Definir data",
+        "Definir Data",
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
             color: AppColors.primaryText, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  Widget _buildQuickActions(BuildContext context) {
-    return const SizedBox.shrink();
-  }
-
+  /// Constrói a visão compacta (título, header do mês, scroller de dias).
   Widget _buildCompactView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // _buildTitle(context), // Título movido para fora do AnimatedCrossFade
         _buildCompactHeader(context),
-        _buildDateScroller(context),
+        _buildDateScroller(context), // <<< Contém Material wrapper
       ],
     );
   }
 
+  /// Constrói o header da visão compacta (Setas < Mês/Ano >).
   Widget _buildCompactHeader(BuildContext context) {
-    final titleText = DateFormat.yMMMM('pt_BR').format(_calendarFocusedDay);
+    // Formata o mês e ano focados (ex: "Outubro de 2025")
+    final titleText =
+        _capitalize(DateFormat.yMMMM('pt_BR').format(_calendarFocusedDay));
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment:
+            MainAxisAlignment.spaceBetween, // Alinha itens nas pontas
         children: [
-          _buildCompactNavButton(Icons.chevron_left, _previousMonth),
+          // --- ALTERAÇÃO (TASK 1): Função da seta esquerda alterada ---
+          _buildCompactNavButton(
+            Icons.chevron_left,
+            () => _scrollDays(-1), // Rola dias para a esquerda
+          ),
+          // --- FIM DA ALTERAÇÃO ---
+
+          // Texto Mês/Ano clicável para abrir o seletor
           InkWell(
-            // <-- ATUALIZADO: Chama o novo picker
             onTap: () => _showCustomMonthYearPicker(context),
             borderRadius: BorderRadius.circular(4),
             child: Padding(
@@ -396,272 +605,296 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
               ),
             ),
           ),
-          _buildCompactNavButton(Icons.chevron_right, _nextMonth),
+          // --- ALTERAÇÃO (TASK 1): Função da seta direita alterada ---
+          _buildCompactNavButton(
+            Icons.chevron_right,
+            () => _scrollDays(1), // Rola dias para a direita
+          ),
+          // --- FIM DA ALTERAÇÃO ---
         ],
       ),
     );
   }
 
+  /// Constrói os botões de navegação de mês (< >) para a visão compacta.
   Widget _buildCompactNavButton(IconData icon, VoidCallback onPressed) {
     return IconButton(
       icon: Icon(icon, color: AppColors.primaryText),
       iconSize: 20,
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(),
-      splashRadius: 20,
+      padding: EdgeInsets.zero, // Remove padding extra
+      constraints: const BoxConstraints(), // Permite tamanho menor
+      splashRadius: 20, // Raio do efeito de clique
       onPressed: onPressed,
     );
   }
 
+  /// Constrói o `ListView` horizontal com os `_DatePill` para a visão compacta.
   Widget _buildDateScroller(BuildContext context) {
-    return SizedBox(
-      height: 100,
-      child: ListView.builder(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        itemCount: _dateList.length,
-        itemBuilder: (context, index) {
-          if (index < 0 || index >= _dateList.length) {
-            return const SizedBox.shrink();
-          }
-          final data = _dateList[index];
-          final bool isSelected = _isSameDay(data.date, _selectedDate);
-          final bool isToday = _isSameDay(data.date, _todayMidnight);
-          final bool isPastDay = data.date.isBefore(_todayMidnight);
+    // Envolve com Material para garantir contexto aos filhos do ListView.builder
+    return Material(
+      type: MaterialType.transparency,
+      child: SizedBox(
+        // Define a altura fixa do scroller
+        height: 100,
+        child: ListView.builder(
+          controller: _scrollController, // Controlador para scroll programático
+          scrollDirection: Axis.horizontal, // Scroll horizontal
+          padding: const EdgeInsets.symmetric(
+              horizontal: 16.0), // Espaçamento nas laterais
+          itemCount: _dateList.length, // Número de dias no mês
+          itemBuilder: (context, index) {
+            // Proteção contra índices inválidos
+            if (index < 0 || index >= _dateList.length) {
+              return const SizedBox.shrink();
+            }
 
-          String dayOfWeek;
-          if (isToday) {
-            dayOfWeek = "Hoje";
-          } else if (_isSameDay(
-              data.date, _todayMidnight.add(const Duration(days: 1)))) {
-            dayOfWeek = "Amanhã";
-          } else {
-            dayOfWeek = toBeginningOfSentenceCase(
-                    DateFormat.E('pt_BR').format(data.date)) ??
-                '';
-          }
+            final data = _dateList[index]; // Pega os dados do dia
+            final bool isSelected = _isSameDay(data.date, _selectedDate);
+            final bool isToday = _isSameDay(data.date, _todayMidnight);
+            // Dia passado (e não hoje)
+            final bool isPastDay =
+                data.date.isBefore(_todayMidnight) && !isToday;
 
-          return _DatePill(
-            dayOfWeek: dayOfWeek,
-            dayOfMonth: data.date.day.toString(),
-            personalDay: data.personalDay,
-            isSelected: isSelected,
-            isToday: isToday,
-            width: _datePillWidth,
-            isPastDay: isPastDay,
-            onTap: (isPastDay && !isToday)
-                ? null
-                : () {
-                    setState(() {
-                      _selectedDate = data.date;
-                      _calendarFocusedDay =
-                          DateTime(data.date.year, data.date.month, 1);
-                      _scrollToIndexInCurrentMonth(data.date.day - 1);
-                    });
-                    _selectAndPop(data.date);
-                  },
-          );
-        },
+            // Define o texto do dia da semana
+            String dayOfWeek;
+            if (isToday) {
+              dayOfWeek = "Hoje";
+            } else if (_isSameDay(
+                data.date, _todayMidnight.add(const Duration(days: 1)))) {
+              dayOfWeek = "Amanhã";
+            } else {
+              dayOfWeek = toBeginningOfSentenceCase(
+                      DateFormat.E('pt_BR').format(data.date)) ??
+                  '';
+            }
+
+            // Retorna o widget _DatePill para este dia
+            return _DatePill(
+              dayOfWeek: dayOfWeek,
+              dayOfMonth: data.date.day.toString(),
+              personalDay: data.personalDay,
+              isSelected: isSelected,
+              isToday: isToday,
+              width: _datePillWidth,
+              isPastDay: isPastDay,
+              // Define o onTap (null para dias passados)
+              onTap: isPastDay
+                  ? null
+                  : () {
+                      _handleDateSelection(data.date);
+                    },
+            );
+          },
+        ),
       ),
     );
   }
 
+  /// Constrói a visão expandida (título, calendário completo).
   Widget _buildExpandedView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTitle(context),
-        _buildFullCalendarView(context),
+        _buildTitle(context), // Título "Definir Data"
+        _buildFullCalendarView(context), // <<< Contém Material wrapper
       ],
     );
   }
 
+  /// Constrói o `TableCalendar` para a visão expandida.
   Widget _buildFullCalendarView(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: TableCalendar(
-        locale: 'pt_BR',
-        focusedDay: _calendarFocusedDay,
-        firstDay: DateTime(2020),
-        lastDay: DateTime(2101),
-        selectedDayPredicate: (day) => _isSameDay(day, _selectedDate),
-        enabledDayPredicate: (day) =>
-            day.isAfter(_todayMidnight) || _isSameDay(day, _todayMidnight),
-        onDaySelected: (selectedDay, focusedDay) {
-          if (selectedDay.isBefore(_todayMidnight) &&
-              !_isSameDay(selectedDay, _todayMidnight)) return;
-
-          setState(() {
-            _selectedDate = selectedDay;
-            _calendarFocusedDay =
-                DateTime(selectedDay.year, selectedDay.month, 1);
-            _regenerateDateListForCurrentMonth();
-          });
-        },
-        onPageChanged: (focusedDay) {
-          setState(() {
-            _calendarFocusedDay =
-                DateTime(focusedDay.year, focusedDay.month, 1);
-            _regenerateDateListForCurrentMonth();
-          });
-        },
-        headerStyle: HeaderStyle(
-          titleCentered: false,
-          formatButtonVisible: false,
-          titleTextStyle: const TextStyle(height: 0, fontSize: 0),
-          leftChevronPadding: EdgeInsets.zero,
-          rightChevronPadding: EdgeInsets.zero,
-          leftChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
-          rightChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
-          leftChevronIcon: const Icon(Icons.chevron_left,
-              color: AppColors.primaryText, size: 24),
-          rightChevronIcon: const Icon(Icons.chevron_right,
-              color: AppColors.primaryText, size: 24),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-          weekendStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-        ),
-        rowHeight: 54,
-        calendarStyle: const CalendarStyle(
-          defaultDecoration: BoxDecoration(),
-          weekendDecoration: BoxDecoration(),
-          outsideDecoration: BoxDecoration(),
-          selectedDecoration: BoxDecoration(),
-          todayDecoration: BoxDecoration(),
-          disabledTextStyle: TextStyle(
-              color: AppColors.tertiaryText, fontStyle: FontStyle.italic),
-        ),
-        calendarBuilders: CalendarBuilders(
-          headerTitleBuilder: (context, day) {
-            final titleText = DateFormat.yMMMM('pt_BR').format(day);
-            return Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    // <-- ATUALIZADO: Chama o novo picker
-                    onTap: () => _showCustomMonthYearPicker(context),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 8.0, horizontal: 4.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            titleText,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              color: AppColors.primaryText,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+    // Envolve com Material para garantir contexto aos builders do TableCalendar
+    return Material(
+      type: MaterialType.transparency,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: TableCalendar(
+          locale: 'pt_BR',
+          focusedDay: _calendarFocusedDay,
+          firstDay: DateTime(2020),
+          lastDay: DateTime(2101),
+          selectedDayPredicate: (day) => _isSameDay(day, _selectedDate),
+          enabledDayPredicate: (day) =>
+              !day.isBefore(_todayMidnight) || _isSameDay(day, _todayMidnight),
+          onDaySelected: (selectedDay, focusedDay) {
+            if (!selectedDay.isBefore(_todayMidnight) ||
+                _isSameDay(selectedDay, _todayMidnight)) {
+              _handleDateSelection(selectedDay);
+            }
+          },
+          onPageChanged: (focusedDay) {
+            setState(() {
+              _calendarFocusedDay =
+                  DateTime(focusedDay.year, focusedDay.month, 1);
+              _regenerateDateListForCurrentMonth();
+            });
+          },
+          // --- Estilos ---
+          headerStyle: HeaderStyle(
+            titleCentered: false,
+            formatButtonVisible: false,
+            titleTextStyle: const TextStyle(height: 0, fontSize: 0),
+            leftChevronPadding: EdgeInsets.zero,
+            rightChevronPadding: EdgeInsets.zero,
+            leftChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
+            rightChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
+            leftChevronIcon: const Icon(Icons.chevron_left,
+                color: AppColors.primaryText, size: 24),
+            rightChevronIcon: const Icon(Icons.chevron_right,
+                color: AppColors.primaryText, size: 24),
+          ),
+          daysOfWeekStyle: const DaysOfWeekStyle(
+            weekdayStyle:
+                TextStyle(color: AppColors.secondaryText, fontSize: 12),
+            weekendStyle:
+                TextStyle(color: AppColors.secondaryText, fontSize: 12),
+          ),
+          rowHeight: 54,
+          calendarStyle: const CalendarStyle(
+            defaultDecoration: BoxDecoration(),
+            weekendDecoration: BoxDecoration(),
+            outsideDecoration: BoxDecoration(),
+            selectedDecoration: BoxDecoration(),
+            todayDecoration: BoxDecoration(),
+            disabledTextStyle: TextStyle(
+                color: AppColors.tertiaryText, fontStyle: FontStyle.italic),
+          ),
+          // --- Builders Customizados ---
+          calendarBuilders: CalendarBuilders(
+            headerTitleBuilder: (context, day) {
+              final titleText =
+                  _capitalize(DateFormat.yMMMM('pt_BR').format(day));
+              return Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _showCustomMonthYearPicker(context),
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8.0, horizontal: 4.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              titleText,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: AppColors.secondaryText,
-                            size: 20,
-                          ),
-                        ],
+                            const SizedBox(width: 4),
+                            const Icon(
+                              Icons.arrow_drop_down,
+                              color: AppColors.secondaryText,
+                              size: 20,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    HapticFeedback.lightImpact();
-                    final now = DateTime.now();
-                    final today = DateTime(now.year, now.month, now.day);
-
-                    if (_isSameDay(_selectedDate, today)) {
-                      _selectAndPop(today);
-                    } else {
+                  TextButton(
+                    onPressed: () {
+                      HapticFeedback.lightImpact();
+                      // Seleciona hoje e foca no mês atual
+                      _handleDateSelection(_todayMidnight);
                       setState(() {
-                        _selectedDate = today;
-                        _calendarFocusedDay =
-                            DateTime(today.year, today.month, 1);
+                        final now = DateTime.now();
+                        _calendarFocusedDay = DateTime(now.year, now.month, 1);
                         _regenerateDateListForCurrentMonth();
                       });
-                      _selectAndPop(today);
-                    }
-                  },
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    visualDensity: VisualDensity.compact,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    "Hoje",
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
+                      // Opcional: Fechar o modal ao clicar em Hoje?
+                      // _confirmSelection();
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      "Hoje",
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-              ],
-            );
-          },
-          defaultBuilder: (context, day, focusedDay) {
-            final personalDay = _engine.calculatePersonalDayForDate(day);
-            final isEnabled = !day.isBefore(_todayMidnight) ||
-                _isSameDay(day, _todayMidnight);
-            final bool isToday = _isSameDay(day, _todayMidnight);
-            return _buildCalendarDayCell(
-              day: day,
-              personalDay: personalDay,
-              isSelected: false,
-              isToday: isToday,
-              isOutside: false,
-              isEnabled: isEnabled,
-            );
-          },
-          outsideBuilder: (context, day, focusedDay) {
-            final personalDay = _engine.calculatePersonalDayForDate(day);
-            final isEnabled = !day.isBefore(_todayMidnight) ||
-                _isSameDay(day, _todayMidnight);
-            final bool isToday = _isSameDay(day, _todayMidnight);
-            return _buildCalendarDayCell(
-              day: day,
-              personalDay: personalDay,
-              isSelected: false,
-              isToday: isToday,
-              isOutside: true,
-              isEnabled: isEnabled,
-            );
-          },
-          selectedBuilder: (context, day, focusedDay) {
-            final personalDay = _engine.calculatePersonalDayForDate(day);
-            final bool isToday = _isSameDay(day, _todayMidnight);
-            return _buildCalendarDayCell(
-              day: day,
-              personalDay: personalDay,
-              isSelected: true,
-              isToday: isToday,
-              isOutside: false,
-              isEnabled: true,
-            );
-          },
-          disabledBuilder: (context, day, focusedDay) {
-            final personalDay = _engine.calculatePersonalDayForDate(day);
-            final bool isToday = _isSameDay(day, _todayMidnight);
-            return _buildCalendarDayCell(
-              day: day,
-              personalDay: personalDay,
-              isSelected: false,
-              isToday: isToday,
-              isOutside: !_isSameMonth(day, _calendarFocusedDay),
-              isEnabled: false,
-            );
-          },
+                  const SizedBox(width: 4),
+                ],
+              );
+            },
+            // Builders para as células dos dias
+            defaultBuilder: (context, day, focusedDay) {
+              final personalDay = _engine.calculatePersonalDayForDate(day);
+              final isToday = _isSameDay(day, _todayMidnight);
+              final isSelected = _isSameDay(day, _selectedDate);
+              final isEnabled = !day.isBefore(_todayMidnight) || isToday;
+              return _buildCalendarDayCell(
+                day: day,
+                personalDay: personalDay,
+                isSelected: isSelected,
+                isToday: isToday,
+                isOutside: false,
+                isEnabled: isEnabled,
+              );
+            },
+            outsideBuilder: (context, day, focusedDay) {
+              return _buildCalendarDayCell(
+                day: day,
+                personalDay: 0,
+                isSelected: false,
+                isToday: false,
+                isOutside: true,
+                isEnabled: false,
+              );
+            },
+            selectedBuilder: (context, day, focusedDay) {
+              final personalDay = _engine.calculatePersonalDayForDate(day);
+              final isToday = _isSameDay(day, _todayMidnight);
+              return _buildCalendarDayCell(
+                day: day,
+                personalDay: personalDay,
+                isSelected: true,
+                isToday: isToday,
+                isOutside: false,
+                isEnabled: true,
+              );
+            },
+            todayBuilder: (context, day, focusedDay) {
+              final personalDay = _engine.calculatePersonalDayForDate(day);
+              final isSelected = _isSameDay(day, _selectedDate);
+              return _buildCalendarDayCell(
+                day: day,
+                personalDay: personalDay,
+                isSelected: isSelected,
+                isToday: true,
+                isOutside: false,
+                isEnabled: true,
+              );
+            },
+            disabledBuilder: (context, day, focusedDay) {
+              final personalDay = _engine.calculatePersonalDayForDate(day);
+              return _buildCalendarDayCell(
+                day: day,
+                personalDay: personalDay,
+                isSelected: false,
+                isToday: false,
+                isOutside: !_isSameMonth(day, _calendarFocusedDay),
+                isEnabled: false,
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
+  /// Constrói a célula individual de um dia para o `TableCalendar`.
   Widget _buildCalendarDayCell({
     required DateTime day,
     required int personalDay,
@@ -670,52 +903,39 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     required bool isOutside,
     required bool isEnabled,
   }) {
-    Color borderColor = AppColors.border;
+    // Lógica visual da célula (sem alterações)
+    Color borderColor =
+        isOutside ? Colors.transparent : AppColors.border.withOpacity(0.5);
     Color cellFillColor = Colors.transparent;
     double borderWidth = 0.8;
-
-    if (isToday && isEnabled) {
-      cellFillColor = AppColors.primary;
-      borderColor = AppColors.primary;
+    if (isToday && isEnabled && !isSelected) {
+      borderColor = AppColors.primary.withOpacity(0.6);
       borderWidth = 1.5;
     }
-
     if (isSelected && isEnabled) {
+      cellFillColor = AppColors.primary;
       borderColor = AppColors.primary;
       borderWidth = 2.0;
-
-      if (isToday) {
-        cellFillColor = AppColors.primary;
-      } else {
-        cellFillColor = Colors.transparent;
-      }
     }
-
-    if (!isEnabled) {
+    if (!isEnabled && !isOutside) {
       borderColor = AppColors.border.withOpacity(0.3);
       borderWidth = 0.5;
-      cellFillColor = Colors.transparent;
     }
-
     Color baseDayTextColor;
-    if (isToday && isEnabled) {
+    if (isSelected && isEnabled) {
       baseDayTextColor = Colors.white;
-    } else if (isSelected && !isToday && isEnabled) {
+    } else if (isToday && isEnabled) {
       baseDayTextColor = AppColors.primary;
     } else if (isOutside) {
-      baseDayTextColor = AppColors.tertiaryText;
+      baseDayTextColor = AppColors.tertiaryText.withOpacity(0.5);
     } else {
       baseDayTextColor = AppColors.secondaryText;
     }
-
     Color dayTextColor =
         isEnabled ? baseDayTextColor : baseDayTextColor.withOpacity(0.4);
-
-    FontWeight dayFontWeight = FontWeight.normal;
-    if ((isToday || isSelected) && isEnabled) {
-      dayFontWeight = FontWeight.bold;
-    }
-
+    FontWeight dayFontWeight = ((isToday || isSelected) && isEnabled)
+        ? FontWeight.bold
+        : FontWeight.normal;
     Widget dayNumberWidget = Text(
       day.day.toString(),
       style: TextStyle(
@@ -724,18 +944,18 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         fontSize: 11,
       ),
     );
-
     Widget vibrationWidget = Opacity(
       opacity: isEnabled ? 1.0 : 0.4,
-      child: (personalDay > 0)
+      child: (personalDay > 0 && !isOutside)
           ? VibrationPill(
               vibrationNumber: personalDay,
               type: VibrationPillType.micro,
-              forceInvertedColors: (isToday && isEnabled),
+              forceInvertedColors: (isSelected && isEnabled),
             )
           : const SizedBox(height: 16, width: 16),
     );
 
+    // Retorna o Container (NÃO precisa mais do Material wrapper aqui)
     return Container(
       margin: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
@@ -763,119 +983,112 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  // Botão "Adicionar horário" atualizado para ter o "X"
+  /// Constrói a linha para adicionar/editar o horário.
   Widget _buildTimePickerButton(BuildContext context) {
     final String timeText = _selectedTime != null
         ? _selectedTime!.format(context)
         : "Adicionar horário";
-
-    final Color textColor =
-        _selectedTime != null ? AppColors.primary : AppColors.primaryText;
-
+    final Color activeColor =
+        _selectedTime != null ? AppColors.primary : AppColors.secondaryText;
+    final FontWeight fontWeight =
+        _selectedTime != null ? FontWeight.w600 : FontWeight.w500;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: InkWell(
-              onTap: () => _showCustomTimePicker(context),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                child: Row(
-                  children: [
-                    Icon(Icons.access_time,
-                        color: _selectedTime != null
-                            ? AppColors.primary
-                            : AppColors.tertiaryText,
-                        size: 20),
-                    const SizedBox(width: 16),
-                    Text(
-                      timeText,
-                      style: TextStyle(
-                          color: textColor,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500),
-                    ),
-                  ],
+      child: InkWell(
+        onTap: () => _showCustomTimePicker(context),
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Row(
+            children: [
+              Icon(Icons.access_time, color: activeColor, size: 20),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  timeText,
+                  style: TextStyle(
+                      color: activeColor, fontSize: 16, fontWeight: fontWeight),
                 ),
               ),
-            ),
-          ),
-          if (_selectedTime != null)
-            IconButton(
-              icon: const Icon(Icons.close,
-                  color: AppColors.tertiaryText, size: 20),
-              splashRadius: 20,
-              onPressed: () {
-                setState(() {
-                  _selectedTime = null;
-                });
-              },
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecurrenceSection(BuildContext context) {
-    final bool isRecurrenceEnabled = false;
-
-    return Opacity(
-      opacity: isRecurrenceEnabled ? 1.0 : 0.4,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        child: InkWell(
-          onTap: isRecurrenceEnabled ? () {} : null,
-          borderRadius: BorderRadius.circular(8),
-          child: const Padding(
-            padding: EdgeInsets.symmetric(vertical: 12.0),
-            child: Row(
-              children: [
-                Icon(Icons.repeat, color: AppColors.tertiaryText, size: 20),
-                SizedBox(width: 16),
-                Text(
-                  "Repetir",
-                  style: TextStyle(
-                      color: AppColors.primaryText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500),
+              if (_selectedTime != null)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedTime = null;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4.0),
+                    child: Icon(Icons.close,
+                        color: AppColors.tertiaryText, size: 20),
+                  ),
                 ),
-                Spacer(),
-                Text(
-                  "Nunca",
-                  style: TextStyle(
-                      color: AppColors.secondaryText,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400),
-                ),
-                SizedBox(width: 4),
-                Icon(Icons.chevron_right,
-                    color: AppColors.tertiaryText, size: 20),
-              ],
-            ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-// Widgets auxiliares (_QuickActionButton, _DatePill) permanecem os mesmos
-// (Copie e cole os widgets _QuickActionButton e _DatePill da versão anterior aqui)
+  /// Constrói a linha para adicionar/editar a recorrência.
+  Widget _buildRecurrenceSection(BuildContext context) {
+    final String recurrenceText = _recurrenceRule.getSummaryText();
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: InkWell(
+        onTap: _showRecurrencePicker,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Row(
+            children: [
+              const Icon(Icons.repeat,
+                  color: AppColors.secondaryText, size: 20),
+              const SizedBox(width: 16),
+              const Text(
+                "Repetir",
+                style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              Text(
+                recurrenceText,
+                style: TextStyle(
+                    color: _recurrenceRule.type == RecurrenceType.none
+                        ? AppColors.secondaryText
+                        : AppColors.primary,
+                    fontSize: 16,
+                    fontWeight: _recurrenceRule.type == RecurrenceType.none
+                        ? FontWeight.w400
+                        : FontWeight.w500),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.tertiaryText, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+} // Fim da classe _CustomDatePickerModalState
 
+// --- Widgets Auxiliares (_QuickActionButton, _DatePill - com alterações) ---
 class _QuickActionButton extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
-
-  const _QuickActionButton({required this.label, required this.onTap});
-
+  const _QuickActionButton(
+      {super.key, required this.label, required this.onTap});
   @override
   Widget build(BuildContext context) {
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+        minimumSize: const Size(60, 40),
         side: const BorderSide(color: AppColors.border),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8.0),
@@ -897,6 +1110,7 @@ class _QuickActionButton extends StatelessWidget {
 }
 
 class _DatePill extends StatelessWidget {
+  // Construtor e variáveis (sem alterações)
   final String dayOfWeek;
   final String dayOfMonth;
   final int personalDay;
@@ -905,7 +1119,6 @@ class _DatePill extends StatelessWidget {
   final VoidCallback? onTap;
   final double width;
   final bool isPastDay;
-
   const _DatePill({
     required this.dayOfWeek,
     required this.dayOfMonth,
@@ -920,43 +1133,40 @@ class _DatePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double opacity = (isPastDay && !isToday && !isSelected) ? 0.4 : 1.0;
+    // --- LÓGICA DE CORES E OPACIDADE MODIFICADA ---
+    final double opacity = isPastDay ? 0.4 : 1.0;
 
-    Color bgColor = Colors.transparent;
+    // Define cores base
+    Color bgColor = AppColors
+        .cardBackground; // Padrão: fundo do modal (corrige "fundo preto")
     Color baseTextColor = AppColors.secondaryText;
     Color baseDayNumColor = AppColors.primaryText;
     Color baseBorderColor = AppColors.border;
     double borderWidth = 1.0;
 
-    if (isToday) {
-      bgColor = AppColors.primary;
+    if (isToday && !isSelected) {
+      // Estado "Hoje" (não selecionado)
+      baseTextColor = AppColors.primary;
+      baseDayNumColor = AppColors.primary;
+      baseBorderColor = AppColors.primary.withOpacity(0.6);
+      borderWidth = 1.5;
+      // bgColor permanece AppColors.cardBackground
+    }
+    if (isSelected) {
+      // Estado "Selecionado"
+      bgColor = AppColors.primary; // Fundo muda
       baseTextColor = Colors.white;
       baseDayNumColor = Colors.white;
       baseBorderColor = AppColors.primary;
-      borderWidth = 1.5;
-    }
-
-    if (isSelected) {
-      baseBorderColor = AppColors.primary;
       borderWidth = 2.0;
-
-      if (isToday) {
-        bgColor = AppColors.primary;
-        baseTextColor = Colors.white;
-        baseDayNumColor = Colors.white;
-      } else {
-        bgColor = Colors.transparent;
-        baseTextColor = AppColors.primary;
-        baseDayNumColor = AppColors.primary;
-      }
     }
 
-    final Color textColor = baseTextColor.withOpacity(opacity);
-    final Color dayNumColor = baseDayNumColor.withOpacity(opacity);
-    final Color borderColor = baseBorderColor.withOpacity(opacity);
+    // O Opacity é aplicado no widget pai, então não precisamos
+    // aplicar .withOpacity() em cada cor individualmente.
+    // --- FIM DAS MODIFICAÇÕES ---
 
     return Opacity(
-      opacity: opacity,
+      opacity: opacity, // Aplica opacidade a tudo (para dias passados)
       child: Container(
         width: width,
         margin: const EdgeInsets.symmetric(horizontal: 4.0),
@@ -966,10 +1176,12 @@ class _DatePill extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8.0),
             decoration: BoxDecoration(
+              // Usa a cor base. O Opacity pai cuida do esmaecimento.
               color: bgColor,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: borderColor,
+                // Usa a cor base da borda. O Opacity pai cuida do esmaecimento.
+                color: baseBorderColor,
                 width: borderWidth,
               ),
             ),
@@ -979,7 +1191,8 @@ class _DatePill extends StatelessWidget {
                 Text(
                   dayOfWeek.toUpperCase(),
                   style: TextStyle(
-                    color: textColor,
+                    // Usa a cor base do texto. O Opacity pai cuida do esmaecimento.
+                    color: baseTextColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -988,7 +1201,8 @@ class _DatePill extends StatelessWidget {
                 Text(
                   dayOfMonth,
                   style: TextStyle(
-                    color: dayNumColor,
+                    // Usa a cor base do número. O Opacity pai cuida do esmaecimento.
+                    color: baseDayNumColor,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1000,7 +1214,7 @@ class _DatePill extends StatelessWidget {
                       ? VibrationPill(
                           vibrationNumber: personalDay,
                           type: VibrationPillType.compact,
-                          forceInvertedColors: isToday,
+                          forceInvertedColors: isSelected,
                         )
                       : null,
                 ),

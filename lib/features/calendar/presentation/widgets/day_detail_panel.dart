@@ -43,7 +43,7 @@ class DayDetailPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (selectedDay == null) {
-      return isDesktop ? _buildEmptyStateDesktop() : const SizedBox.shrink();
+      return _buildEmptyStateDesktop(); // Sempre mostra estado vazio, independente do layout
     }
 
     final formattedDate = toBeginningOfSentenceCase(

@@ -1,7 +1,9 @@
-// lib/main.dart
-
 import 'dart:async';
+import 'dart:io' show Platform;
+
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -20,6 +22,38 @@ import 'package:intl/date_symbol_data_local.dart';
 // Chave do Site reCAPTCHA v3 para Web
 const String kReCaptchaSiteKey = '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU';
 
+// ========================================
+// FUNÇÃO DE CONEXÃO COM EMULADORES
+// ========================================
+Future<void> _connectToEmulators() async {
+  final bool isAndroid = !kIsWeb && Platform.isAndroid;
+  final String host = isAndroid ? '10.0.2.2' : 'localhost';
+
+  // Portas (conforme seu firebase.json ATUALIZADO)
+  const int firestorePort = 8081;
+  const int authPort = 9098;
+  const int functionsPort = 5002;
+
+  debugPrint('---');
+  debugPrint('--- 🛠️  CONECTANDO AOS EMULADORES EM $host 🛠️  ---');
+
+  // Apontar o Firestore para o Emulador
+  FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
+
+  // Apontar o Auth para o Emulador
+  await FirebaseAuth.instance.useAuthEmulator(host, authPort);
+
+  // Apontar o Functions para o Emulador
+  FirebaseFunctions.instanceFor(region: 'us-central1')
+      .useFunctionsEmulator(host, functionsPort);
+
+  debugPrint('--- ✅ EMULADORES CONECTADOS ---');
+  debugPrint('---');
+}
+// ========================================
+// FIM DA FUNÇÃO
+// ========================================
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
@@ -29,45 +63,51 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  try {
-    debugPrint('🔧 Inicializando Firebase App Check...');
-
+  // ========================================
+  // LÓGICA DE CONEXÃO COM EMULADOR
+  // ========================================
+  if (kDebugMode) {
+    // Em modo DEBUG, conecte-se aos emuladores
+    try {
+      await _connectToEmulators();
+    } catch (e) {
+      debugPrint('!!! Erro ao conectar aos emuladores: $e');
+    }
+  } else {
     // ========================================
-    // CONFIGURAÇÃO AUTOMÁTICA DO APP CHECK
+    // EM MODO RELEASE, ATIVE O APP CHECK (ADICIONADO "ELSE")
     // ========================================
-    // O Flutter detecta automaticamente se está em:
-    // - Modo debug (desenvolvimento)
-    // - Modo release (produção)
-    // E escolhe o provedor correto!
+    try {
+      debugPrint('🔧 Inicializando Firebase App Check...');
 
-    await FirebaseAppCheck.instance.activate(
-      // ===== WEB =====
-      // Em debug: usa debug token (definido no index.html)
-      // Em release: usa reCAPTCHA v3 automaticamente
-      webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
+      // ========================================
+      // CONFIGURAÇÃO AUTOMÁTICA DO APP CHECK
+      // ========================================
+      await FirebaseAppCheck.instance.activate(
+        // ===== WEB =====
+        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
 
-      // ===== ANDROID =====
-      // Em debug (kDebugMode = true): usa debug provider
-      // Em release (kDebugMode = false): usa Play Integrity (requer app na Play Store)
-      androidProvider:
-          kDebugMode ? AndroidProvider.debug : AndroidProvider.playIntegrity,
+        // ===== ANDROID =====
+        // Em release (kDebugMode = false): usa Play Integrity
+        androidProvider: AndroidProvider.playIntegrity,
 
-      // ===== iOS/macOS =====
-      // Em debug: usa debug provider
-      // Em release: usa App Attest (requer app na App Store)
-      appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-    );
+        // ===== iOS/macOS =====
+        // Em release: usa App Attest
+        appleProvider: AppleProvider.appAttest,
+      );
 
-    debugPrint('✅ Firebase App Check ativado!');
-    _logAppCheckStatus();
-  } catch (e, s) {
-    debugPrint('');
-    debugPrint('❌ ===== ERRO NO APP CHECK =====');
-    debugPrint('Erro: $e');
-    debugPrint('StackTrace: $s');
-    debugPrint('================================');
-    debugPrint('');
+      debugPrint('✅ Firebase App Check ativado!');
+      _logAppCheckStatus(); // Esta função já checa kDebugMode, mas tudo bem
+    } catch (e, s) {
+      debugPrint('');
+      debugPrint('❌ ===== ERRO NO APP CHECK =====');
+      debugPrint('Erro: $e');
+      debugPrint('StackTrace: $s');
+      debugPrint('================================');
+      debugPrint('');
+    }
   }
+  // === FIM DA LÓGICA DE ATIVAÇÃO CONDICIONAL ===
 
   runApp(const SincroApp());
 }
@@ -76,9 +116,13 @@ Future<void> main() async {
 void _logAppCheckStatus() {
   if (!kDebugMode) {
     // Em produção, não logamos detalhes
+    debugPrint('📱 ===== APP CHECK STATUS =====');
+    debugPrint('Modo: RELEASE 🚀');
     return;
   }
 
+  // (Esta parte do código não será mais chamada,
+  // mas podemos manter por segurança)
   debugPrint('');
   debugPrint('📱 ===== APP CHECK STATUS =====');
   debugPrint('Modo: ${kDebugMode ? "DEBUG 🛠️" : "RELEASE 🚀"}');
@@ -88,42 +132,45 @@ void _logAppCheckStatus() {
     debugPrint('');
     debugPrint('🌐 WEB:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Token');
-      debugPrint('  ℹ️ Procure no console por:');
-      debugPrint('     "Firebase App Check debug token: XXXX..."');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+      debugPrint('  ✓ Usando: Debug Token');
+      debugPrint('  ℹ️ Procure no console por:');
+      debugPrint('     "Firebase App Check debug token: XXXX..."');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
     } else {
-      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
-      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
+      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
+      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
     }
   } else if (defaultTargetPlatform == TargetPlatform.android) {
     debugPrint('');
     debugPrint('🤖 ANDROID:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
-      debugPrint('     "Firebase App Check debug token"');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
+      debugPrint('     "Firebase App Check debug token"');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
     } else {
-      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na Play Store');
+      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na Play Store');
     }
   } else if (defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.macOS) {
     debugPrint('');
     debugPrint('🍎 iOS/macOS:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ℹ️ Registre o token no Firebase Console');
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ℹ️ Registre o token no Firebase Console');
     } else {
-      debugPrint('  ✓ Usando: App Attest (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na App Store');
+      debugPrint('  ✓ Usando: App Attest (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na App Store');
     }
   }
 
   debugPrint('================================');
   debugPrint('');
 }
+
+// ... (O RESTO DO SEU CÓDIGO PERMANECE INTOCADO) ...
+// (SincroApp, AuthCheck, etc.)
 
 class SincroApp extends StatelessWidget {
   const SincroApp({super.key});

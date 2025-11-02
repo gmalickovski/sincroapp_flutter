@@ -35,11 +35,19 @@ class CustomCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rowHeight =
-        isDesktop && calendarWidth != null ? (calendarWidth! / 7) - 4 : 52.0;
-    // Removido borderRadius daqui, pois o container agora é transparente
+    // Calcula a altura da linha baseado no espaço disponível na tela
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight = isDesktop
+        ? screenHeight * 0.65
+        : screenHeight * 0.45; // 65% da altura na versão desktop
+    final rowHeight = isDesktop
+        ? (availableHeight / 6) - 8 // 6 linhas do calendário, com margem
+        : 52.0; // Altura fixa para mobile
 
     return Container(
+      // Mantém o calendário alinhado ao topo e dá uma altura controlada no desktop
+      alignment: Alignment.topCenter,
+      height: isDesktop ? availableHeight : null,
       // --- INÍCIO DA CORREÇÃO DE LAYOUT ---
       // Tornar o container externo transparente ou remover a cor
       decoration: BoxDecoration(
@@ -48,7 +56,7 @@ class CustomCalendar extends StatelessWidget {
             BorderRadius.circular(8.0), // Mantém o arredondamento se necessário
       ),
       // --- FIM DA CORREÇÃO DE LAYOUT ---
-      padding: const EdgeInsets.only(bottom: 8), // Mantém padding inferior
+      padding: const EdgeInsets.only(bottom: 8, top: 8), // Mantém padding
       child: TableCalendar<CalendarEvent>(
         locale: 'pt_BR',
         firstDay: DateTime.utc(2010, 1, 1),
@@ -87,28 +95,55 @@ class CustomCalendar extends StatelessWidget {
         onPageChanged: onPageChanged,
 
         // Usa builders de célula (_DayCell desenha marcadores)
+        enabledDayPredicate: (day) {
+          // Desabilita a seleção de dias passados
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final checkDay = DateTime(day.year, day.month, day.day);
+          return !checkDay.isBefore(today);
+        },
         calendarBuilders: CalendarBuilders(
-          // REMOVIDO markerBuilder
           defaultBuilder: (context, day, focusedDay) {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final checkDay = DateTime(day.year, day.month, day.day);
+            final isPastDay = checkDay.isBefore(today);
+
             return _DayCell(
-              day: day, isDesktop: isDesktop,
-              events: _getEventsForDay(day), // Passa eventos
+              day: day,
+              isDesktop: isDesktop,
+              isSelected: false,
+              events: _getEventsForDay(day),
+              isPastDayOverride: isPastDay,
+              personalDayNumber:
+                  null, // Necessário para manter consistência visual
             );
           },
           selectedBuilder: (context, day, focusedDay) {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final checkDay = DateTime(day.year, day.month, day.day);
+            final isPastDay = checkDay.isBefore(today);
+
             return _DayCell(
-              day: day, isDesktop: isDesktop, isSelected: true,
-              personalDayNumber: personalDayNumber, // Passa
-              events: _getEventsForDay(day), // Passa eventos
+              day: day,
+              isDesktop: isDesktop,
+              isSelected: !isPastDay, // Só permite seleção de dias futuros
+              personalDayNumber: isPastDay ? null : personalDayNumber,
+              events: _getEventsForDay(day),
+              isPastDayOverride: isPastDay,
             );
           },
           todayBuilder: (context, day, focusedDay) {
             return _DayCell(
-              day: day, isDesktop: isDesktop, isToday: true,
+              day: day,
+              isDesktop: isDesktop,
+              isToday: true,
               isSelected: isSameDay(day, selectedDay),
               personalDayNumber:
                   isSameDay(day, selectedDay) ? personalDayNumber : null,
-              events: _getEventsForDay(day), // Passa eventos
+              events: _getEventsForDay(day),
+              isPastDayOverride: false, // Hoje nunca é considerado passado
             );
           },
           outsideBuilder: (context, day, focusedDay) {
@@ -138,6 +173,7 @@ class _DayCell extends StatefulWidget {
   final bool isToday;
   final int? personalDayNumber;
   final List<CalendarEvent> events;
+  final bool? isPastDayOverride;
 
   const _DayCell({
     required this.day,
@@ -146,6 +182,7 @@ class _DayCell extends StatefulWidget {
     this.isToday = false,
     this.personalDayNumber,
     this.events = const [],
+    this.isPastDayOverride,
   });
 
   @override
@@ -156,16 +193,10 @@ class _DayCellState extends State<_DayCell> {
   bool _isHovered = false;
 
   Color _getColorForEventType(EventType type) {
-    switch (type) {
-      case EventType.task:
-        return AppColors.taskMarker ?? Colors.blue;
-      case EventType.goalTask:
-        return AppColors.goalTaskMarker ?? Colors.purple;
-      case EventType.journal:
-        return AppColors.journalMarker ?? Colors.green;
-      default:
-        return Colors.transparent;
-    }
+    if (type == EventType.task) return AppColors.taskMarker;
+    if (type == EventType.goalTask) return AppColors.goalTaskMarker;
+    if (type == EventType.journal) return AppColors.journalMarker;
+    throw StateError('Unhandled EventType: $type');
   }
 
   Color _getPersonalDayColor() {
@@ -198,40 +229,66 @@ class _DayCellState extends State<_DayCell> {
     }
   }
 
+  bool _isPastDay() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final cellDay = DateTime(widget.day.year, widget.day.month, widget.day.day);
+    return cellDay.isBefore(today);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isPast = widget.isPastDayOverride ?? _isPastDay();
+
+    // Define cores base para garantir que dias passados sempre tenham quadrados visíveis
     Color backgroundColor =
-        Colors.white.withOpacity(0.03); // Fundo padrão sutil
+        AppColors.cardBackground.withOpacity(0.15); // Base para todos os dias
+
+    // Ajusta opacidade baseado no estado
     if (widget.isToday && !widget.isSelected) {
       backgroundColor = AppColors.cardBackground.withOpacity(0.8);
-    }
-    if (_isHovered && !widget.isSelected && widget.isDesktop) {
+    } else if (_isHovered &&
+        !widget.isSelected &&
+        widget.isDesktop &&
+        !isPast) {
       backgroundColor = AppColors.cardBackground.withOpacity(0.6);
+    } else if (!isPast) {
+      backgroundColor = AppColors.cardBackground.withOpacity(0.08);
     }
 
-    Color borderColor = AppColors.border.withOpacity(0.5); // Borda padrão
+    // Define a cor da borda - sempre visível para todos os dias
+    Color borderColor =
+        AppColors.border.withOpacity(0.4); // Base para todos os dias
+
+    // Ajusta a borda para estados especiais
     if (widget.isSelected) {
       borderColor = _getPersonalDayColor();
     } else if (widget.isToday) {
       borderColor = AppColors.primary.withOpacity(0.7);
+    } else if (!isPast) {
+      borderColor = AppColors.border.withOpacity(0.6);
     }
 
-    Color textColor = AppColors.secondaryText; // Cor padrão texto
+    // Define cores de texto garantindo visibilidade
+    Color textColor;
     if (widget.isToday && !widget.isSelected) {
       textColor = AppColors.primary;
-    }
-    if (widget.isSelected) {
+    } else if (widget.isSelected && !isPast) {
       textColor = Colors.white;
+    } else if (isPast) {
+      textColor = AppColors.tertiaryText.withOpacity(0.85);
+    } else {
+      textColor = AppColors.secondaryText;
     }
 
     return MouseRegion(
       onEnter: (_) {
-        if (widget.isDesktop) setState(() => _isHovered = true);
+        if (widget.isDesktop && !isPast) setState(() => _isHovered = true);
       },
       onExit: (_) {
-        if (widget.isDesktop) setState(() => _isHovered = false);
+        if (widget.isDesktop && !isPast) setState(() => _isHovered = false);
       },
-      cursor: SystemMouseCursors.click,
+      cursor: isPast ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: Container(
         margin: const EdgeInsets.all(2.0),
         decoration: BoxDecoration(
@@ -276,13 +333,16 @@ class _DayCellState extends State<_DayCell> {
                       .map((type) {
                         final markerSize =
                             widget.isDesktop ? 6.0 : 5.0; // Ajustado
+                        // Aplica opacidade menor se for dia passado
+                        final markerColor = _getColorForEventType(type)
+                            .withOpacity(isPast ? 0.9 : 1.0);
                         return Container(
                           width: markerSize,
                           height: markerSize,
                           margin: const EdgeInsets.symmetric(horizontal: 1.5),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _getColorForEventType(type),
+                            color: markerColor,
                           ),
                         );
                       })

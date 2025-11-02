@@ -15,9 +15,11 @@ class TasksListView extends StatelessWidget {
   final Function(TaskModel, bool) onToggle;
   // --- INÍCIO DA MUDANÇA ---
   final Function(TaskModel)? onTaskTap; // Callback para abrir detalhes
-  // REMOVIDO: final Function(TaskModel) onTaskDeleted;
-  // REMOVIDO: final Function(TaskModel) onTaskEdited;
-  // REMOVIDO: final Function(TaskModel) onTaskDuplicated;
+
+  // (Solicitação 1) Novos parâmetros de seleção (AGORA OPCIONAIS)
+  final bool selectionMode;
+  final Set<String> selectedTaskIds;
+  final Function(String, bool)? onTaskSelected; // Tornou-se opcional
   // --- FIM DA MUDANÇA ---
 
   const TasksListView({
@@ -30,15 +32,18 @@ class TasksListView extends StatelessWidget {
     required this.onToggle,
     // --- INÍCIO DA MUDANÇA ---
     this.onTaskTap, // Adicionado como opcional
-    // REMOVIDO: required this.onTaskDeleted,
-    // REMOVIDO: required this.onTaskEdited,
-    // REMOVIDO: required this.onTaskDuplicated,
+
+    // (Solicitação 1) Adiciona ao construtor (COM VALORES PADRÃO / OPCIONAIS)
+    this.selectionMode = false,
+    this.selectedTaskIds = const {},
+    this.onTaskSelected, // Não é mais 'required'
     // --- FIM DA MUDANÇA ---
   });
 
   @override
   Widget build(BuildContext context) {
     if (tasks.isEmpty) {
+      // --- MANTIDO: O seu UI de lista vazia original ---
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -57,29 +62,29 @@ class TasksListView extends StatelessWidget {
           ],
         ),
       );
+      // --- FIM DO CÓDIGO MANTIDO ---
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 80),
+      padding: const EdgeInsets.fromLTRB(
+          8, 8, 16, 80), // Added right padding for scrollbar
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
         return TaskItem(
-          key: ValueKey(task.id), // Boa prática adicionar key
+          key: ValueKey(task.id),
           task: task,
-          // showJourney não é mais um parâmetro direto relevante para TaskItem como antes
-          // showGoalIconFlag, showTagsIconFlag, showVibrationPillFlag podem ser passados aqui se necessário
-          // controlar a exibição desses ícones de forma diferente em listas diferentes.
-          // Por enquanto, usaremos os defaults do TaskItem.
+          // Core callbacks
           onToggle: (isCompleted) => onToggle(task, isCompleted),
-          // --- INÍCIO DA MUDANÇA ---
-          onTap: onTaskTap != null
-              ? () => onTaskTap!(task)
-              : null, // Passa o onTap
-          // REMOVIDO: onEdit: () => onTaskEdited(task),
-          // REMOVIDO: onDelete: () => onTaskDeleted(task),
-          // REMOVIDO: onDuplicate: () => onTaskDuplicated(task),
-          // --- FIM DA MUDANÇA ---
+          onTap: onTaskTap != null ? () => onTaskTap!(task) : null,
+          // Selection mode props
+          selectionMode: selectionMode,
+          selectedTaskIds: selectedTaskIds,
+          onTaskSelected: onTaskSelected,
+          // Layout flags com valores default
+          showGoalIconFlag: true,
+          showTagsIconFlag: true,
+          showVibrationPillFlag: true,
         );
       },
     );
