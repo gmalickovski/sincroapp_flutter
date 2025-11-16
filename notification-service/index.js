@@ -21,10 +21,10 @@ const axios = require('axios');
 // Carrega service account (baixe do Firebase Console)
 const serviceAccount = require('./serviceAccountKey.json');
 
-// Inicializa Firebase Admin
+// Inicializa Firebase Admin (sincroapp-529cc - PROJETO CORRETO)
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL: 'https://sincroapp-e9cda.firebaseio.com'
+  databaseURL: 'https://sincroapp-529cc.firebaseio.com'
 });
 
 const db = admin.firestore();

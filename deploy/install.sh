@@ -23,7 +23,7 @@ NGINX_CONFIG="${NGINX_CONFIG:-/etc/nginx/sites-available/sincroapp.com.br}"
 NGINX_ENABLED="${NGINX_ENABLED:-/etc/nginx/sites-enabled/sincroapp.com.br}"
 DOMAIN="${DOMAIN:-sincroapp.com.br}"
 NODE_VERSION="${NODE_VERSION:-20}"
-FIREBASE_PROJECT="${FIREBASE_PROJECT:-sincroapp-e9cda}"
+FIREBASE_PROJECT="${FIREBASE_PROJECT:-sincroapp-529cc}"
 # Flags
 SKIP_NGINX="${SKIP_NGINX:-0}"
 SKIP_SSL="${SKIP_SSL:-1}"

@@ -8,15 +8,15 @@ const isLocalhost = Boolean(
   window.location.hostname === '127.0.0.1'
 );
 
-// Configuração do Firebase (UNIFICADO - sincroapp-e9cda)
+// Configuração do Firebase (sincroapp-529cc - PROJETO CORRETO)
 const firebaseConfig = {
-  apiKey: "AIzaSyBDHpEm3FyKfOnzjJ6xLz8hLQV8DZrPqA0",
-  authDomain: "sincroapp-e9cda.firebaseapp.com",
-  projectId: "sincroapp-e9cda",
-  storageBucket: "sincroapp-e9cda.firebasestorage.app",
-  messagingSenderId: "711001992054",
-  appId: "1:711001992054:web:0b4a34e3a3e10e3e3e3e3e",
-  measurementId: "G-XXXXXXXXXX"
+  apiKey: "AIzaSyCxP5jLEiYyL5hTBqPgawsL4XJ6k_VKHd8",
+  authDomain: "sincroapp-529cc.firebaseapp.com",
+  projectId: "sincroapp-529cc",
+  storageBucket: "sincroapp-529cc.firebasestorage.app",
+  messagingSenderId: "1011842661481",
+  appId: "1:1011842661481:web:e85b3aa24464e12ae2b6f8",
+  measurementId: "G-JVW0L403K9"
 };
 
 // Inicializa Firebase

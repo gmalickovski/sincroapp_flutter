@@ -17,8 +17,8 @@ const recaptchaClient = new RecaptchaEnterpriseServiceClient();
 // URL do seu webhook
 const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
 
-// Configurações reCAPTCHA (UNIFICADO - sincroapp-e9cda)
-const RECAPTCHA_PROJECT_ID = "sincroapp-e9cda";
+// Configurações reCAPTCHA (sincroapp-529cc - PROJETO CORRETO)
+const RECAPTCHA_PROJECT_ID = "sincroapp-529cc";
 const RECAPTCHA_SITE_KEY = "6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU";
 
 /**
