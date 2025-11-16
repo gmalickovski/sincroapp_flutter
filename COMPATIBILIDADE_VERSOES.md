@@ -12,6 +12,8 @@ O ambiente de desenvolvimento local usa versões mais recentes (Flutter 3.35.7, 
 
 Os scripts de deploy (`install.sh` e `update.sh`) agora aplicam patches automáticos no `pubspec.yaml` após clonar/atualizar o repositório, garantindo compatibilidade com o ambiente do servidor.
 
+Total de pacotes corrigidos: **15**
+
 ## Versões Ajustadas
 
 ### Pacotes Core
@@ -21,6 +23,7 @@ Os scripts de deploy (`install.sh` e `update.sh`) agora aplicam patches automát
 | `collection` | ^1.19.1 | ^1.18.0 | flutter_test SDK requer 1.18.0 |
 | `google_sign_in` | ^7.2.0 | ^6.2.1 | Requer Dart >= 3.7.0 |
 | `google_fonts` | ^6.3.2 | ^6.1.0 | Requer Dart >= 3.7.0 |
+| `table_calendar` | ^3.2.0 | ^3.1.3 | Requer intl ^0.20.0 mas flutter_localizations SDK usa 0.19.0 |
 
 ### Pacotes Firebase
 
@@ -53,8 +56,8 @@ Os scripts de deploy (`install.sh` e `update.sh`) agora aplicam patches automát
 
 Os patches são aplicados automaticamente via `sed` nos arquivos:
 
-1. **deploy/install.sh** (Step 9)
-2. **deploy/update.sh** (Step 6)
+1. **deploy/install.sh** (Step 9) - 15 patches
+2. **deploy/update.sh** (Step 6) - 15 patches
 
 Exemplo de patch:
 ```bash

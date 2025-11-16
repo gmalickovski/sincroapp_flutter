@@ -106,6 +106,7 @@ log_info "Corrigindo versões de pacotes para compatibilidade com flutter_test e
 sed -i 's/collection: \^1\.19\.1/collection: ^1.18.0/' "$INSTALL_DIR/pubspec.yaml"
 sed -i 's/google_sign_in: \^7\.2\.0/google_sign_in: ^6.2.1/' "$INSTALL_DIR/pubspec.yaml"
 sed -i 's/google_fonts: \^6\.3\.2/google_fonts: ^6.1.0/' "$INSTALL_DIR/pubspec.yaml"
+sed -i 's/table_calendar: \^3\.2\.0/table_calendar: ^3.1.3/' "$INSTALL_DIR/pubspec.yaml"
 sed -i 's/firebase_core: \^4\.2\.0/firebase_core: ^3.6.0/' "$INSTALL_DIR/pubspec.yaml"
 sed -i 's/firebase_auth: \^6\.1\.1/firebase_auth: ^5.3.1/' "$INSTALL_DIR/pubspec.yaml"
 sed -i 's/cloud_firestore: \^6\.0\.3/cloud_firestore: ^5.4.4/' "$INSTALL_DIR/pubspec.yaml"
