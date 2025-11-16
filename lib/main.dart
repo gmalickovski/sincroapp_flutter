@@ -27,7 +27,11 @@ import 'package:sincro_app_flutter/features/authentication/data/content_data.dar
 // --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 // Chave do Site reCAPTCHA v3 para Web
-const String kReCaptchaSiteKey = '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU';
+// Em produção, injete via --dart-define=RECAPTCHA_V3_SITE_KEY=... no build.
+const String kReCaptchaSiteKey = String.fromEnvironment(
+  'RECAPTCHA_V3_SITE_KEY',
+  defaultValue: '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU',
+);
 
 // ========================================
 // FUNÇÃO DE CONEXÃO COM EMULADORES

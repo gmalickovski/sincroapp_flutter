@@ -28,6 +28,7 @@ FIREBASE_PROJECT="${FIREBASE_PROJECT:-sincroapp-529cc}"
 SKIP_NGINX="${SKIP_NGINX:-0}"
 SKIP_SSL="${SKIP_SSL:-1}"
 RENDERER="${RENDERER:-html}"
+RECAPTCHA_V3_SITE_KEY="${RECAPTCHA_V3_SITE_KEY:-}"
 
 # Função para log colorido
 log_info() {
@@ -149,6 +150,14 @@ fi
 cd "$INSTALL_DIR"
 log_success "Repositório clonado com sucesso"
 
+# 9.1 VALIDAR CHAVE DO APPCHECK (WEB)
+if [ -z "$RECAPTCHA_V3_SITE_KEY" ]; then
+    log_error "Variável de ambiente RECAPTCHA_V3_SITE_KEY não definida."
+    log_error "Defina sua chave de site do App Check (reCAPTCHA v3) antes de prosseguir."
+    log_error "Exemplo: export RECAPTCHA_V3_SITE_KEY=\"xxxx\" && sudo -E ./deploy/install.sh"
+    exit 1
+fi
+
 # 9. CORRIGIR VERSÃO DO PACOTE COLLECTION NO PUBSPEC.YAML
 log_info "Corrigindo versões de pacotes para compatibilidade com flutter_test e Dart SDK..."
 sed -i 's/collection: \^1\.19\.1/collection: ^1.18.0/' "$INSTALL_DIR/pubspec.yaml"
@@ -210,7 +219,8 @@ export PATH="$PATH:/opt/flutter/bin"
 flutter clean || true
 
 # Fazer build
-flutter build web --release --web-renderer "$RENDERER"
+flutter build web --release --web-renderer "$RENDERER" \
+    --dart-define=RECAPTCHA_V3_SITE_KEY="$RECAPTCHA_V3_SITE_KEY"
 
 if [ ! -d "$INSTALL_DIR/build/web" ]; then
     log_error "Build falhou - diretório build/web não foi criado"
