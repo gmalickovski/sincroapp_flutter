@@ -167,7 +167,12 @@ sed -i 's/firebase_messaging: \^16\.0\.3/firebase_messaging: ^15.1.3/' "$INSTALL
 sed -i 's/flutter_lints: \^4\.0\.0/flutter_lints: ^3.0.2/' "$INSTALL_DIR/pubspec.yaml"
 # Corrigir intl para versão compatível com Flutter 3.27.1 (VPS usa intl 0.19.0)
 sed -i 's/intl: \^0\.20\.2/intl: ^0.19.0/' "$INSTALL_DIR/pubspec.yaml"
-log_success "pubspec.yaml corrigido"
+
+# Reverter withValues para withOpacity (Flutter 3.27.1 não suporta withValues completo)
+log_info "Revertendo withValues() para withOpacity() para compatibilidade com Flutter 3.27.1..."
+find "$INSTALL_DIR/lib" -name "*.dart" -type f -exec sed -i 's/\.withValues(alpha: \([0-9.]*\))/.withOpacity(\1)/g' {} +
+
+log_success "pubspec.yaml e código-fonte corrigidos para Flutter 3.27.1"
 
 # 10. INSTALAR DEPENDÊNCIAS FLUTTER
 log_info "Instalando dependências Flutter..."
