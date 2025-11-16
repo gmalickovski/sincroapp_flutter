@@ -45,7 +45,6 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
 
   final _firestoreService = FirestoreService();
 
-  // *** MÉTODO _pickDate ATUALIZADO ***
   Future<void> _pickDate() async {
     // Esconde o teclado antes de abrir o seletor de data
     FocusScope.of(context).unfocus();
@@ -69,10 +68,16 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       setState(() {
         _targetDate = pickedDate;
       });
+      debugPrint('CreateGoalDialog: Data selecionada: $_targetDate');
+    } else {
+      debugPrint(
+          'CreateGoalDialog: Nenhuma data selecionada (pickedDate é null)');
     }
   }
 
   Future<void> _handleSave() async {
+    // Remove foco dos campos para evitar heurísticas de formulário do navegador
+    FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate() ||
         _isSaving ||
         _targetDate == null) {
@@ -85,6 +90,30 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
         );
       }
       return;
+    }
+
+    // Checagem de limite de metas por plano
+    if (widget.goalToEdit == null) {
+      int maxGoals = 1;
+      final plan = widget.userData.subscription.plan;
+      if (plan.toString().contains('despertar')) {
+        maxGoals = 5;
+      } else if (plan.toString().contains('sinergia')) {
+        maxGoals = 99999;
+      }
+      final goalsSnapshot =
+          await FirestoreService().getActiveGoals(widget.userData.uid);
+      if (goalsSnapshot.length >= maxGoals) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(maxGoals == 99999
+                ? 'Você já atingiu o limite de metas.'
+                : 'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
+          ),
+        );
+        return;
+      }
     }
 
     setState(() => _isSaving = true);
@@ -106,6 +135,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
         'subTasks': [],
       },
     };
+
+    debugPrint('CreateGoalDialog: Salvando meta com targetDate: $_targetDate');
+    debugPrint('CreateGoalDialog: dataToSave = $dataToSave');
 
     try {
       if (widget.goalToEdit != null) {
@@ -217,6 +249,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _titleController,
+                    autofillHints: null, // Desabilita autofill
+                    enableSuggestions: false,
+                    autocorrect: false,
                     style: const TextStyle(color: Colors.white, fontSize: 16),
                     decoration: _buildInputDecoration(
                       labelText: 'Título da Jornada *',
@@ -237,6 +272,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
+                    autofillHints: null, // Desabilita autofill
+                    enableSuggestions: false,
+                    autocorrect: false,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     maxLines: 4,
                     minLines: 2,

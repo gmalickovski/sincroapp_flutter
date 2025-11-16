@@ -3,24 +3,17 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart'; // Import atualizado
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-// Import do TaskInputModal ainda é usado para o botão '+' no header
-// Numerology engine to compute personal day when needed
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
-class FocusDayCard extends StatelessWidget {
+class FocusDayCard extends StatefulWidget {
   final List<TaskModel> tasks;
   final VoidCallback onViewAll;
   final Function(TaskModel task, bool isCompleted) onTaskStatusChanged;
   final UserModel userData;
-  // --- INÍCIO DA MUDANÇA ---
-  final Function(TaskModel task)? onTaskTap; // Callback para abrir detalhes
-  // REMOVIDO: final Function(TaskModel task) onTaskDeleted;
-  // REMOVIDO: final Function(TaskModel task) onTaskEdited;
-  // REMOVIDO: final Function(TaskModel task) onTaskDuplicated;
-  // --- FIM DA MUDANÇA ---
-  final VoidCallback onAddTask; // Callback para o botão '+' no header
+  final Function(TaskModel task)? onTaskTap;
+  final VoidCallback onAddTask;
   final Widget? dragHandle;
   final bool isEditMode;
 
@@ -30,65 +23,83 @@ class FocusDayCard extends StatelessWidget {
     required this.onViewAll,
     required this.onTaskStatusChanged,
     required this.userData,
-    // --- INÍCIO DA MUDANÇA ---
-    this.onTaskTap, // Adicionado como opcional
-    // REMOVIDO: required this.onTaskDeleted,
-    // REMOVIDO: required this.onTaskEdited,
-    // REMOVIDO: required this.onTaskDuplicated,
-    // --- FIM DA MUDANÇA ---
+    this.onTaskTap,
     required this.onAddTask,
     this.dragHandle,
     this.isEditMode = false,
   });
 
   @override
+  State<FocusDayCard> createState() => _FocusDayCardState();
+}
+
+class _FocusDayCardState extends State<FocusDayCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          )
-        ],
-      ),
-      child: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHeader(context),
-                const SizedBox(height: 16),
-                _buildTaskList(context), // Passa o context
-              ],
+    final Color borderColor = _isHovered
+        ? AppColors.primary.withOpacity(0.8)
+        : AppColors.border.withOpacity(0.7);
+    final double borderWidth = _isHovered ? 1.5 : 1.0;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(16.0),
+          border: Border.all(color: borderColor, width: borderWidth),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.05),
+                    blurRadius: 8,
+                  )
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  )
+                ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 16),
+                  _buildTaskList(context),
+                ],
+              ),
             ),
-          ),
-          if (isEditMode && dragHandle != null)
-            Positioned(
-              top: 8,
-              right: 8,
-              child: dragHandle!,
-            ),
-        ],
+            if (widget.isEditMode && widget.dragHandle != null)
+              Positioned(
+                top: 8,
+                right: 8,
+                child: widget.dragHandle!,
+              ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: EdgeInsets.only(right: isEditMode ? 32 : 0),
+      padding: EdgeInsets.only(right: widget.isEditMode ? 32 : 0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Ícone e Título
           const Flexible(
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
@@ -105,40 +116,38 @@ class FocusDayCard extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
+                    maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-          // Botões de Ação
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Botão Adicionar Tarefa
-              if (!isEditMode)
+              if (!widget.isEditMode)
                 IconButton(
                   icon: const Icon(Icons.add_circle_outline,
                       color: AppColors.primary),
                   tooltip: 'Adicionar Tarefa',
                   iconSize: 22,
-                  padding: const EdgeInsets.all(4),
                   constraints: const BoxConstraints(),
                   splashRadius: 20,
-                  onPressed: onAddTask,
+                  onPressed: widget.onAddTask,
                 ),
-              // Botão "Ver tudo"
               Padding(
                 padding: const EdgeInsets.only(left: 4.0),
                 child: TextButton(
-                  onPressed: isEditMode ? null : onViewAll,
+                  onPressed: widget.isEditMode ? null : widget.onViewAll,
                   style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 2),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: AppColors.secondaryText,
-                      textStyle: const TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w500)),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: AppColors.secondaryText,
+                    textStyle: const TextStyle(
+                        fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                   child: const Text('Ver tudo'),
                 ),
               ),
@@ -163,17 +172,12 @@ class FocusDayCard extends StatelessWidget {
   }
 
   Widget _buildTaskList(BuildContext context) {
-    // Show tasks that belong to TODAY (LOCAL date comparison) and also
-    // match today's personal day. Use dueDate when present, otherwise
-    // fall back to createdAt. Exclude completed tasks.
     final nowLocal = DateTime.now().toLocal();
     final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
 
-    // Prepare numerology engine to compute personal day for today and
-    // to compute per-task personal day if the task doesn't have it saved.
     final engine = NumerologyEngine(
-      nomeCompleto: userData.nomeAnalise,
-      dataNascimento: userData.dataNasc,
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
     );
     final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
 
@@ -183,21 +187,19 @@ class FocusDayCard extends StatelessWidget {
       return DateTime(dl.year, dl.month, dl.day);
     }
 
-    final filtered = tasks.where((task) {
+    final filtered = widget.tasks.where((task) {
       if (task.completed) return false;
 
       final DateTime? taskDate = task.dueDate ?? task.createdAt;
       final taskDateOnly = _localDateOnly(taskDate);
       if (taskDateOnly == null) return false;
 
-      // Must be the same LOCAL day
       if (!(taskDateOnly.year == todayLocal.year &&
           taskDateOnly.month == todayLocal.month &&
           taskDateOnly.day == todayLocal.day)) {
         return false;
       }
 
-      // Determine the task's personal day (use saved value if present)
       final int taskPersonalDay =
           task.personalDay ?? engine.calculatePersonalDayForDate(taskDateOnly);
 
@@ -216,17 +218,13 @@ class FocusDayCard extends StatelessWidget {
         return TaskItem(
           key: ValueKey(task.id),
           task: task,
-          // Flags de exibição (mantidas da correção anterior)
           showGoalIconFlag: true,
           showTagsIconFlag: true,
-          showVibrationPillFlag:
-              true, // Mostrar pílula no card do dashboard? Sim.
-          // Callbacks
-          onToggle: (isCompleted) => onTaskStatusChanged(task, isCompleted),
-          onTap: onTaskTap != null
-              ? () => onTaskTap!(task)
-              : null, // Passa o onTap
-          // Callbacks de menu removidos
+          showVibrationPillFlag: true,
+          onToggle: (isCompleted) =>
+              widget.onTaskStatusChanged(task, isCompleted),
+          onTap:
+              widget.onTaskTap != null ? () => widget.onTaskTap!(task) : null,
           verticalPaddingOverride: 6.0,
         );
       }).toList(),

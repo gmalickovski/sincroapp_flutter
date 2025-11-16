@@ -14,12 +14,15 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Atualizado para Java 17 para evitar avisos de source/target 8 obsoletos
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+        // Habilita core library desugaring (necessário para flutter_local_notifications)
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
     defaultConfig {
@@ -53,6 +56,9 @@ flutter {
 dependencies {
     // Importa o BoM do Firebase (usando a versão estável mais recente)
     implementation(platform("com.google.firebase:firebase-bom:33.2.0"))
+
+    // Core library desugaring (necessário para flutter_local_notifications)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.2")
 
     // Você não precisa adicionar mais nada aqui (ex: firebase-auth, firebase-ai).
     // Os plugins do Flutter farão isso automaticamente, e o BoM acima

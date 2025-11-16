@@ -27,6 +27,12 @@ class _BussolaCardState extends State<BussolaCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Animated purple border like GoalCard
+    final Color borderColor = (_isHovered && !widget.isEditMode)
+        ? AppColors.primary.withOpacity(0.8)
+        : AppColors.border.withOpacity(0.7);
+    final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
+
     final cardContent = ClipRRect(
       borderRadius: BorderRadius.circular(16.0),
       child: BackdropFilter(
@@ -36,20 +42,14 @@ class _BussolaCardState extends State<BussolaCard> {
           decoration: BoxDecoration(
             color: AppColors.cardBackground.withOpacity(0.8),
             borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: AppColors.border.withOpacity(0.5)),
-            boxShadow: [
-              if (_isHovered && !widget.isEditMode)
-                BoxShadow(
-                  color: AppColors.primaryAccent.withOpacity(0.6),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
-                )
+            border: Border.all(color: borderColor, width: borderWidth),
+            // Keep a subtle constant shadow
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x26000000),
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              )
             ],
           ),
           child: Stack(

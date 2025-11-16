@@ -1,6 +1,7 @@
 // lib/common/widgets/custom_app_bar.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -51,51 +52,36 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         onPressed: onMenuPressed,
         tooltip: 'Menu',
       ),
-      title: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.sync, color: AppColors.primary, size: 24),
-          SizedBox(width: 8),
-          Text(
-            "SincroApp",
-            style: TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
+      title: SvgPicture.asset(
+        'assets/images/sincroapp_logo.svg',
+        height: 32,
+        fit: BoxFit.contain,
       ),
       centerTitle: true,
       actions: [
         // *** CHANGE HERE: Only show Edit button if on Desktop AND callback is provided ***
-        if (isDesktop && onEditPressed != null)
+        // Oculta o botão de Editar/Concluir enquanto o modo de reorder está ativo
+        if (isDesktop && onEditPressed != null && !isEditMode)
           Padding(
             // Add padding for better spacing on desktop
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton.icon(
               icon: Icon(
                 // Logic remains the same: show check when isEditMode is true (modal open)
-                isEditMode ? Icons.check : Icons.edit_outlined,
-                color: isEditMode ? Colors.green : AppColors.secondaryText,
+                Icons.edit_outlined,
+                color: AppColors.secondaryText,
                 size: 18,
               ),
               label: Text(
-                isEditMode ? 'Concluir' : 'Editar',
-                style: TextStyle(
-                  color: isEditMode ? Colors.green : AppColors.secondaryText,
-                ),
+                'Editar',
+                style: const TextStyle(color: AppColors.secondaryText),
               ),
               onPressed: onEditPressed, // This still calls _openReorderModal
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(
-                    color: isEditMode
-                        ? Colors.green.withOpacity(0.5)
-                        : AppColors.border,
-                  ),
+                  side: const BorderSide(color: AppColors.border),
                 ),
               ),
             ),

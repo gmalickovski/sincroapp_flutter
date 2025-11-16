@@ -6,7 +6,6 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:intl/intl.dart';
 // 1. IMPORTA O PROMPT BUILDER
 import 'package:sincro_app_flutter/services/ai_prompt_builder.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
@@ -142,7 +141,7 @@ class AIService {
                   final startOfToday =
                       DateTime(today.year, today.month, today.day);
                   if (!suggestedDate.isBefore(startOfToday)) {
-                    return {
+                    return <String, String>{
                       'title': item['title'].toString(),
                       'date': dateStr,
                     };
@@ -224,7 +223,7 @@ class AIService {
     } catch (e) {
       debugPrint("❌ Erro ao decodificar JSON: $e");
       debugPrint("📄 Texto que causou o erro: $text");
-      throw FormatException(
+      throw const FormatException(
           "JSON inválido recebido da IA."); // Lança FormatException
     }
   }

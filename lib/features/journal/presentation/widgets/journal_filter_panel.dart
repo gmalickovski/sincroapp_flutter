@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
 
 class JournalFilterPanel extends StatefulWidget {
   final DateTime? initialDate;
@@ -11,6 +13,7 @@ class JournalFilterPanel extends StatefulWidget {
   final Function(DateTime?, int?, int?) onApply;
   final VoidCallback onClearInPanel;
   final bool isBottomSheet;
+  final UserModel userData;
 
   const JournalFilterPanel({
     super.key,
@@ -20,6 +23,7 @@ class JournalFilterPanel extends StatefulWidget {
     required this.onApply,
     required this.onClearInPanel,
     this.isBottomSheet = false,
+    required this.userData,
   });
 
   @override
@@ -81,11 +85,24 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                       onPressed: () => setState(() => _tempDate = null))
                   : null,
               onTap: () async {
-                final pickedDate = await showDatePicker(
+                // Open custom calendar dialog instead of the default Flutter date picker
+                final DateTime firstDate = DateTime(2020);
+                final DateTime lastDate =
+                    DateTime.now().add(const Duration(days: 365));
+                DateTime initial = _tempDate ?? DateTime.now();
+                // Clamp initial within range to avoid assertion errors
+                if (initial.isBefore(firstDate)) initial = firstDate;
+                if (initial.isAfter(lastDate)) initial = lastDate;
+
+                final pickedDate = await showDialog<DateTime>(
                   context: context,
-                  initialDate: _tempDate ?? DateTime.now(),
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                  barrierDismissible: true,
+                  builder: (ctx) => CustomEndDatePickerDialog(
+                    initialDate: initial,
+                    firstDate: firstDate,
+                    lastDate: lastDate,
+                    userData: widget.userData,
+                  ),
                 );
                 if (pickedDate != null) {
                   setState(() => _tempDate = pickedDate);
@@ -100,7 +117,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                 value: _tempVibration,
                 isExpanded: true,
                 underline: const SizedBox.shrink(),
-                hint: const Text('Filtrar por vibração',
+                hint: const Text('Filtrar por Dia Pessoal',
                     style: TextStyle(color: AppColors.secondaryText)),
                 dropdownColor: AppColors.cardBackground,
                 style: const TextStyle(color: Colors.white),
@@ -108,11 +125,11 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                   setState(() => _tempVibration = value);
                 },
                 items: [
-                  const DropdownMenuItem(
-                      value: null, child: Text('Todas as Vibrações')),
+                  const DropdownMenuItem<int?>(
+                      value: null, child: Text('Todos os Dias Pessoais')),
                   ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
-                      .map((v) => DropdownMenuItem(
-                          value: v, child: Text('Vibração $v')))
+                      .map((v) => DropdownMenuItem<int?>(
+                          value: v, child: Text('Dia Pessoal $v')))
                       .toList(),
                 ],
               ),

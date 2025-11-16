@@ -1,0 +1,87 @@
+enum AssistantActionType { schedule, create_goal, create_task }
+
+class AssistantAction {
+  final AssistantActionType type;
+  final String? title;
+  final String? description; // Novo: descrição/motivação da meta
+  final DateTime?
+      date; // For schedule/create_task and target date for create_goal
+  final DateTime? startDate; // For ranges
+  final DateTime? endDate;
+  final List<String> subtasks;
+
+  AssistantAction({
+    required this.type,
+    this.title,
+    this.description,
+    this.date,
+    this.startDate,
+    this.endDate,
+    this.subtasks = const [],
+  });
+
+  factory AssistantAction.fromJson(Map<String, dynamic> json) {
+    final typeStr = (json['type'] ?? '').toString();
+    AssistantActionType? t;
+    if (typeStr == 'schedule') t = AssistantActionType.schedule;
+    if (typeStr == 'create_goal') t = AssistantActionType.create_goal;
+    if (typeStr == 'create_task') t = AssistantActionType.create_task;
+    final parseDate = (dynamic v) {
+      if (v == null) return null;
+      final s = v.toString();
+      // Accept YYYY-MM-DD
+      final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+      if (regex.hasMatch(s)) return DateTime.tryParse(s);
+      return null;
+    };
+    // Support both "date" and "targetDate" keys
+    final parsedDate = parseDate(json['date']) ?? parseDate(json['targetDate']);
+    return AssistantAction(
+      type: t ?? AssistantActionType.create_task,
+      title: (json['title'] ?? '').toString().trim().isEmpty
+          ? null
+          : (json['title'] ?? '').toString().trim(),
+      description: (json['description'] ?? '').toString().trim().isEmpty
+          ? null
+          : (json['description'] ?? '').toString().trim(),
+      date: parsedDate,
+      startDate: parseDate(json['startDate']),
+      endDate: parseDate(json['endDate']),
+      subtasks: (json['subtasks'] is List)
+          ? List<String>.from(json['subtasks'].map((e) => e.toString()))
+          : const <String>[],
+    );
+  }
+}
+
+class AssistantAnswer {
+  final String answer;
+  final List<AssistantAction> actions;
+
+  AssistantAnswer({required this.answer, required this.actions});
+
+  factory AssistantAnswer.fromJson(Map<String, dynamic> json) {
+    final answer = (json['answer'] ?? '').toString();
+    final actions = <AssistantAction>[];
+    if (json['actions'] is List) {
+      for (final item in (json['actions'] as List)) {
+        if (item is Map) actions.add(AssistantAction.fromJson(Map.from(item)));
+      }
+    }
+    return AssistantAnswer(answer: answer, actions: actions);
+  }
+}
+
+class AssistantMessage {
+  final String role; // 'user' | 'assistant'
+  final String content;
+  final DateTime time;
+  final List<AssistantAction> actions; // Novo: ações sugeridas pelo assistente
+
+  AssistantMessage({
+    required this.role,
+    required this.content,
+    required this.time,
+    this.actions = const [],
+  });
+}

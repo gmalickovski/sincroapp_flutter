@@ -103,22 +103,22 @@ class CustomCalendar extends StatelessWidget {
           return !checkDay.isBefore(today);
         },
         calendarBuilders: CalendarBuilders(
+          // --- INÍCIO DA CORREÇÃO (Refatoração) ---
+          // Lógica 'isPastDay' removida pois 'enabledDayPredicate' garante
+          // que este builder só rode para dias futuros (ou hoje).
           defaultBuilder: (context, day, focusedDay) {
-            final now = DateTime.now();
-            final today = DateTime(now.year, now.month, now.day);
-            final checkDay = DateTime(day.year, day.month, day.day);
-            final isPastDay = checkDay.isBefore(today);
-
             return _DayCell(
               day: day,
               isDesktop: isDesktop,
               isSelected: false,
               events: _getEventsForDay(day),
-              isPastDayOverride: isPastDay,
+              isPastDayOverride: false, // Explícito que não é passado
               personalDayNumber:
                   null, // Necessário para manter consistência visual
             );
           },
+          // --- FIM DA CORREÇÃO ---
+
           selectedBuilder: (context, day, focusedDay) {
             final now = DateTime.now();
             final today = DateTime(now.year, now.month, now.day);
@@ -146,6 +146,21 @@ class CustomCalendar extends StatelessWidget {
               isPastDayOverride: false, // Hoje nunca é considerado passado
             );
           },
+
+          // --- INÍCIO DA CORREÇÃO (PROBLEMA 1) ---
+          // Adicionado 'disabledBuilder' para customizar dias passados
+          disabledBuilder: (context, day, focusedDay) {
+            return _DayCell(
+              day: day,
+              isDesktop: isDesktop,
+              isSelected: false,
+              events: _getEventsForDay(day),
+              isPastDayOverride: true, // Força o estilo de dia passado
+              personalDayNumber: null,
+            );
+          },
+          // --- FIM DA CORREÇÃO ---
+
           outsideBuilder: (context, day, focusedDay) {
             return Container(
               // Mantém célula esmaecida
@@ -236,50 +251,111 @@ class _DayCellState extends State<_DayCell> {
     return cellDay.isBefore(today);
   }
 
+  // --- INÍCIO DA CORREÇÃO (Request 2) ---
+  /// Constrói os marcadores de evento (círculos) para a visualização mobile.
+  Widget _buildMobileMarkers() {
+    final isPast = widget.isPastDayOverride ?? _isPastDay();
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: widget.events
+          .map((e) => e.type)
+          .toSet() // Tipos únicos
+          .map((type) {
+            final markerSize = 5.0;
+            final markerColor =
+                _getColorForEventType(type).withOpacity(isPast ? 0.9 : 1.0);
+            return Container(
+              width: markerSize,
+              height: markerSize,
+              margin: const EdgeInsets.symmetric(horizontal: 1.5),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: markerColor,
+              ),
+            );
+          })
+          .take(3) // Limita a 3 marcadores no mobile
+          .toList(),
+    );
+  }
+
+  /// Constrói os marcadores de evento (barras) para a visualização desktop.
+  Widget _buildDesktopMarkers() {
+    final isPast = widget.isPastDayOverride ?? _isPastDay();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: widget.events
+          .map((e) => e.type)
+          .toSet() // Tipos únicos
+          .map((type) {
+            final markerColor =
+                _getColorForEventType(type).withOpacity(isPast ? 0.9 : 1.0);
+            return Container(
+              height: 4, // Altura da barra
+              margin: const EdgeInsets.only(top: 2), // Espaçamento entre barras
+              decoration: BoxDecoration(
+                color: markerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            );
+          })
+          .take(3) // Limita a 3 barras para não estourar a célula
+          .toList(),
+    );
+  }
+  // --- FIM DA CORREÇÃO (Request 2) ---
+
   @override
   Widget build(BuildContext context) {
     final isPast = widget.isPastDayOverride ?? _isPastDay();
 
-    // Define cores base para garantir que dias passados sempre tenham quadrados visíveis
-    Color backgroundColor =
-        AppColors.cardBackground.withOpacity(0.15); // Base para todos os dias
+    // --- INÍCIO DA CORREÇÃO (Ajuste Fino de UI) ---
+    // Lógica de cores baseada na sua versão anterior (dias passados visíveis)
+    // + ajuste de dias futuros (mais destaque)
 
-    // Ajusta opacidade baseado no estado
-    if (widget.isToday && !widget.isSelected) {
-      backgroundColor = AppColors.cardBackground.withOpacity(0.8);
-    } else if (_isHovered &&
-        !widget.isSelected &&
-        widget.isDesktop &&
-        !isPast) {
-      backgroundColor = AppColors.cardBackground.withOpacity(0.6);
-    } else if (!isPast) {
-      backgroundColor = AppColors.cardBackground.withOpacity(0.08);
-    }
-
-    // Define a cor da borda - sempre visível para todos os dias
-    Color borderColor =
-        AppColors.border.withOpacity(0.4); // Base para todos os dias
-
-    // Ajusta a borda para estados especiais
-    if (widget.isSelected) {
-      borderColor = _getPersonalDayColor();
-    } else if (widget.isToday) {
-      borderColor = AppColors.primary.withOpacity(0.7);
-    } else if (!isPast) {
-      borderColor = AppColors.border.withOpacity(0.6);
-    }
-
-    // Define cores de texto garantindo visibilidade
+    Color backgroundColor;
+    Color borderColor;
     Color textColor;
-    if (widget.isToday && !widget.isSelected) {
-      textColor = AppColors.primary;
-    } else if (widget.isSelected && !isPast) {
-      textColor = Colors.white;
-    } else if (isPast) {
-      textColor = AppColors.tertiaryText.withOpacity(0.85);
-    } else {
-      textColor = AppColors.secondaryText;
+
+    // 1. DIAS PASSADOS (Opacos, como você gostava)
+    if (isPast) {
+      backgroundColor = AppColors.cardBackground.withOpacity(0.15); // Base
+      borderColor = AppColors.border.withOpacity(0.4); // Base
+      textColor = AppColors.tertiaryText.withOpacity(0.85); // Texto opaco
     }
+    // 2. DIAS FUTUROS (Mais destaque)
+    else {
+      // Começa com os valores de destaque pedidos
+      backgroundColor =
+          AppColors.cardBackground.withOpacity(0.3); // MAIS DESTAQUE
+      borderColor = AppColors.border.withOpacity(0.7); // MAIS DESTAQUE
+      textColor = AppColors.secondaryText; // Texto normal
+
+      // Sobrescreve para HOVER
+      if (_isHovered && widget.isDesktop) {
+        backgroundColor = AppColors.cardBackground.withOpacity(0.6);
+      }
+
+      // Sobrescreve para HOJE (não selecionado)
+      if (widget.isToday && !widget.isSelected) {
+        backgroundColor = AppColors.cardBackground.withOpacity(0.8);
+        borderColor = AppColors.primary.withOpacity(0.7);
+        textColor = AppColors.primary;
+      }
+
+      // --- INÍCIO DA CORREÇÃO (Request 1) ---
+      // Sobrescreve para SELECIONADO (borda colorida, fundo neutro)
+      if (widget.isSelected) {
+        backgroundColor =
+            AppColors.cardBackground.withOpacity(0.8); // Fundo neutro
+        borderColor = _getPersonalDayColor(); // Borda na cor do dia
+        textColor =
+            AppColors.primary; // Texto com cor de destaque (ficará bold)
+      }
+      // --- FIM DA CORREÇÃO (Request 1) ---
+    }
+    // --- FIM DA CORREÇÃO ---
 
     return MouseRegion(
       onEnter: (_) {
@@ -319,37 +395,18 @@ class _DayCellState extends State<_DayCell> {
               ),
             ),
 
-            // Marcadores (desenhados pelo _DayCell)
+            // --- INÍCIO DA CORREÇÃO (Request 2) ---
+            // Marcadores (condicionais desktop/mobile)
             if (widget.events.isNotEmpty)
               Positioned(
                 bottom: widget.isDesktop ? 8 : 4,
-                left: 0,
-                right: 0,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: widget.events
-                      .map((e) => e.type)
-                      .toSet() // Tipos únicos
-                      .map((type) {
-                        final markerSize =
-                            widget.isDesktop ? 6.0 : 5.0; // Ajustado
-                        // Aplica opacidade menor se for dia passado
-                        final markerColor = _getColorForEventType(type)
-                            .withOpacity(isPast ? 0.9 : 1.0);
-                        return Container(
-                          width: markerSize,
-                          height: markerSize,
-                          margin: const EdgeInsets.symmetric(horizontal: 1.5),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: markerColor,
-                          ),
-                        );
-                      })
-                      .take(widget.isDesktop ? 5 : 3) // Limita
-                      .toList(),
-                ),
+                left: widget.isDesktop ? 8 : 0, // Padding para barras desktop
+                right: widget.isDesktop ? 8 : 0, // Padding para barras desktop
+                child: widget.isDesktop
+                    ? _buildDesktopMarkers()
+                    : _buildMobileMarkers(),
               ),
+            // --- FIM DA CORREÇÃO (Request 2) ---
           ],
         ),
       ),

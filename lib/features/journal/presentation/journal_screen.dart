@@ -10,6 +10,9 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'journal_editor_screen.dart';
+import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/journal_filter_panel.dart';
 
@@ -125,6 +128,7 @@ class _JournalScreenState extends State<JournalScreen> {
             initialVibration: _vibrationFilter,
             onApply: onApply,
             onClearInPanel: onClear,
+            userData: widget.userData,
           ),
         ),
       ],
@@ -284,12 +288,34 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openJournalEditor(),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
-      ),
+      floatingActionButton: (widget.userData.subscription.isActive &&
+              widget.userData.subscription.plan == SubscriptionPlan.premium)
+          ? ExpandingAssistantFab(
+              onPrimary: () => _openJournalEditor(),
+              primaryIcon: Icons.book_outlined, // Ícone de diário
+              primaryTooltip: 'Nova anotação',
+              onOpenAssistant: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => AssistantPanel(userData: widget.userData),
+                );
+              },
+              onMic: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Entrada por voz chegará em breve.'),
+                  ),
+                );
+              },
+            )
+          : FloatingActionButton(
+              onPressed: () => _openJournalEditor(),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add),
+            ),
     );
   }
 }

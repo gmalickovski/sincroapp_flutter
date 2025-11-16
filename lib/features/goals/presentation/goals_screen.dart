@@ -1,5 +1,3 @@
-// lib/features/goals/presentation/goals_screen.dart
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -11,8 +9,12 @@ import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_scree
 // IMPORT ADICIONADO
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_card.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 class GoalsScreen extends StatefulWidget {
   final UserModel userData;
@@ -203,20 +205,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
                         final goals = snapshot.data!;
 
-                        // Layout em Grid para Desktop
+                        // Desktop: Masonry grid no estilo do Diário e Dashboard
                         if (isDesktop) {
-                          int crossAxisCount =
-                              (constraints.maxWidth / 350).floor().clamp(1, 4);
-                          return GridView.builder(
-                            padding: const EdgeInsets.only(top: 8, bottom: 80),
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio:
-                                  1.9, // Ajustado para card com mais info
-                            ),
+                          // 2 colunas para 900-1400px, 3 para telas maiores
+                          final int columns =
+                              constraints.maxWidth >= 1200 ? 3 : 2;
+                          return MasonryGridView.count(
+                            padding: const EdgeInsets.only(top: 8, bottom: 100),
+                            crossAxisCount: columns,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
                             itemCount: goals.length,
                             itemBuilder: (context, index) {
                               final goal = goals[index];
@@ -231,10 +229,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                             },
                           );
                         }
-                        // Layout em Lista para Mobile
+                        // Mobile: lista vertical simples
                         else {
                           return ListView.builder(
-                            padding: const EdgeInsets.only(top: 8, bottom: 80),
+                            padding: const EdgeInsets.only(top: 8, bottom: 100),
                             itemCount: goals.length,
                             itemBuilder: (context, index) {
                               final goal = goals[index];
@@ -261,13 +259,36 @@ class _GoalsScreenState extends State<GoalsScreen> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _navigateToCreateGoal, // MÉTODO ATUALIZADO
-        backgroundColor: AppColors.primary,
-        tooltip: 'Nova Jornada',
-        heroTag: 'fab_goals_screen',
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: (widget.userData.subscription.isActive &&
+              widget.userData.subscription.plan == SubscriptionPlan.premium)
+          ? ExpandingAssistantFab(
+              onPrimary:
+                  _navigateToCreateGoal, // Chama screen ou dialog conforme plataforma
+              primaryIcon: Icons.flag_outlined, // Ícone de meta
+              primaryTooltip: 'Nova Jornada',
+              onOpenAssistant: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => AssistantPanel(userData: widget.userData),
+                );
+              },
+              onMic: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Entrada por voz chegará em breve.'),
+                  ),
+                );
+              },
+            )
+          : FloatingActionButton(
+              onPressed: _navigateToCreateGoal,
+              backgroundColor: AppColors.primary,
+              tooltip: 'Nova Jornada',
+              heroTag: 'fab_goals_screen',
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
     );
   }
 
@@ -275,7 +296,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
     return const Padding(
       padding: EdgeInsets.only(top: 16, bottom: 16),
       child: Text(
-        'Meta',
+        // --- INÍCIO DA CORREÇÃO (Título) ---
+        'Metas', // Alterado de 'Meta' para 'Metas'
+        // --- FIM DA CORREÇÃO ---
         style: TextStyle(
           color: Colors.white,
           fontSize: 28,
@@ -291,44 +314,26 @@ class _GoalsScreenState extends State<GoalsScreen> {
         constraints: const BoxConstraints(maxWidth: 400),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
+          children: const [
+            Icon(
               Icons.flag_outlined,
               color: AppColors.tertiaryText,
               size: 48,
             ),
-            const SizedBox(height: 16),
-            const Text(
+            SizedBox(height: 16),
+            Text(
               'Nenhuma jornada iniciada',
               style: TextStyle(
                 color: AppColors.secondaryText,
                 fontSize: 18,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
+            SizedBox(height: 8),
+            Text(
               'Crie sua primeira jornada para começar a evoluir.',
               textAlign: TextAlign.center,
               style: TextStyle(color: AppColors.tertiaryText),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _navigateToCreateGoal, // MÉTODO ATUALIZADO
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'Criar Jornada',
-                style:
-                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            )
           ],
         ),
       ),

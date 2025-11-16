@@ -100,6 +100,10 @@ class Goal extends Equatable {
   factory Goal.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
+    // Debug: Verificar o valor bruto de targetDate vindo do Firestore
+    print(
+        'Goal.fromFirestore: ID=${doc.id}, targetDate raw value = ${data['targetDate']} (type: ${data['targetDate'].runtimeType})');
+
     DateTime? _parseDate(dynamic dateValue) {
       if (dateValue == null) return null;
       if (dateValue is Timestamp) {

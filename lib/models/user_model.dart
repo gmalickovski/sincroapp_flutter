@@ -1,6 +1,7 @@
 // lib/models/user_model.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 class UserModel {
   final String uid;
@@ -10,9 +11,12 @@ class UserModel {
   final String sobrenome;
   final String nomeAnalise;
   final String dataNasc;
-  final String plano;
+  final String plano; // DEPRECATED - usar subscription.plan
   final bool isAdmin;
-  final List<String> dashboardCardOrder; // *** NOVO CAMPO ADICIONADO ***
+  final List<String> dashboardCardOrder;
+  final List<String> dashboardHiddenCards;
+  final SubscriptionModel
+      subscription; // NOVO: gerenciamento de planos e features
 
   UserModel({
     required this.uid,
@@ -24,7 +28,9 @@ class UserModel {
     required this.dataNasc,
     required this.plano,
     required this.isAdmin,
-    required this.dashboardCardOrder, // *** NOVO CAMPO ADICIONADO ***
+    required this.dashboardCardOrder,
+    this.dashboardHiddenCards = const [],
+    required this.subscription, // NOVO
   });
 
   // Lista de ordem padrão para novos usuários ou usuários existentes
@@ -35,19 +41,40 @@ class UserModel {
         'bussola',
         'vibracaoMes',
         'vibracaoAno',
-        'arcanoRegente',
-        'arcanoVigente',
         'cicloVida',
+        // Novos cards do mapa numerológico completo (planos pagos)
+        'numeroDestino',
+        'numeroExpressao',
+        'numeroMotivacao',
+        'numeroImpressao',
+        'missaoVida',
+        'talentoOculto',
+        'respostaSubconsciente',
       ];
 
   factory UserModel.fromFirestore(DocumentSnapshot<Object?> doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    // *** LÓGICA ADICIONADA PARA O NOVO CAMPO ***
-    // Tenta ler a ordem do Firestore, se não existir, usa a ordem padrão.
+    // Lógica para dashboardCardOrder
     final List<dynamic> rawOrder =
         data['dashboardCardOrder'] ?? defaultCardOrder;
     final List<String> cardOrder = rawOrder.cast<String>();
+
+    // Lê lista de ocultos, padrão lista vazia
+    final List<String> hiddenCards = (data['dashboardHiddenCards'] is List)
+        ? List<String>.from(data['dashboardHiddenCards'])
+        : <String>[];
+
+    // Lê dados de subscription
+    SubscriptionModel subscription;
+    if (data['subscription'] != null && data['subscription'] is Map) {
+      subscription = SubscriptionModel.fromFirestore(
+        Map<String, dynamic>.from(data['subscription']),
+      );
+    } else {
+      // Cria subscription free padrão para usuários antigos
+      subscription = SubscriptionModel.free();
+    }
 
     return UserModel(
       uid: doc.id,
@@ -59,7 +86,9 @@ class UserModel {
       dataNasc: data['dataNasc'] ?? '',
       plano: data['plano'] ?? 'gratuito',
       isAdmin: data['isAdmin'] ?? false,
-      dashboardCardOrder: cardOrder, // *** NOVO CAMPO ADICIONADO ***
+      dashboardCardOrder: cardOrder,
+      dashboardHiddenCards: hiddenCards,
+      subscription: subscription,
     );
   }
 
@@ -71,14 +100,14 @@ class UserModel {
       'sobrenome': sobrenome,
       'nomeAnalise': nomeAnalise,
       'dataNasc': dataNasc,
-      'plano': plano,
       'isAdmin': isAdmin,
-      'dashboardCardOrder': dashboardCardOrder, // *** NOVO CAMPO ADICIONADO ***
+      'dashboardCardOrder': dashboardCardOrder,
+      'dashboardHiddenCards': dashboardHiddenCards,
+      'subscription': subscription.toFirestore(), // NOVO
     };
   }
 
-  // *** MÉTODO 'copyWith' ADICIONADO (BOA PRÁTICA) ***
-  // Permite criar cópias do usuário modificando apenas alguns campos
+  // Método 'copyWith' - Permite criar cópias do usuário modificando apenas alguns campos
   UserModel copyWith({
     String? uid,
     String? email,
@@ -90,6 +119,8 @@ class UserModel {
     String? plano,
     bool? isAdmin,
     List<String>? dashboardCardOrder,
+    List<String>? dashboardHiddenCards,
+    SubscriptionModel? subscription,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -102,6 +133,38 @@ class UserModel {
       plano: plano ?? this.plano,
       isAdmin: isAdmin ?? this.isAdmin,
       dashboardCardOrder: dashboardCardOrder ?? this.dashboardCardOrder,
+      dashboardHiddenCards: dashboardHiddenCards ?? this.dashboardHiddenCards,
+      subscription: subscription ?? this.subscription,
     );
   }
+
+  // --- HELPERS DE FEATURES ---
+
+  /// Verifica se pode usar recursos de IA
+  bool get canUseAI => subscription.canUseAI;
+
+  /// Verifica se pode criar uma nova meta
+  bool canCreateGoal(int currentGoalsCount) {
+    final limit = PlanLimits.getGoalsLimit(subscription.plan);
+    if (limit == -1) return true; // Ilimitado
+    return currentGoalsCount < limit;
+  }
+
+  /// Verifica se tem acesso a numerologia avançada
+  bool get hasAdvancedNumerology =>
+      PlanLimits.hasFeature(subscription.plan, 'advanced_numerology');
+
+  /// Verifica se pode customizar dashboard
+  bool get canCustomizeDashboard =>
+      PlanLimits.hasFeature(subscription.plan, 'dashboard_customization');
+
+  /// Verifica se tem acesso a integrações
+  bool get hasIntegrations =>
+      PlanLimits.hasFeature(subscription.plan, 'integrations');
+
+  /// Nome amigável do plano
+  String get planDisplayName => PlanLimits.getPlanName(subscription.plan);
+
+  /// Sugestões de IA restantes
+  int get aiSuggestionsRemaining => subscription.aiSuggestionsRemaining;
 }

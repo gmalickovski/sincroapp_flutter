@@ -48,4 +48,16 @@ class AuthRepository {
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
   }
+
+  // Envia email de redefinição de senha
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (e) {
+      // Repassa para a UI decidir a mensagem
+      throw e;
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

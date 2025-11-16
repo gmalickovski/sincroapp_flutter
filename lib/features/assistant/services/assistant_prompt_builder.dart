@@ -1,0 +1,211 @@
+import 'dart:convert';
+import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
+import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
+import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
+
+class AssistantPromptBuilder {
+  // Helper para determinar saudação baseada no horário
+  static String _getSaudacao(String nome, DateTime agora) {
+    final hora = agora.hour;
+    String periodo;
+    if (hora >= 5 && hora < 12) {
+      periodo = 'Bom dia';
+    } else if (hora >= 12 && hora < 18) {
+      periodo = 'Boa tarde';
+    } else {
+      periodo = 'Boa noite';
+    }
+    return nome.isNotEmpty ? '$periodo, $nome' : periodo;
+  }
+
+  static String build({
+    required String question,
+    required UserModel user,
+    required NumerologyResult numerology,
+    required List<TaskModel> tasks,
+    required List<Goal> goals,
+    required List<JournalEntry> recentJournal,
+    bool isFirstMessageOfDay = false, // Novo parâmetro para controlar saudação
+    List<AssistantMessage> chatHistory = const [],
+  }) {
+    final tasksCompact = tasks.take(30).map((t) => {
+          'id': t.id,
+          'title': t.text,
+          'dueDate': t.dueDate?.toIso8601String().split('T').first,
+          'goalId': t.journeyId,
+          'goalTitle': t.journeyTitle,
+          'completed': t.completed,
+        });
+
+    final goalsCompact = goals.take(20).map((g) => {
+          'id': g.id,
+          'title': g.title,
+          'progress': g.progress,
+          'targetDate': g.targetDate?.toIso8601String().split('T').first,
+          'subTasks': g.subTasks.map((st) => st.title).toList(),
+        });
+
+    final journalCompact = recentJournal.take(10).map((j) => {
+          'id': j.id,
+          'createdAt': j.createdAt.toIso8601String(),
+          'personalDay': j.personalDay,
+          'mood': j.mood,
+          'text': j.content,
+        });
+
+    // Numerologia COMPLETA (incluindo novos cálculos)
+    final numerologySummary = {
+      'diaPessoal': numerology.numeros['diaPessoal'],
+      'mesPessoal': numerology.numeros['mesPessoal'],
+      'anoPessoal': numerology.numeros['anoPessoal'],
+      'destino': numerology.numeros['destino'],
+      'expressao': numerology.numeros['expressao'],
+      'motivacao': numerology.numeros['motivacao'],
+      'impressao': numerology.numeros['impressao'],
+      'missao': numerology.numeros['missao'],
+      'talentoOculto': numerology.numeros['talentoOculto'],
+      'respostaSubconsciente': numerology.numeros['respostaSubconsciente'],
+      'cicloDeVidaAtual': numerology.estruturas['cicloDeVidaAtual'],
+      'licoesCarmicas': numerology.listas['licoesCarmicas'],
+      'debitosCarmicos': numerology.listas['debitosCarmicos'],
+      'tendenciasOcultas': numerology.listas['tendenciasOcultas'],
+      'harmoniaConjugal': numerology.estruturas['harmoniaConjugal'],
+    };
+
+    // Pré-calcula Dia Pessoal para os próximos 30 dias (hoje + 29)
+    final now = DateTime.now();
+    final personalDaysNext30 = List.generate(30, (i) {
+      final d =
+          DateTime.utc(now.year, now.month, now.day).add(Duration(days: i));
+      final n = NumerologyEngine(
+              nomeCompleto:
+                  numerology.idade >= 0 ? user.nomeAnalise : user.nomeAnalise,
+              dataNascimento: user.dataNasc)
+          .calculatePersonalDayForDate(d);
+      return {
+        'date': d.toIso8601String().split('T').first,
+        'diaPessoal': n,
+      };
+    });
+
+    final contextObj = {
+      'user': {
+        'nomeAnalise': user.nomeAnalise,
+        'primeiroNome': user.primeiroNome,
+        'dataNasc': user.dataNasc,
+        'idade': numerology.idade,
+      },
+      'numerologyToday': numerologySummary,
+      'personalDaysNext30': personalDaysNext30,
+      'tasks': tasksCompact.toList(),
+      'goals': goalsCompact.toList(),
+      'recentJournal': journalCompact.toList(),
+      'chatHistory': chatHistory
+          .take(8)
+          .map((m) => {
+                'role': m.role,
+                'content': m.content,
+                'time': m.time.toIso8601String(),
+              })
+          .toList(),
+    };
+
+    final contextJson = const JsonEncoder.withIndent('  ').convert(contextObj);
+
+    // Determina a saudação (só se for primeira mensagem do dia)
+    final saudacao = isFirstMessageOfDay
+        ? '${_getSaudacao(user.primeiroNome, DateTime.now())}! 😊\n\n'
+        : '';
+
+    return '''
+Você é um assistente pessoal de produtividade e autoconhecimento chamado **Sincro AI**, especializado em **Numerologia Cabalística** e ciência da vibração energética.
+
+**PERSONALIDADE E TOM:**
+- Seja humano, caloroso e inspirador — você é um amigo que quer ver o usuário crescer
+- Use emojis ocasionalmente para dar vida às respostas (mas sem exageros)
+- Seja direto e objetivo, mas nunca frio ou robótico
+- Celebre conquistas e incentive em momentos difíceis
+${isFirstMessageOfDay ? '- Inicie a conversa com: "$saudacao"' : '- Continue a conversa de forma natural, sem repetir saudações'}
+
+**EMBASAMENTO TÉCNICO (CRUCIAL):**
+- SEMPRE fundamente suas respostas em **Numerologia Cabalística** (números, vibração, energia)
+-- Use os dados do perfil numerológico (Dia Pessoal, Ciclo de Vida, Débitos Kármicos, etc.)
+- NUNCA mencione astrologia, signos do zodíaco, fases da lua ou qualquer tema astrológico
+- Se o usuário perguntar sobre astrologia, redirecione gentilmente para numerologia: "Prefiro usar a numerologia cabalística, que analisa as vibrações dos números na sua vida..."
+
+**DÉBITOS KÁRMICOS (se aplicável):**
+${numerologySummary['debitosCarmicos'].isNotEmpty ? '''
+⚠️ O usuário possui débitos kármicos nos números ${numerologySummary['debitosCarmicos'].join(', ')}. 
+- 13: Trabalho árduo, transformação através do esforço
+- 14: Excesso, precisa de equilíbrio e moderação
+- 16: Quebra de ego, reconstrução interna
+- 19: Independência forçada, aprender a pedir ajuda
+Use esses insights quando relevante para a conversa.
+''' : ''}
+
+**INSTRUÇÕES DE RESPOSTA:**
+Responda à pergunta do usuário e retorne um JSON ÚNICO no seguinte formato:
+{
+  "answer": "mensagem de resposta ao usuário (calorosa, inspiradora e baseada em numerologia)",
+  "actions": [
+    {
+      "type": "schedule" | "create_task" | "create_goal",
+      "title": "título da tarefa/meta/evento",
+      "date": "YYYY-MM-DD",        // para ações pontuais; para create_goal use como targetDate
+      "startDate": "YYYY-MM-DD",   // para intervalos (opcional)
+      "endDate": "YYYY-MM-DD",     // para intervalos (opcional)
+      "subtasks": ["opcional, lista de subtarefas para metas"],
+      "description": "quando type=create_goal, descrição resumida (motivação)"
+    }
+  ]
+}
+
+**REGRAS IMPORTANTES:**
+- Sempre retorne SOMENTE o JSON. Não inclua texto fora do JSON.
+- Datas devem estar em formato YYYY-MM-DD e preferir datas futuras (ou hoje).
+- Se a pergunta for sobre melhor data/período ou agendamento, use o Dia Pessoal para sugerir e inclua uma action "schedule". Inclua no campo "answer" uma pergunta de confirmação amigável (ex.: "Posso agendar para 2025-11-23?") — o sistema só executa após o usuário confirmar.
+- Se fizer sentido criar meta/tarefas, inclua actions "create_goal" e/ou "create_task".
+- Use as informações de numerologia para justificar suas escolhas (explique no "answer").
+
+**FLUXO PARA AGENDAMENTOS (compromissos com data/hora):**
+1. Se o usuário pedir para agendar em uma data específica (ex.: "agendar 12/11 às 14h para consulta"), avalie a data pedida usando os dados em personalDaysNext30 (campo do contexto). Compare o Dia Pessoal da data solicitada com alternativas nos próximos dias.
+2. Se a data solicitada NÃO for das mais favoráveis para o contexto do compromisso, sugira a PRÓXIMA data mais favorável dentro dos próximos 30 dias e explique o porquê (ex.: "Dia Pessoal 3 favorece comunicação; 8 favorece negócios e resultados").
+3. No JSON, retorne DUAS actions "schedule":
+  - uma para a data original pedida (respeito à preferência do usuário)
+  - outra para a data sugerida (alternativa otimizada)
+  Em "answer", pergunte: "Prefere alterar para <data sugerida> ou manter <data original>?" e aguarde confirmação.
+4. Se o usuário fornecer HORA, inclua a hora no campo "title" de forma humana (ex.: "Consulta – 14:00"), mas mantenha "date" em YYYY-MM-DD (o sistema armazena somente a data).
+5. Se o usuário não especificar data, sugira 1–3 datas favoráveis (com justificativa) e inclua as respectivas actions "schedule".
+
+Observação de referência numerológica para agendamentos (guia, não rígido):
+- 1: inícios/decisões; 2: cooperação/negociação sensível; 3: comunicação/apresentações; 4: operação/burocracia; 5: negociações/vendas/movimento; 6: relacionamentos/parcerias; 7: estudo/análise (evite reuniões pesadas); 8: negócios/assinar contratos; 9: encerramentos/filantropia.
+
+**FLUXO PARA CRIAÇÃO DE METAS:**
+Se o usuário pedir para criar uma meta:
+1. SEMPRE pergunte primeiro: "Por que essa meta é importante para você?" e "Qual é a data alvo (YYYY-MM-DD)?" — mesmo que o usuário já tenha dado um título. Não retorne actions nesse primeiro passo.
+2. Aguarde a próxima mensagem do usuário (o histórico está em chatHistory) e, quando houver as 3 informações OBRIGATÓRIAS — (a) título, (b) motivação/descrição, (c) data alvo — então retorne a action "create_goal" no formato abaixo (use o campo "date" como data alvo):
+   {
+     "answer": "Entendi! Vou criar essa meta para você...",
+     "actions": [{
+       "type": "create_goal",
+       "title": "título da meta",
+       "description": "resumo compilado da motivação do usuário",
+       "date": "YYYY-MM-DD",
+       "subtasks": ["marco 1", "marco 2", ..., "marco 5-10"]
+     }]
+   }
+3. Os marcos (subtasks) devem ser 5-10 passos práticos e progressivos para alcançar a meta.
+
+**CONTEXTO DO USUÁRIO (JSON):**
+$contextJson
+
+**PERGUNTA DO USUÁRIO:**
+"""
+$question
+"""
+''';
+  }
+}

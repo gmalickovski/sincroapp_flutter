@@ -9,7 +9,11 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 
 class DayDetailPanel extends StatelessWidget {
-  final DateTime? selectedDay;
+  // --- INÍCIO DA CORREÇÃO (Refatoração) ---
+  // Alterado de 'DateTime?' para 'DateTime' pois agora garantimos
+  // que um dia sempre estará selecionado na tela principal.
+  final DateTime selectedDay;
+  // --- FIM DA CORREÇÃO ---
   final int? personalDayNumber;
   final List<dynamic> events;
   final bool isDesktop;
@@ -25,7 +29,10 @@ class DayDetailPanel extends StatelessWidget {
 
   const DayDetailPanel({
     super.key,
-    this.selectedDay,
+    // --- INÍCIO DA CORREÇÃO (Refatoração) ---
+    // 'selectedDay' agora é obrigatório (required) e não-nulo.
+    required this.selectedDay,
+    // --- FIM DA CORREÇÃO ---
     this.personalDayNumber,
     required this.events,
     this.isDesktop = false,
@@ -42,12 +49,13 @@ class DayDetailPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (selectedDay == null) {
-      return _buildEmptyStateDesktop(); // Sempre mostra estado vazio, independente do layout
-    }
+    // --- INÍCIO DA CORREÇÃO (Refatoração) ---
+    // A verificação "if (selectedDay == null)" foi REMOVIDA.
+    // O widget agora pressupõe que 'selectedDay' é válido.
+    // --- FIM DA CORREÇÃO ---
 
     final formattedDate = toBeginningOfSentenceCase(
-        DateFormat("EEEE, 'dia' d", 'pt_BR').format(selectedDay!));
+        DateFormat("EEEE, 'dia' d", 'pt_BR').format(selectedDay));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,7 +68,7 @@ class DayDetailPanel extends StatelessWidget {
               Expanded(
                 // Garante que a data não estoure
                 child: Text(
-                  formattedDate!,
+                  formattedDate, // Removido '!' desnecessário
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,
@@ -138,7 +146,8 @@ class DayDetailPanel extends StatelessWidget {
 
   // Estados vazios (inalterados)
   Widget _buildEmptyStateDesktop() {
-    // Implementação do estado vazio para desktop (inalterada)
+    // Esta função não é mais chamada pela lógica (selectedDay == null),
+    // mas pode ser útil se você quiser usá-la quando 'events.isEmpty'
     return const Center(
       child: Text(
         'Selecione um dia',

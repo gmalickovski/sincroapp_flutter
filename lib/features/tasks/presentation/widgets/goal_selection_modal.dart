@@ -143,7 +143,7 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
                             horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.track_changes_outlined,
+                            const Icon(Icons.flag_outlined,
                                 color: AppColors.secondaryText),
                             const SizedBox(width: 12),
                             Expanded(

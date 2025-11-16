@@ -1,10 +1,11 @@
 // lib/features/goals/presentation/create_goal_screen.dart
+import 'dart:async'; // IMPORT ADICIONADO (para TimeoutException)
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-// IMPORT ADICIONADO
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -45,18 +46,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
 
   final _firestoreService = FirestoreService();
 
-  // *** MÉTODO _pickDate ATUALIZADO ***
   Future<void> _pickDate() async {
-    // Esconde o teclado antes de abrir o seletor de data
     FocusScope.of(context).unfocus();
 
-    // Substitui o showDatePicker nativo pelo seu Dialog customizado
     final pickedDate = await showDialog<DateTime>(
       context: context,
       builder: (context) {
         return CustomEndDatePickerDialog(
           userData: widget.userData,
-          // Use o dia atual por padrão (ou a data alvo já selecionada)
           initialDate: _targetDate ?? DateTime.now(),
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
@@ -68,54 +65,135 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       setState(() {
         _targetDate = pickedDate;
       });
+      debugPrint('CreateGoalScreen: Data selecionada: $_targetDate');
+    } else {
+      debugPrint(
+          'CreateGoalScreen: Nenhuma data selecionada (pickedDate é null)');
     }
   }
 
+  // --- MÉTODO _handleSave ATUALIZADO ---
   Future<void> _handleSave() async {
-    if (!_formKey.currentState!.validate() ||
-        _isSaving ||
-        _targetDate == null) {
-      if (_targetDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('Por favor, defina uma data alvo para sua jornada.'),
-          ),
-        );
-      }
+    // Fecha qualquer teclado virtual e remove foco dos campos antes de salvar
+    FocusScope.of(context).unfocus();
+    // 1. Validação do formulário
+    if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    setState(() => _isSaving = true);
+    // 1.1 Checagem de limite de metas por plano
+    if (widget.goalToEdit == null) {
+      // Só checa ao criar nova meta
+      int maxGoals = 1;
+      final plan = widget.userData.subscription.plan;
+      if (plan.toString().contains('despertar')) {
+        maxGoals = 5;
+      } else if (plan.toString().contains('sinergia')) {
+        maxGoals = 99999; // ilimitado
+      }
+      // Busca número atual de metas do usuário
+      final goalsSnapshot =
+          await FirestoreService().getActiveGoals(widget.userData.uid);
+      if (goalsSnapshot.length >= maxGoals) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red,
+            content: Text(maxGoals == 99999
+                ? 'Você já atingiu o limite de metas.'
+                : 'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
+          ),
+        );
+        return;
+      }
+    }
 
-    final dataToSave = {
-      'title': _titleController.text.trim(),
-      'description': _descriptionController.text.trim(),
-      'targetDate':
-          _targetDate != null ? Timestamp.fromDate(_targetDate!) : null,
-      'progress': 0,
-      'createdAt': Timestamp.now(),
-      'userId': widget.userData.uid,
-    };
+    // 2. Validação da data (movida para cima)
+    if (_targetDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Por favor, defina uma data alvo para sua jornada.'),
+        ),
+      );
+      return;
+    }
+
+    // 3. Prevenir cliques duplos
+    if (_isSaving) {
+      return;
+    }
+
+    // 4. Iniciar o estado de carregamento
+    setState(() => _isSaving = true);
+    bool isSuccessful = false; // Flag para controlar o bloco 'finally'
 
     try {
+      // Define um tempo limite para a operação de banco de dados
+      const Duration firestoreTimeout = Duration(seconds: 15);
+
       if (widget.goalToEdit != null) {
-        await _firestoreService.updateGoal(Goal(
-          id: widget.goalToEdit!.id,
-          title: _titleController.text.trim(),
-          description: _descriptionController.text.trim(),
-          targetDate: _targetDate,
-          progress: widget.goalToEdit!.progress,
-          userId: widget.userData.uid,
-          createdAt: widget.goalToEdit!.createdAt,
-          subTasks: widget.goalToEdit!.subTasks,
-        ));
+        // Editando jornada existente
+        await _firestoreService
+            .updateGoal(Goal(
+              id: widget.goalToEdit!.id,
+              title: _titleController.text.trim(),
+              description: _descriptionController.text.trim(),
+              targetDate: _targetDate,
+              progress: widget.goalToEdit!.progress,
+              userId: widget.userData.uid,
+              createdAt: widget.goalToEdit!.createdAt,
+              subTasks: widget.goalToEdit!.subTasks,
+            ))
+            .timeout(firestoreTimeout); // Adiciona o timeout
       } else {
-        await _firestoreService.addGoal(widget.userData.uid, dataToSave);
+        // Criando nova jornada
+        final dataToSave = {
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'targetDate': Timestamp.fromDate(_targetDate!), // Já verificado
+          'progress': 0,
+          'createdAt': Timestamp.now(),
+          'userId': widget.userData.uid,
+          'subTasks': [], // Seu fix (correto)
+        };
+        debugPrint(
+            'CreateGoalScreen: Salvando nova meta com targetDate: $_targetDate');
+        debugPrint('CreateGoalScreen: dataToSave = $dataToSave');
+        await _firestoreService
+            .addGoal(widget.userData.uid, dataToSave)
+            .timeout(firestoreTimeout); // Adiciona o timeout
       }
-      if (mounted) Navigator.of(context).pop();
+
+      // 5. Sucesso: marcar como sucesso e fechar a tela
+      isSuccessful = true;
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
+    } on FirebaseException catch (e) {
+      // Erro específico do Firebase (ex: regras de segurança)
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade400,
+            content:
+                Text('Erro de Firebase: ${e.message ?? "Tente novamente."}'),
+          ),
+        );
+      }
+    } on TimeoutException {
+      // Erro de Timeout (provavelmente o que está acontecendo)
+      // Os logs do ConnectivityManager sugerem isso.
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade400,
+            content: const Text(
+                'Não foi possível conectar. Verifique sua internet e tente novamente.'),
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _isSaving = false);
+      // Outro erro inesperado
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -126,8 +204,16 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           ),
         );
       }
+    } finally {
+      // 6. Bloco Finally: SEMPRE será executado.
+      // Se a operação NÃO foi bem-sucedida, paramos o loading
+      // e reativamos o botão.
+      if (mounted && !isSuccessful) {
+        setState(() => _isSaving = false);
+      }
     }
   }
+  // --- FIM DA ATUALIZAÇÃO ---
 
   @override
   void dispose() {
@@ -178,14 +264,18 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       ),
       body: Form(
         key: _formKey,
+        autovalidateMode: AutovalidateMode.disabled,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 100.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 16),
               TextFormField(
                 controller: _titleController,
+                autofillHints: null, // Desabilita autofill
+                enableSuggestions: false,
+                autocorrect: false,
+                enableInteractiveSelection: true,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -209,6 +299,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _descriptionController,
+                autofillHints: null, // Desabilita autofill
+                enableSuggestions: false,
+                autocorrect: false,
                 style: const TextStyle(color: Colors.white, fontSize: 15),
                 maxLines: 5,
                 minLines: 3,
@@ -230,13 +323,13 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              // *** SELETOR DE DATA (agora chama o _pickDate atualizado) ***
               Material(
-                // Usei a cor de fundo do Card, mas pode ser transparente
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(8),
                 child: FormField<DateTime>(
                   validator: (value) {
+                    // A validação agora é feita no _handleSave
+                    // mas mantemos o feedback visual de erro
                     if (_targetDate == null) {
                       return 'Por favor, defina uma data alvo para sua meta';
                     }
@@ -315,7 +408,6 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   },
                 ),
               ),
-              const SizedBox(height: 100), // Espaço para o botão flutuante
             ],
           ),
         ),
@@ -326,7 +418,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         child: SizedBox(
           width: double.infinity,
           child: FloatingActionButton.extended(
-            onPressed: _handleSave,
+            onPressed: _isSaving ? null : _handleSave, // Desativa no loading
             label: _isSaving
                 ? const CustomLoadingSpinner()
                 : Text(
@@ -336,7 +428,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
             icon: _isSaving ? null : const Icon(Icons.check),
-            backgroundColor: AppColors.primary,
+            backgroundColor: _isSaving
+                ? AppColors.primary.withOpacity(0.5)
+                : AppColors.primary, // Feedback visual de desativado
             foregroundColor: Colors.white,
           ),
         ),

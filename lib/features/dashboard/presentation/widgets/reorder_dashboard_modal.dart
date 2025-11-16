@@ -11,30 +11,103 @@ const Map<String, Map<String, dynamic>> _cardDisplayData = {
     'icon': Icons.flag_outlined
   },
   'focusDay': {'name': 'Foco do Dia', 'icon': Icons.check_circle_outline},
-  'vibracaoDia': {'name': 'Vibração do Dia', 'icon': Icons.sunny},
+  'vibracaoDia': {'name': 'Dia Pessoal', 'icon': Icons.sunny},
   'bussola': {'name': 'Bússola de Atividades', 'icon': Icons.explore_outlined},
-  'vibracaoMes': {'name': 'Vibração do Mês', 'icon': Icons.nightlight_round},
-  'vibracaoAno': {'name': 'Vibração do Ano', 'icon': Icons.star_border},
-  'arcanoRegente': {
-    'name': 'Arcano Regente',
-    'icon': Icons.shield_moon_outlined
-  },
-  'arcanoVigente': {'name': 'Arcano Vigente', 'icon': Icons.shield_moon},
+  'vibracaoMes': {'name': 'Mês Pessoal', 'icon': Icons.nightlight_round},
+  'vibracaoAno': {'name': 'Ano Pessoal', 'icon': Icons.star_border},
   'cicloVida': {'name': 'Ciclo de Vida', 'icon': Icons.repeat},
+  'diaNatalicio': {'name': 'Dia Natalício', 'icon': Icons.cake},
+  // Insights diários da IA (premium)
+  'assistantInsights': {
+    'name': 'Insight Diário (IA)',
+    'icon': Icons.lightbulb_outline,
+  },
+  // Novos cards numerológicos (planos pagos)
+  'numeroDestino': {
+    'name': 'Número de Destino',
+    'icon': Icons.explore_outlined,
+  },
+  'numeroExpressao': {
+    'name': 'Número de Expressão',
+    'icon': Icons.face_outlined,
+  },
+  'numeroMotivacao': {
+    'name': 'Número da Motivação',
+    'icon': Icons.favorite_border,
+  },
+  'numeroImpressao': {
+    'name': 'Número de Impressão',
+    'icon': Icons.visibility_outlined,
+  },
+  'numeroPsiquico': {
+    'name': 'Número Psíquico',
+    'icon': Icons.bubble_chart_outlined,
+  },
+  'missaoVida': {
+    'name': 'Missão de Vida',
+    'icon': Icons.flag_outlined,
+  },
+  'talentoOculto': {
+    'name': 'Talento Oculto',
+    'icon': Icons.auto_awesome,
+  },
+  'aptidoesProfissionais': {
+    'name': 'Aptidões Profissionais',
+    'icon': Icons.work_outline,
+  },
+  'respostaSubconsciente': {
+    'name': 'Resposta Subconsciente',
+    'icon': Icons.psychology_outlined,
+  },
+  // Listas e relacionamentos
+  'licoesCarmicas': {
+    'name': 'Lições Kármicas',
+    'icon': Icons.menu_book_outlined,
+  },
+  'debitosCarmicos': {
+    'name': 'Débitos Kármicos',
+    'icon': Icons.balance_outlined,
+  },
+  'tendenciasOcultas': {
+    'name': 'Tendências Ocultas',
+    'icon': Icons.visibility_off_outlined,
+  },
+  'desafios': {
+    'name': 'Desafios',
+    'icon': Icons.warning_amber_outlined,
+  },
+  'momentosDecisivos': {
+    'name': 'Momentos Decisivos',
+    'icon': Icons.timelapse,
+  },
+  'harmoniaConjugal': {
+    'name': 'Harmonia Conjugal',
+    'icon': Icons.favorite_border,
+  },
+  'diasFavoraveis': {
+    'name': 'Dias Favoráveis',
+    'icon': Icons.event_available,
+  },
 };
 
 class ReorderDashboardModal extends StatefulWidget {
   final String userId;
   final List<String> initialOrder;
+  final List<String> initialHidden;
   final ScrollController? scrollController;
   final Function(bool success) onSaveComplete;
+  // Opcional: permite passar a lista de chaves disponíveis no dashboard atual
+  // (se não fornecida, o modal usa todo o catálogo de _cardDisplayData)
+  final List<String>? availableKeys;
 
   const ReorderDashboardModal({
     super.key,
     required this.userId,
     required this.initialOrder,
+    this.initialHidden = const [],
     this.scrollController,
     required this.onSaveComplete,
+    this.availableKeys,
   });
 
   @override
@@ -45,12 +118,26 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
   late List<String> _currentOrder;
   final FirestoreService _firestoreService = FirestoreService();
   bool _isLoading = false;
+  late Set<String> _hidden; // controla cards ocultos durante a edição
 
   @override
   void initState() {
     super.initState();
     _currentOrder = List.from(widget.initialOrder);
+    // 1) Mantém apenas IDs conhecidos no catálogo
     _currentOrder.removeWhere((id) => !_cardDisplayData.containsKey(id));
+    // 2) Garante que TODOS os cards do catálogo (ou os disponíveis informados)
+    //    apareçam no modal, adicionando os que não constam na ordem salva.
+    final List<String> catalog =
+        widget.availableKeys ?? _cardDisplayData.keys.toList();
+    for (final id in catalog) {
+      if (_cardDisplayData.containsKey(id) && !_currentOrder.contains(id)) {
+        _currentOrder.add(id);
+      }
+    }
+    // 3) Filtra o conjunto de ocultos para conter apenas IDs válidos
+    _hidden = {...widget.initialHidden};
+    _hidden.removeWhere((id) => !_cardDisplayData.containsKey(id));
   }
 
   Future<void> _onSave() async {
@@ -62,13 +149,14 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     if (!isMountedAtStart) return;
 
     setState(() => _isLoading = true);
-    bool success = false;
     try {
       print("ReorderModal: Chamando Firestore update...");
       await _firestoreService.updateUserDashboardOrder(
           widget.userId, _currentOrder);
+      // Persiste os cartões ocultos
+      await _firestoreService.updateUserDashboardHiddenCards(
+          widget.userId, _hidden.toList());
       print("ReorderModal: Firestore update finalizado com sucesso.");
-      success = true;
       if (mounted) {
         print("ReorderModal: Chamando onSaveComplete(true).");
         widget.onSaveComplete(true);
@@ -79,7 +167,6 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     } catch (e, stackTrace) {
       print("ReorderModal: Erro durante save: $e");
       print(stackTrace);
-      success = false;
       if (mounted) {
         print("ReorderModal: Mostrando SnackBar de erro.");
         messenger.showSnackBar(SnackBar(
@@ -113,22 +200,27 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                 color: AppColors.border.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(2)),
           ),
-          // Título e Fechar
+          // Título centralizado e Fechar
           Padding(
             padding:
                 const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                const Text('Reordenar Dashboard',
+                const Text('Organizar Dashboard',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                IconButton(
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: IconButton(
                     icon:
                         const Icon(Icons.close, color: AppColors.secondaryText),
-                    onPressed: () => widget.onSaveComplete(false))
+                    onPressed: () => widget.onSaveComplete(false),
+                    tooltip: 'Fechar',
+                  ),
+                ),
               ],
             ),
           ),
@@ -136,6 +228,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
           // Lista
           Flexible(
             child: ReorderableListView.builder(
+              buildDefaultDragHandles: false,
               scrollController: widget.scrollController,
               padding: const EdgeInsets.symmetric(vertical: 8.0),
               itemCount: _currentOrder.length,
@@ -144,24 +237,59 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                 final cardData = _cardDisplayData[cardId] ??
                     {'name': cardId, 'icon': Icons.drag_indicator};
 
-                // ================== INÍCIO DA CORREÇÃO ==================
-                // Retorna o ListTile diretamente e coloca a Key nele.
-                // Removemos o wrapper Material.
+                final bool isHidden = _hidden.contains(cardId);
+
+                // Item com ícone do card, título, botão de ocultar e alça de arrastar
                 return ListTile(
-                  key: ObjectKey(cardId), // <<<--- KEY AQUI
-                  leading:
-                      Icon(cardData['icon'], color: AppColors.secondaryText),
+                  key: ValueKey(cardId),
+                  leading: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Handle de arraste (6 pontos) – só inicia drag ao tocar nele
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: Icon(
+                          Icons.drag_indicator,
+                          color: AppColors.secondaryText
+                              .withOpacity(isHidden ? 0.35 : 0.8),
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        cardData['icon'],
+                        color: isHidden
+                            ? AppColors.secondaryText.withOpacity(0.4)
+                            : AppColors.secondaryText,
+                      ),
+                    ],
+                  ),
                   title: Text(
                     cardData['name'],
-                    style: const TextStyle(color: AppColors.primaryText),
+                    style: TextStyle(
+                      color: AppColors.primaryText
+                          .withOpacity(isHidden ? 0.5 : 1.0),
+                    ),
                   ),
-                  trailing: ReorderableDragStartListener(
-                    index: index,
-                    child: const Icon(Icons.drag_handle,
-                        color: AppColors.secondaryText),
+                  trailing: IconButton(
+                    tooltip: isHidden ? 'Mostrar card' : 'Ocultar card',
+                    icon: Icon(
+                      isHidden
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                      color: isHidden ? AppColors.secondaryText : Colors.white,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        if (isHidden) {
+                          _hidden.remove(cardId);
+                        } else {
+                          _hidden.add(cardId);
+                        }
+                      });
+                    },
                   ),
                 );
-                // ================== FIM DA CORREÇÃO ==================
               },
               onReorder: (oldIndex, newIndex) {
                 setState(() {

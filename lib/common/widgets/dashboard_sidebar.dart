@@ -5,6 +5,8 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
+import 'package:sincro_app_flutter/features/admin/presentation/admin_screen.dart';
 
 class DashboardSidebar extends StatelessWidget {
   final bool isExpanded;
@@ -27,7 +29,8 @@ class DashboardSidebar extends StatelessWidget {
       {'icon': Icons.calendar_today_outlined, 'label': 'Agenda'},
       {'icon': Icons.book_outlined, 'label': 'Diário de Bordo'},
       {'icon': Icons.check_box_outlined, 'label': 'Foco do Dia'},
-      {'icon': Icons.track_changes_outlined, 'label': 'Jornadas'},
+      // Metas/Jornadas: troca ícone de "alvo" para "bandeira" (flag)
+      {'icon': Icons.flag_outlined, 'label': 'Jornadas'},
     ];
 
     return AnimatedContainer(
@@ -65,6 +68,19 @@ class DashboardSidebar extends StatelessWidget {
               child: const Divider(color: Color(0x804B5563), height: 1),
             ),
             const SizedBox(height: 8),
+            // Admin - apenas se for admin
+            if (userData.isAdmin)
+              _buildNavItem(
+                context: context,
+                icon: Icons.admin_panel_settings_outlined,
+                text: 'Admin',
+                index: 97,
+                onTap: () {
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => AdminScreen(userData: userData),
+                  ));
+                },
+              ),
             _buildNavItem(
               context: context,
               icon: Icons.settings_outlined,
@@ -82,7 +98,58 @@ class DashboardSidebar extends StatelessWidget {
               text: 'Sair',
               index: 99,
               isLogout: true,
-              onTap: () async {/* ... Lógica de confirmação e logout ... */},
+              onTap: () async {
+                // Confirmação simples antes de sair
+                final shouldLogout = await showDialog<bool>(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    backgroundColor: const Color(0xFF0F1623),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    title: const Text(
+                      'Sair da conta?',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    content: const Text(
+                      'Você tem certeza que deseja sair?',
+                      style: TextStyle(color: Color(0xFF9CA3AF)),
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(true),
+                        child: const Text('Sair'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (shouldLogout != true) return;
+
+                try {
+                  await AuthRepository().signOut();
+                  if (!context.mounted) return;
+                  // Limpa a pilha de rotas e leva para a tela de Login
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(
+                      builder: (_) => const LoginScreen(),
+                    ),
+                    (route) => false,
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: Colors.redAccent,
+                      content: Text('Erro ao sair: $e'),
+                    ),
+                  );
+                }
+              },
             ),
             const SizedBox(height: 20),
           ],

@@ -1,0 +1,21 @@
+# Não versionar credenciais
+serviceAccountKey.json
+
+# Node modules
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# PM2
+.pm2/
+logs/
+pids/
+
+# Ambiente
+.env
+.env.local
+.env.*.local
+
+# Sistema
+.DS_Store
+Thumbs.db

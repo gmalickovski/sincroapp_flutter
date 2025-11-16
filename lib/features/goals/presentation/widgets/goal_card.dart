@@ -1,6 +1,4 @@
-// lib/features/goals/presentation/widgets/goal_card.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
@@ -32,59 +30,7 @@ class _GoalCardState extends State<GoalCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Se tivermos userId, escutamos as tasks da meta para calcular progresso
-    final FirestoreService _firestoreService = FirestoreService();
-
-    Widget progressWidget(int progress, String? formattedDate) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '$progress%',
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              if (formattedDate != null)
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.calendar_today_outlined,
-                      color: AppColors.tertiaryText,
-                      size: 14,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Até $formattedDate',
-                      style: const TextStyle(
-                        color: AppColors.tertiaryText,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: progress / 100.0,
-            backgroundColor: AppColors.background.withOpacity(0.7),
-            color: AppColors.primary,
-            minHeight: 10,
-            borderRadius: BorderRadius.circular(5),
-          ),
-        ],
-      );
-    }
-
-    final formattedDate = widget.goal.targetDate != null
-        ? DateFormat('dd/MM/yyyy', 'pt_BR').format(widget.goal.targetDate!)
-        : null;
+    final firestore = FirestoreService();
 
     // *** LÓGICA DA BORDA DE HOVER ***
     final Color borderColor;
@@ -131,146 +77,296 @@ class _GoalCardState extends State<GoalCard> {
             splashColor: AppColors.primary.withOpacity(0.1),
             highlightColor: AppColors.primary.withOpacity(0.1),
             hoverColor: Colors.transparent, // DESLIGA O HOVER PADRÃO
-            child: Stack(
-              // Stack para posicionar o botão de deletar
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool isMobile =
+                      MediaQuery.of(context).size.width < 768.0;
+                  final double diameter = isMobile ? 220 : 260;
+                  final double headerHeight =
+                      diameter + 24; // espaço para centralizar o círculo
+
+                  return Stack(
                     children: [
-                      // Título (com espaço para o botão de deletar)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 30.0), // Espaço
-                        child: Text(
-                          widget.goal.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                      // Botão de opções no canto superior direito
+                      if (widget.onDelete != null || widget.onEdit != null)
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: PopupMenuButton<String>(
+                            icon: const Icon(
+                              Icons.more_vert,
+                              color: AppColors.secondaryText,
+                              size: 20,
+                            ),
+                            tooltip: 'Opções',
+                            color: AppColors.cardBackground,
+                            position: PopupMenuPosition.under,
+                            itemBuilder: (context) {
+                              final items = <PopupMenuEntry<String>>[];
+                              if (widget.onEdit != null) {
+                                items.add(const PopupMenuItem<String>(
+                                  value: 'edit',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined,
+                                          color: Colors.white, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Editar',
+                                          style:
+                                              TextStyle(color: Colors.white)),
+                                    ],
+                                  ),
+                                ));
+                              }
+                              if (widget.onDelete != null) {
+                                items.add(const PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline,
+                                          color: Colors.redAccent, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Excluir',
+                                          style:
+                                              TextStyle(color: Colors.white)),
+                                    ],
+                                  ),
+                                ));
+                              }
+                              return items;
+                            },
+                            onSelected: (value) {
+                              if (value == 'edit' && widget.onEdit != null) {
+                                widget.onEdit!();
+                              } else if (value == 'delete' &&
+                                  widget.onDelete != null) {
+                                widget.onDelete!();
+                              }
+                            },
                           ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      // Descrição
-                      if (widget.goal.description.isNotEmpty)
-                        Text(
-                          widget.goal.description,
-                          style: const TextStyle(
-                            color: AppColors.secondaryText,
-                            fontSize: 14,
-                            height: 1.5,
+
+                      // Conteúdo do card
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Círculo centralizado
+                          SizedBox(
+                            height: headerHeight,
+                            child: Center(
+                              child: StreamBuilder<List<TaskModel>>(
+                                stream: widget.userId.isNotEmpty
+                                    ? firestore.getTasksForGoalStream(
+                                        widget.userId, widget.goal.id)
+                                    : null,
+                                builder: (context, snapshot) {
+                                  final tasks =
+                                      snapshot.data ?? const <TaskModel>[];
+                                  final int total = tasks.isNotEmpty
+                                      ? tasks.length
+                                      : widget.goal.subTasks.length;
+                                  final int done = tasks.isNotEmpty
+                                      ? tasks.where((t) => t.completed).length
+                                      : widget.goal.subTasks
+                                          .where((t) => t.isCompleted)
+                                          .length;
+                                  final double percent = total > 0
+                                      ? (done / total).clamp(0.0, 1.0)
+                                      : (widget.goal.progress / 100)
+                                          .clamp(0.0, 1.0);
+
+                                  return _ProgressCircle(
+                                    diameter: diameter,
+                                    percent: percent,
+                                    done: done,
+                                    total: total,
+                                    targetDate: widget.goal.targetDate,
+                                  );
+                                },
+                              ),
+                            ),
                           ),
-                          maxLines: 3, // Ocupa mais espaço se for desktop
-                          overflow: TextOverflow.ellipsis,
-                        ),
-
-                      // Spacer para empurrar o progresso para baixo
-                      // Em um ListView, isso não funciona bem,
-                      // então vamos apenas usar um SizedBox se a descrição for vazia
-                      if (widget.goal.description.isEmpty)
-                        const SizedBox(height: 24),
-
-                      const Spacer(), // Usa o espaço restante
-
-                      // Rodapé do Card (Progresso e Data) -> usa StreamBuilder para calcular igual ao GoalDetail
-                      StreamBuilder<List<TaskModel>>(
-                        stream: widget.userId.isNotEmpty
-                            ? _firestoreService.getTasksForGoalStream(
-                                widget.userId, widget.goal.id)
-                            : null,
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            final milestones = snapshot.data!;
-                            final int progress = milestones.isEmpty
-                                ? 0
-                                : (milestones.where((m) => m.completed).length /
-                                        milestones.length *
-                                        100)
-                                    .round();
-                            return progressWidget(progress, formattedDate);
-                          } else if (snapshot.hasError) {
-                            // Em caso de erro, usa o progresso armazenado no Goal
-                            return progressWidget(
-                                widget.goal.progress, formattedDate);
-                          } else if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            // Mostra o progresso salvo enquanto carrega
-                            return progressWidget(
-                                widget.goal.progress, formattedDate);
-                          } else {
-                            return progressWidget(
-                                widget.goal.progress, formattedDate);
-                          }
-                        },
+                          const SizedBox(height: 12),
+                          Text(
+                            widget.goal.title,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          if (widget.goal.description.isNotEmpty)
+                            Text(
+                              widget.goal.description,
+                              style: const TextStyle(
+                                color: AppColors.secondaryText,
+                                fontSize: 14,
+                              ),
+                              softWrap: true,
+                            ),
+                        ],
                       ),
                     ],
-                  ),
-                ),
-
-                // Menu de opções
-                if (widget.onDelete != null || widget.onEdit != null)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(
-                        Icons.more_vert,
-                        color: AppColors.secondaryText,
-                        size: 20,
-                      ),
-                      tooltip: 'Opções',
-                      color: AppColors.cardBackground,
-                      position: PopupMenuPosition.under,
-                      itemBuilder: (context) => [
-                        if (widget.onEdit != null)
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                const Icon(
-                                  Icons.edit_outlined,
-                                  color: AppColors.secondaryText,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 8),
-                                const Text('Editar',
-                                    style: TextStyle(color: Colors.white)),
-                              ],
-                            ),
-                          ),
-                        if (widget.onDelete != null)
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline,
-                                    color: Colors.red.shade400, size: 20),
-                                const SizedBox(width: 8),
-                                Text('Excluir',
-                                    style:
-                                        TextStyle(color: Colors.red.shade400)),
-                              ],
-                            ),
-                          ),
-                      ],
-                      onSelected: (value) {
-                        if (value == 'edit' && widget.onEdit != null) {
-                          widget.onEdit!();
-                        } else if (value == 'delete' &&
-                            widget.onDelete != null) {
-                          widget.onDelete!();
-                        }
-                      },
-                    ),
-                  ),
-              ],
+                  );
+                },
+              ),
             ),
           ),
         ),
       ),
     );
   }
+}
+
+// ====== UI de progresso radial (estilo dashboard) ======
+class _ProgressCircle extends StatelessWidget {
+  final double diameter;
+  final double percent; // 0..1
+  final int done;
+  final int total;
+  final DateTime? targetDate;
+
+  const _ProgressCircle({
+    required this.diameter,
+    required this.percent,
+    required this.done,
+    required this.total,
+    required this.targetDate,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Formata data alvo
+    String? formattedDate;
+    if (targetDate != null) {
+      final months = [
+        'Jan',
+        'Fev',
+        'Mar',
+        'Abr',
+        'Mai',
+        'Jun',
+        'Jul',
+        'Ago',
+        'Set',
+        'Out',
+        'Nov',
+        'Dez'
+      ];
+      final d = targetDate!;
+      formattedDate =
+          '${d.day.toString().padLeft(2, '0')} ${months[d.month - 1]} ${d.year}';
+    }
+    final int displayPercent = (percent * 100).round();
+
+    return SizedBox(
+      height: diameter,
+      width: diameter,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          SizedBox(
+            height: diameter,
+            width: diameter,
+            child: CustomPaint(painter: _RadialBasePainter()),
+          ),
+          SizedBox(
+            height: diameter,
+            width: diameter,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: percent),
+              duration: const Duration(milliseconds: 500),
+              curve: Curves.easeOut,
+              builder: (context, value, _) =>
+                  CustomPaint(painter: _RadialProgressPainter(value)),
+            ),
+          ),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('$displayPercent%',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text(total == 0 ? 'Sem marcos' : '$done de $total',
+                  style: const TextStyle(
+                      color: AppColors.secondaryText, fontSize: 14)),
+              if (formattedDate != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border:
+                        Border.all(color: AppColors.primary.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.calendar_today_outlined,
+                          color: AppColors.primary, size: 14),
+                      const SizedBox(width: 6),
+                      Text(formattedDate,
+                          style: const TextStyle(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RadialBasePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final base = Paint()
+      ..color = AppColors.border.withOpacity(0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round;
+    final c = Offset(size.width / 2, size.height / 2);
+    final r = (size.width / 2) - 8;
+    canvas.drawCircle(c, r, base);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _RadialProgressPainter extends CustomPainter {
+  final double percent;
+  _RadialProgressPainter(this.percent);
+  @override
+  void paint(Canvas canvas, Size size) {
+    final progress = Paint()
+      ..color = AppColors.primary
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 16
+      ..strokeCap = StrokeCap.round;
+    final rect = Offset.zero & size;
+    final start = -90 * 3.1415926535 / 180; // topo
+    final sweep = percent * 2 * 3.1415926535;
+    canvas.drawArc(rect.deflate(8), start, sweep, false, progress);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RadialProgressPainter old) =>
+      old.percent != percent;
 }

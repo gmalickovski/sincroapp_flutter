@@ -1,4 +1,3 @@
-// lib/features/tasks/presentation/widgets/task_item.dart
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
@@ -66,29 +65,25 @@ class TaskItem extends StatelessWidget {
       child: Container(
         width: 32, // Largura total da área de toque
         constraints: const BoxConstraints(minHeight: 32),
-        // align to top-left so checkbox circle sits at the top next to multiline text
         alignment: Alignment.topLeft,
-        margin: const EdgeInsets.only(right: 12.0, top: 4.0),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: Container(
-            width: 19, // Tamanho do círculo
-            height: 19,
-            decoration: BoxDecoration(
-              color:
-                  task.completed ? Colors.green.shade500 : Colors.transparent,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: task.completed
-                    ? Colors.green.shade500
-                    : AppColors.tertiaryText.withOpacity(0.7),
-                width: 1.5,
-              ),
+        // Alinha com a primeira linha do texto (ajustado para height 1.45)
+        margin: const EdgeInsets.only(right: 12.0, top: 2.0),
+        child: Container(
+          width: 19, // Tamanho do círculo
+          height: 19,
+          decoration: BoxDecoration(
+            color: task.completed ? Colors.green.shade500 : Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: task.completed
+                  ? Colors.green.shade500
+                  : AppColors.tertiaryText.withOpacity(0.7),
+              width: 1.5,
             ),
-            child: task.completed
-                ? const Icon(Icons.check, size: 11, color: Colors.white)
-                : null,
           ),
+          child: task.completed
+              ? const Icon(Icons.check, size: 11, color: Colors.white)
+              : null,
         ),
       ),
     );
@@ -103,10 +98,10 @@ class TaskItem extends StatelessWidget {
       width: 32, // Largura total
       constraints: const BoxConstraints(minHeight: 32),
       alignment: Alignment.topLeft,
-      margin: const EdgeInsets.only(right: 12.0, top: 2.0),
-      // Ajusta o padding para alinhar com seu círculo
-      child: Align(
-        alignment: Alignment.topLeft,
+      // Alinha com a primeira linha do texto (ajustado para compensar padding interno do Checkbox)
+      margin: const EdgeInsets.only(right: 8.0, top: 0.0),
+      child: Transform.scale(
+        scale: 0.9, // Reduz ligeiramente para melhor proporção
         child: Checkbox(
           value: isSelected,
           // Adiciona verificação nula
@@ -119,6 +114,8 @@ class TaskItem extends StatelessWidget {
           activeColor: AppColors.primary,
           side: const BorderSide(color: AppColors.border, width: 2),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
         ),
       ),
     );
@@ -127,6 +124,10 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: Verificar os dados da tarefa
+    print(
+        "DEBUG TaskItem: '${task.text}' - personalDay: ${task.personalDay}, dueDate: ${task.dueDate}, createdAt: ${task.createdAt}");
+
     // Determina se os ícones/pílula devem ser mostrados BASEADO NAS FLAGS e nos dados da task
     final bool shouldShowGoalIcon = showGoalIconFlag &&
         task.journeyTitle != null &&
@@ -137,6 +138,9 @@ class TaskItem extends StatelessWidget {
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
         task.personalDay! > 0;
+
+    print(
+        "DEBUG TaskItem: '${task.text}' - shouldShowPill: $shouldShowPill (flag: $showVibrationPillFlag, personalDay: ${task.personalDay})");
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;
@@ -198,22 +202,21 @@ class TaskItem extends StatelessWidget {
 
               // 2. Texto Principal
               Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 0.0),
-                  child: Text(
-                    task.text,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: task.completed
-                          ? AppColors.tertiaryText
-                          : AppColors.secondaryText,
-                      decoration: task.completed
-                          ? TextDecoration.lineThrough
-                          : TextDecoration.none,
-                      fontSize: mainFontSize,
-                      height: 1.4,
-                    ),
+                child: Text(
+                  task.text,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: task.completed
+                        ? AppColors.tertiaryText
+                        : AppColors.secondaryText,
+                    decoration: task.completed
+                        ? TextDecoration.lineThrough
+                        : TextDecoration.none,
+                    fontSize: mainFontSize,
+                    height: 1.45, // Line-height padrão de leitura confortável
+                    letterSpacing:
+                        0.15, // Espaçamento de letra para melhor legibilidade
                   ),
                 ),
               ),
@@ -224,11 +227,10 @@ class TaskItem extends StatelessWidget {
                   shouldShowTagIcon ||
                   shouldShowPill)
                 ConstrainedBox(
-                  constraints:
-                      BoxConstraints(maxWidth: 120), // Aumentado um pouco
+                  constraints: const BoxConstraints(maxWidth: 120),
                   child: Padding(
-                    padding:
-                        const EdgeInsets.only(top: verticalAlignmentPadding),
+                    // Alinha com a primeira linha do texto (considerando height 1.45)
+                    padding: const EdgeInsets.only(left: 8.0, top: 1.0),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -237,45 +239,47 @@ class TaskItem extends StatelessWidget {
                         if (shouldShowDateIcon)
                           Padding(
                             padding:
-                                const EdgeInsets.fromLTRB(3.0, 2.0, 3.0, 0.0),
+                                const EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.calendar_today_outlined,
                               size: iconIndicatorSize,
-                              color: AppColors.tertiaryText.withOpacity(0.8),
+                              color: const Color(
+                                  0xFFFB923C), // orange-400 (laranja como no chip)
                             ),
                           ),
                         if (shouldShowGoalIcon)
                           Padding(
                             padding:
-                                const EdgeInsets.fromLTRB(3.0, 2.0, 3.0, 0.0),
+                                const EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.flag_outlined,
                               size: iconIndicatorSize,
-                              color: Colors.cyanAccent.withOpacity(0.8),
+                              color: const Color(
+                                  0xFF06B6D4), // cyan-500 (ciano como no chip)
                             ),
                           ),
                         if (shouldShowTagIcon)
                           Padding(
                             padding:
-                                const EdgeInsets.fromLTRB(3.0, 2.0, 3.0, 0.0),
+                                const EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.label_outline,
                               size: iconIndicatorSize,
-                              color: Colors.purple.shade200.withOpacity(0.9),
+                              color: const Color(
+                                  0xFFEC4899), // pink-500 (rosa/magenta como no chip)
                             ),
                           ),
                         if (shouldShowPill)
                           Padding(
                             padding: EdgeInsets.only(
-                                left: (shouldShowDateIcon ||
-                                        shouldShowGoalIcon ||
-                                        shouldShowTagIcon)
-                                    ? 6.0
-                                    : 0,
-                                top: 2.0),
+                              left: (shouldShowDateIcon ||
+                                      shouldShowGoalIcon ||
+                                      shouldShowTagIcon)
+                                  ? 6.0
+                                  : 0,
+                            ),
                             child: VibrationPill(
                               vibrationNumber: task.personalDay!,
-                              // Use the medium/compact pill (24x24) as requested
                               type: VibrationPillType.compact,
                             ),
                           ),

@@ -55,17 +55,41 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           userData: widget.userData,
           userId: widget.userData.uid,
 
+          // --- INÍCIO DA CORREÇÃO (Problema 1 e 2) ---
+          preselectedGoal: widget.initialGoal, // Passa a meta atual
+          initialDueDate: DateTime.now(), // Passa a data de hoje para a pílula
+          // --- FIM DA CORREÇÃO ---
+
           // Usa a nova assinatura com ParsedTask
           onAddTask: (ParsedTask parsedTask) {
+            // --- INÍCIO DA CORREÇÃO (Refatoração Dia Pessoal) ---
+            DateTime? finalDueDateUtc = parsedTask.dueDate?.toUtc();
+            DateTime dateForPersonalDay;
+
+            if (finalDueDateUtc != null) {
+              dateForPersonalDay = finalDueDateUtc;
+            } else {
+              // Se não tem data, usa a data atual para calcular o dia pessoal
+              final now = DateTime.now().toLocal();
+              dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+            }
+
+            // Calcula o dia pessoal usando a data determinada
+            final int? finalPersonalDay =
+                _calculatePersonalDay(dateForPersonalDay);
+            // --- FIM DA CORREÇÃO ---
+
             final newTask = TaskModel(
               id: '',
               text: parsedTask.cleanText,
               createdAt: DateTime.now().toUtc(),
-              dueDate: parsedTask.dueDate?.toUtc() ?? DateTime.now().toUtc(),
+              dueDate: finalDueDateUtc, // Usa a data do picker (pode ser nula)
               journeyId: widget.initialGoal.id, // Garante associação
               journeyTitle: widget.initialGoal.title, // Garante associação
               tags: parsedTask.tags,
-              // TODO: Adicionar lógica para pegar o personalDay se necessário aqui
+              // --- INÍCIO DA CORREÇÃO (Refatoração Dia Pessoal) ---
+              personalDay: finalPersonalDay, // Salva o dia pessoal calculado
+              // --- FIM DA CORREÇÃO ---
             );
 
             // Usa o _firestoreService existente
@@ -222,6 +246,33 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
   // --- FIM DA ATUALIZAÇÃO ---
   // ---
+
+  // --- INÍCIO DA CORREÇÃO (Refatoração Dia Pessoal) ---
+  /// Calcula o Dia Pessoal para uma data específica.
+  /// Retorna null se os dados do usuário não estiverem disponíveis ou a data for nula.
+  int? _calculatePersonalDay(DateTime? date) {
+    if (widget.userData.dataNasc.isEmpty ||
+        widget.userData.nomeAnalise.isEmpty ||
+        date == null) {
+      return null; // Retorna nulo se não pode calcular
+    }
+
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+
+    try {
+      // Garante que estamos usando UTC
+      final dateUtc = date.toUtc();
+      final day = engine.calculatePersonalDayForDate(dateUtc);
+      return (day > 0) ? day : null;
+    } catch (e) {
+      print("Erro ao calcular dia pessoal para $date: $e");
+      return null;
+    }
+  }
+  // --- FIM DA CORREÇÃO ---
 
   // Build principal (Sua lógica original, sem alterações estruturais)
   @override

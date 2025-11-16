@@ -1,7 +1,6 @@
 // lib/features/calendar/presentation/calendar_screen.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:collection/collection.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -18,6 +17,9 @@ import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/day_detail_panel.dart';
+import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 
 class CalendarScreen extends StatefulWidget {
@@ -35,7 +37,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final AuthRepository _authRepository = AuthRepository();
 
   DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
+
+  // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
+  // Alterado de 'DateTime? _selectedDay;' para 'late DateTime _selectedDay;'
+  // Isso garante ao compilador que _selectedDay nunca será nulo
+  // quando o DayDetailPanel for chamado, pois ele é inicializado no initState.
+  late DateTime _selectedDay;
+  // --- FIM DA CORREÇÃO ---
+
   late final String _userId;
 
   Map<DateTime, List<CalendarEvent>> _events = {}; // Chave UTC
@@ -61,6 +70,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.initState();
     final now = DateTime.now();
     _focusedDay = DateTime(now.year, now.month, now.day);
+    // Esta linha satisfaz o 'late' de _selectedDay
     _selectedDay = DateTime(now.year, now.month, now.day);
     // Garante que userId seja pego com segurança
     _userId = _authRepository.getCurrentUser()?.uid ?? '';
@@ -127,8 +137,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
       _onTasksCreatedAtUpdated([]);
     });
 
-    if (isInitialLoad && mounted && _selectedDay != null) {
-      _updatePersonalDay(_selectedDay!);
+    if (isInitialLoad && mounted) {
+      // _selectedDay não é mais nulo aqui
+      _updatePersonalDay(_selectedDay);
     }
     if (isInitialLoad && mounted) {
       // O setState será chamado pelo _processEvents
@@ -254,13 +265,37 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return _rawEvents[localMidnightKey] ?? [];
   }
 
+  /// Calcula o Dia Pessoal para uma data específica (mesma lógica do FocoDoDiaScreen)
+  int? _calculatePersonalDay(DateTime? date) {
+    if (widget.userData.dataNasc.isEmpty ||
+        widget.userData.nomeAnalise.isEmpty ||
+        date == null) {
+      return null;
+    }
+
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+
+    try {
+      final dateUtc = date.toUtc();
+      final day = engine.calculatePersonalDayForDate(dateUtc);
+      return (day > 0) ? day : null;
+    } catch (e) {
+      debugPrint("Erro ao calcular dia pessoal para $date: $e");
+      return null;
+    }
+  }
+
   // ---
   // --- ATUALIZAÇÃO PRINCIPAL AQUI ---
   // ---
   void _openAddTaskModal({TaskModel? task}) async {
     // Usa _selectedDay como data pré-selecionada SE não estiver editando
-    final preselectedDateMidnight = (task == null && _selectedDay != null)
-        ? DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day)
+    // Não precisamos mais verificar se _selectedDay é nulo aqui.
+    final preselectedDateMidnight = (task == null)
+        ? DateTime(_selectedDay.year, _selectedDay.month, _selectedDay.day)
         : null; // Se estiver editando (task != null), não pré-seleciona data
 
     // Verifica se userId é válido antes de abrir
@@ -290,16 +325,41 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Verifica se está editando ou adicionando
           if (task != null) {
             // --- LÓGICA DE EDIÇÃO ---
+            // Calcula o personalDay para a data da tarefa atualizada
+            DateTime? finalDueDateUtc;
+            DateTime dateForPersonalDay;
+
+            if (parsedTask.dueDate != null) {
+              final dateLocal = parsedTask.dueDate!.toLocal();
+              finalDueDateUtc =
+                  DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
+              dateForPersonalDay = finalDueDateUtc;
+            } else if (task.dueDate != null) {
+              final dateLocal = task.dueDate!.toLocal();
+              finalDueDateUtc =
+                  DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
+              dateForPersonalDay = finalDueDateUtc;
+            } else {
+              final now = DateTime.now().toLocal();
+              dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+              finalDueDateUtc = null;
+            }
+
+            final int? finalPersonalDay =
+                _calculatePersonalDay(dateForPersonalDay);
+
             // Cria um TaskModel atualizado usando copyWith
             final updatedTask = task.copyWith(
               text: parsedTask.cleanText,
-              // Usa a data do parser OU a data original da tarefa se o parser não encontrar
-              dueDate: parsedTask.dueDate?.toUtc() ?? task.dueDate?.toUtc(),
-              journeyId: parsedTask.journeyId, // Usa o ID da jornada do parser
-              journeyTitle:
-                  parsedTask.journeyTitle, // Usa o título da jornada do parser
-              tags: parsedTask.tags, // Usa as tags do parser
-              // TODO: Atualizar personalDay se necessário
+              dueDate: finalDueDateUtc,
+              journeyId: parsedTask.journeyId,
+              journeyTitle: parsedTask.journeyTitle,
+              tags: parsedTask.tags,
+              reminderTime: parsedTask.reminderTime,
+              recurrenceType: parsedTask.recurrenceRule.type,
+              recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
+              recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
+              personalDay: finalPersonalDay,
             );
             // Chama o método de atualização do Firestore
             _firestoreService
@@ -315,18 +375,46 @@ class _CalendarScreenState extends State<CalendarScreen> {
               }
             });
           } else {
-            // --- LÓGICA DE ADIÇÃO ---
+            // --- LÓGICA DE ADIÇÃO (mesma do FocoDoDiaScreen) ---
+            DateTime? finalDueDateUtc;
+            DateTime dateForPersonalDay;
+
+            if (parsedTask.dueDate != null) {
+              final dateLocal = parsedTask.dueDate!.toLocal();
+              finalDueDateUtc =
+                  DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
+              dateForPersonalDay = finalDueDateUtc;
+            } else if (preselectedDateMidnight != null) {
+              // Usa a data pré-selecionada do calendário
+              finalDueDateUtc = DateTime.utc(
+                preselectedDateMidnight.year,
+                preselectedDateMidnight.month,
+                preselectedDateMidnight.day,
+              );
+              dateForPersonalDay = finalDueDateUtc;
+            } else {
+              // Se não tem data, usa hoje para calcular o personalDay
+              final now = DateTime.now().toLocal();
+              dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+              finalDueDateUtc = null;
+            }
+
+            final int? finalPersonalDay =
+                _calculatePersonalDay(dateForPersonalDay);
+
             final newTask = TaskModel(
               id: '',
               text: parsedTask.cleanText,
               createdAt: DateTime.now().toUtc(),
-              // Usa a data do parser OU a data pré-selecionada se o parser não encontrar
-              dueDate: parsedTask.dueDate?.toUtc() ??
-                  preselectedDateMidnight?.toUtc(),
+              dueDate: finalDueDateUtc,
               journeyId: parsedTask.journeyId,
               journeyTitle: parsedTask.journeyTitle,
               tags: parsedTask.tags,
-              // TODO: Adicionar lógica para pegar o personalDay se necessário
+              reminderTime: parsedTask.reminderTime,
+              recurrenceType: parsedTask.recurrenceRule.type,
+              recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
+              recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
+              personalDay: finalPersonalDay,
             );
             _firestoreService.addTask(_userId, newTask).catchError((error) {
               print("Erro ao ADICIONAR tarefa pelo calendário: $error");
@@ -364,8 +452,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
       setState(() {
         _focusedDay = localMidnightFocusedDay;
         _isChangingMonth = true;
-        _selectedDay = null;
-        _personalDayNumber = null;
+
+        // --- INÍCIO DA CORREÇÃO (PROBLEMA 2) ---
+        // As linhas abaixo foram removidas para manter o painel de detalhes
+        // visível ao trocar de mês.
+        // _selectedDay = null;
+        // _personalDayNumber = null;
+        // --- FIM DA CORREÇÃO ---
       });
 
       // Aguarda a inicialização dos streams
@@ -444,13 +537,35 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 },
               ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddTaskModal,
-        backgroundColor: AppColors.primary,
-        tooltip: 'Nova Tarefa',
-        heroTag: 'calendar_fab',
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
+      floatingActionButton: (widget.userData.subscription.isActive &&
+              widget.userData.subscription.plan == SubscriptionPlan.premium)
+          ? ExpandingAssistantFab(
+              onPrimary: _openAddTaskModal,
+              primaryIcon: Icons.add_task,
+              primaryTooltip: 'Nova Tarefa',
+              onOpenAssistant: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) => AssistantPanel(userData: widget.userData),
+                );
+              },
+              onMic: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Entrada por voz chegará em breve.'),
+                  ),
+                );
+              },
+            )
+          : FloatingActionButton(
+              onPressed: _openAddTaskModal,
+              backgroundColor: AppColors.primary,
+              tooltip: 'Nova Tarefa',
+              heroTag: 'calendar_fab',
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
     );
   }
 
@@ -524,17 +639,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
               width: 1, thickness: 1, color: AppColors.border),
           Expanded(
             flex: 4,
+            // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
+            // _selectedDay agora é um 'DateTime' não-nulo,
+            // então podemos passá-lo diretamente.
             child: DayDetailPanel(
               selectedDay: _selectedDay,
               personalDayNumber: _personalDayNumber,
-              events: _selectedDay != null
-                  ? _getRawEventsForDay(_selectedDay!)
-                  : [],
+              events: _getRawEventsForDay(_selectedDay),
               isDesktop: false,
               onAddTask: _openAddTaskModal,
               onToggleTask: _onToggleTask,
               onTaskTap: _handleTaskTap,
             ),
+            // --- FIM DA CORREÇÃO ---
           ),
         ],
       );
@@ -583,17 +700,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           Expanded(
+            // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
+            // _selectedDay agora é um 'DateTime' não-nulo,
+            // então podemos passá-lo diretamente.
             child: DayDetailPanel(
               selectedDay: _selectedDay,
               personalDayNumber: _personalDayNumber,
-              events: _selectedDay != null
-                  ? _getRawEventsForDay(_selectedDay!)
-                  : [],
+              events: _getRawEventsForDay(_selectedDay),
               isDesktop: false,
               onAddTask: _openAddTaskModal,
               onToggleTask: _onToggleTask,
               onTaskTap: _handleTaskTap,
             ),
+            // --- FIM DA CORREÇÃO ---
           ),
         ],
       );
@@ -668,17 +787,19 @@ class _CalendarScreenState extends State<CalendarScreen> {
           flex: 1,
           child: Padding(
             padding: const EdgeInsets.fromLTRB(16, 24, 24, 24),
+            // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
+            // _selectedDay agora é um 'DateTime' não-nulo,
+            // então podemos passá-lo diretamente.
             child: DayDetailPanel(
               selectedDay: _selectedDay,
               personalDayNumber: _personalDayNumber,
-              events: _selectedDay != null
-                  ? _getRawEventsForDay(_selectedDay!)
-                  : [],
+              events: _getRawEventsForDay(_selectedDay),
               isDesktop: true,
               onAddTask: _openAddTaskModal,
               onToggleTask: _onToggleTask,
               onTaskTap: _handleTaskTap,
             ),
+            // --- FIM DA CORREÇÃO ---
           ),
         ),
       ],

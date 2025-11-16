@@ -1,6 +1,4 @@
-// lib/features/tasks/presentation/widgets/task_input_modal.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
@@ -92,28 +90,59 @@ class _TaskInputModalState extends State<TaskInputModal> {
       _selectedGoalId = widget.taskToEdit!.journeyId;
       _selectedGoalTitle = widget.taskToEdit!.journeyTitle;
     } else {
+      // Lógica para NOVAS tarefas
       _textController.text = widget.initialTaskText ?? '';
       _selectedTime = null;
       _selectedRecurrenceRule = RecurrenceRule();
       _selectedTags = []; // Começa vazio
+      _selectedDate = null; // Garante que o pill de data não apareça por padrão
 
+      // --- INÍCIO DA CORREÇÃO (Problema 1 e 2) ---
+      // Lógica condicional:
+      // Se uma meta é pré-selecionada, estamos na tela de metas.
+      // Se não, estamos no calendário ou foco.
       if (widget.preselectedGoal != null) {
+        // --- LÓGICA DA TELA DE METAS ---
         _selectedGoalId = widget.preselectedGoal!.id;
         _selectedGoalTitle = widget.preselectedGoal!.title;
-      }
 
-      // --- INÍCIO DA MUDANÇA: Define _selectedDate em vez de adicionar ao texto ---
-      if (widget.initialDueDate != null) {
-        initialDateForPill = widget.initialDueDate!.toLocal();
-        _selectedDate = initialDateForPill; // Define o estado
+        // --- INÍCIO DA CORREÇÃO ---
+        // As linhas que adicionavam a tag automaticamente foram REMOVIDAS.
+        // --- FIM DA CORREÇÃO ---
+
+        // Usa a data inicial APENAS para a pílula de vibração (Problema 1)
+        if (widget.initialDueDate != null) {
+          initialDateForPill = widget.initialDueDate!.toLocal();
+        }
+        // _selectedDate continua nulo, então o pill de data não aparece
+      } else {
+        // --- LÓGICA DO CALENDÁRIO / FOCO ---
+        // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
+        if (widget.initialDueDate != null) {
+          initialDateForPill = widget.initialDueDate!.toLocal();
+          // Define o pill de data APENAS se for uma data diferente de hoje
+          final today = DateTime.now();
+          final todayMidnight = DateTime(today.year, today.month, today.day);
+          final initialMidnight = DateTime(
+            initialDateForPill.year,
+            initialDateForPill.month,
+            initialDateForPill.day,
+          );
+
+          // Só mostra o pill se for uma data futura ou passada (não hoje)
+          if (!isSameDay(initialMidnight, todayMidnight)) {
+            _selectedDate = initialDateForPill;
+          }
+          // Se for hoje, _selectedDate continua null (pill não aparece)
+        }
       }
-      // --- FIM DA MUDANÇA ---
+      // --- FIM DA CORREÇÃO ---
     }
 
     // --- REMOVIDO: _textController.addListener(_onTextChanged) ---
 
-    // Define a data para a pílula de vibração (usa data selecionada ou hoje)
-    _selectedDateForPill = _selectedDate ?? DateTime.now();
+    // Define a data para a pílula de vibração (usa data selecionada ou a data inicial)
+    _selectedDateForPill = _selectedDate ?? initialDateForPill;
     if (widget.userData != null) {
       _updateVibrationForDate(_selectedDateForPill);
     }
@@ -436,8 +465,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     // Pill da Data
                     if (_selectedDate != null)
                       _buildPill(
-                        label: DateFormat('dd/MM/yy', 'pt_BR')
-                            .format(_selectedDate!),
+                        label: _formatDateReadable(_selectedDate!),
                         icon: Icons.calendar_today_rounded,
                         color: Colors.orangeAccent,
                         onDeleted: () {
@@ -583,5 +611,44 @@ class _TaskInputModalState extends State<TaskInputModal> {
         ),
       ),
     );
+  }
+
+  // Formata data de forma legível: "12 de Dezembro" ou "12 de Dezembro de 2026"
+  // Inclui horário se _selectedTime estiver definido
+  String _formatDateReadable(DateTime date) {
+    final now = DateTime.now();
+    final months = [
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro'
+    ];
+
+    final day = date.day;
+    final month = months[date.month - 1];
+
+    String dateStr;
+    if (date.year == now.year) {
+      dateStr = '$day de $month';
+    } else {
+      dateStr = '$day de $month de ${date.year}';
+    }
+
+    // Adiciona horário se houver
+    if (_selectedTime != null) {
+      final hh = _selectedTime!.hour.toString().padLeft(2, '0');
+      final mm = _selectedTime!.minute.toString().padLeft(2, '0');
+      dateStr += ' às $hh:$mm';
+    }
+
+    return dateStr;
   }
 }

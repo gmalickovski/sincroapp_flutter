@@ -1,0 +1,35 @@
+{
+  "name": "sincroapp-notification-service",
+  "version": "1.0.0",
+  "description": "Serviço de notificações push para SincroApp (FCM)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "pm2:start": "pm2 start index.js --name sincroapp-notifications",
+    "pm2:stop": "pm2 stop sincroapp-notifications",
+    "pm2:restart": "pm2 restart sincroapp-notifications",
+    "pm2:logs": "pm2 logs sincroapp-notifications",
+    "pm2:delete": "pm2 delete sincroapp-notifications"
+  },
+  "keywords": [
+    "firebase",
+    "fcm",
+    "notifications",
+    "push",
+    "sincroapp"
+  ],
+  "author": "gmalickovski",
+  "license": "MIT",
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

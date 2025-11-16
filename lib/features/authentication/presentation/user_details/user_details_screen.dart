@@ -4,8 +4,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
-import 'package:sincro_app_flutter/models/user_model.dart'; // Import necessário
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/app/routs/app_router.dart';
 
 class UserDetailsScreen extends StatefulWidget {
   final User firebaseUser;
@@ -25,7 +27,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   @override
   void initState() {
     super.initState();
-    _nomeAnaliseController.text = widget.firebaseUser.displayName ?? '';
+    // Deixa o campo em branco - nome de nascimento pode ser diferente do cadastro
   }
 
   Future<void> _saveDetails() async {
@@ -41,7 +43,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
     // Validação simples da data (DD/MM/AAAA)
     final dateRegex = RegExp(r'^\d{2}/\d{2}/\d{4}$');
-    if (!_dataNascController.text.contains(dateRegex)) {
+    if (!dateRegex.hasMatch(_dataNascController.text)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Formato de data inválido. Use DD/MM/AAAA.'),
@@ -62,29 +64,30 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       final sobrenome =
           nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
-      // ================== INÍCIO DA CORREÇÃO ==================
       final newUser = UserModel(
         uid: widget.firebaseUser.uid,
         email: widget.firebaseUser.email ?? '',
-        photoUrl: widget.firebaseUser.photoURL, // Adicionado photoUrl
+        photoUrl: widget.firebaseUser.photoURL,
         primeiroNome: primeiroNome,
         sobrenome: sobrenome,
-        nomeAnalise: _nomeAnaliseController.text.trim(), // Adicionado trim()
-        dataNasc: _dataNascController.text.trim(), // Adicionado trim()
-        plano: 'gratuito', // Por defeito
+        nomeAnalise: _nomeAnaliseController.text.trim(),
+        dataNasc: _dataNascController.text.trim(),
+        plano: 'gratuito',
         isAdmin: false,
-        dashboardCardOrder:
-            UserModel.defaultCardOrder, // Adicionada ordem padrão
+        dashboardCardOrder: UserModel.defaultCardOrder,
+        subscription: SubscriptionModel.free(), // Plano gratuito padrão
       );
-      // ================== FIM DA CORREÇÃO ==================
 
       await _firestoreService.saveUserData(newUser);
-      // O AuthCheck em main.dart irá detectar a mudança nos dados do usuário
-      // (especificamente nomeAnalise não vazio) e navegar para o Dashboard.
-      // Não precisamos navegar manualmente aqui.
-
-      // Se chegarmos aqui, o save foi bem-sucedido. O AuthCheck fará o resto.
-      // A tela de loading (_step = 3) continuará visível até o AuthCheck reconstruir.
+      // Navegação direta para o Dashboard após salvar com sucesso.
+      // Mantemos o AuthCheck como plano B, mas forçamos a navegação
+      // para evitar ficar preso no estado de carregamento em algumas plataformas (web).
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.dashboard,
+          (route) => false,
+        );
+      }
     } catch (e) {
       // Se der erro, volta ao formulário e mostra mensagem
       if (mounted) {
@@ -144,21 +147,39 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         return Column(
           key: const ValueKey('step1'),
           children: [
+            const Text(
+              'Passo 1 de 2',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.tertiaryText,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 8),
             const Text('Bem-vindo(a) ao SincroApp!',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.secondaryAccent)),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               'Sua jornada de autoconhecimento começa agora.\nPara calcularmos sua rota numerológica pessoal, precisamos de apenas duas informações.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.secondaryText, height: 1.5),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.secondaryText,
+                  height: 1.5),
             ),
             const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => setState(() => _step = 2),
-              child: const Text('Começar'),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => setState(() => _step = 2),
+                child: const Text('Começar'),
+              ),
             ),
           ],
         );
@@ -168,16 +189,31 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           key: const ValueKey('step2'),
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const Text(
+              'Passo 2 de 2',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.tertiaryText,
+                letterSpacing: 0.2,
+              ),
+            ),
+            const SizedBox(height: 8),
             const Text('Só mais um passo!',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.secondaryAccent)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             const Text(
                 'Para personalizar sua jornada, precisamos do seu nome completo de nascimento.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.tertiaryText)),
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.tertiaryText,
+                    height: 1.5)),
             const SizedBox(height: 24),
             const Text('Seu nome completo de nascimento',
                 style: TextStyle(
@@ -241,12 +277,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             const SizedBox(height: 24),
             const Text('Calculando sua rota...',
                 style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.secondaryAccent)),
-            const SizedBox(height: 8),
-            Text('Estamos alinhando os números para você.',
-                style: TextStyle(color: AppColors.tertiaryText)),
+            const SizedBox(height: 12),
+            const Text('Estamos alinhando os números para você.',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.tertiaryText,
+                    height: 1.5)),
           ],
         );
     }

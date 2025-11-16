@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/app/routs/app_router.dart';
 
 class PlanSettingsTab extends StatelessWidget {
   final UserModel userData;
@@ -33,7 +34,10 @@ class PlanSettingsTab extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () {
-                    // Adicionar lógica para gerenciar assinatura
+                    Navigator.of(context).pushNamed(
+                      AppRoutes.subscription,
+                      arguments: {'user': userData},
+                    );
                   },
                   child: const Text('Gerenciar Assinatura'),
                 ),

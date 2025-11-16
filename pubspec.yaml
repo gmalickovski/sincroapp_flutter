@@ -41,6 +41,24 @@ dependencies:
 
   uuid: ^4.5.1
 
+  # --- INÍCIO: DEPENDÊNCIAS PARA NOTIFICAÇÕES ---
+  
+  # Notificações locais
+  flutter_local_notifications: ^18.0.1
+  
+  # Permissões do sistema
+  permission_handler: ^11.3.1
+  
+  # Fuso horário (VERSÃO ATUALIZADA)
+  timezone: ^0.10.0
+  
+  # Firebase Cloud Messaging
+  firebase_messaging: ^16.0.3 
+  
+  # --- FIM: DEPENDÊNCIAS PARA NOTIFICAÇÕES ---
+
+  # 🚀 ADICIONADO: Pacote para renderizar imagens SVG (o logo)
+  flutter_svg: ^2.0.10+1
 
 
 dev_dependencies:
@@ -49,6 +67,9 @@ dev_dependencies:
   
   flutter_lints: ^4.0.0
 
+  # 🚀 ADICIONADO: Pacote para gerar os ícones do app (Android/iOS)
+  flutter_launcher_icons: ^0.13.1
+
 flutter:
   uses-material-design: true
 
@@ -56,6 +77,24 @@ flutter:
     - assets/images/
 
   fonts:
-    - family: Inter
+    - family: Poppins
       fonts:
-        - asset: fonts/Inter-VariableFont_opsz,wght.ttf
+        - asset: fonts/Poppins-Regular.ttf
+          weight: 400
+        - asset: fonts/Poppins-SemiBold.ttf
+          weight: 600
+        - asset: fonts/Poppins-Bold.ttf
+          weight: 700
+
+# 🚀 ADICIONADO: Configuração do gerador de ícones
+# Isso diz ao pacote para usar o seu "arquivo mestre"
+# para criar todos os ícones necessários.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/icon_master_1024.png"
+  ios_remove_alpha: true # O iOS não permite transparência no ícone principal
+  web:
+    generate: true
+    image_path: "assets/images/favicon_master_512.png"
+    # Você pode adicionar mais configurações de favicon aqui se desejar

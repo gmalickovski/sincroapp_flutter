@@ -7,9 +7,14 @@ class NumerologyResult {
   final int idade;
   final Map<String, int> numeros;
   final Map<String, dynamic> estruturas;
+  final Map<String, dynamic> listas; // NOVO: lições, débitos, tendências, etc.
 
-  NumerologyResult(
-      {required this.idade, required this.numeros, required this.estruturas});
+  NumerologyResult({
+    required this.idade,
+    required this.numeros,
+    required this.estruturas,
+    required this.listas,
+  });
 }
 
 class NumerologyEngine {
@@ -40,21 +45,37 @@ class NumerologyEngine {
   }
 
   int _calcularValor(String letra) {
-    String char = letra.toUpperCase();
-    if (char == 'Ç') return 6;
-    String charNormalizado = char
-        .replaceAll('Á', 'A')
-        .replaceAll('À', 'A')
-        .replaceAll('Ã', 'A')
-        .replaceAll('Â', 'A')
-        .replaceAll('É', 'E')
-        .replaceAll('Ê', 'E')
-        .replaceAll('Í', 'I')
-        .replaceAll('Ó', 'O')
-        .replaceAll('Õ', 'O')
-        .replaceAll('Ô', 'O')
-        .replaceAll('Ú', 'U');
-    return _tabelaConversao[charNormalizado] ?? 0;
+    // Implementação simples anterior não suportava diacríticos aumentados; mantemos ajuste mestre.
+    final upper = letra.toUpperCase();
+    if (upper == 'Ç') return 6;
+    int base = _tabelaConversao[upper
+            .replaceAll('Á', 'A')
+            .replaceAll('À', 'A')
+            .replaceAll('Ã', 'A')
+            .replaceAll('Â', 'A')
+            .replaceAll('É', 'E')
+            .replaceAll('Ê', 'E')
+            .replaceAll('Í', 'I')
+            .replaceAll('Ó', 'O')
+            .replaceAll('Õ', 'O')
+            .replaceAll('Ô', 'O')
+            .replaceAll('Ú', 'U')] ??
+        0;
+    switch (upper) {
+      case 'Á':
+      case 'É':
+      case 'Í':
+      case 'Ó':
+      case 'Ú':
+        return base + 2;
+      case 'Ã':
+      case 'Õ':
+        return base + 3;
+      case 'À':
+        return base * 3;
+      default:
+        return base;
+    }
   }
 
   DateTime? _parseDate(String dateStr) {
@@ -124,39 +145,239 @@ class NumerologyEngine {
     };
   }
 
-  Map<String, dynamic> _calcularTrianguloDaVida() {
-    final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '').toUpperCase();
-    if (nomeLimpo.isEmpty)
-      return {'arcanoRegente': null, 'sequenciaCompletaArcanos': []};
-    List<int> valoresNumericos =
-        nomeLimpo.split('').map((l) => _calcularValor(l)).toList();
-    List<int> sequenciaCompletaArcanos = [];
-    for (int i = 0; i < valoresNumericos.length - 1; i++) {
-      sequenciaCompletaArcanos
-          .add(int.parse('${valoresNumericos[i]}${valoresNumericos[i + 1]}'));
-    }
-    List<int> linhaAtual = List.from(valoresNumericos);
-    while (linhaAtual.length > 1) {
-      List<int> proximaLinha = [];
-      for (int j = 0; j < linhaAtual.length - 1; j++) {
-        proximaLinha.add(_reduzirNumero(linhaAtual[j] + linhaAtual[j + 1]));
+  // REMOVIDO: Funções de Arcanos (_calcularTrianguloDaVida e _calcularArcanoAtual) – não fazem mais parte do modelo numerológico atual.
+
+  // === NOVOS MÉTODOS DE CÁLCULO (baseados no JS) ===
+
+  int _calcularNumeroExpressao() {
+    final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '');
+    int soma = nomeLimpo.split('').fold(0, (acc, l) => acc + _calcularValor(l));
+    int e = _reduzirNumero(soma, mestre: true);
+    if (e == 2 || e == 4) {
+      // Regra do mestre: somar por palavra reduzida
+      final palavras = nomeCompleto.split(RegExp(r'\s+'));
+      int totalPalavras = 0;
+      for (final p in palavras) {
+        int somaPalavra =
+            p.split('').fold(0, (acc, l) => acc + _calcularValor(l));
+        totalPalavras += _reduzirNumero(somaPalavra);
       }
-      linhaAtual = proximaLinha;
+      e = _reduzirNumero(totalPalavras);
     }
+    return e;
+  }
+
+  int _calcularNumeroMotivacao() {
+    const vogais = 'AEIOUY';
+    int soma = 0;
+    for (var letra in nomeCompleto.split('')) {
+      final char = letra.toUpperCase();
+      if (vogais.contains(char)) {
+        soma += _calcularValor(letra);
+      }
+    }
+    return _reduzirNumero(soma, mestre: true);
+  }
+
+  int _calcularNumeroImpressao() {
+    const consoantes = 'BCDFGHJKLMNPQRSTVWXYZÇ';
+    int soma = 0;
+    for (var letra in nomeCompleto.split('')) {
+      final char = letra.toUpperCase();
+      if (consoantes.contains(char)) {
+        soma += _calcularValor(letra);
+      }
+    }
+    return _reduzirNumero(soma, mestre: true);
+  }
+
+  int _calcularTalentoOculto(int motivacao, int expressao) {
+    return _reduzirNumero(motivacao + expressao);
+  }
+
+  // Número Psíquico: redução do dia de nascimento (1–9)
+  int _calcularNumeroPsiquico(DateTime dataNasc) {
+    return _reduzirNumero(dataNasc.day);
+  }
+
+  // Desafio Principal (0–8): |mês reduzido - dia reduzido|
+  // Desafios: desafio1=|mes-dia|, desafio2=|ano-dia|, principal=|d1-d2|
+  Map<String, int> _calcularDesafios(DateTime dataNasc) {
+    final diaR = _reduzirNumero(dataNasc.day);
+    final mesR = _reduzirNumero(dataNasc.month);
+    final anoR = _reduzirNumero(dataNasc.year);
+    final d1 = (mesR - diaR).abs();
+    final d2 = (anoR - diaR).abs();
+    final principal = (d1 - d2).abs();
     return {
-      'arcanoRegente': linhaAtual.isNotEmpty ? linhaAtual[0] : null,
-      'sequenciaCompletaArcanos': sequenciaCompletaArcanos
+      'desafio1': d1,
+      'desafio2': d2,
+      'desafioPrincipal': principal,
     };
   }
 
-  Map<String, dynamic> _calcularArcanoAtual(int idade, List<int> sequencia) {
-    if (sequencia.isEmpty) return {'numero': null};
-    final duracaoCicloArcano = 90 / sequencia.length;
-    final indiceArcano = (idade / duracaoCicloArcano).floor();
+  // Momentos Decisivos (Pinnacles):
+  // P1 = reduzir(mês + dia), P2 = reduzir(dia + ano),
+  // P3 = reduzir(P1 + P2), P4 = reduzir(mês + ano)
+  Map<String, dynamic> _calcularMomentosDecisivos(
+      DateTime dataNasc, int idade) {
+    final mesR = _reduzirNumero(dataNasc.month);
+    final diaR = _reduzirNumero(dataNasc.day);
+    final anoR = _reduzirNumero(dataNasc.year);
+
+    final p1 = _reduzirNumero(mesR + diaR, mestre: true);
+    final p2 = _reduzirNumero(diaR + anoR, mestre: true);
+    final p3 = _reduzirNumero(p1 + p2, mestre: true);
+    final p4 = _reduzirNumero(mesR + anoR, mestre: true);
+
+    int atual;
+    if (idade <= 36) {
+      atual = p1;
+    } else if (idade <= 45) {
+      atual = p2;
+    } else if (idade <= 54) {
+      atual = p3;
+    } else {
+      atual = p4;
+    }
+
     return {
-      'numero': indiceArcano < sequencia.length ? sequencia[indiceArcano] : null
+      'p1': p1,
+      'p2': p2,
+      'p3': p3,
+      'p4': p4,
+      'atual': atual,
     };
   }
+
+  List<int> _calcularLicoesCarmicas() {
+    final numerosPresentes = <int>{};
+    final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '');
+    for (var letra in nomeLimpo.split('')) {
+      final valor = _calcularValor(letra);
+      if (valor > 0) {
+        numerosPresentes.add(_reduzirNumero(valor));
+      }
+    }
+    final licoes = <int>[];
+    for (int i = 1; i <= 9; i++) {
+      if (!numerosPresentes.contains(i)) {
+        licoes.add(i);
+      }
+    }
+    return licoes;
+  }
+
+  List<int> _calcularDebitosCarmicos(
+      int destino, int motivacao, int expressao) {
+    final dataNasc = _parseDate(dataNascimento);
+    if (dataNasc == null) return [];
+
+    final debitos = <int>{};
+    final diaNascimento = dataNasc.day;
+
+    // Débitos kármicos diretos do dia de nascimento
+    if ([13, 14, 16, 19].contains(diaNascimento)) {
+      debitos.add(diaNascimento);
+    }
+
+    // Mapeamento: número -> débito kármico
+    const Map<int, int> mapeamento = {4: 13, 5: 14, 7: 16, 1: 19};
+
+    for (var numero in [destino, motivacao, expressao]) {
+      if (mapeamento.containsKey(numero)) {
+        debitos.add(mapeamento[numero]!);
+      }
+    }
+
+    return debitos.toList()..sort();
+  }
+
+  List<int> _calcularTendenciasOcultas() {
+    final contagem = <int, int>{};
+    final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '');
+
+    for (var letra in nomeLimpo.split('')) {
+      final valor = _calcularValor(letra);
+      if (valor > 0) {
+        final reduzido = _reduzirNumero(valor);
+        contagem[reduzido] = (contagem[reduzido] ?? 0) + 1;
+      }
+    }
+
+    final tendencias = <int>[];
+    for (int i = 1; i <= 9; i++) {
+      if ((contagem[i] ?? 0) >= 3) {
+        tendencias.add(i);
+      }
+    }
+    return tendencias..sort();
+  }
+
+  int _calcularRespostaSubconsciente() {
+    return 9 - _calcularLicoesCarmicas().length;
+  }
+
+  Map<String, dynamic> _calcularHarmoniaConjugal(int missao) {
+    const harmonias = {
+      1: {
+        'vibra': [9],
+        'atrai': [4, 8],
+        'oposto': [6, 7],
+        'passivo': [2, 3, 5]
+      },
+      2: {
+        'vibra': [8],
+        'atrai': [7, 9],
+        'oposto': [5],
+        'passivo': [1, 3, 4, 6]
+      },
+      3: {
+        'vibra': [7],
+        'atrai': [5, 6, 9],
+        'oposto': [4, 8],
+        'passivo': [1, 2]
+      },
+      4: {
+        'vibra': [6],
+        'atrai': [1, 8],
+        'oposto': [3, 5],
+        'passivo': [2, 7, 9]
+      },
+      5: {
+        'vibra': [5],
+        'atrai': [3, 9],
+        'oposto': [2, 4, 6],
+        'passivo': [1, 7, 8]
+      },
+      6: {
+        'vibra': [4],
+        'atrai': [3, 7, 9],
+        'oposto': [1, 5, 8],
+        'passivo': [2]
+      },
+      7: {
+        'vibra': [3],
+        'atrai': [2, 6],
+        'oposto': [1, 9],
+        'passivo': [4, 5, 8]
+      },
+      8: {
+        'vibra': [2],
+        'atrai': [1, 4],
+        'oposto': [3, 6],
+        'passivo': [5, 7, 9]
+      },
+      9: {
+        'vibra': [1],
+        'atrai': [2, 3, 5, 6],
+        'passivo': [4, 8]
+      },
+    };
+    return harmonias[missao] ?? {};
+  }
+
+  // === FIM DOS NOVOS MÉTODOS ===
 
   NumerologyResult? calcular() {
     final dataNascDate = _parseDate(dataNascimento);
@@ -164,6 +385,16 @@ class NumerologyEngine {
 
     final idade = _calcularIdade();
     final destino = _calcularNumeroDestino();
+    final expressao = _calcularNumeroExpressao();
+    final motivacao = _calcularNumeroMotivacao();
+    final impressao = _calcularNumeroImpressao();
+    final missao = _reduzirNumero(expressao + destino, mestre: true);
+    final talentoOculto = _calcularTalentoOculto(motivacao, expressao);
+    final respostaSubconsciente = _calcularRespostaSubconsciente();
+    final diaNatalicio = dataNascDate.day; // Dia de nascimento (1-31)
+    final numeroPsiquico = _calcularNumeroPsiquico(dataNascDate);
+    final desafios = _calcularDesafios(dataNascDate);
+
     final ciclosDeVida = _calcularCiclosDeVida(destino);
 
     Map<String, dynamic> cicloDeVidaAtual;
@@ -175,11 +406,7 @@ class NumerologyEngine {
       cicloDeVidaAtual = ciclosDeVida['ciclo3'];
     }
 
-    final triangulo = _calcularTrianguloDaVida();
-    final arcanoRegente = triangulo['arcanoRegente'];
-    final sequenciaArcanos =
-        List<int>.from(triangulo['sequenciaCompletaArcanos']);
-    final arcanoAtual = _calcularArcanoAtual(idade, sequenciaArcanos);
+    // Arcanos descontinuados: removidos do cálculo.
 
     final hoje = DateTime.now();
     final aniversarioJaPassou = hoje.month > dataNascDate.month ||
@@ -193,18 +420,47 @@ class NumerologyEngine {
         mesPessoal + _reduzirNumero(hoje.day, mestre: true),
         mestre: true);
 
+    // Momentos decisivos (pinnacles)
+    final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate, idade);
+
+    // Cálculos de listas (lições, débitos, tendências)
+    final licoesCarmicas = _calcularLicoesCarmicas();
+    final debitosCarmicos =
+        _calcularDebitosCarmicos(destino, motivacao, expressao);
+    final tendenciasOcultas = _calcularTendenciasOcultas();
+    final harmoniaConjugal = _calcularHarmoniaConjugal(missao);
+
     return NumerologyResult(
       idade: idade,
       numeros: {
         'diaPessoal': diaPessoal,
         'mesPessoal': mesPessoal,
         'anoPessoal': anoPessoal,
+        'destino': destino,
+        'expressao': expressao,
+        'motivacao': motivacao,
+        'impressao': impressao,
+        'missao': missao,
+        'talentoOculto': talentoOculto,
+        'respostaSubconsciente': respostaSubconsciente,
+        'diaNatalicio': diaNatalicio,
+        'numeroPsiquico': numeroPsiquico,
+        // Aptidões Profissionais: utilizamos o número de Expressão como base
+        'aptidoesProfissionais': expressao,
+        'desafio': desafios['desafioPrincipal'] ?? 0,
       },
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
-        'arcanoRegente': arcanoRegente,
-        'arcanoAtual': arcanoAtual,
+        'harmoniaConjugal': harmoniaConjugal,
+        'desafios': desafios,
+        'momentosDecisivos': momentosDecisivos,
+        'momentoDecisivoAtual': momentosDecisivos['atual'],
+      },
+      listas: {
+        'licoesCarmicas': licoesCarmicas,
+        'debitosCarmicos': debitosCarmicos,
+        'tendenciasOcultas': tendenciasOcultas,
       },
     );
   }
@@ -222,7 +478,6 @@ class NumerologyEngine {
     // Redução inicial dos números
     int diaNascReduzido = _reduzirNumero(dataNascUtc.day);
     int mesNascReduzido = _reduzirNumero(dataNascUtc.month);
-    int anoNascReduzido = _reduzirNumero(dataNascUtc.year);
 
     // Redução do ano atual
     int anoAtualReduzido = _reduzirNumero(utcDate.year);

@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_button.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/register/register_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -70,16 +72,18 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.star_outline,
-                    color: AppColors.secondaryAccent, size: 48),
-                const SizedBox(height: 8),
-                const Text(
-                  'SincroApp',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                SvgPicture.asset(
+                  'assets/images/sincroapp_logo_2.svg',
+                  height: 96,
+                  fit: BoxFit.contain,
                 ),
+                const SizedBox(height: 24),
                 const Text(
                   'Bem-vindo(a) de volta!',
-                  style: TextStyle(color: AppColors.tertiaryText),
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: AppColors.secondaryText,
+                  ),
                 ),
                 const SizedBox(height: 32),
                 Container(
@@ -125,8 +129,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: CustomTextButton(
-                          text: 'Esqueceu sua senha?',
-                          onPressed: () {},
+                          text: 'Esqueci minha senha',
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordScreen(),
+                              ),
+                            );
+                          },
                           color: AppColors.secondaryAccent,
                         ),
                       ),

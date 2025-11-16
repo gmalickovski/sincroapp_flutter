@@ -16,9 +16,8 @@ class AIPromptBuilder {
     VibrationContent? content;
     Map<dynamic, VibrationContent>? sourceMap;
 
-    if (type == 'arcanoRegente' || type == 'arcanoAtual') {
-      sourceMap = ContentData.vibracoes['arcanos'];
-    } else if (type == 'ciclosDeVida') {
+    // Arcanos descontinuados: removido o branch que buscava 'arcanos'.
+    if (type == 'ciclosDeVida') {
       sourceMap = ContentData.textosCiclosDeVida;
     } else {
       sourceMap = ContentData.vibracoes[type];
@@ -93,55 +92,107 @@ class AIPromptBuilder {
         : "Nenhum marco foi criado para esta meta ainda.";
     // --- FIM DA CORREÇÃO ---
 
-    // --- 2. O TEMPLATE DO PROMPT (v8 - Baseado no JS) ---
-    // Este prompt pede à IA para CALCULAR as datas
+    // --- 2. O TEMPLATE DO PROMPT (v8 - Baseado no JS - MELHORADO) ---
     return """
-    Você é um Coach de Produtividade e Estrategista Pessoal, com profundo conhecimento em numerologia.
-    Sua missão é criar um plano de ação estratégico, quebrando uma meta principal em 5 a 7 marcos NOVOS e COMPLEMENTARES, atribuindo a data ideal para cada um.
+Você é um Coach de Produtividade e Estrategista Pessoal com expertise em numerologia pitagórica.
+Sua missão é criar marcos estratégicos NOVOS, ESPECÍFICOS e COMPLEMENTARES para quebrar uma meta em etapas acionáveis.
 
-    **DOSSIÊ DO USUÁRIO:**
+═══════════════════════════════════════════════════════════════════
+📋 DOSSIÊ COMPLETO DO USUÁRIO
+═══════════════════════════════════════════════════════════════════
 
-    **1. A META:**
-    - Meta Principal: "${goal.title}"
-    - Motivação/Descrição: "${goal.description.isNotEmpty ? goal.description : "Não fornecida"}"
-    - Informações Adicionais do Usuário: "${additionalInfo.isNotEmpty ? additionalInfo : "Nenhuma"}"
+**1. A META PRINCIPAL:**
+- Título: "${goal.title}"
+- Descrição/Motivação: "${goal.description.isNotEmpty ? goal.description : "Não fornecida"}"
+${goal.targetDate != null ? '- Prazo Final Desejado: ${DateFormat('dd/MM/yyyy').format(goal.targetDate!)}' : '- Prazo: Não definido'}
+- Contexto Adicional: "${additionalInfo.isNotEmpty ? additionalInfo : "Nenhum"}"
 
-    **2. MARCOS JÁ EXISTENTES NA META (para evitar repetição):**
-    $milestonesContext
+**2. MARCOS JÁ CRIADOS (NÃO REPITA):**
+$milestonesContext
+${existingSubTasks.isNotEmpty ? '\n⚠️ CRÍTICO: Suas sugestões devem ser DIFERENTES e COMPLEMENTARES aos marcos acima.' : '✓ Primeira vez criando marcos para esta meta.'}
 
-    **3. CONTEXTO DE LONGO PRAZO (O CENÁRIO GERAL):**
-    - $anoPessoalContext
-    - $mesPessoalContext
-    - Ciclos de Vida: $cicloDeVidaContext
-    
-    **4. CONTEXTO DE CURTO PRAZO (ATIVIDADES RECENTES):**
-    - Últimas Tarefas do Usuário (em todas as metas): $tasksContext
+**3. PERFIL NUMEROLÓGICO DO USUÁRIO:**
+${user.nomeAnalise.isNotEmpty ? '- Nome de Análise: ${user.nomeAnalise}' : ''}
+- Data de Nascimento: ${user.dataNasc}
+- $anoPessoalContext
+- $mesPessoalContext
+- **Ciclos de Vida:**
+$cicloDeVidaContext
 
-    **5. FERRAMENTA PARA DATAS (A VIBRAÇÃO DO DIA):**
-    - Data de Início do Planejamento: $formattedStartDate
-    - Data de Nascimento do Usuário: ${user.dataNasc} (formato dd/MM/yyyy. use para calcular o dia pessoal de datas futuras)
-    - Guia do Dia Pessoal (Use para escolher a vibração): 
-    $diaPessoalContext
+**4. CONTEXTO DE ATIVIDADES RECENTES:**
+$tasksContext
 
-    ---
-    **SUA TAREFA ESTRATÉGICA:**
+**5. GUIA DE VIBRAÇÕES DOS DIAS PESSOAIS:**
+(Use para escolher as melhores datas para cada tipo de ação)
+$diaPessoalContext
 
-    1.  **ANÁLISE:** Primeiro, leia os "MARCOS JÁ EXISTENTES". Sua principal prioridade é NÃO sugerir marcos que sejam redundantes ou muito similares aos que já estão listados. Suas sugestões devem ser os PRÓXIMOS PASSOS lógicos.
+═══════════════════════════════════════════════════════════════════
+🎯 INSTRUÇÕES ESTRATÉGICAS
+═══════════════════════════════════════════════════════════════════
 
-    2.  **SÍNTESE DO MOMENTO:** Analise o restante do dossiê (Ano Pessoal, Mês, Ciclos) para definir o **TEMA** do plano. O usuário está num ano de inícios? De finalizações? Use isso para guiar o tom das sugestões.
+**PASSO 1 - ANÁLISE CONTEXTUAL:**
+- Leia TODOS os marcos existentes e identifique qual fase da jornada já foi coberta
+- Identifique lacunas: O que falta para completar a meta?
+- Considere o Ano e Mês Pessoal para definir o tom (expansão? consolidação? transformação?)
 
-    3.  **CRIE MARCOS NOVOS E COMPLEMENTARES:** Crie de 5 a 7 marcos que continuem o trabalho já feito. Se os marcos existentes são sobre "planejamento", sugira marcos sobre "execução". Se já existem marcos de "criação", sugira sobre "divulgação" ou "análise".
-    
-    4.  **ATRIBUA DATAS INTELIGENTES:** Para cada novo marco, encontre a data futura ideal (a partir de $formattedStartDate) usando o **Dia Pessoal** (calculado com a Data de Nascimento ${user.dataNasc}) e o **Guia do Dia Pessoal**. (Ex: Planejamento em Dia 4, Lançamento em Dia 1, Conclusão em Dia 9).
+**PASSO 2 - CRIE MARCOS ESTRATÉGICOS:**
+Crie exatamente **5 a 7 marcos NOVOS** que:
+- Sejam específicos e acionáveis (não genéricos)
+- Representem os PRÓXIMOS PASSOS lógicos após os marcos existentes
+- Cubram diferentes aspectos da meta (planejamento → execução → validação → ajuste)
+- Sejam progressivos (do mais simples ao mais complexo, ou vice-versa se fizer sentido)
+- Tenham títulos claros que comecem com VERBOS DE AÇÃO
 
-    5.  **FORMATO DA RESPOSTA:** Responda **APENAS** com um array de objetos JSON. Não inclua a palavra "json" ou marcadores de código ```. Cada objeto deve ter as chaves "title" (string) e "date" (string no formato "YYYY-MM-DD").
+**PASSO 3 - ATRIBUA DATAS INTELIGENTES:**
+Para cada marco:
+1. Calcule o Dia Pessoal de datas futuras usando a data de nascimento (${user.dataNasc})
+2. Escolha datas que tenham vibrações alinhadas com o tipo de ação:
+   - Dia 1: Inícios, lançamentos, primeiros passos
+   - Dia 2: Cooperação, parcerias, networking
+   - Dia 3: Comunicação, apresentações, criatividade
+   - Dia 4: Planejamento, estruturação, organização
+   - Dia 5: Mudanças, testes, experimentação
+   - Dia 6: Conclusão, responsabilidade, entrega de resultados
+   - Dia 7: Reflexão, análise, estudo profundo
+   - Dia 8: Realização material, execução prática
+   - Dia 9: Finalização, encerramento de ciclos
+   - Dia 11: Inspiração, visão, projetos maiores
+   - Dia 22: Grandes realizações, projetos de impacto
 
-    **Exemplo de Resposta Esperada (APENAS O ARRAY):**
-    [
-      {"title": "Executar a primeira fase do plano de ação", "date": "2025-10-27"},
-      {"title": "Analisar os resultados iniciais e ajustar a estratégia", "date": "2025-11-04"},
-      {"title": "Iniciar a divulgação nas redes sociais (Dia 1)", "date": "2025-11-07"}
-    ]
-    """;
+3. Espalhe os marcos ao longo de pelo menos 30-60 dias (não concentre tudo em 1 semana)
+4. Datas devem ser **sempre futuras**, começando de $formattedStartDate
+
+**PASSO 4 - VALIDAÇÃO FINAL:**
+Antes de responder, certifique-se que:
+- ✓ Nenhum marco repete os já existentes
+- ✓ Títulos são específicos (não "Executar tarefa" mas "Validar hipótese X com 10 usuários")
+- ✓ Todas as datas estão no formato YYYY-MM-DD
+- ✓ As datas fazem sentido cronologicamente
+- ✓ Cada marco tem uma vibração adequada ao seu propósito
+
+═══════════════════════════════════════════════════════════════════
+📤 FORMATO DE RESPOSTA (OBRIGATÓRIO)
+═══════════════════════════════════════════════════════════════════
+
+Responda APENAS com um array JSON válido. NÃO inclua:
+- A palavra "json" ou marcadores de código (\`\`\`)
+- Explicações ou texto adicional
+- Quebras de linha desnecessárias
+
+**Estrutura Exata:**
+[
+  {"title": "Verbo + ação específica e mensurável", "date": "YYYY-MM-DD"},
+  {"title": "Outro verbo + ação clara", "date": "YYYY-MM-DD"}
+]
+
+**Exemplo Correto:**
+[
+  {"title": "Definir 3 indicadores-chave de sucesso para a meta", "date": "2025-11-10"},
+  {"title": "Criar protótipo inicial e validar com 5 pessoas", "date": "2025-11-18"},
+  {"title": "Analisar feedback e ajustar estratégia", "date": "2025-11-25"},
+  {"title": "Executar primeira versão completa do plano", "date": "2025-12-02"},
+  {"title": "Apresentar resultados e coletar aprendizados", "date": "2025-12-09"}
+]
+""";
   }
 }

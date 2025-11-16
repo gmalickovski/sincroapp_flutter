@@ -1,5 +1,5 @@
+// lib/main.dart
 import 'dart:async';
-import 'dart:io' show Platform;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -14,10 +14,17 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/user_details/user_details_screen.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:sincro_app_flutter/app/routs/app_router.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
+
+// --- INÍCIO DAS NOVAS IMPORTAÇÕES ---
+import 'package:sincro_app_flutter/services/notification_service.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
+// --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 // Chave do Site reCAPTCHA v3 para Web
 const String kReCaptchaSiteKey = '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU';
@@ -26,10 +33,18 @@ const String kReCaptchaSiteKey = '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU';
 // FUNÇÃO DE CONEXÃO COM EMULADORES
 // ========================================
 Future<void> _connectToEmulators() async {
-  final bool isAndroid = !kIsWeb && Platform.isAndroid;
-  final String host = isAndroid ? '10.0.2.2' : 'localhost';
+  // Define o host baseado na plataforma
+  String host;
+  if (kIsWeb) {
+    host = 'localhost';
+  } else if (defaultTargetPlatform == TargetPlatform.android) {
+    // Emulador Android acessa host através de 10.0.2.2
+    host = '10.0.2.2';
+  } else {
+    host = 'localhost';
+  }
 
-  // Portas (conforme seu firebase.json ATUALIZADO)
+  // Portas (conforme seu firebase.json)
   const int firestorePort = 8081;
   const int authPort = 9098;
   const int functionsPort = 5002;
@@ -63,11 +78,35 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // --- INÍCIO DA INICIALIZAÇÃO DAS NOTIFICAÇÕES ---
+  // Inicializa o serviço de notificação
+  // Isso também configura o fuso horário
+  try {
+    await NotificationService.instance.init();
+    debugPrint('✅ Notification Service inicializado!');
+  } catch (e) {
+    debugPrint('❌ Erro ao inicializar Notification Service: $e');
+  }
+  // --- FIM DA INICIALIZAÇÃO DAS NOTIFICAÇÕES ---
+
   // ========================================
   // LÓGICA DE CONEXÃO COM EMULADOR
   // ========================================
   if (kDebugMode) {
-    // Em modo DEBUG, conecte-se aos emuladores
+    // Em modo DEBUG: ative App Check com Debug Provider e conecte nos emuladores
+    try {
+      debugPrint('🔧 Inicializando Firebase App Check (DEBUG Provider)...');
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
+        androidProvider: AndroidProvider.debug,
+        appleProvider: AppleProvider.debug,
+      );
+      _logAppCheckStatus();
+    } catch (e, s) {
+      debugPrint('⚠️ Falha ao ativar App Check (debug): $e');
+      debugPrint('$s');
+    }
+
     try {
       await _connectToEmulators();
     } catch (e) {
@@ -75,7 +114,7 @@ Future<void> main() async {
     }
   } else {
     // ========================================
-    // EM MODO RELEASE, ATIVE O APP CHECK (ADICIONADO "ELSE")
+    // EM MODO RELEASE, ATIVE O APP CHECK
     // ========================================
     try {
       debugPrint('🔧 Inicializando Firebase App Check...');
@@ -97,7 +136,7 @@ Future<void> main() async {
       );
 
       debugPrint('✅ Firebase App Check ativado!');
-      _logAppCheckStatus(); // Esta função já checa kDebugMode, mas tudo bem
+      _logAppCheckStatus(); // Esta função já checa kDebugMode
     } catch (e, s) {
       debugPrint('');
       debugPrint('❌ ===== ERRO NO APP CHECK =====');
@@ -132,36 +171,36 @@ void _logAppCheckStatus() {
     debugPrint('');
     debugPrint('🌐 WEB:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Token');
-      debugPrint('  ℹ️ Procure no console por:');
-      debugPrint('     "Firebase App Check debug token: XXXX..."');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+      debugPrint('  ✓ Usando: Debug Token');
+      debugPrint('  ℹ️ Procure no console por:');
+      debugPrint('     "Firebase App Check debug token: XXXX..."');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
     } else {
-      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
-      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
+      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
+      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
     }
   } else if (defaultTargetPlatform == TargetPlatform.android) {
     debugPrint('');
     debugPrint('🤖 ANDROID:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
-      debugPrint('     "Firebase App Check debug token"');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
+      debugPrint('     "Firebase App Check debug token"');
+      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
     } else {
-      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na Play Store');
+      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na Play Store');
     }
   } else if (defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.macOS) {
     debugPrint('');
     debugPrint('🍎 iOS/macOS:');
     if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ℹ️ Registre o token no Firebase Console');
+      debugPrint('  ✓ Usando: Debug Provider');
+      debugPrint('  ℹ️ Registre o token no Firebase Console');
     } else {
-      debugPrint('  ✓ Usando: App Attest (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na App Store');
+      debugPrint('  ✓ Usando: App Attest (Produção)');
+      debugPrint('  ⚠️ Requer: App publicado na App Store');
     }
   }
 
@@ -170,7 +209,7 @@ void _logAppCheckStatus() {
 }
 
 // ... (O RESTO DO SEU CÓDIGO PERMANECE INTOCADO) ...
-// (SincroApp, AuthCheck, etc.)
+// (SincroApp, etc.)
 
 class SincroApp extends StatelessWidget {
   const SincroApp({super.key});
@@ -180,6 +219,9 @@ class SincroApp extends StatelessWidget {
     return MaterialApp(
       title: 'SincroApp',
       debugShowCheckedModeBanner: false,
+      routes: AppRouter.routes,
+      onGenerateRoute: AppRouter.onGenerateRoute,
+      onUnknownRoute: AppRouter.onUnknownRoute,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -192,7 +234,7 @@ class SincroApp extends StatelessWidget {
         brightness: Brightness.dark,
         scaffoldBackgroundColor: AppColors.background,
         primaryColor: AppColors.primaryAccent,
-        fontFamily: 'Inter',
+        fontFamily: 'Poppins',
         splashFactory: NoSplash.splashFactory,
         highlightColor: Colors.transparent,
         textTheme: const TextTheme().apply(
@@ -212,7 +254,7 @@ class SincroApp extends StatelessWidget {
           ),
           textStyle: const TextStyle(
             color: AppColors.primaryText,
-            fontFamily: 'Inter',
+            fontFamily: 'Poppins',
             fontSize: 16,
           ),
           elevation: 4,
@@ -230,7 +272,7 @@ class SincroApp extends StatelessWidget {
             color: AppColors.primaryText,
             fontSize: 18,
             fontWeight: FontWeight.w500,
-            fontFamily: 'Inter',
+            fontFamily: 'Poppins',
           ),
         ),
       ),
@@ -252,6 +294,9 @@ class _AuthCheckState extends State<AuthCheck> {
   User? _firebaseUser;
   bool _isLoading = true;
 
+  // --- NOVA VARIÁVEL DE ESTADO ---
+  bool _dailyNotificationsScheduled = false;
+
   @override
   void initState() {
     super.initState();
@@ -260,6 +305,11 @@ class _AuthCheckState extends State<AuthCheck> {
         setState(() {
           _firebaseUser = user;
           _isLoading = false;
+          // --- ADICIONADO ---
+          // Se o usuário deslogar, reseta o flag
+          if (user == null) {
+            _dailyNotificationsScheduled = false;
+          }
         });
       }
     });
@@ -269,6 +319,61 @@ class _AuthCheckState extends State<AuthCheck> {
   void dispose() {
     _authSubscription.cancel();
     super.dispose();
+  }
+
+  // --- NOVA FUNÇÃO HELPER ---
+  /// Agenda as notificações diárias (Dia Pessoal e Lembrete de Fim de Dia)
+  void _scheduleDailyNotifications(UserModel user) {
+    // Garante que só rode uma vez por login
+    if (_dailyNotificationsScheduled) return;
+    if (user.nomeAnalise.isEmpty || user.dataNasc.isEmpty) return;
+
+    try {
+      // 1. Agendar Notificação Matinal (Feature #2)
+      final engine = NumerologyEngine(
+        nomeCompleto: user.nomeAnalise,
+        dataNascimento: user.dataNasc,
+      );
+      final today = DateTime.now();
+      final personalDay = engine.calculatePersonalDayForDate(today);
+
+      final dayInfo = ContentData.vibracoes['diaPessoal']?[personalDay];
+      final title = "✨ Vibração do seu Dia: $personalDay";
+
+      // --- INÍCIO DA CORREÇÃO ---
+      // A propriedade correta é 'descricaoCurta', conforme
+      // lib/features/authentication/data/content_data.dart
+      final body = dayInfo?.descricaoCurta ??
+          "Veja o que a vibração de hoje significa para você.";
+      // --- FIM DA CORREÇÃO ---
+
+      NotificationService.instance.scheduleDailyPersonalDayNotification(
+        title: title,
+        body: body,
+        // --- INÍCIO DA CORREÇÃO ---
+        // Usa o construtor TimeOfDay
+        scheduleTime: const TimeOfDay(hour: 8, minute: 0), // 8:00 AM
+        // --- FIM DA CORREÇÃO ---
+      );
+
+      // 2. Agendar Verificação de Fim de Dia (Feature #1)
+      NotificationService.instance.scheduleDailyEndOfDayCheck(
+        user.uid,
+        // --- INÍCIO DA CORREÇÃO ---
+        // Usa o construtor TimeOfDay
+        const TimeOfDay(hour: 21, minute: 0), // 9:00 PM
+        // --- FIM DA CORREÇÃO ---
+      );
+
+      // Marca como agendado
+      setState(() {
+        _dailyNotificationsScheduled = true;
+      });
+      debugPrint(
+          "✅ Notificações diárias (Dia Pessoal e Fim de Dia) agendadas.");
+    } catch (e) {
+      debugPrint("❌ Erro ao agendar notificações diárias: $e");
+    }
   }
 
   @override
@@ -300,6 +405,11 @@ class _AuthCheckState extends State<AuthCheck> {
           if (userSnapshot.hasData &&
               userSnapshot.data != null &&
               userSnapshot.data!.nomeAnalise.isNotEmpty) {
+            // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
+            // Agenda as notificações diárias assim que temos os dados do usuário
+            _scheduleDailyNotifications(userSnapshot.data!);
+            // --- FIM DA LÓGICA DE AGENDAMENTO ---
+
             return const DashboardScreen();
           }
 

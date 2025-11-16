@@ -15,6 +15,9 @@ import 'package:uuid/uuid.dart';
 import 'widgets/task_input_modal.dart';
 import 'widgets/task_detail_modal.dart';
 import 'widgets/tag_selection_modal.dart';
+import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 // --- INÍCIO DA MUDANÇA: Importar o motor de numerologia ---
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -74,6 +77,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       builder: (context) => TaskInputModal(
         userData: widget.userData!,
         userId: _userId,
+        // NÃO passa initialDueDate para que o pill de data não apareça
+        // O modal vai calcular a vibração para "hoje" mas não mostra o pill
         onAddTask: (ParsedTask parsedTask) {
           if (parsedTask.recurrenceRule.type == RecurrenceType.none) {
             _createSingleTask(parsedTask);
@@ -128,6 +133,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // Se não tem data específica, usa a data atual (não a de amanhã)
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
     }
 
     // Calcula o dia pessoal usando a data determinada
@@ -662,13 +668,40 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // --- INÍCIO DA MUDANÇA (Solicitação 1): Esconde FAB em modo de seleção ---
       floatingActionButton: _isSelectionMode
           ? null
-          : FloatingActionButton(
-              onPressed: _openAddTaskModal,
-              backgroundColor: AppColors.primary,
-              tooltip: 'Adicionar Tarefa',
-              heroTag: 'foco_fab',
-              child: const Icon(Icons.add, color: Colors.white),
-            ),
+          : (widget.userData != null &&
+                  widget.userData!.subscription.isActive &&
+                  widget.userData!.subscription.plan ==
+                      SubscriptionPlan.premium)
+              ? ExpandingAssistantFab(
+                  onPrimary: _openAddTaskModal,
+                  primaryIcon: Icons.add_task,
+                  primaryTooltip: 'Adicionar Tarefa',
+                  onOpenAssistant: () {
+                    if (widget.userData == null) return;
+                    showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (_) => AssistantPanel(
+                        userData: widget.userData!,
+                      ),
+                    );
+                  },
+                  onMic: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Entrada por voz chegará em breve.'),
+                      ),
+                    );
+                  },
+                )
+              : FloatingActionButton(
+                  onPressed: _openAddTaskModal,
+                  backgroundColor: AppColors.primary,
+                  tooltip: 'Adicionar Tarefa',
+                  heroTag: 'foco_fab',
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
       // --- FIM DA MUDANÇA ---
     );
   }
@@ -676,8 +709,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   // _buildHeader (original) MODIFICADO para (Solicitação 1 e 3)
   Widget _buildHeader({required bool isMobile}) {
     final double titleFontSize = isMobile ? 28 : 32;
-    // reduce spacing between filter chips to make header denser
-    final double chipSpacing = 6.0;
+    // --- INÍCIO DA CORREÇÃO (Problema 2) ---
+    // Padronizando o espaçamento
+    final double chipSpacing = 8.0;
+    // --- FIM DA CORREÇÃO ---
 
     return SingleChildScrollView(
       child: Column(
@@ -705,84 +740,82 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                // Filtros principais como Wrap
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 8.0,
-                  children: TaskFilterType.values.map((filterType) {
-                    String label;
-                    late IconData icon;
-                    switch (filterType) {
-                      case TaskFilterType.focoDoDia:
-                        label = 'Foco do Dia';
-                        icon = Icons.star_border_rounded;
-                        break;
-                      case TaskFilterType.todas:
-                        label = 'Todas';
-                        icon = Icons.inbox_rounded;
-                        break;
-                      case TaskFilterType.vibracao:
-                        label = 'Dia Pessoal';
-                        icon = Icons.wb_sunny_rounded;
-                        break;
-                      case TaskFilterType.concluidas:
-                        label = 'Concluídas';
-                        icon = Icons.check_circle_outline_rounded;
-                        break;
-                    }
+                // --- INÍCIO DA CORREÇÃO (Problema 2) ---
+                // 'Wrap' removido, 'Row' agora contém os filhos diretamente
+                // com espaçamento consistente
+                // --- FIM DA CORREÇÃO ---
+                ...TaskFilterType.values.map((filterType) {
+                  String label;
+                  late IconData icon;
+                  switch (filterType) {
+                    case TaskFilterType.focoDoDia:
+                      label = 'Foco do Dia';
+                      icon = Icons.star_border_rounded;
+                      break;
+                    case TaskFilterType.todas:
+                      label = 'Todas';
+                      icon = Icons.inbox_rounded;
+                      break;
+                    case TaskFilterType.vibracao:
+                      label = 'Dia Pessoal';
+                      icon = Icons.wb_sunny_rounded;
+                      break;
+                    case TaskFilterType.concluidas:
+                      label = 'Concluídas';
+                      icon = Icons.check_circle_outline_rounded;
+                      break;
+                  }
 
-                    final isSelected = _selectedFilter == filterType;
+                  final isSelected = _selectedFilter == filterType;
 
-                    return Padding(
-                      padding:
-                          EdgeInsets.only(right: chipSpacing), // Espaçamento
-                      child: ChoiceChip(
-                        label: Text(label,
-                            style: TextStyle(
-                                fontSize: 14)), // Consistent text size
-                        avatar: Icon(
-                          icon,
-                          size: 16, // Smaller icon size
+                  return Padding(
+                    padding: EdgeInsets.only(right: chipSpacing), // Espaçamento
+                    child: ChoiceChip(
+                      label: Text(label,
+                          style:
+                              TextStyle(fontSize: 14)), // Consistent text size
+                      avatar: Icon(
+                        icon,
+                        size: 16, // Smaller icon size
+                        color:
+                            isSelected ? Colors.white : AppColors.secondaryText,
+                      ),
+                      selected: isSelected,
+                      onSelected: (selected) {
+                        if (selected) {
+                          setState(() {
+                            // --- INÍCIO DA MUDANÇA (Solicitação 1) ---
+                            // Cancela o modo de seleção ao trocar de filtro
+                            _clearSelection();
+                            // --- FIM DA MUDANÇA ---
+                            _selectedFilter = filterType;
+                            if (filterType != TaskFilterType.vibracao) {
+                              _selectedVibrationNumber = null;
+                            }
+                            _selectedTag = null;
+                          });
+                        }
+                      },
+                      backgroundColor: AppColors.cardBackground,
+                      selectedColor: AppColors.primary,
+                      labelStyle: TextStyle(
                           color: isSelected
                               ? Colors.white
                               : AppColors.secondaryText,
-                        ),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          if (selected) {
-                            setState(() {
-                              // --- INÍCIO DA MUDANÇA (Solicitação 1) ---
-                              // Cancela o modo de seleção ao trocar de filtro
-                              _clearSelection();
-                              // --- FIM DA MUDANÇA ---
-                              _selectedFilter = filterType;
-                              if (filterType != TaskFilterType.vibracao) {
-                                _selectedVibrationNumber = null;
-                              }
-                              _selectedTag = null;
-                            });
-                          }
-                        },
-                        backgroundColor: AppColors.cardBackground,
-                        selectedColor: AppColors.primary,
-                        labelStyle: TextStyle(
-                            color: isSelected
-                                ? Colors.white
-                                : AppColors.secondaryText,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal),
-                        showCheckmark: false,
-                        side: BorderSide.none,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6), // Reduced padding
-                      ),
-                    );
-                  }).toList(),
-                ),
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal),
+                      showCheckmark: false,
+                      side: BorderSide.none,
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6), // Reduced padding
+                    ),
+                  );
+                }).toList(),
 
-                const SizedBox(width: 12),
+                // --- INÍCIO DA CORREÇÃO (Problema 2) ---
+                // SizedBox(width: 12) removido
+                // --- FIM DA CORREÇÃO ---
 
                 // Tag filter (opens modal) - keep visible regardless of selection mode
                 Padding(
@@ -818,6 +851,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    // --- INÍCIO DA CORREÇÃO (Problema 1) ---
+                    // Adicionado 'side' para corresponder aos outros chips
+                    side: BorderSide.none,
+                    // --- FIM DA CORREÇÃO ---
                   ),
                 ),
               ],
