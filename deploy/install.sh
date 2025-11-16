@@ -220,6 +220,7 @@ flutter clean || true
 
 # Fazer build
 flutter build web --release --web-renderer "$RENDERER" \
+    --base-href /app/ \
     --dart-define=RECAPTCHA_V3_SITE_KEY="$RECAPTCHA_V3_SITE_KEY"
 
 if [ ! -d "$INSTALL_DIR/build/web" ]; then
@@ -228,6 +229,26 @@ if [ ! -d "$INSTALL_DIR/build/web" ]; then
 fi
 
 log_success "Build Flutter Web concluído"
+
+# 13.1. COPIAR LANDING PARA O BUILD E AJUSTAR APPCHECK
+log_info "Publicando landing (landing.html/js e firebase-config.js) no build/web..."
+
+# Substituir a site key do App Check na landing pelo valor fornecido
+sed -i "s/appCheck\.activate(\s*'[^']\+'\s*,/appCheck.activate('$RECAPTCHA_V3_SITE_KEY',/" "$INSTALL_DIR/web/firebase-config.js"
+
+# Copiar arquivos da landing para a pasta pública do Flutter
+cp -f "$INSTALL_DIR/web/landing.html" "$INSTALL_DIR/build/web/landing.html"
+cp -f "$INSTALL_DIR/web/landing.js" "$INSTALL_DIR/build/web/landing.js"
+cp -f "$INSTALL_DIR/web/firebase-config.js" "$INSTALL_DIR/build/web/firebase-config.js"
+cp -f "$INSTALL_DIR/web/favicon.png" "$INSTALL_DIR/build/web/favicon.png" 2>/dev/null || true
+
+# Copiar ícones se existirem
+if [ -d "$INSTALL_DIR/web/icons" ]; then
+    mkdir -p "$INSTALL_DIR/build/web/icons"
+    cp -rf "$INSTALL_DIR/web/icons/"* "$INSTALL_DIR/build/web/icons/"
+fi
+
+log_success "Landing publicada em build/web"
 
 # 14. CONFIGURAR FIREBASE (LOGIN E PROJETO)
 if ! command_exists firebase; then
@@ -246,11 +267,115 @@ else
     log_warning "Firebase CLI indisponível. Pule esta etapa e faça login/deploy manualmente depois."
 fi
 
-# 15. NGINX (USAR CONFIG EXISTENTE)
-log_info "Usando configuração Nginx existente. Validando e recarregando..."
-nginx -t || { log_error "nginx -t falhou. Corrija a configuração existente e tente novamente."; exit 1; }
-systemctl reload nginx
-log_success "Nginx recarregado"
+# 15. NGINX (CONFIGURAR LANDING EM / E APP EM /app)
+if [ "$SKIP_NGINX" = "1" ]; then
+    log_info "SKIP_NGINX=1 definido. Pulando configuração do Nginx."
+else
+    log_info "Escrevendo configuração Nginx em: $NGINX_CONFIG"
+
+    WWW_DOMAIN="www.$DOMAIN"
+    WEB_ROOT="$INSTALL_DIR/build/web"
+
+    # Backup da config antiga (se houver)
+    if [ -f "$NGINX_CONFIG" ]; then
+        cp -f "$NGINX_CONFIG" "$NGINX_CONFIG.bak.$(date +%Y%m%d%H%M%S)"
+    fi
+
+    cat > "$NGINX_CONFIG" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name $DOMAIN $WWW_DOMAIN;
+    return 301 https://$DOMAIN\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name $DOMAIN $WWW_DOMAIN;
+
+    # Certificados gerenciados externamente (Certbot)
+    # ssl_certificate /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
+    # ssl_certificate_key /etc/letsencrypt/live/$DOMAIN/privkey.pem;
+    # include /etc/letsencrypt/options-ssl-nginx.conf;
+    # ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    root $WEB_ROOT;
+    index landing.html index.html;
+
+    access_log /var/log/nginx/sincroapp-access.log;
+    error_log /var/log/nginx/sincroapp-error.log;
+
+    # Rota raiz: landing
+    location = / {
+        try_files /landing.html =404;
+    }
+
+    # App Flutter em /app
+    location = /app {
+        return 301 /app/;
+    }
+    location /app/ {
+        alias $WEB_ROOT/;
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+    }
+
+    # Assets JS/CSS do app
+    location ~* ^/app/.*\.(js|css|wasm|json)$ {
+        alias $WEB_ROOT/;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Arquivos estáticos gerais
+    location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Landing scripts
+    location ~* ^/(landing|firebase-config)\.js$ {
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
+    # Manifest/Service Worker
+    location ~* (manifest\.json|flutter_service_worker\.js)$ {
+        expires 1h;
+        add_header Cache-Control "public";
+    }
+
+    # Segurança
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firestore.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://identitytoolkit.googleapis.com;" always;
+
+    autoindex off;
+    client_max_body_size 10M;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss application/atom+xml image/svg+xml;
+}
+EOF
+
+    # Criar symlink em sites-enabled, se definido e necessário
+    if [ -n "$NGINX_ENABLED" ]; then
+        ln -sf "$NGINX_CONFIG" "$NGINX_ENABLED" 2>/dev/null || true
+    fi
+
+    nginx -t || { log_error "nginx -t falhou. Revise $NGINX_CONFIG"; exit 1; }
+    systemctl reload nginx
+    log_success "Nginx configurado e recarregado"
+fi
 
 # 16. SSL (NENHUMA ALTERAÇÃO)
 log_info "Pulando alterações de SSL (usando certificados já configurados)"

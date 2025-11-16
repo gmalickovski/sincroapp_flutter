@@ -27,73 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
  * Abre modal de login ou redireciona para app
  */
 async function handleLogin() {
-  showLoading(true);
-  
-  try {
-    // Usa Google Auth Provider
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    
-    const result = await auth.signInWithPopup(provider);
-    const user = result.user;
-    
-    console.log('✅ Login bem-sucedido:', user.email);
-    
-    // Verifica se usuário existe no Firestore
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    
-    if (userDoc.exists) {
-      // Usuário já cadastrado: redireciona para app
-      window.location.href = '/';
-    } else {
-      // Novo usuário: cria documento básico e redireciona
-      await createUserDocument(user);
-      window.location.href = '/';
-    }
-    
-  } catch (error) {
-    console.error('❌ Erro no login:', error);
-    showError('Erro ao fazer login. Tente novamente.');
-  } finally {
-    showLoading(false);
-  }
+  // Redireciona para a tela de login do app Flutter
+  window.location.href = '/app/login';
 }
 
 /**
  * Registra novo usuário
  */
 async function handleRegister() {
-  showLoading(true);
-  
-  try {
-    // Usa Google Auth Provider
-    const provider = new firebase.auth.GoogleAuthProvider();
-    provider.addScope('email');
-    provider.addScope('profile');
-    
-    const result = await auth.signInWithPopup(provider);
-    const user = result.user;
-    
-    console.log('✅ Registro bem-sucedido:', user.email);
-    
-    // Verifica se usuário já existe
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    
-    if (!userDoc.exists) {
-      // Cria documento do usuário
-      await createUserDocument(user);
-    }
-    
-    // Redireciona para app
-    window.location.href = '/';
-    
-  } catch (error) {
-    console.error('❌ Erro no registro:', error);
-    showError('Erro ao criar conta. Tente novamente.');
-  } finally {
-    showLoading(false);
-  }
+  // Redireciona para a tela de cadastro do app Flutter
+  window.location.href = '/app/register';
 }
 
 /**
