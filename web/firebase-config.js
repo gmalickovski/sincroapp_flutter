@@ -8,7 +8,7 @@ const isLocalhost = Boolean(
   window.location.hostname === '127.0.0.1'
 );
 
-// Configuração do Firebase (mesma do firebase_options.dart)
+// Configuração do Firebase (UNIFICADO - sincroapp-e9cda)
 const firebaseConfig = {
   apiKey: "AIzaSyBDHpEm3FyKfOnzjJ6xLz8hLQV8DZrPqA0",
   authDomain: "sincroapp-e9cda.firebaseapp.com",

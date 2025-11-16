@@ -23,7 +23,7 @@ NGINX_CONFIG="${NGINX_CONFIG:-/etc/nginx/sites-available/sincroapp.com.br}"
 NGINX_ENABLED="${NGINX_ENABLED:-/etc/nginx/sites-enabled/sincroapp.com.br}"
 DOMAIN="${DOMAIN:-sincroapp.com.br}"
 NODE_VERSION="${NODE_VERSION:-20}"
-FIREBASE_PROJECT="${FIREBASE_PROJECT:-sincroapp-529cc}"
+FIREBASE_PROJECT="${FIREBASE_PROJECT:-sincroapp-e9cda}"
 # Flags
 SKIP_NGINX="${SKIP_NGINX:-0}"
 SKIP_SSL="${SKIP_SSL:-1}"
@@ -307,7 +307,6 @@ server {
     }
     
     location /app/ {
-        alias $WEB_ROOT/;
         try_files \$uri \$uri/ /app/index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
@@ -316,7 +315,6 @@ server {
 
     # Assets JS/CSS do app (DEVE VIR ANTES de location /app/)
     location ~* ^/app/.*\.(js|css|wasm|json|map)$ {
-        alias $WEB_ROOT/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
