@@ -1,0 +1,7 @@
+Resolving dependencies...
+Because sincro_app_flutter depends on firebase_ai ^0.3.1+5 which doesn't match any versions, version solving failed.
+
+
+You can try the following suggestion to make the pubspec resolve:
+* Try upgrading your constraint on firebase_ai: flutter pub add firebase_ai:^2.3.0
+Failed to update packages.
