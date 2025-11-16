@@ -2,6 +2,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const crypto = require("crypto");
+const {RecaptchaEnterpriseServiceClient} = require("@google-cloud/recaptcha-enterprise");
 
 // Inicializa o SDK Admin
 admin.initializeApp();
@@ -10,8 +11,78 @@ admin.initializeApp();
 const db = admin.firestore();
 const messaging = admin.messaging();
 
+// Cliente reCAPTCHA Enterprise (reutilizável)
+const recaptchaClient = new RecaptchaEnterpriseServiceClient();
+
 // URL do seu webhook
 const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
+
+// Configurações reCAPTCHA
+const RECAPTCHA_PROJECT_ID = "sincroapp-529cc";
+const RECAPTCHA_SITE_KEY = "6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU";
+
+/**
+ * Valida token reCAPTCHA e retorna score de risco (0.0 a 1.0)
+ * Score alto (>0.5) = provavelmente humano
+ * Score baixo (<0.5) = provavelmente bot
+ * 
+ * @param {string} token - Token reCAPTCHA do cliente
+ * @param {string} expectedAction - Ação esperada (login, register, etc)
+ * @returns {Promise<{valid: boolean, score: number, reasons: string[]}>}
+ */
+async function assessRecaptcha(token, expectedAction = "homepage") {
+  try {
+    const projectPath = recaptchaClient.projectPath(RECAPTCHA_PROJECT_ID);
+
+    const request = {
+      assessment: {
+        event: {
+          token: token,
+          siteKey: RECAPTCHA_SITE_KEY,
+          expectedAction: expectedAction,
+        },
+      },
+      parent: projectPath,
+    };
+
+    const [response] = await recaptchaClient.createAssessment(request);
+
+    // Verifica se o token é válido
+    if (!response.tokenProperties.valid) {
+      functions.logger.warn(`Token inválido: ${response.tokenProperties.invalidReason}`);
+      return {
+        valid: false,
+        score: 0,
+        reasons: [response.tokenProperties.invalidReason],
+      };
+    }
+
+    // Verifica se a ação corresponde
+    if (response.tokenProperties.action !== expectedAction) {
+      functions.logger.warn(`Ação não corresponde. Esperado: ${expectedAction}, Recebido: ${response.tokenProperties.action}`);
+      return {
+        valid: false,
+        score: 0,
+        reasons: ["ACTION_MISMATCH"],
+      };
+    }
+
+    // Retorna score e motivos
+    const score = response.riskAnalysis.score || 0;
+    const reasons = response.riskAnalysis.reasons || [];
+
+    functions.logger.info(`✅ reCAPTCHA válido. Score: ${score}, Razões: ${reasons.join(", ")}`);
+
+    return {
+      valid: true,
+      score: score,
+      reasons: reasons,
+    };
+  } catch (error) {
+    functions.logger.error("Erro ao validar reCAPTCHA:", error);
+    throw new functions.https.HttpsError("internal", "Erro ao validar reCAPTCHA");
+  }
+}
 
 /**
  * Função auxiliar para enviar dados ao webhook do n8n.
@@ -25,6 +96,48 @@ const sendToWebhook = async (payload) => {
     functions.logger.error("ERRO AO ENVIAR WEBHOOK:", { errorMessage: error.message });
   }
 };
+
+// ========================================
+// RECAPTCHA ENTERPRISE VALIDATION
+// ========================================
+
+/**
+ * Endpoint público para validar tokens reCAPTCHA
+ * Usado pela landing page e pelo Flutter app para pontuar
+ * 
+ * POST body: { token: string, action: string }
+ */
+exports.validateRecaptcha = functions.https.onRequest(async (req, res) => {
+  // Apenas POST
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Método não permitido" });
+  }
+
+  try {
+    const { token, action } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ error: "Token reCAPTCHA obrigatório" });
+    }
+
+    const expectedAction = action || "homepage";
+    const assessment = await assessRecaptcha(token, expectedAction);
+
+    // Threshold: score >= 0.5 considerado válido
+    const isHuman = assessment.valid && assessment.score >= 0.5;
+
+    res.status(200).json({
+      success: isHuman,
+      score: assessment.score,
+      valid: assessment.valid,
+      reasons: assessment.reasons,
+      message: isHuman ? "Verificação aprovada" : "Verificação falhou - possível bot",
+    });
+  } catch (error) {
+    functions.logger.error("Erro em validateRecaptcha:", error);
+    res.status(500).json({ error: "Erro ao validar token" });
+  }
+});
 
 /**
  * Acionado quando um novo documento de usuário é criado no Firestore.
@@ -303,6 +416,7 @@ exports.scheduleDailyNotifications = functions.pubsub.schedule('0 21 * * *')
 
 /**
  * Inicia checkout web via PagBank
+ * Protegido por reCAPTCHA para prevenir fraude
  */
 exports.startWebCheckout = functions.https.onCall(async (data, context) => {
   functions.logger.info("================ startWebCheckout ACIONADA ================");
@@ -312,10 +426,25 @@ exports.startWebCheckout = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError('unauthenticated', 'Usuário não autenticado');
   }
   
-  const { userId, plan } = data;
+  const { userId, plan, recaptchaToken } = data;
   
   if (!userId || !plan) {
     throw new functions.https.HttpsError('invalid-argument', 'userId e plan são obrigatórios');
+  }
+
+  // Valida reCAPTCHA (opcional mas recomendado)
+  if (recaptchaToken) {
+    try {
+      const assessment = await assessRecaptcha(recaptchaToken, 'checkout');
+      if (!assessment.valid || assessment.score < 0.5) {
+        functions.logger.warn(`Checkout bloqueado - score reCAPTCHA: ${assessment.score}`);
+        throw new functions.https.HttpsError('permission-denied', 'Verificação de segurança falhou');
+      }
+      functions.logger.info(`✅ Checkout aprovado - score: ${assessment.score}`);
+    } catch (error) {
+      functions.logger.error("Erro ao validar reCAPTCHA no checkout:", error);
+      // Continua mesmo se falhar (graceful degradation)
+    }
   }
   
   try {

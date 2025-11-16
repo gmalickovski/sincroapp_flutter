@@ -102,19 +102,50 @@ async function handleSelectPlan(planId) {
   
   // Plano gratuito: apenas redireciona
   if (planId === 'free') {
-    window.location.href = '/';
+    window.location.href = '/app/';
     return;
   }
   
-  // Planos pagos: inicia checkout
+  // Planos pagos: valida reCAPTCHA e inicia checkout
   showLoading(true);
   
   try {
+    // Executa reCAPTCHA v3 para a ação 'checkout'
+    const token = await grecaptcha.enterprise.execute(
+      '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU',
+      { action: 'checkout' }
+    );
+    
+    console.log('✅ Token reCAPTCHA gerado para checkout');
+    
+    // Valida no backend (isso gera a pontuação que o Firebase precisa!)
+    const validateResponse = await fetch('https://us-central1-sincroapp-e9cda.cloudfunctions.net/validateRecaptcha', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        token: token,
+        action: 'checkout'
+      })
+    });
+    
+    const validation = await validateResponse.json();
+    
+    if (!validation.success) {
+      console.warn('⚠️ Verificação reCAPTCHA falhou:', validation);
+      showError('Verificação de segurança falhou. Tente novamente.');
+      return;
+    }
+    
+    console.log('✅ reCAPTCHA validado. Score:', validation.score);
+    
     // Chama função do PaymentService via Cloud Function
     const startCheckout = firebase.functions().httpsCallable('startWebCheckout');
     const result = await startCheckout({ 
       userId: user.uid,
-      plan: planId // 'plus' ou 'premium'
+      plan: planId, // 'plus' ou 'premium'
+      recaptchaToken: token
     });
     
     if (result.data.checkoutUrl) {
