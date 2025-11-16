@@ -52,7 +52,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 10,
           )
         ],
@@ -205,7 +205,7 @@ class _MoodSelector extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: isSelected
-                  ? AppColors.primary.withOpacity(0.3)
+                  ? AppColors.primary.withValues(alpha: 0.3)
                   : Colors.transparent,
               border: isSelected
                   ? Border.all(color: AppColors.primary, width: 1)

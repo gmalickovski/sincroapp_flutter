@@ -184,8 +184,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             });
           },
           selected: isSelected,
-          selectedTileColor: AppColors.primary.withOpacity(0.1),
-          hoverColor: AppColors.cardBackground.withOpacity(0.5),
+          selectedTileColor: AppColors.primary.withValues(alpha: 0.1),
+          hoverColor: AppColors.cardBackground.withValues(alpha: 0.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8.0),
           ),

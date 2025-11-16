@@ -378,7 +378,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               ),
               if (_isLoading)
                 Container(
-                    color: Colors.black.withOpacity(0.6),
+                    color: Colors.black.withValues(alpha: 0.6),
                     child: const Center(child: CustomLoadingSpinner())),
             ],
           ),
@@ -550,7 +550,7 @@ class _GoalInfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 5,
             offset: const Offset(0, 2),
           ),
@@ -591,7 +591,7 @@ class _GoalInfoCard extends StatelessWidget {
           const SizedBox(height: 8),
           LinearProgressIndicator(
             value: progress / 100.0,
-            backgroundColor: AppColors.background.withOpacity(0.7),
+            backgroundColor: AppColors.background.withValues(alpha: 0.7),
             color: AppColors.primary,
             minHeight: 10,
             borderRadius: BorderRadius.circular(5),

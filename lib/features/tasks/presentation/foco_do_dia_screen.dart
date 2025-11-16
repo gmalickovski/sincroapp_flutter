@@ -898,12 +898,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                   });
                                 },
                                 backgroundColor:
-                                    colors.background.withOpacity(0.2),
+                                    colors.background.withValues(alpha: 0.2),
                                 selectedColor: colors.background,
                                 labelStyle: TextStyle(
                                   color: isSelected
                                       ? colors.text
-                                      : colors.background.withOpacity(0.9),
+                                      : colors.background.withValues(alpha: 0.9),
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
@@ -912,7 +912,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                 shape: StadiumBorder(
                                     side: BorderSide(
                                         color: colors.background
-                                            .withOpacity(0.5))),
+                                            .withValues(alpha: 0.5))),
                                 showCheckmark: false,
                                 materialTapTargetSize:
                                     MaterialTapTargetSize.shrinkWrap,

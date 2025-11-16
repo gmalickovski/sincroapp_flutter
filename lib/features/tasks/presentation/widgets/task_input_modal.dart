@@ -514,7 +514,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     color: _selectedGoalId != null
                         ? Colors.cyanAccent
                         : (widget.preselectedGoal != null
-                            ? AppColors.tertiaryText.withOpacity(0.3)
+                            ? AppColors.tertiaryText.withValues(alpha: 0.3)
                             : AppColors.tertiaryText),
                   ),
                   _buildActionButton(
@@ -598,15 +598,15 @@ class _TaskInputModalState extends State<TaskInputModal> {
         size: 16,
         color: color,
       ),
-      backgroundColor: AppColors.background.withOpacity(0.5),
+      backgroundColor: AppColors.background.withValues(alpha: 0.5),
       onDeleted: onDeleted,
-      deleteIconColor: AppColors.secondaryText.withOpacity(0.7),
+      deleteIconColor: AppColors.secondaryText.withValues(alpha: 0.7),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8.0),
         side: BorderSide(
-          color: color.withOpacity(0.3),
+          color: color.withValues(alpha: 0.3),
         ),
       ),
     );

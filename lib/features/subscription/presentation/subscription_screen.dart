@@ -67,7 +67,7 @@ class _Header extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
       ),
       child: Row(
         children: [
@@ -221,7 +221,7 @@ class _PlanHighlights extends StatelessWidget {
               style: TextStyle(
                 color: enabled
                     ? AppColors.secondaryText
-                    : AppColors.secondaryText.withOpacity(0.6),
+                    : AppColors.secondaryText.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -334,7 +334,7 @@ class _FeatureMatrix extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -347,7 +347,7 @@ class _FeatureMatrix extends StatelessWidget {
           ],
           rows: features.map((f) => f.asDataRow()).toList(),
           headingRowColor: WidgetStateProperty.resolveWith(
-            (states) => AppColors.border.withOpacity(0.08),
+            (states) => AppColors.border.withValues(alpha: 0.08),
           ),
           dataRowColor: WidgetStateProperty.resolveWith(
             (states) => Colors.transparent,

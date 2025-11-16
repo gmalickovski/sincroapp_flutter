@@ -71,10 +71,10 @@ class _InfoCardState extends State<InfoCard> {
             padding:
                 const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
             decoration: BoxDecoration(
-              color: AppColors.primaryAccent.withOpacity(0.1),
+              color: AppColors.primaryAccent.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8.0),
               border: Border.all(
-                color: AppColors.primaryAccent.withOpacity(0.3),
+                color: AppColors.primaryAccent.withValues(alpha: 0.3),
                 width: 1.0,
               ),
             ),
@@ -84,7 +84,7 @@ class _InfoCardState extends State<InfoCard> {
                 Icon(
                   Icons.access_time,
                   size: 16,
-                  color: AppColors.primaryAccent.withOpacity(0.8),
+                  color: AppColors.primaryAccent.withValues(alpha: 0.8),
                 ),
                 const SizedBox(width: 8),
                 Text(
@@ -138,8 +138,8 @@ class _InfoCardState extends State<InfoCard> {
 
     // Compute animated border like GoalCard (purple on hover)
     final Color borderColor = (_isHovered && !widget.isEditMode)
-        ? AppColors.primary.withOpacity(0.8)
-        : AppColors.border.withOpacity(0.7);
+        ? AppColors.primary.withValues(alpha: 0.8)
+        : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
     final cardContent = ClipRRect(
@@ -149,7 +149,7 @@ class _InfoCardState extends State<InfoCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground.withOpacity(0.8),
+            color: AppColors.cardBackground.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(16.0),
             border: Border.all(color: borderColor, width: borderWidth),
             // Hover effect now uses only the border; keep a subtle, constant shadow
@@ -194,8 +194,8 @@ class _InfoCardState extends State<InfoCard> {
         child: InkWell(
           onTap: widget.isEditMode ? null : widget.onTap,
           borderRadius: BorderRadius.circular(16.0),
-          splashColor: AppColors.primaryAccent.withOpacity(0.1),
-          highlightColor: AppColors.primaryAccent.withOpacity(0.1),
+          splashColor: AppColors.primaryAccent.withValues(alpha: 0.1),
+          highlightColor: AppColors.primaryAccent.withValues(alpha: 0.1),
           hoverColor: Colors.transparent,
           child: cardContent,
         ),
@@ -226,7 +226,7 @@ class _InfoCardState extends State<InfoCard> {
                   color: widget.color,
                   height: 1,
                   shadows: [
-                    Shadow(color: widget.color.withOpacity(0.5), blurRadius: 15)
+                    Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
                   ])),
           Container(
               height: 60,
@@ -234,9 +234,9 @@ class _InfoCardState extends State<InfoCard> {
               margin: const EdgeInsets.symmetric(horizontal: 20.0),
               decoration: BoxDecoration(
                   gradient: LinearGradient(colors: [
-                AppColors.primaryAccent.withOpacity(0.0),
-                AppColors.primaryAccent.withOpacity(0.3),
-                AppColors.primaryAccent.withOpacity(0.0)
+                AppColors.primaryAccent.withValues(alpha: 0.0),
+                AppColors.primaryAccent.withValues(alpha: 0.3),
+                AppColors.primaryAccent.withValues(alpha: 0.0)
               ], begin: Alignment.topCenter, end: Alignment.bottomCenter))),
           Expanded(
             child: Column(
@@ -266,10 +266,10 @@ class _InfoCardState extends State<InfoCard> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
                 decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withOpacity(0.15),
+                    color: AppColors.primaryAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20.0),
                     border: Border.all(
-                        color: AppColors.primaryAccent.withOpacity(0.3))),
+                        color: AppColors.primaryAccent.withValues(alpha: 0.3))),
                 child: Text(tag,
                     style: const TextStyle(
                         color: Color(0xffe9d5ff),
@@ -310,7 +310,7 @@ class _InfoCardState extends State<InfoCard> {
                   color: widget.color,
                   height: 1,
                   shadows: [
-                    Shadow(color: widget.color.withOpacity(0.5), blurRadius: 15)
+                    Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
                   ],
                 ),
               ),
@@ -320,9 +320,9 @@ class _InfoCardState extends State<InfoCard> {
                   margin: const EdgeInsets.symmetric(horizontal: 20.0),
                   decoration: BoxDecoration(
                       gradient: LinearGradient(colors: [
-                    AppColors.primaryAccent.withOpacity(0.0),
-                    AppColors.primaryAccent.withOpacity(0.3),
-                    AppColors.primaryAccent.withOpacity(0.0)
+                    AppColors.primaryAccent.withValues(alpha: 0.0),
+                    AppColors.primaryAccent.withValues(alpha: 0.3),
+                    AppColors.primaryAccent.withValues(alpha: 0.0)
                   ], begin: Alignment.topCenter, end: Alignment.bottomCenter))),
               Expanded(
                 child: Column(
@@ -354,10 +354,10 @@ class _InfoCardState extends State<InfoCard> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
                 decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withOpacity(0.15),
+                    color: AppColors.primaryAccent.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(20.0),
                     border: Border.all(
-                        color: AppColors.primaryAccent.withOpacity(0.3))),
+                        color: AppColors.primaryAccent.withValues(alpha: 0.3))),
                 child: Text(tag,
                     style: const TextStyle(
                         color: Color(0xffe9d5ff),

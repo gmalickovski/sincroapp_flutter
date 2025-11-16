@@ -126,10 +126,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 Container(
                   padding: const EdgeInsets.all(24.0),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackground.withOpacity(0.5),
+                    color: AppColors.cardBackground.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16.0),
                     border:
-                        Border.all(color: AppColors.border.withOpacity(0.5)),
+                        Border.all(color: AppColors.border.withValues(alpha: 0.5)),
                   ),
                   child: Form(
                     key: _formKey,

@@ -312,7 +312,7 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
                           color: isSelected
                               ? Colors.white
                               : AppColors.primaryText
-                                  .withOpacity(0.6), // Texto branco ou opaco
+                                  .withValues(alpha: 0.6), // Texto branco ou opaco
                           fontSize: isSelected ? 20 : 18, // Tamanho da fonte
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w500,

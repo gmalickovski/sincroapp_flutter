@@ -431,7 +431,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   ),
             icon: _isSaving ? null : const Icon(Icons.check),
             backgroundColor: _isSaving
-                ? AppColors.primary.withOpacity(0.5)
+                ? AppColors.primary.withValues(alpha: 0.5)
                 : AppColors.primary, // Feedback visual de desativado
             foregroundColor: Colors.white,
           ),

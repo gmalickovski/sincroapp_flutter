@@ -181,7 +181,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 avatar: const Icon(Icons.clear, size: 16, color: Colors.white),
                 label: const Text('Limpar todos os filtros'),
                 labelStyle: const TextStyle(color: Colors.white),
-                backgroundColor: AppColors.primary.withOpacity(0.5),
+                backgroundColor: AppColors.primary.withValues(alpha: 0.5),
                 onPressed: () {
                   setState(() {
                     _dateFilter = null;

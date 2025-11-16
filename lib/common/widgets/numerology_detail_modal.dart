@@ -57,11 +57,11 @@ class NumerologyDetailModal extends StatelessWidget {
         constraints: const BoxConstraints(maxWidth: 480),
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.95),
+          color: Colors.black.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.2),
+              color: Colors.black.withValues(alpha: 0.2),
               blurRadius: 24,
               offset: const Offset(0, 8),
             ),
@@ -135,7 +135,7 @@ class NumerologyDetailModal extends StatelessWidget {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: AppColors.border.withOpacity(0.3),
+            color: AppColors.border.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -186,7 +186,7 @@ class NumerologyDetailModal extends StatelessWidget {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppColors.border.withOpacity(0.3),
+            color: AppColors.border.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -288,7 +288,7 @@ class NumerologyDetailModal extends StatelessWidget {
             child: Text(
               periodMatch.group(1)!,
               style: TextStyle(
-                color: (color ?? AppColors.primaryAccent).withOpacity(0.9),
+                color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.9),
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
                 fontStyle: FontStyle.italic,
@@ -378,10 +378,10 @@ class NumerologyDetailModal extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: (color ?? AppColors.primaryAccent).withOpacity(0.1),
+        color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: (color ?? AppColors.primaryAccent).withOpacity(0.3),
+          color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -420,10 +420,10 @@ class NumerologyDetailModal extends StatelessWidget {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: (color ?? AppColors.primaryAccent).withOpacity(0.15),
+            color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: (color ?? AppColors.primaryAccent).withOpacity(0.3),
+              color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -454,7 +454,7 @@ class NumerologyDetailModal extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.deepPurple.withOpacity(0.18),
+                  color: Colors.deepPurple.withValues(alpha: 0.18),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,

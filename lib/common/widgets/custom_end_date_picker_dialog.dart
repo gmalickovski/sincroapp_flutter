@@ -367,15 +367,15 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
       borderWidth = 2.0;
     } else if (isToday && isEnabled) {
       // Dia "Hoje": Fundo primário sutil, sem borda
-      cellFillColor = AppColors.primary.withOpacity(0.25);
+      cellFillColor = AppColors.primary.withValues(alpha: 0.25);
     } else if (!isEnabled) {
       // Dia desabilitado: Fundo muito sutil
-      // --- ALTERAÇÃO: Trocado AppColors.border.withOpacity(0.3) por branco com opacidade ---
-      cellFillColor = Colors.white.withOpacity(0.02);
+      // --- ALTERAÇÃO: Trocado AppColors.border.withValues(alpha: 0.3) por branco com opacidade ---
+      cellFillColor = Colors.white.withValues(alpha: 0.02);
     } else {
       // Dia padrão (habilitado, não selecionado, não hoje):
       // --- ALTERAÇÃO: Trocado AppColors.border por branco com opacidade para um visual mais suave ---
-      cellFillColor = Colors.white.withOpacity(0.05);
+      cellFillColor = Colors.white.withValues(alpha: 0.05);
     }
     // --- FIM DA ALTERAÇÃO (TASK 3) ---
 
@@ -391,7 +391,7 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
     }
 
     Color dayTextColor =
-        isEnabled ? baseDayTextColor : baseDayTextColor.withOpacity(0.4);
+        isEnabled ? baseDayTextColor : baseDayTextColor.withValues(alpha: 0.4);
 
     FontWeight dayFontWeight = FontWeight.normal;
     if ((isToday || isSelected) && isEnabled) {

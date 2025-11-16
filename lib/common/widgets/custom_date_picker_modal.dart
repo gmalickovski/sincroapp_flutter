@@ -498,7 +498,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: AppColors.tertiaryText.withOpacity(0.5),
+              color: AppColors.tertiaryText.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -878,11 +878,11 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
   }) {
     // Lógica visual da célula (sem alterações)
     Color borderColor =
-        isOutside ? Colors.transparent : AppColors.border.withOpacity(0.5);
+        isOutside ? Colors.transparent : AppColors.border.withValues(alpha: 0.5);
     Color cellFillColor = Colors.transparent;
     double borderWidth = 0.8;
     if (isToday && isEnabled && !isSelected) {
-      borderColor = AppColors.primary.withOpacity(0.6);
+      borderColor = AppColors.primary.withValues(alpha: 0.6);
       borderWidth = 1.5;
     }
     if (isSelected && isEnabled) {
@@ -891,7 +891,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       borderWidth = 2.0;
     }
     if (!isEnabled && !isOutside) {
-      borderColor = AppColors.border.withOpacity(0.3);
+      borderColor = AppColors.border.withValues(alpha: 0.3);
       borderWidth = 0.5;
     }
     Color baseDayTextColor;
@@ -900,12 +900,12 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     } else if (isToday && isEnabled) {
       baseDayTextColor = AppColors.primary;
     } else if (isOutside) {
-      baseDayTextColor = AppColors.tertiaryText.withOpacity(0.5);
+      baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.5);
     } else {
       baseDayTextColor = AppColors.secondaryText;
     }
     Color dayTextColor =
-        isEnabled ? baseDayTextColor : baseDayTextColor.withOpacity(0.4);
+        isEnabled ? baseDayTextColor : baseDayTextColor.withValues(alpha: 0.4);
     FontWeight dayFontWeight = ((isToday || isSelected) && isEnabled)
         ? FontWeight.bold
         : FontWeight.normal;
@@ -1089,7 +1089,7 @@ class _DatePill extends StatelessWidget {
       // Estado "Hoje" (não selecionado)
       baseTextColor = AppColors.primary;
       baseDayNumColor = AppColors.primary;
-      baseBorderColor = AppColors.primary.withOpacity(0.6);
+      baseBorderColor = AppColors.primary.withValues(alpha: 0.6);
       borderWidth = 1.5;
       // bgColor permanece AppColors.cardBackground
     }
@@ -1103,7 +1103,7 @@ class _DatePill extends StatelessWidget {
     }
 
     // O Opacity é aplicado no widget pai, então não precisamos
-    // aplicar .withOpacity() em cada cor individualmente.
+    // aplicar .withValues(alpha: ) em cada cor individualmente.
     // --- FIM DAS MODIFICAÇÕES ---
 
     return Opacity(

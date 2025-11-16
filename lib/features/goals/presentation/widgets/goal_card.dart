@@ -37,10 +37,10 @@ class _GoalCardState extends State<GoalCard> {
     final double borderWidth;
 
     if (_isHovered) {
-      borderColor = AppColors.primary.withOpacity(0.8);
+      borderColor = AppColors.primary.withValues(alpha: 0.8);
       borderWidth = 1.5;
     } else {
-      borderColor = AppColors.border.withOpacity(0.7);
+      borderColor = AppColors.border.withValues(alpha: 0.7);
       borderWidth = 1.0;
     }
 
@@ -61,7 +61,7 @@ class _GoalCardState extends State<GoalCard> {
           boxShadow: _isHovered // Sombra sutil opcional no hover
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.05),
+                    color: AppColors.primary.withValues(alpha: 0.05),
                     blurRadius: 8,
                   )
                 ]
@@ -74,8 +74,8 @@ class _GoalCardState extends State<GoalCard> {
           child: InkWell(
             onTap: widget.onTap,
             borderRadius: BorderRadius.circular(12),
-            splashColor: AppColors.primary.withOpacity(0.1),
-            highlightColor: AppColors.primary.withOpacity(0.1),
+            splashColor: AppColors.primary.withValues(alpha: 0.1),
+            highlightColor: AppColors.primary.withValues(alpha: 0.1),
             hoverColor: Colors.transparent, // DESLIGA O HOVER PADRÃO
             child: Padding(
               padding: const EdgeInsets.all(16.0),
@@ -305,10 +305,10 @@ class _ProgressCircle extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                     border:
-                        Border.all(color: AppColors.primary.withOpacity(0.4)),
+                        Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -337,7 +337,7 @@ class _RadialBasePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final base = Paint()
-      ..color = AppColors.border.withOpacity(0.25)
+      ..color = AppColors.border.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 16
       ..strokeCap = StrokeCap.round;

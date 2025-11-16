@@ -154,7 +154,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
             borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.2),
                   blurRadius: 12,
                   offset: const Offset(0, -2)),
             ],
@@ -222,11 +222,11 @@ class _AssistantPanelState extends State<AssistantPanel> {
                   constraints: const BoxConstraints(maxWidth: 560),
                   decoration: BoxDecoration(
                     color: isUser
-                        ? AppColors.primaryAccent.withOpacity(0.15)
+                        ? AppColors.primaryAccent.withValues(alpha: 0.15)
                         : AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(10),
                     border:
-                        Border.all(color: AppColors.border.withOpacity(0.6)),
+                        Border.all(color: AppColors.border.withValues(alpha: 0.6)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,13 +293,13 @@ class _AssistantPanelState extends State<AssistantPanel> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.0),
                           borderSide: BorderSide(
-                            color: AppColors.border.withOpacity(0.5),
+                            color: AppColors.border.withValues(alpha: 0.5),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.0),
                           borderSide: BorderSide(
-                            color: AppColors.border.withOpacity(0.5),
+                            color: AppColors.border.withValues(alpha: 0.5),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -421,10 +421,10 @@ class _AssistantPanelState extends State<AssistantPanel> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: chipColor.withOpacity(0.15),
+          color: chipColor.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: chipColor.withOpacity(0.4),
+            color: chipColor.withValues(alpha: 0.4),
             width: 1,
           ),
         ),

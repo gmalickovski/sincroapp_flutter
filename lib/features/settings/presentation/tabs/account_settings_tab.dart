@@ -255,7 +255,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
                 'Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.',
             content: ElevatedButton(
               style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade800.withOpacity(0.8),
+                  backgroundColor: Colors.red.shade800.withValues(alpha: 0.8),
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 45)),
               onPressed: _isDeleting ? null : _handleDeleteAccount,

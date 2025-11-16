@@ -90,15 +90,15 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
         Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: AppColors.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              splashColor: AppColors.primary.withOpacity(0.2),
-              hoverColor: AppColors.primary.withOpacity(0.1),
+              splashColor: AppColors.primary.withValues(alpha: 0.2),
+              hoverColor: AppColors.primary.withValues(alpha: 0.1),
               onTap: () {
                 setState(() {
                   _isCreatingNewTag = true;
@@ -160,15 +160,15 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
                 final tagName = tags[index];
                 return Container(
                   decoration: BoxDecoration(
-                    color: AppColors.background.withOpacity(0.5),
+                    color: AppColors.background.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      splashColor: AppColors.primary.withOpacity(0.2),
-                      hoverColor: AppColors.primary.withOpacity(0.1),
+                      splashColor: AppColors.primary.withValues(alpha: 0.2),
+                      hoverColor: AppColors.primary.withValues(alpha: 0.1),
                       onTap: () {
                         // --- INÍCIO DA MUDANÇA ---
                         // Retorna a tag (já sanitizada) via pop

@@ -40,7 +40,7 @@ class DashboardSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xff111827), // Cor de fundo da sidebar
         border: Border(
-          right: BorderSide(color: AppColors.border.withOpacity(0.5), width: 1),
+          right: BorderSide(color: AppColors.border.withValues(alpha: 0.5), width: 1),
         ),
       ),
       child: SafeArea(

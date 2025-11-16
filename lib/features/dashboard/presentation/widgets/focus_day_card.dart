@@ -39,8 +39,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
   @override
   Widget build(BuildContext context) {
     final Color borderColor = _isHovered
-        ? AppColors.primary.withOpacity(0.8)
-        : AppColors.border.withOpacity(0.7);
+        ? AppColors.primary.withValues(alpha: 0.8)
+        : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = _isHovered ? 1.5 : 1.0;
 
     return MouseRegion(
@@ -49,19 +49,19 @@ class _FocusDayCardState extends State<FocusDayCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground.withOpacity(0.8),
+          color: AppColors.cardBackground.withValues(alpha: 0.8),
           borderRadius: BorderRadius.circular(16.0),
           border: Border.all(color: borderColor, width: borderWidth),
           boxShadow: _isHovered
               ? [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.05),
+                    color: AppColors.primary.withValues(alpha: 0.05),
                     blurRadius: 8,
                   )
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   )

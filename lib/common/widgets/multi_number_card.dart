@@ -47,8 +47,8 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
     final displayTitle = widget.info.tituloTradicional ?? widget.info.titulo;
 
     final Color borderColor = (_isHovered && !widget.isEditMode)
-        ? AppColors.primary.withOpacity(0.8)
-        : AppColors.border.withOpacity(0.7);
+        ? AppColors.primary.withValues(alpha: 0.8)
+        : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
     final cardContent = ClipRRect(
@@ -58,7 +58,7 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground.withOpacity(0.8),
+            color: AppColors.cardBackground.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(16.0),
             border: Border.all(color: borderColor, width: borderWidth),
             boxShadow: const [
@@ -101,8 +101,8 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
         child: InkWell(
           onTap: widget.isEditMode ? null : widget.onTap,
           borderRadius: BorderRadius.circular(16.0),
-          splashColor: AppColors.primaryAccent.withOpacity(0.1),
-          highlightColor: AppColors.primaryAccent.withOpacity(0.1),
+          splashColor: AppColors.primaryAccent.withValues(alpha: 0.1),
+          highlightColor: AppColors.primaryAccent.withValues(alpha: 0.1),
           hoverColor: Colors.transparent,
           child: cardContent,
         ),
@@ -146,10 +146,10 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryAccent.withOpacity(0.15),
+                  color: AppColors.primaryAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20.0),
                   border: Border.all(
-                      color: AppColors.primaryAccent.withOpacity(0.3)),
+                      color: AppColors.primaryAccent.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   tag,
@@ -212,10 +212,10 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryAccent.withOpacity(0.15),
+                  color: AppColors.primaryAccent.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20.0),
                   border: Border.all(
-                      color: AppColors.primaryAccent.withOpacity(0.3)),
+                      color: AppColors.primaryAccent.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   tag,
@@ -251,7 +251,7 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
               color: widget.color,
               height: 1,
               shadows: [
-                Shadow(color: widget.color.withOpacity(0.5), blurRadius: 15)
+                Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
               ],
             ),
           ),
@@ -263,9 +263,9 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppColors.primaryAccent.withOpacity(0.0),
-                  AppColors.primaryAccent.withOpacity(0.3),
-                  AppColors.primaryAccent.withOpacity(0.0),
+                  AppColors.primaryAccent.withValues(alpha: 0.0),
+                  AppColors.primaryAccent.withValues(alpha: 0.3),
+                  AppColors.primaryAccent.withValues(alpha: 0.0),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,

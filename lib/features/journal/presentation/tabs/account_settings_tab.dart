@@ -249,7 +249,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
               isDangerZone: true),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.2),
+                backgroundColor: Colors.red.withValues(alpha: 0.2),
                 foregroundColor: Colors.red.shade300),
             onPressed: _isDeleting ? null : _handleDeleteAccount,
             child: _isDeleting

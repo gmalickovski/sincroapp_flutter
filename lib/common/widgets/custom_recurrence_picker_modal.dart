@@ -266,7 +266,7 @@ class _CustomRecurrencePickerModalState
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.tertiaryText.withOpacity(0.5),
+            color: AppColors.tertiaryText.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(2),
           ),
         ),

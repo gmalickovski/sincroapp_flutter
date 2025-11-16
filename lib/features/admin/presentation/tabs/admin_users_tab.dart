@@ -262,7 +262,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
         });
       },
       backgroundColor: AppColors.background,
-      selectedColor: AppColors.primary.withOpacity(0.2),
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary,
       labelStyle: TextStyle(
         color: isSelected ? AppColors.primary : AppColors.secondaryText,
@@ -285,7 +285,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isActiveSubscription
-              ? planColor.withOpacity(0.3)
+              ? planColor.withValues(alpha: 0.3)
               : AppColors.border,
           width: 1,
         ),
@@ -293,7 +293,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: CircleAvatar(
-          backgroundColor: planColor.withOpacity(0.2),
+          backgroundColor: planColor.withValues(alpha: 0.2),
           child: user.photoUrl != null
               ? ClipOval(
                   child: Image.network(
@@ -332,7 +332,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: planColor.withOpacity(0.2),
+                    color: planColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                     border: Border.all(color: planColor, width: 1),
                   ),
@@ -350,7 +350,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.red.withOpacity(0.2),
+                      color: Colors.red.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: Colors.red, width: 1),
                     ),
@@ -368,7 +368,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.2),
+                      color: AppColors.primary.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(4),
                       border: Border.all(color: AppColors.primary, width: 1),
                     ),

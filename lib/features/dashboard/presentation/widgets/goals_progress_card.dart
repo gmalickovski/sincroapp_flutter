@@ -56,8 +56,8 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width >= 768.0;
     final Color borderColor = _isHovered
-        ? AppColors.primary.withOpacity(0.8)
-        : AppColors.border.withOpacity(0.7);
+        ? AppColors.primary.withValues(alpha: 0.8)
+        : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = _isHovered ? 1.5 : 1.0;
 
     return MouseRegion(
@@ -77,7 +77,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
             boxShadow: _isHovered
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.05),
+                      color: AppColors.primary.withValues(alpha: 0.05),
                       blurRadius: 8,
                     )
                   ]
@@ -171,9 +171,9 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
               height: 36,
               width: 36,
               decoration: BoxDecoration(
-                color: AppColors.cardBackground.withOpacity(0.9),
+                color: AppColors.cardBackground.withValues(alpha: 0.9),
                 border: Border.all(
-                    color: AppColors.border.withOpacity(0.8), width: 1),
+                    color: AppColors.border.withValues(alpha: 0.8), width: 1),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -323,7 +323,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                   goal.description.isEmpty ? 'Sem descrição' : goal.description,
                   style: TextStyle(
                     color: goal.description.isEmpty
-                        ? AppColors.tertiaryText.withOpacity(0.5)
+                        ? AppColors.tertiaryText.withValues(alpha: 0.5)
                         : AppColors.tertiaryText,
                     fontSize: 14,
                     height: 1.4,
@@ -353,7 +353,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
             decoration: BoxDecoration(
               color: _currentPage == index
                   ? AppColors.primary
-                  : AppColors.secondaryText.withOpacity(0.5),
+                  : AppColors.secondaryText.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(4),
             ),
           );
@@ -418,7 +418,7 @@ class _FullWidthGoalProgress extends StatelessWidget {
               child: CircularProgressIndicator(
                 value: percent.isNaN ? 0 : percent,
                 strokeWidth: 12,
-                backgroundColor: AppColors.border.withOpacity(0.35),
+                backgroundColor: AppColors.border.withValues(alpha: 0.35),
                 valueColor:
                     const AlwaysStoppedAnimation<Color>(AppColors.primary),
               ),
@@ -450,10 +450,10 @@ class _FullWidthGoalProgress extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.primary.withOpacity(0.3),
+                      color: AppColors.primary.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),

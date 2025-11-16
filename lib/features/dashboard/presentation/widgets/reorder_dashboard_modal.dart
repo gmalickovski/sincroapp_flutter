@@ -197,7 +197,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
             height: 4,
             margin: const EdgeInsets.symmetric(vertical: 12),
             decoration: BoxDecoration(
-                color: AppColors.border.withOpacity(0.5),
+                color: AppColors.border.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(2)),
           ),
           // Título centralizado e Fechar
@@ -251,7 +251,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                         child: Icon(
                           Icons.drag_indicator,
                           color: AppColors.secondaryText
-                              .withOpacity(isHidden ? 0.35 : 0.8),
+                              .withValues(alpha: isHidden ? 0.35 : 0.8),
                           size: 22,
                         ),
                       ),
@@ -259,7 +259,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                       Icon(
                         cardData['icon'],
                         color: isHidden
-                            ? AppColors.secondaryText.withOpacity(0.4)
+                            ? AppColors.secondaryText.withValues(alpha: 0.4)
                             : AppColors.secondaryText,
                       ),
                     ],
@@ -268,7 +268,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                     cardData['name'],
                     style: TextStyle(
                       color: AppColors.primaryText
-                          .withOpacity(isHidden ? 0.5 : 1.0),
+                          .withValues(alpha: isHidden ? 0.5 : 1.0),
                     ),
                   ),
                   trailing: IconButton(
@@ -302,8 +302,8 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
               proxyDecorator:
                   (Widget child, int index, Animation<double> animation) {
                 return Material(
-                  color:
-                      AppColors.primary.withOpacity(0.1), // Cor de fundo suave
+                  color: AppColors.primary
+                      .withValues(alpha: 0.1), // Cor de fundo suave
                   elevation: 4.0, // Sombra
                   borderRadius: BorderRadius.circular(8),
                   child: child,

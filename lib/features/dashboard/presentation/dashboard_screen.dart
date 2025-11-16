@@ -2213,7 +2213,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _menuAnimationController.reverse();
                 });
               },
-              child: Container(color: Colors.black.withOpacity(0.5))),
+              child: Container(color: Colors.black.withValues(alpha: 0.5))),
         AnimatedPositioned(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,

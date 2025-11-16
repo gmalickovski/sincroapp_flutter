@@ -126,9 +126,9 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             child: Container(
               padding: const EdgeInsets.all(32.0),
               decoration: BoxDecoration(
-                color: AppColors.cardBackground.withOpacity(0.5),
+                color: AppColors.cardBackground.withValues(alpha: 0.5),
                 borderRadius: BorderRadius.circular(16.0),
-                border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
               ),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),

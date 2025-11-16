@@ -77,7 +77,7 @@ class TaskItem extends StatelessWidget {
             border: Border.all(
               color: task.completed
                   ? Colors.green.shade500
-                  : AppColors.tertiaryText.withOpacity(0.7),
+                  : AppColors.tertiaryText.withValues(alpha: 0.7),
               width: 1.5,
             ),
           ),
@@ -166,8 +166,8 @@ class TaskItem extends StatelessWidget {
         }
       },
       // --- FIM DA MUDANÇA ---
-      splashColor: AppColors.primary.withOpacity(0.1),
-      highlightColor: AppColors.primary.withOpacity(0.05),
+      splashColor: AppColors.primary.withValues(alpha: 0.1),
+      highlightColor: AppColors.primary.withValues(alpha: 0.05),
       borderRadius: BorderRadius.circular(8.0),
       child: AnimatedContainer(
         // Adicionado para feedback visual
@@ -175,7 +175,7 @@ class TaskItem extends StatelessWidget {
         // --- INÍCIO DA MUDANÇA (Solicitação 1): Feedback visual de seleção ---
         decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary.withOpacity(0.2)
+                ? AppColors.primary.withValues(alpha: 0.2)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(8.0)),
         // --- FIM DA MUDANÇA ---

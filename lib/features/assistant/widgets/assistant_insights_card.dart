@@ -66,7 +66,7 @@ class _AssistantInsightsCardState extends State<AssistantInsightsCard> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
       ),
       padding: const EdgeInsets.all(16),
       child: FutureBuilder<String>(

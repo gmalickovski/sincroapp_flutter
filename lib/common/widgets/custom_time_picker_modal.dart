@@ -144,7 +144,7 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
                     child: Text(
                       ":",
                       style: TextStyle(
-                        color: AppColors.primaryText.withOpacity(0.7),
+                        color: AppColors.primaryText.withValues(alpha: 0.7),
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                       ),
@@ -292,7 +292,7 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
                           color: isSelected
                               ? Colors.white
                               : AppColors.primaryText
-                                  .withOpacity(0.6), // Texto branco ou opaco
+                                  .withValues(alpha: 0.6), // Texto branco ou opaco
                           fontSize: isSelected ? 24 : 20, // Ajuste de tamanho
                           fontWeight:
                               isSelected ? FontWeight.bold : FontWeight.w500,

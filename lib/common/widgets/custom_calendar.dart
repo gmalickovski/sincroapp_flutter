@@ -167,8 +167,8 @@ class CustomCalendar extends StatelessWidget {
               margin: const EdgeInsets.all(2.0), alignment: Alignment.center,
               child: Text(
                 '${day.day}',
-                style:
-                    TextStyle(color: AppColors.tertiaryText.withOpacity(0.3)),
+                style: TextStyle(
+                    color: AppColors.tertiaryText.withValues(alpha: 0.3)),
               ),
             );
           },
@@ -262,8 +262,8 @@ class _DayCellState extends State<_DayCell> {
           .toSet() // Tipos únicos
           .map((type) {
             final markerSize = 5.0;
-            final markerColor =
-                _getColorForEventType(type).withOpacity(isPast ? 0.9 : 1.0);
+            final markerColor = _getColorForEventType(type)
+                .withValues(alpha: isPast ? 0.9 : 1.0);
             return Container(
               width: markerSize,
               height: markerSize,
@@ -289,8 +289,8 @@ class _DayCellState extends State<_DayCell> {
           .map((e) => e.type)
           .toSet() // Tipos únicos
           .map((type) {
-            final markerColor =
-                _getColorForEventType(type).withOpacity(isPast ? 0.9 : 1.0);
+            final markerColor = _getColorForEventType(type)
+                .withValues(alpha: isPast ? 0.9 : 1.0);
             return Container(
               height: 4, // Altura da barra
               margin: const EdgeInsets.only(top: 2), // Espaçamento entre barras
@@ -320,27 +320,28 @@ class _DayCellState extends State<_DayCell> {
 
     // 1. DIAS PASSADOS (Opacos, como você gostava)
     if (isPast) {
-      backgroundColor = AppColors.cardBackground.withOpacity(0.15); // Base
-      borderColor = AppColors.border.withOpacity(0.4); // Base
-      textColor = AppColors.tertiaryText.withOpacity(0.85); // Texto opaco
+      backgroundColor =
+          AppColors.cardBackground.withValues(alpha: 0.15); // Base
+      borderColor = AppColors.border.withValues(alpha: 0.4); // Base
+      textColor = AppColors.tertiaryText.withValues(alpha: 0.85); // Texto opaco
     }
     // 2. DIAS FUTUROS (Mais destaque)
     else {
       // Começa com os valores de destaque pedidos
       backgroundColor =
-          AppColors.cardBackground.withOpacity(0.3); // MAIS DESTAQUE
-      borderColor = AppColors.border.withOpacity(0.7); // MAIS DESTAQUE
+          AppColors.cardBackground.withValues(alpha: 0.3); // MAIS DESTAQUE
+      borderColor = AppColors.border.withValues(alpha: 0.7); // MAIS DESTAQUE
       textColor = AppColors.secondaryText; // Texto normal
 
       // Sobrescreve para HOVER
       if (_isHovered && widget.isDesktop) {
-        backgroundColor = AppColors.cardBackground.withOpacity(0.6);
+        backgroundColor = AppColors.cardBackground.withValues(alpha: 0.6);
       }
 
       // Sobrescreve para HOJE (não selecionado)
       if (widget.isToday && !widget.isSelected) {
-        backgroundColor = AppColors.cardBackground.withOpacity(0.8);
-        borderColor = AppColors.primary.withOpacity(0.7);
+        backgroundColor = AppColors.cardBackground.withValues(alpha: 0.8);
+        borderColor = AppColors.primary.withValues(alpha: 0.7);
         textColor = AppColors.primary;
       }
 
@@ -348,7 +349,7 @@ class _DayCellState extends State<_DayCell> {
       // Sobrescreve para SELECIONADO (borda colorida, fundo neutro)
       if (widget.isSelected) {
         backgroundColor =
-            AppColors.cardBackground.withOpacity(0.8); // Fundo neutro
+            AppColors.cardBackground.withValues(alpha: 0.8); // Fundo neutro
         borderColor = _getPersonalDayColor(); // Borda na cor do dia
         textColor =
             AppColors.primary; // Texto com cor de destaque (ficará bold)

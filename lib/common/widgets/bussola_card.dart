@@ -29,8 +29,8 @@ class _BussolaCardState extends State<BussolaCard> {
   Widget build(BuildContext context) {
     // Animated purple border like GoalCard
     final Color borderColor = (_isHovered && !widget.isEditMode)
-        ? AppColors.primary.withOpacity(0.8)
-        : AppColors.border.withOpacity(0.7);
+        ? AppColors.primary.withValues(alpha: 0.8)
+        : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
     final cardContent = ClipRRect(
@@ -40,7 +40,7 @@ class _BussolaCardState extends State<BussolaCard> {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground.withOpacity(0.8),
+            color: AppColors.cardBackground.withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(16.0),
             border: Border.all(color: borderColor, width: borderWidth),
             // Keep a subtle constant shadow
@@ -83,8 +83,8 @@ class _BussolaCardState extends State<BussolaCard> {
         child: InkWell(
           onTap: widget.isEditMode ? null : widget.onTap,
           borderRadius: BorderRadius.circular(16.0),
-          splashColor: AppColors.primaryAccent.withOpacity(0.1),
-          highlightColor: AppColors.primaryAccent.withOpacity(0.1),
+          splashColor: AppColors.primaryAccent.withValues(alpha: 0.1),
+          highlightColor: AppColors.primaryAccent.withValues(alpha: 0.1),
           hoverColor: Colors.transparent,
           child: cardContent,
         ),
@@ -145,7 +145,7 @@ class _BussolaCardState extends State<BussolaCard> {
                       Padding(
                         padding: const EdgeInsets.only(top: 5.0),
                         child: Icon(Icons.circle,
-                            color: color.withOpacity(0.5), size: 8),
+                            color: color.withValues(alpha: 0.5), size: 8),
                       ),
                       const SizedBox(width: 8),
                       Expanded(

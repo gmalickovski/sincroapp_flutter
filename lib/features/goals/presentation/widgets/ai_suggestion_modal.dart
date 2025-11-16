@@ -195,7 +195,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
               topRight: Radius.circular(20),
             ),
             border: Border.all(
-              color: AppColors.border.withOpacity(0.3),
+              color: AppColors.border.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -226,7 +226,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
-            color: AppColors.border.withOpacity(0.3),
+            color: AppColors.border.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -307,7 +307,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFFEF4444).withOpacity(0.5), // red-500
+            color: const Color(0xFFEF4444).withValues(alpha: 0.5), // red-500
             width: 1.5,
           ),
         ),
@@ -466,13 +466,13 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.0),
                           borderSide: BorderSide(
-                            color: AppColors.border.withOpacity(0.5),
+                            color: AppColors.border.withValues(alpha: 0.5),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.0),
                           borderSide: BorderSide(
-                            color: AppColors.border.withOpacity(0.5),
+                            color: AppColors.border.withValues(alpha: 0.5),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -549,13 +549,13 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withOpacity(0.08)
+                        ? AppColors.primary.withValues(alpha: 0.08)
                         : AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary.withOpacity(0.5)
-                          : AppColors.border.withOpacity(0.3),
+                          ? AppColors.primary.withValues(alpha: 0.5)
+                          : AppColors.border.withValues(alpha: 0.3),
                       width: isSelected ? 1.5 : 1,
                     ),
                   ),
@@ -580,7 +580,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                             side: BorderSide(
                               color: isSelected
                                   ? AppColors.primary
-                                  : AppColors.border.withOpacity(0.5),
+                                  : AppColors.border.withValues(alpha: 0.5),
                               width: 2,
                             ),
                             shape: RoundedRectangleBorder(
@@ -613,10 +613,10 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFB923C).withOpacity(0.15),
+                          color: const Color(0xFFFB923C).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFFB923C).withOpacity(0.3),
+                            color: const Color(0xFFFB923C).withValues(alpha: 0.3),
                             width: 1,
                           ),
                         ),
@@ -659,7 +659,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
         color: AppColors.cardBackground,
         border: Border(
           top: BorderSide(
-            color: AppColors.border.withOpacity(0.3),
+            color: AppColors.border.withValues(alpha: 0.3),
             width: 1,
           ),
         ),
@@ -711,7 +711,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                 borderRadius: BorderRadius.circular(12),
               ),
               elevation: 0,
-              disabledBackgroundColor: AppColors.border.withOpacity(0.3),
+              disabledBackgroundColor: AppColors.border.withValues(alpha: 0.3),
             ),
             onPressed: _selectedSuggestions.isEmpty
                 ? null

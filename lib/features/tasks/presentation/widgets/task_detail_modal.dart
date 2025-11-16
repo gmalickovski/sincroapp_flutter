@@ -725,7 +725,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           ),
           if (_isLoading)
             Container(
-              color: Colors.black.withOpacity(0.5),
+              color: Colors.black.withValues(alpha: 0.5),
               child: const Center(
                   child: CircularProgressIndicator(color: AppColors.primary)),
             ),
@@ -747,7 +747,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(20.0),
                   border: Border.all(
-                      color: vibrationColor.withOpacity(borderOpacity),
+                      color: vibrationColor.withValues(alpha: borderOpacity),
                       width: borderWidth)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -774,7 +774,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             decoration: BoxDecoration(
                 border: Border(
                     top: BorderSide(
-                        color: vibrationColor.withOpacity(borderOpacity),
+                        color: vibrationColor.withValues(alpha: borderOpacity),
                         width: borderWidth + 1))),
             child: contentBody),
       );
@@ -1074,15 +1074,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500),
                                 backgroundColor:
-                                    AppColors.background.withOpacity(0.6),
+                                    AppColors.background.withValues(alpha: 0.6),
                                 onDeleted: () => _removeTag(tag),
-                                deleteIconColor:
-                                    AppColors.secondaryText.withOpacity(0.7),
+                                deleteIconColor: AppColors.secondaryText
+                                    .withValues(alpha: 0.7),
                                 deleteButtonTooltipMessage: "Remover tag",
                                 shape: StadiumBorder(
                                     side: BorderSide(
                                         color: Colors.purpleAccent
-                                            .withOpacity(0.3))),
+                                            .withValues(alpha: 0.3))),
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 10.0, vertical: 4.0),
                                 materialTapTargetSize:
@@ -1106,7 +1106,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                           ? 'Adicionar tag...'
                           : 'Limite de tags atingido',
                       hintStyle: TextStyle(
-                          color: AppColors.tertiaryText.withOpacity(0.7)),
+                          color: AppColors.tertiaryText.withValues(alpha: 0.7)),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
                       isDense: true,
