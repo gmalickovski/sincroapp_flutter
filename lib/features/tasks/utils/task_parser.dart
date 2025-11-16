@@ -1,6 +1,5 @@
 // lib/features/tasks/utils/task_parser.dart
 import 'package:flutter/material.dart'; // Necessário para TimeOfDay
-import 'package:intl/intl.dart';
 // REMOVIDO: import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
 // REMOVIDO: import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';

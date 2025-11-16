@@ -297,33 +297,6 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     }
   }
 
-  /// Navega para o mês anterior no calendário.
-  void _previousMonth() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _calendarFocusedDay = DateTime(
-        _calendarFocusedDay.year,
-        _calendarFocusedDay.month - 1,
-        1,
-      );
-      _regenerateDateListForCurrentMonth(); // Atualiza a lista de pílulas
-    });
-  }
-
-  /// Navega para o próximo mês no calendário.
-  void _nextMonth() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _calendarFocusedDay = DateTime(
-        _calendarFocusedDay.year,
-        _calendarFocusedDay.month + 1,
-        1,
-      );
-      _regenerateDateListForCurrentMonth(); // Atualiza a lista de pílulas
-    });
-  }
-
-  // --- ALTERAÇÃO (TASK 1): Nova função para rolar os dias ---
   /// Rola a lista de dias horizontalmente.
   void _scrollDays(int direction) {
     if (!_scrollController.hasClients || !mounted) return;
@@ -1076,38 +1049,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
   }
 } // Fim da classe _CustomDatePickerModalState
 
-// --- Widgets Auxiliares (_QuickActionButton, _DatePill - com alterações) ---
-class _QuickActionButton extends StatelessWidget {
-  final String label;
-  final VoidCallback onTap;
-  const _QuickActionButton(
-      {super.key, required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton(
-      onPressed: onTap,
-      style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
-        minimumSize: const Size(60, 40),
-        side: const BorderSide(color: AppColors.border),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: AppColors.primaryText,
-          fontWeight: FontWeight.w500,
-          fontSize: 14,
-        ),
-        textAlign: TextAlign.center,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-  }
-}
+// --- Widget Auxiliar (_DatePill - com alterações) ---
 
 class _DatePill extends StatelessWidget {
   // Construtor e variáveis (sem alterações)
@@ -1128,7 +1070,6 @@ class _DatePill extends StatelessWidget {
     required this.onTap,
     required this.width,
     required this.isPastDay,
-    super.key,
   });
 
   @override

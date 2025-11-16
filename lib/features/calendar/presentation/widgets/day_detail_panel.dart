@@ -144,18 +144,6 @@ class DayDetailPanel extends StatelessWidget {
     );
   }
 
-  // Estados vazios (inalterados)
-  Widget _buildEmptyStateDesktop() {
-    // Esta função não é mais chamada pela lógica (selectedDay == null),
-    // mas pode ser útil se você quiser usá-la quando 'events.isEmpty'
-    return const Center(
-      child: Text(
-        'Selecione um dia',
-        style: TextStyle(color: AppColors.secondaryText, fontSize: 16),
-      ),
-    );
-  }
-
   Widget _buildEmptyStateMobile() {
     // Implementação do estado vazio para mobile (inalterada)
     return const Center(
