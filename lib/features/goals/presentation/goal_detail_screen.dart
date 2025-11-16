@@ -96,13 +96,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             _firestoreService
                 .addTask(widget.userData.uid, newTask)
                 .catchError((error) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text('Erro ao salvar marco: $error'),
-                      backgroundColor: Colors.red),
-                );
-              }
+              if (!mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text('Erro ao salvar marco: $error'),
+                    backgroundColor: Colors.red),
+              );
             });
           },
         );

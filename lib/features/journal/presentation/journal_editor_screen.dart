@@ -82,6 +82,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       setState(() => _isSaving = false);
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: Colors.red.shade400,

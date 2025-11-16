@@ -104,6 +104,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       final goalsSnapshot =
           await FirestoreService().getActiveGoals(widget.userData.uid);
       if (goalsSnapshot.length >= maxGoals) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,

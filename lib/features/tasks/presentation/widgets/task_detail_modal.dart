@@ -263,12 +263,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         await _firestoreService.updateGoalProgress(
             widget.userData.uid, duplicatedTask.journeyId!);
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(
             content: Text('Tarefa duplicada.'),
             backgroundColor: AppColors.primary),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
             content: Text('Erro ao duplicar: $e'), backgroundColor: Colors.red),
@@ -306,6 +308,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (confirmed != true) return;
 
     String? goalIdToUpdate = widget.task.journeyId;
+    if (!mounted) return;
     Navigator.of(currentContext).pop();
 
     try {
@@ -314,11 +317,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         await _firestoreService.updateGoalProgress(
             widget.userData.uid, goalIdToUpdate);
       }
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(
             content: Text('Tarefa excluída.'), backgroundColor: Colors.orange),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
             content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
@@ -399,11 +404,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             widget.userData.uid, currentGoalId);
       }
 
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(
             content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
             content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),

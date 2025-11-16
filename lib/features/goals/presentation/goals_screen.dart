@@ -58,6 +58,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         },
       ).then((result) {
         if (result == true) {
+          if (!mounted) return;
           // Meta salva com sucesso, opcionalmente mostrar um SnackBar
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

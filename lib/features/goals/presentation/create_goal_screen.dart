@@ -95,6 +95,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       final goalsSnapshot =
           await FirestoreService().getActiveGoals(widget.userData.uid);
       if (goalsSnapshot.length >= maxGoals) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red,
@@ -109,6 +110,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
 
     // 2. Validação da data (movida para cima)
     if (_targetDate == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           backgroundColor: Colors.red,
