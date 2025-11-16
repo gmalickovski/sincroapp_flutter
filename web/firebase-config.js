@@ -26,33 +26,13 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Configuração do App Check
+// App Check é ativado APENAS no Flutter app (lib/main.dart)
+// Landing page NÃO precisa de App Check porque usuários não estão autenticados aqui
 if (isLocalhost) {
-  // DEBUG: Ativa debug token
-  console.log('🛠️ Modo DEBUG: App Check debug token ativado');
-  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-  
-  // Conecta aos emuladores
+  // Conecta aos emuladores locais
   console.log('🔧 Conectando aos emuladores locais...');
   db.useEmulator('localhost', 8081);
   auth.useEmulator('http://localhost:9098');
-  
-  // Inicializa App Check com debug provider
-  const appCheck = firebase.appCheck();
-  appCheck.activate(
-    new firebase.appCheck.CustomProvider({
-      getToken: () => Promise.resolve({ token: 'debug-token', expireTimeMillis: Date.now() + 3600000 })
-    }),
-    true // isTokenAutoRefreshEnabled
-  );
-} else {
-  // PRODUÇÃO: Usa reCAPTCHA v3
-  console.log('🚀 Modo PRODUÇÃO: Usando reCAPTCHA v3');
-  const appCheck = firebase.appCheck();
-  appCheck.activate(
-    '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU', // reCAPTCHA site key
-    true // isTokenAutoRefreshEnabled
-  );
 }
 
 // Listener de mudanças de autenticação
