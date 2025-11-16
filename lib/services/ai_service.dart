@@ -24,28 +24,20 @@ class AIService {
       return _cachedModel!;
     }
     try {
-      debugPrint("=== Inicializando modelo Gemini ===");
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception(
-            "❌ Usuário não autenticado. FirebaseAuth.instance.currentUser é null.");
+            "Usuário não autenticado. FirebaseAuth.instance.currentUser é null.");
       }
-      debugPrint("✅ Usuário autenticado: ${currentUser.uid}");
 
       final model = FirebaseAI.vertexAI(
         auth: FirebaseAuth.instance,
         appCheck: FirebaseAppCheck.instance,
       ).generativeModel(
-        // Usando o modelo do seu JS que funciona
         model: 'gemini-2.5-flash-lite',
-        // --- generationConfig REMOVIDO (Esta é a correção principal do erro "Com certeza!") ---
       );
 
       _cachedModel = model;
-      debugPrint("✅ Modelo Gemini inicializado com sucesso!");
-      debugPrint("📦 Provider: vertexAI (com App Check)");
-      debugPrint("🤖 Modelo: ${model.model}");
-      debugPrint("===================================");
       return model;
     } catch (e, stackTrace) {
       // Mantém seu tratamento de erro
@@ -70,15 +62,12 @@ class AIService {
     String additionalInfo = '',
   }) async {
     try {
-      debugPrint("🚀 AIService (v8): Iniciando geração de sugestões...");
       final currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception(
-            "❌ Usuário não autenticado. Por favor, faça login novamente.");
+            "Usuário não autenticado. Por favor, faça login novamente.");
       }
-      debugPrint("✅ Usuário autenticado: ${currentUser.uid}");
 
-      // --- PASSO 1: Construir o Prompt (usando o builder v8) ---
       final prompt = AIPromptBuilder.buildTaskSuggestionPrompt(
         goal: goal,
         user: user,
@@ -89,38 +78,21 @@ class AIService {
         existingSubTasks: goal.subTasks,
       );
 
-      debugPrint("📝 Prompt (v8) preparado (${prompt.length} caracteres)");
-      // Descomente para depuração completa do prompt
-      // debugPrint("--- INÍCIO DO PROMPT v8 ---");
-      // debugPrint(prompt);
-      // debugPrint("--- FIM DO PROMPT v8 ---");
-
-      final generativeModel = _getModel(); // Modelo sem generationConfig
+      final generativeModel = _getModel();
       final content = [Content.text(prompt)];
 
-      debugPrint("🤖 Chamando modelo Gemini para idear tarefas e datas...");
       final response = await generativeModel.generateContent(content);
-      debugPrint("✅ Resposta recebida do modelo");
 
       String text = response.text ?? '';
-      debugPrint(
-          "📄 Resposta bruta (${text.length} caracteres): ${text.substring(0, text.length > 200 ? 200 : text.length)}...");
 
-      // --- PASSO 3: Limpar e Parsear (Lógica do JS) ---
       text = text.replaceAll('```json', '').replaceAll('```', '').trim();
 
-      // Tenta extrair APENAS o array JSON, mesmo que haja texto antes/depois
-      // (Esta é a correção para a resposta "Com certeza! [...]")
       final jsonMatch =
           RegExp(r'\[\s*\{.*?\}\s*\]', dotAll: true).firstMatch(text);
 
       if (jsonMatch != null) {
         text = jsonMatch.group(0)!;
-        debugPrint(
-            "✅ JSON extraído com sucesso: ${text.substring(0, text.length > 100 ? 100 : text.length)}...");
       } else {
-        debugPrint(
-            "❌ Falha ao extrair JSON da resposta. Resposta completa: $text");
         throw FormatException("A IA não retornou um array JSON válido.");
       }
 
@@ -146,41 +118,27 @@ class AIService {
                       'date': dateStr,
                     };
                   } else {
-                    debugPrint("⚠️ Data passada ignorada ($dateStr)");
                     return null;
                   }
                 } catch (e) {
-                  debugPrint("⚠️ Data inválida ignorada ($dateStr): $e");
                   return null;
                 }
               } else {
-                debugPrint("⚠️ Formato de data inválido ignorado: $dateStr");
                 return null;
               }
             } else {
-              debugPrint(
-                  "⚠️ Item inválido ignorado (faltando title ou date): $item");
               return null;
             }
           })
           .whereType<Map<String, String>>()
           .toList();
 
-      debugPrint(
-          "✅ ${suggestions.length} sugestões VÁLIDAS geradas com sucesso!");
-      if (suggestions.isEmpty && suggestionsJson.isNotEmpty) {
-        debugPrint(
-            "🤔 Nenhuma sugestão válida foi extraída, embora o JSON inicial parecesse ok.");
-      } else if (suggestions.isEmpty) {
-        debugPrint("🤔 A IA não retornou nenhuma sugestão.");
+      if (suggestions.isEmpty) {
         throw Exception("A IA não conseguiu gerar sugestões para esta meta.");
       }
 
       return suggestions;
-    } catch (e, s) {
-      // Seu tratamento de erro v2 (que é excelente)
-      debugPrint("❌ ERRO ao gerar sugestões: $e");
-      debugPrint("📍 StackTrace: $s");
+    } catch (e) {
       final errorString = e.toString().toLowerCase();
       if (errorString.contains("app check") ||
           errorString.contains("unauthenticated") ||
@@ -218,7 +176,6 @@ class AIService {
   // Método parseJsonList (Mantido - não precisa alterar)
   static List<dynamic> parseJsonList(String text) {
     try {
-      debugPrint("📄 JSON limpo recebido para parse: $text");
       return jsonDecode(text) as List<dynamic>;
     } catch (e) {
       debugPrint("❌ Erro ao decodificar JSON: $e");

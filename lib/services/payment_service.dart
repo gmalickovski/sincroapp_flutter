@@ -60,7 +60,6 @@ class PaymentService {
     if (kIsWeb) {
       // No web, redireciona para URL de checkout
       // TODO: Implementar redirecionamento via url_launcher ou dart:html
-      debugPrint('Redirecionar para: $checkoutUrl');
       return true;
     }
 
@@ -90,8 +89,6 @@ class PaymentService {
       'cancelUrl': 'https://seuapp.com/payment/cancel',
     };
 
-    debugPrint('Criando checkout PagBank: $checkoutData');
-
     // TODO: Implementar chamada para Firebase Function
     // final response = await _firestoreService.callFunction('createPagBankCheckout', checkoutData);
     // return response['checkoutUrl'];
@@ -102,7 +99,6 @@ class PaymentService {
   /// ========== iOS: Apple In-App Purchase ==========
   Future<bool> _purchaseIOS(String userId, SubscriptionPlan plan) async {
     // TODO: Implementar com in_app_purchase package
-    debugPrint('Compra iOS - plano: ${plan.name}');
 
     // Fluxo básico:
     // 1. Inicializar InAppPurchase
@@ -118,7 +114,6 @@ class PaymentService {
   /// ========== Android: Google Play Billing ==========
   Future<bool> _purchaseAndroid(String userId, SubscriptionPlan plan) async {
     // TODO: Implementar com in_app_purchase package
-    debugPrint('Compra Android - plano: ${plan.name}');
 
     // Fluxo básico:
     // 1. Inicializar InAppPurchase

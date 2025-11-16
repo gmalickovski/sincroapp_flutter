@@ -1429,7 +1429,6 @@ class FirestoreService {
         // Remove campo legado para eliminar duplicidade
         'plano': FieldValue.delete(),
       });
-      debugPrint("Assinatura do usuário $uid atualizada com sucesso.");
     } catch (e) {
       debugPrint("Erro ao atualizar assinatura: $e");
       rethrow;
@@ -1476,7 +1475,6 @@ class FirestoreService {
       batch.delete(_db.collection('users').doc(uid));
 
       await batch.commit();
-      debugPrint("Usuário $uid e todos seus dados deletados com sucesso.");
     } catch (e) {
       debugPrint("Erro ao deletar usuário: $e");
       rethrow;

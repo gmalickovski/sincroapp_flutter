@@ -133,7 +133,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         });
       }
     } catch (e) {
-      print("Erro ao carregar detalhes da meta: $e");
       if (mounted) {
         setState(() => _isLoadingGoal = false);
       }
@@ -165,7 +164,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             dataNascimento: widget.userData.dataNasc);
         return engine.calculatePersonalDayForDate(localDate);
       } catch (e) {
-        print("Erro ao calcular dia pessoal para $localDate: $e");
         return 0;
       }
     }
@@ -321,7 +319,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             content: Text('Tarefa excluída.'), backgroundColor: Colors.orange),
       );
     } catch (e) {
-      print("Erro ao excluir tarefa: $e");
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
             content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
@@ -407,7 +404,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
       );
     } catch (e) {
-      print("Erro ao salvar tarefa: $e");
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(
             content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),

@@ -204,8 +204,6 @@ class _JournalScreenState extends State<JournalScreen> {
                   return const Center(child: CustomLoadingSpinner());
                 }
                 if (snapshot.hasError) {
-                  print(
-                      "ERRO DO FIRESTORE (verifique os índices): ${snapshot.error}");
                   return Center(
                       child: Text("Erro ao carregar anotações.",
                           style: TextStyle(color: Colors.red.shade300)));

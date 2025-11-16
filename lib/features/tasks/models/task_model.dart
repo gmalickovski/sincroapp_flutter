@@ -125,7 +125,6 @@ class TaskModel {
         reminder = TimeOfDay(
             hour: data['reminderHour'], minute: data['reminderMinute']);
       } catch (e) {
-        print("Erro ao parsear reminderTime do Firestore: $e");
         reminder = null;
       }
     }

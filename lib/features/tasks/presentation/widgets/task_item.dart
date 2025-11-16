@@ -124,10 +124,6 @@ class TaskItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Debug: Verificar os dados da tarefa
-    print(
-        "DEBUG TaskItem: '${task.text}' - personalDay: ${task.personalDay}, dueDate: ${task.dueDate}, createdAt: ${task.createdAt}");
-
     // Determina se os ícones/pílula devem ser mostrados BASEADO NAS FLAGS e nos dados da task
     final bool shouldShowGoalIcon = showGoalIconFlag &&
         task.journeyTitle != null &&
@@ -138,9 +134,6 @@ class TaskItem extends StatelessWidget {
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
         task.personalDay! > 0;
-
-    print(
-        "DEBUG TaskItem: '${task.text}' - shouldShowPill: $shouldShowPill (flag: $showVibrationPillFlag, personalDay: ${task.personalDay})");
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;

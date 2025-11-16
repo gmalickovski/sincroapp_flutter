@@ -186,7 +186,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
           });
         }
       } catch (e) {
-        print("Erro ao calcular dia pessoal: $e");
         if (mounted) {
           setState(() {
             _selectedDateForPill = dateMidnight;

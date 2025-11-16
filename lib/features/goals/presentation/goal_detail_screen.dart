@@ -96,7 +96,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             _firestoreService
                 .addTask(widget.userData.uid, newTask)
                 .catchError((error) {
-              print("Erro ao adicionar marco (tarefa): $error");
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -113,7 +112,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // Função _handleMilestoneTap (Sua original)
   void _handleMilestoneTap(TaskModel task) {
-    print("Marco/Tarefa tocado: ${task.id} - ${task.text}");
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -268,7 +266,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       final day = engine.calculatePersonalDayForDate(dateUtc);
       return (day > 0) ? day : null;
     } catch (e) {
-      print("Erro ao calcular dia pessoal para $date: $e");
       return null;
     }
   }

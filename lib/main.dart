@@ -49,21 +49,12 @@ Future<void> _connectToEmulators() async {
   const int authPort = 9098;
   const int functionsPort = 5002;
 
-  debugPrint('---');
-  debugPrint('--- 🛠️  CONECTANDO AOS EMULADORES EM $host 🛠️  ---');
-
-  // Apontar o Firestore para o Emulador
   FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
 
-  // Apontar o Auth para o Emulador
   await FirebaseAuth.instance.useAuthEmulator(host, authPort);
 
-  // Apontar o Functions para o Emulador
   FirebaseFunctions.instanceFor(region: 'us-central1')
       .useFunctionsEmulator(host, functionsPort);
-
-  debugPrint('--- ✅ EMULADORES CONECTADOS ---');
-  debugPrint('---');
 }
 // ========================================
 // FIM DA FUNÇÃO
@@ -78,30 +69,20 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // --- INÍCIO DA INICIALIZAÇÃO DAS NOTIFICAÇÕES ---
   // Inicializa o serviço de notificação
-  // Isso também configura o fuso horário
   try {
     await NotificationService.instance.init();
-    debugPrint('✅ Notification Service inicializado!');
   } catch (e) {
     debugPrint('❌ Erro ao inicializar Notification Service: $e');
   }
-  // --- FIM DA INICIALIZAÇÃO DAS NOTIFICAÇÕES ---
 
-  // ========================================
-  // LÓGICA DE CONEXÃO COM EMULADOR
-  // ========================================
   if (kDebugMode) {
-    // Em modo DEBUG: ative App Check com Debug Provider e conecte nos emuladores
     try {
-      debugPrint('🔧 Inicializando Firebase App Check (DEBUG Provider)...');
       await FirebaseAppCheck.instance.activate(
         webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
         androidProvider: AndroidProvider.debug,
         appleProvider: AppleProvider.debug,
       );
-      _logAppCheckStatus();
     } catch (e, s) {
       debugPrint('⚠️ Falha ao ativar App Check (debug): $e');
       debugPrint('$s');
@@ -109,9 +90,7 @@ Future<void> main() async {
 
     try {
       await _connectToEmulators();
-    } catch (e) {
-      debugPrint('!!! Erro ao conectar aos emuladores: $e');
-    }
+    } catch (e) {}
   } else {
     // ========================================
     // EM MODO RELEASE, ATIVE O APP CHECK
@@ -134,9 +113,6 @@ Future<void> main() async {
         // Em release: usa App Attest
         appleProvider: AppleProvider.appAttest,
       );
-
-      debugPrint('✅ Firebase App Check ativado!');
-      _logAppCheckStatus(); // Esta função já checa kDebugMode
     } catch (e, s) {
       debugPrint('');
       debugPrint('❌ ===== ERRO NO APP CHECK =====');
@@ -150,66 +126,6 @@ Future<void> main() async {
 
   runApp(const SincroApp());
 }
-
-/// Função helper para logar o status do App Check
-void _logAppCheckStatus() {
-  if (!kDebugMode) {
-    // Em produção, não logamos detalhes
-    debugPrint('📱 ===== APP CHECK STATUS =====');
-    debugPrint('Modo: RELEASE 🚀');
-    return;
-  }
-
-  // (Esta parte do código não será mais chamada,
-  // mas podemos manter por segurança)
-  debugPrint('');
-  debugPrint('📱 ===== APP CHECK STATUS =====');
-  debugPrint('Modo: ${kDebugMode ? "DEBUG 🛠️" : "RELEASE 🚀"}');
-  debugPrint('Plataforma: ${defaultTargetPlatform.name}');
-
-  if (kIsWeb) {
-    debugPrint('');
-    debugPrint('🌐 WEB:');
-    if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Token');
-      debugPrint('  ℹ️ Procure no console por:');
-      debugPrint('     "Firebase App Check debug token: XXXX..."');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
-    } else {
-      debugPrint('  ✓ Usando: reCAPTCHA v3 (Produção)');
-      debugPrint('  ✓ Site Key: $kReCaptchaSiteKey');
-    }
-  } else if (defaultTargetPlatform == TargetPlatform.android) {
-    debugPrint('');
-    debugPrint('🤖 ANDROID:');
-    if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ⚠️ PROCURE NO LOGCAT POR:');
-      debugPrint('     "Firebase App Check debug token"');
-      debugPrint('  ℹ️ Registre em: console.firebase.google.com > App Check');
-    } else {
-      debugPrint('  ✓ Usando: Play Integrity API (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na Play Store');
-    }
-  } else if (defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS) {
-    debugPrint('');
-    debugPrint('🍎 iOS/macOS:');
-    if (kDebugMode) {
-      debugPrint('  ✓ Usando: Debug Provider');
-      debugPrint('  ℹ️ Registre o token no Firebase Console');
-    } else {
-      debugPrint('  ✓ Usando: App Attest (Produção)');
-      debugPrint('  ⚠️ Requer: App publicado na App Store');
-    }
-  }
-
-  debugPrint('================================');
-  debugPrint('');
-}
-
-// ... (O RESTO DO SEU CÓDIGO PERMANECE INTOCADO) ...
-// (SincroApp, etc.)
 
 class SincroApp extends StatelessWidget {
   const SincroApp({super.key});

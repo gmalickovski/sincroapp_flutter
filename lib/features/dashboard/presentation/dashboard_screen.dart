@@ -330,9 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  void _handleTaskTap(TaskModel task) {
-    debugPrint("Dashboard: Tarefa tocada: ${task.id} - ${task.text}");
-  }
+  void _handleTaskTap(TaskModel task) {}
 
   // ---
   // --- ATUALIZAÇÃO NESTA FUNÇÃO ---

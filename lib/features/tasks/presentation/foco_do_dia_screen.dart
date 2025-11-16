@@ -112,7 +112,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       final day = engine.calculatePersonalDayForDate(dateUtc);
       return (day > 0) ? day : null;
     } catch (e) {
-      print("Erro ao calcular dia pessoal para $date: $e");
       return null;
     }
   }
@@ -232,7 +231,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       }
       nextDate = _getNextDate(rule, nextDate);
       if (iterations > maxIterations + 5) {
-        print("Warning: Loop de recorrência excedeu limite de segurança.");
         break;
       }
     }
@@ -646,8 +644,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                           _userId, task.journeyId!);
                                     }
                                   }).catchError((error) {
-                                    print(
-                                        "Erro ao atualizar status da tarefa: $error");
                                     _showErrorSnackbar(
                                         "Erro ao atualizar tarefa: $error");
                                   });
