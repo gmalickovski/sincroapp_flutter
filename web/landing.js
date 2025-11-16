@@ -27,16 +27,16 @@ document.addEventListener('DOMContentLoaded', () => {
  * Abre modal de login ou redireciona para app
  */
 async function handleLogin() {
-  // Redireciona para a tela de login do app Flutter
-  window.location.href = '/app/login';
+  // Redireciona para a rota de login do Flutter (hash-based)
+  window.location.href = '/app/#/login';
 }
 
 /**
  * Registra novo usuário
  */
 async function handleRegister() {
-  // Redireciona para a tela de cadastro do app Flutter
-  window.location.href = '/app/register';
+  // Redireciona para a rota de cadastro do Flutter (hash-based)
+  window.location.href = '/app/#/register';
 }
 
 /**

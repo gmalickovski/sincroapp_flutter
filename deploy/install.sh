@@ -315,7 +315,8 @@ server {
     }
     
     location /app/ {
-        try_files \$uri \$uri/ /app/index.html;
+        # Remove \$uri/ para evitar redirecionamentos 301 em rotas dinâmicas (ex: /app/login)
+        try_files \$uri /app/index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
