@@ -170,7 +170,11 @@ sed -i 's/intl: \^0\.20\.2/intl: ^0.19.0/' "$INSTALL_DIR/pubspec.yaml"
 
 # Reverter withValues para withOpacity (Flutter 3.27.1 não suporta withValues completo)
 log_info "Revertendo withValues() para withOpacity() para compatibilidade com Flutter 3.27.1..."
-find "$INSTALL_DIR/lib" -name "*.dart" -type f -exec sed -i 's/\.withValues(alpha: \([0-9.]*\))/.withOpacity(\1)/g' {} +
+# Cobrir casos com literais, variáveis e expressões (ternário, etc.)
+find "$INSTALL_DIR/lib" -name "*.dart" -type f -exec sed -Ei 's/\.withValues\(alpha: ([^)]*)\)/.withOpacity(\1)/g' {} +
+
+# Ajustar DropdownButtonFormField: initialValue -> value (compatibilidade com Flutter 3.27.1)
+sed -i "s/initialValue:/value:/g" "$INSTALL_DIR/lib/features/admin/presentation/widgets/user_edit_dialog.dart"
 
 log_success "pubspec.yaml e código-fonte corrigidos para Flutter 3.27.1"
 
