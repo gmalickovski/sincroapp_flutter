@@ -75,7 +75,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Garante que userId seja pego com segurança
     _userId = _authRepository.getCurrentUser()?.uid ?? '';
     if (_userId.isEmpty) {
-      print("ERRO GRAVE: CalendarScreen iniciada sem userId!");
+      debugPrint("ERRO GRAVE: CalendarScreen iniciada sem userId!");
       // Idealmente, tratar esse caso (ex: mostrar erro, impedir build)
       _isScreenLoading = false; // Impede loading infinito
     } else {
@@ -94,7 +94,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       {bool isInitialLoad = false}) async {
     // Garante que não prossiga se userId for inválido
     if (_userId.isEmpty) {
-      print("ERRO: Tentativa de inicializar streams sem userId.");
+      debugPrint("ERRO: Tentativa de inicializar streams sem userId.");
       if (mounted) {
         setState(() {
           _isChangingMonth = false;
@@ -126,14 +126,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _tasksDueDateSubscription = _firestoreService
         .getTasksDueDateStreamForMonth(_userId, monthUtc)
         .listen(_onTasksDueDateUpdated, onError: (e, s) {
-      print("Erro no stream de tasks (dueDate): $e\n$s");
+      debugPrint("Erro no stream de tasks (dueDate): $e\n$s");
       _onTasksDueDateUpdated([]);
     });
 
     _tasksCreatedAtSubscription = _firestoreService
         .getTasksCreatedAtStreamForMonth(_userId, monthUtc)
         .listen(_onTasksCreatedAtUpdated, onError: (e, s) {
-      print("Erro no stream de tasks (createdAt): $e\n$s");
+      debugPrint("Erro no stream de tasks (createdAt): $e\n$s");
       _onTasksCreatedAtUpdated([]);
     });
 
@@ -210,7 +210,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         return DateTime.utc(localDate.year, localDate.month, localDate.day);
       });
     } catch (e, stackTrace) {
-      print("Erro em _processEvents: $e\n$stackTrace");
+      debugPrint("Erro em _processEvents: $e\n$stackTrace");
       newRawEvents = {};
       newEvents = {};
     } finally {
@@ -365,7 +365,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
             _firestoreService
                 .updateTask(_userId, updatedTask)
                 .catchError((error) {
-              print("Erro ao ATUALIZAR tarefa pelo calendário: $error");
+              debugPrint("Erro ao ATUALIZAR tarefa pelo calendário: $error");
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -417,7 +417,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               personalDay: finalPersonalDay,
             );
             _firestoreService.addTask(_userId, newTask).catchError((error) {
-              print("Erro ao ADICIONAR tarefa pelo calendário: $error");
+              debugPrint("Erro ao ADICIONAR tarefa pelo calendário: $error");
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -483,7 +483,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _firestoreService.updateGoalProgress(_userId, task.journeyId!);
       }
     } catch (e) {
-      print("Erro ao atualizar conclusão: $e");
+      debugPrint("Erro ao atualizar conclusão: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('Erro ao atualizar tarefa: $e'),
@@ -493,7 +493,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _handleTaskTap(TaskModel task) {
-    print("Calendário: Tarefa tocada: ${task.id} - ${task.text}");
+    debugPrint("Calendário: Tarefa tocada: ${task.id} - ${task.text}");
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {

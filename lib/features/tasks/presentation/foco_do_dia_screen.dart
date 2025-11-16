@@ -54,7 +54,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     super.initState();
     _userId = AuthRepository().getCurrentUser()?.uid ?? '';
     if (_userId.isEmpty) {
-      print("ERRO: FocoDoDiaScreen acessada sem usuário logado!");
+      debugPrint("ERRO: FocoDoDiaScreen acessada sem usuário logado!");
     }
   }
 
@@ -539,7 +539,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           return const Center(child: CustomLoadingSpinner());
                         }
                         if (snapshot.hasError) {
-                          print("Erro no Stream de Tarefas: ${snapshot.error}");
+                          debugPrint("Erro no Stream de Tarefas: ${snapshot.error}");
                           return Center(
                               child: Text(
                                   'Erro ao carregar tarefas: ${snapshot.error}'));

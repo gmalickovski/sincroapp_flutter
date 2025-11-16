@@ -145,38 +145,38 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     final messenger = ScaffoldMessenger.of(context);
     final bool isMountedAtStart = mounted;
 
-    print("ReorderModal: _onSave iniciado. Mounted: $isMountedAtStart");
+    debugPrint("ReorderModal: _onSave iniciado. Mounted: $isMountedAtStart");
     if (!isMountedAtStart) return;
 
     setState(() => _isLoading = true);
     try {
-      print("ReorderModal: Chamando Firestore update...");
+      debugPrint("ReorderModal: Chamando Firestore update...");
       await _firestoreService.updateUserDashboardOrder(
           widget.userId, _currentOrder);
       // Persiste os cartões ocultos
       await _firestoreService.updateUserDashboardHiddenCards(
           widget.userId, _hidden.toList());
-      print("ReorderModal: Firestore update finalizado com sucesso.");
+      debugPrint("ReorderModal: Firestore update finalizado com sucesso.");
       if (mounted) {
-        print("ReorderModal: Chamando onSaveComplete(true).");
+        debugPrint("ReorderModal: Chamando onSaveComplete(true).");
         widget.onSaveComplete(true);
       } else {
-        print(
+        debugPrint(
             "ReorderModal: Sucesso no save, mas widget desmontado antes de chamar onSaveComplete.");
       }
     } catch (e, stackTrace) {
-      print("ReorderModal: Erro durante save: $e");
-      print(stackTrace);
+      debugPrint("ReorderModal: Erro durante save: $e");
+      debugPrint("StackTrace: $stackTrace");
       if (mounted) {
-        print("ReorderModal: Mostrando SnackBar de erro.");
+        debugPrint("ReorderModal: Mostrando SnackBar de erro.");
         messenger.showSnackBar(SnackBar(
             content: Text('Erro ao salvar: ${e.toString()}'),
             backgroundColor: Colors.red));
         setState(() => _isLoading = false);
-        print("ReorderModal: Chamando onSaveComplete(false).");
+        debugPrint("ReorderModal: Chamando onSaveComplete(false).");
         widget.onSaveComplete(false);
       } else {
-        print("ReorderModal: Erro ocorreu, mas widget desmontado.");
+        debugPrint("ReorderModal: Erro ocorreu, mas widget desmontado.");
       }
     }
   }

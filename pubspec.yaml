@@ -13,6 +13,9 @@ dependencies:
   # Pacote para localização do app (datas, etc.)
   flutter_localizations:
     sdk: flutter
+  
+  # Formatação de datas e números
+  intl: ^0.20.2
 
   google_fonts: ^6.1.0
   cupertino_icons: ^1.0.8

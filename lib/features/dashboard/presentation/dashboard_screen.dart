@@ -26,9 +26,6 @@ import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/assistant_insights_card.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
-import 'package:sincro_app_flutter/services/ai_service.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import '../../calendar/presentation/calendar_screen.dart';
 import '../../journal/presentation/journal_screen.dart';
@@ -59,42 +56,6 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen>
     with SingleTickerProviderStateMixin {
-  // --- INÍCIO: Controle de requisições IA por plano ---
-  Future<int> _getIaRequestsThisMonth(String userId) async {
-    final now = DateTime.now();
-    final startOfMonth = DateTime.utc(now.year, now.month, 1);
-    final endOfMonth = DateTime.utc(now.year, now.month + 1, 1);
-    final db = FirestoreService();
-    final snapshot = await db.db
-        .collection('users')
-        .doc(userId)
-        .collection('iaRequests')
-        .where('createdAt',
-            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfMonth))
-        .where('createdAt', isLessThan: Timestamp.fromDate(endOfMonth))
-        .get();
-    return snapshot.docs.length;
-  }
-
-  Future<bool> _canSendIaRequest(UserModel user) async {
-    final plan = user.subscription.plan.toString().toLowerCase();
-    int maxRequests = 3;
-    if (plan.contains('despertar')) maxRequests = 30;
-    if (plan.contains('sinergia')) maxRequests = 99999;
-    final count = await _getIaRequestsThisMonth(user.uid);
-    return count < maxRequests;
-  }
-
-  Future<void> _registerIaRequest(String userId) async {
-    await FirestoreService()
-        .db
-        .collection('users')
-        .doc(userId)
-        .collection('iaRequests')
-        .add({'createdAt': Timestamp.now()});
-  }
-  // --- FIM: Controle de requisições IA por plano ---
-
   UserModel? _userData;
   NumerologyResult? _numerologyData;
   bool _isLoading = true;
@@ -427,43 +388,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   // --- FIM DA ATUALIZAÇÃO ---
-  // --- INÍCIO: Função para gerar sugestão IA com todos os dados ---
-  Future<List<Map<String, String>>> _generateIaSuggestions({
-    required Goal goal,
-    required UserModel user,
-    required NumerologyResult numerologyResult,
-    required List<TaskModel> userTasks,
-    required List<JournalEntry> journalEntries,
-    String additionalInfo = '',
-  }) async {
-    // Checa limite de requisições IA
-    final canSend = await _canSendIaRequest(user);
-    if (!canSend) {
-      throw Exception(
-          'Você atingiu o limite de requisições IA do seu plano este mês. Para mais, faça upgrade!');
-    }
-    await _registerIaRequest(user.uid);
-    // Prompt builder já usa todos os dados, mas pode ser expandido para incluir journalEntries
-    // Sugestão: Adicione journalEntries ao additionalInfo
-    final journalSummary = journalEntries.isNotEmpty
-        ? journalEntries
-            .map((e) =>
-                '- ${e.content} (${e.createdAt.toLocal().toString().split(' ')[0]})')
-            .join('\n')
-        : 'Nenhuma anotação recente.';
-    final info = additionalInfo.isNotEmpty
-        ? additionalInfo + '\n\nAnotações recentes:\n' + journalSummary
-        : 'Anotações recentes:\n' + journalSummary;
-    return await AIService.generateSuggestions(
-      goal: goal,
-      user: user,
-      numerologyResult: numerologyResult,
-      userTasks: userTasks,
-      additionalInfo: info,
-    );
-  }
-  // --- FIM: Função para gerar sugestão IA ---
-  // ---
 
   // Navegação, _buildCardList, _buildDragHandle, Getters de conteúdo,
   // _buildCurrentPage, _openReorderModal, build principal, layouts, _buildDashboardContent
