@@ -108,24 +108,33 @@ fi
 if ! command_exists flutter; then
     log_info "Instalando Flutter SDK..."
     
-    # Download Flutter
     cd /opt
     wget -q https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.24.5-stable.tar.xz
     tar xf flutter_linux_3.24.5-stable.tar.xz
     rm flutter_linux_3.24.5-stable.tar.xz
     
-    # Adicionar ao PATH
-    echo 'export PATH="$PATH:/opt/flutter/bin"' >> /etc/profile
+    # Adicionar ao PATH para todas as sessões (profile.d)
+    echo 'export PATH="$PATH:/opt/flutter/bin"' > /etc/profile.d/flutter.sh
+    chmod 644 /etc/profile.d/flutter.sh
     export PATH="$PATH:/opt/flutter/bin"
-    
-    # Configurar Flutter
-    flutter config --no-analytics
-    flutter precache --web
-    
-    log_success "Flutter SDK instalado"
+
+    # Corrigir aviso de "dubious ownership" ao rodar como root
+    git config --global --add safe.directory /opt/flutter || true
+
+    # Configurar Flutter e atualizar para a última estável
+    flutter config --no-analytics || true
+    flutter channel stable || true
+    flutter upgrade || true
+    flutter precache --web || true
+    flutter --version || true
+
+    log_success "Flutter SDK instalado e atualizado (canal estável)"
 else
     log_success "Flutter SDK já instalado"
-    flutter upgrade
+    git config --global --add safe.directory /opt/flutter || true
+    flutter channel stable || true
+    flutter upgrade || true
+    flutter --version || true
 fi
 
 # 7. INSTALAR PM2 PARA GERENCIAR SERVIÇO DE NOTIFICAÇÕES
@@ -290,6 +299,11 @@ log_info "Recarregando Nginx..."
 systemctl reload nginx
 log_success "Nginx recarregado"
 
+# Recarregar variáveis de ambiente globais (para sessões futuras)
+if [ -f /etc/profile.d/flutter.sh ]; then
+    . /etc/profile.d/flutter.sh || true
+fi
+
 # 17. CONFIGURAR SERVIÇO DE NOTIFICAÇÕES
 if [ -d "$INSTALL_DIR/notification-service" ]; then
     log_info "Configurando Serviço de Notificações com PM2..."
@@ -322,11 +336,16 @@ log_success "Permissões configuradas"
 
 # 20. CONFIGURAR FIREWALL (UFW)
 if command_exists ufw; then
-    log_info "Configurando firewall..."
-    ufw allow 'Nginx Full'
-    ufw allow 22
-    ufw --force enable
-    log_success "Firewall configurado"
+    log_info "Detectado UFW instalado. Não vamos habilitar nem alterar regras automaticamente para evitar interferir com Docker e outros serviços."
+    UFW_STATUS=$(ufw status | head -n 1 | awk '{print tolower($2)}')
+    if [ "$UFW_STATUS" = "active" ]; then
+        log_info "UFW está ativo. Adicionando apenas regras necessárias, sem alterar políticas."
+        ufw allow 'Nginx Full' || true
+        ufw allow 22 || true
+        log_success "Regras do UFW ajustadas (sem alterar estado)."
+    else
+        log_warning "UFW está inativo. Mantendo inativo para não impactar containers Docker e outros apps."
+    fi
 fi
 
 # 21. VERIFICAR SERVIÇOS

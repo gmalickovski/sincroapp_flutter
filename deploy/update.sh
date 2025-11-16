@@ -100,6 +100,14 @@ log_success "Código atualizado do GitHub"
 
 # 6. ATUALIZAR DEPENDÊNCIAS FLUTTER
 log_info "Atualizando dependências Flutter..."
+# Corrigir possível aviso de propriedade ao rodar como root
+git config --global --add safe.directory /opt/flutter || true
+if [ -f /etc/profile.d/flutter.sh ]; then
+    . /etc/profile.d/flutter.sh || true
+fi
+export PATH="$PATH:/opt/flutter/bin"
+flutter channel stable || true
+flutter upgrade || true
 flutter pub get
 log_success "Dependências Flutter atualizadas"
 
