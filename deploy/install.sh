@@ -230,13 +230,11 @@ fi
 
 log_success "Build Flutter Web concluído"
 
-# 13.1. COPIAR LANDING PARA O BUILD E AJUSTAR APPCHECK
+# 13.1. COPIAR LANDING PARA O BUILD
 log_info "Publicando landing (landing.html/js e firebase-config.js) no build/web..."
 
-# Substituir a site key do App Check na landing pelo valor fornecido
-sed -i "s/appCheck\.activate(\s*'[^']\+'\s*,/appCheck.activate('$RECAPTCHA_V3_SITE_KEY',/" "$INSTALL_DIR/web/firebase-config.js"
-
 # Copiar arquivos da landing para a pasta pública do Flutter
+# NOTA: firebase-config.js já possui a site key correta hardcoded
 cp -f "$INSTALL_DIR/web/landing.html" "$INSTALL_DIR/build/web/landing.html"
 cp -f "$INSTALL_DIR/web/landing.js" "$INSTALL_DIR/build/web/landing.js"
 cp -f "$INSTALL_DIR/web/firebase-config.js" "$INSTALL_DIR/build/web/firebase-config.js"
