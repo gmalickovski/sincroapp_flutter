@@ -305,16 +305,17 @@ server {
     location = /app {
         return 301 /app/;
     }
+    
     location /app/ {
         alias $WEB_ROOT/;
-        try_files $uri $uri/ /index.html;
+        try_files \$uri \$uri/ /app/index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
     }
 
-    # Assets JS/CSS do app
-    location ~* ^/app/.*\.(js|css|wasm|json)$ {
+    # Assets JS/CSS do app (DEVE VIR ANTES de location /app/)
+    location ~* ^/app/.*\.(js|css|wasm|json|map)$ {
         alias $WEB_ROOT/;
         expires 1y;
         add_header Cache-Control "public, immutable";
@@ -343,7 +344,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-    add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firestore.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://identitytoolkit.googleapis.com;" always;
+    add_header Content-Security-Policy "default-src 'self' https:; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://www.gstatic.com https://unpkg.com https://www.google.com https://recaptchaenterprise.googleapis.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://unpkg.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://firestore.googleapis.com https://*.cloudfunctions.net wss://*.firebaseio.com https://identitytoolkit.googleapis.com https://recaptchaenterprise.googleapis.com https://www.gstatic.com; frame-src https://www.google.com;" always;
 
     autoindex off;
     client_max_body_size 10M;
