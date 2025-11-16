@@ -262,7 +262,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         leading: const CloseButton(color: AppColors.secondaryText),
         title: Text(
             widget.goalToEdit != null ? 'Editar Jornada' : 'Nova Jornada',
-            style: TextStyle(color: Colors.white, fontSize: 18)),
+            style: const TextStyle(color: Colors.white, fontSize: 18)),
       ),
       body: Form(
         key: _formKey,
@@ -427,7 +427,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                     widget.goalToEdit != null
                         ? "Atualizar Jornada"
                         : "Salvar Jornada",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
             icon: _isSaving ? null : const Icon(Icons.check),
             backgroundColor: _isSaving

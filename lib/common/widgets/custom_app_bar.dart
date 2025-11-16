@@ -66,15 +66,15 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
             // Add padding for better spacing on desktop
             padding: const EdgeInsets.only(right: 8.0),
             child: TextButton.icon(
-              icon: Icon(
+              icon: const Icon(
                 // Logic remains the same: show check when isEditMode is true (modal open)
                 Icons.edit_outlined,
                 color: AppColors.secondaryText,
                 size: 18,
               ),
-              label: Text(
+              label: const Text(
                 'Editar',
-                style: const TextStyle(color: AppColors.secondaryText),
+                style: TextStyle(color: AppColors.secondaryText),
               ),
               onPressed: onEditPressed, // This still calls _openReorderModal
               style: TextButton.styleFrom(

@@ -573,7 +573,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       BuildContext context, Map<DateTime, List<CalendarEvent>> eventsMapUtc) {
     final orientation = MediaQuery.of(context).orientation;
 
-    void _handleTodayTap() {
+    void handleTodayTap() {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
@@ -598,7 +598,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       children: [
                         CalendarHeader(
                           focusedDay: _focusedDay,
-                          onTodayButtonTap: _handleTodayTap,
+                          onTodayButtonTap: handleTodayTap,
                           onLeftArrowTap: () => _onPageChanged(DateTime(
                               _focusedDay.year, _focusedDay.month - 1)),
                           onRightArrowTap: () => _onPageChanged(DateTime(
@@ -665,7 +665,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 CalendarHeader(
                   focusedDay: _focusedDay,
-                  onTodayButtonTap: _handleTodayTap,
+                  onTodayButtonTap: handleTodayTap,
                   onLeftArrowTap: () => _onPageChanged(
                       DateTime(_focusedDay.year, _focusedDay.month - 1)),
                   onRightArrowTap: () => _onPageChanged(
@@ -721,7 +721,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   Widget _buildWideLayout(
       BuildContext context, Map<DateTime, List<CalendarEvent>> eventsMapUtc) {
-    void _handleTodayTap() {
+    void handleTodayTap() {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
@@ -743,7 +743,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               children: [
                 CalendarHeader(
                   focusedDay: _focusedDay,
-                  onTodayButtonTap: _handleTodayTap,
+                  onTodayButtonTap: handleTodayTap,
                   onLeftArrowTap: () => _onPageChanged(
                       DateTime(_focusedDay.year, _focusedDay.month - 1)),
                   onRightArrowTap: () => _onPageChanged(

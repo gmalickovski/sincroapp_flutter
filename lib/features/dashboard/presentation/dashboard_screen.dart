@@ -1,7 +1,6 @@
 // lib/features/dashboard/presentation/dashboard_screen.dart
 
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -1431,8 +1430,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final atrai = (harmonia['atrai'] as List?)?.cast<int>() ?? const [];
     final oposto = (harmonia['oposto'] as List?)?.cast<int>() ?? const [];
     final passivo = (harmonia['passivo'] as List?)?.cast<int>() ?? const [];
-    final titulo = 'Harmonia Conjugal';
-    final descricaoCurta =
+    const titulo = 'Harmonia Conjugal';
+    const descricaoCurta =
         'Compatibilidades e dinâmicas afetivas relacionadas à sua Missão.';
     final buffer = StringBuffer();
     buffer.writeln(
@@ -1501,7 +1500,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       descricaoCurta: descricaoCurta,
       descricaoCompleta: buffer.toString(),
       inspiracao: 'Relacionar-se é co-criar campos de evolução.',
-      tags: ['Relacionamentos', 'Sintonia'],
+      tags: const ['Relacionamentos', 'Sintonia'],
     );
   }
 

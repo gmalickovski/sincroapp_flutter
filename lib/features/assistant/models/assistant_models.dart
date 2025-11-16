@@ -26,14 +26,14 @@ class AssistantAction {
     if (typeStr == 'schedule') t = AssistantActionType.schedule;
     if (typeStr == 'create_goal') t = AssistantActionType.create_goal;
     if (typeStr == 'create_task') t = AssistantActionType.create_task;
-    final parseDate = (dynamic v) {
+    DateTime? parseDate(dynamic v) {
       if (v == null) return null;
       final s = v.toString();
       // Accept YYYY-MM-DD
       final regex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
       if (regex.hasMatch(s)) return DateTime.tryParse(s);
       return null;
-    };
+    }
     // Support both "date" and "targetDate" keys
     final parsedDate = parseDate(json['date']) ?? parseDate(json['targetDate']);
     return AssistantAction(

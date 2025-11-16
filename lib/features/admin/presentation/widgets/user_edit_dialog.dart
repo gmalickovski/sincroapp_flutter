@@ -110,7 +110,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             // Header
             Row(
               children: [
-                Icon(Icons.edit, color: AppColors.primary),
+                const Icon(Icons.edit, color: AppColors.primary),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -153,7 +153,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionPlan>(
-              value: _selectedPlan,
+              initialValue: _selectedPlan,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -188,7 +188,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionStatus>(
-              value: _selectedStatus,
+              initialValue: _selectedStatus,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -232,7 +232,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.calendar_today, color: AppColors.secondaryText),
+                    const Icon(Icons.calendar_today, color: AppColors.secondaryText),
                     const SizedBox(width: 12),
                     Text(
                       _validUntil != null
@@ -272,7 +272,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                  const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

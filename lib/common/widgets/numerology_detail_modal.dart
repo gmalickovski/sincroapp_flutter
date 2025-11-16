@@ -1,6 +1,5 @@
 // lib/common/widgets/numerology_detail_modal.dart
 
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -106,7 +105,7 @@ class NumerologyDetailModal extends StatelessWidget {
               const SizedBox(height: 18),
               ...numerosFavoraveis!
                   .map((n) => _buildDiaFavoravelLongo(n))
-                  .toList(),
+                  ,
             ],
           ),
         ),

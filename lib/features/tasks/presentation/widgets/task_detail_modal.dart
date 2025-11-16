@@ -477,28 +477,30 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           });
         }
       } else {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text('Limite de 5 tags atingido.'),
                 duration: Duration(seconds: 2)),
           );
+        }
         _tagInputController.clear();
       }
     } else if (tagText.isNotEmpty && forbiddenChars.hasMatch(tagText)) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
               content: Text('Tags não podem conter / # @'),
               duration: Duration(seconds: 2)),
         );
+      }
       _tagInputController.clear();
     } else {
       _tagInputController.clear();
     }
-    if (mounted && _currentTags.length < 5)
+    if (mounted && _currentTags.length < 5) {
       _tagFocusNode.requestFocus();
-    else if (mounted) _tagFocusNode.unfocus();
+    } else if (mounted) _tagFocusNode.unfocus();
   }
 
   void _removeTag(String tagToRemove) {
@@ -842,9 +844,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             tooltip: "Mais opções",
             onSelected: (value) {
               // _removeAutocompleteOverlay(); // Removido
-              if (value == 'duplicate')
+              if (value == 'duplicate') {
                 _duplicateTask();
-              else if (value == 'delete') _deleteTask();
+              } else if (value == 'delete') _deleteTask();
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               _buildPopupMenuItem(
@@ -1049,9 +1051,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
+          const Padding(
             // Align icon closer to the top so the tags/input align vertically
-            padding: const EdgeInsets.only(top: 4.0, right: 16.0),
+            padding: EdgeInsets.only(top: 4.0, right: 16.0),
             child: Icon(Icons.label_outline,
                 color: AppColors.secondaryText, size: 20),
           ),

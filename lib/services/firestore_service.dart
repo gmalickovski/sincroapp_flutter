@@ -1208,7 +1208,7 @@ class FirestoreService {
         createdAt: DateTime.now().toUtc(),
         description: '', // Demais campos padrão do seu Model
         progress: 0,
-        subTasks: [],
+        subTasks: const [],
       );
 
       final docRef = await addGoal(

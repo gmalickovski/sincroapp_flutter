@@ -18,10 +18,11 @@ void main(List<String> args) {
       if (ch == '(') {
         stack.add(MapEntry(i + 1, j + 1));
       } else if (ch == ')') {
-        if (stack.isNotEmpty)
+        if (stack.isNotEmpty) {
           stack.removeLast();
-        else
+        } else {
           print('Unmatched ) at ${i + 1}:${j + 1}');
+        }
       }
     }
   }
@@ -30,6 +31,8 @@ void main(List<String> args) {
     print('No unmatched opening parentheses found.');
   } else {
     print('Unmatched opening parentheses (line:col) count=${stack.length}:');
-    for (var e in stack) print('  ${e.key}:${e.value}');
+    for (var e in stack) {
+      print('  ${e.key}:${e.value}');
+    }
   }
 }

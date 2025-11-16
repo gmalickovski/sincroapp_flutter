@@ -316,12 +316,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   return SafeArea(
                     child: CustomScrollView(
                       slivers: [
-                        SliverAppBar(
+                        const SliverAppBar(
                           backgroundColor: AppColors.background,
                           elevation: 0,
                           pinned: true,
-                          leading: const BackButton(color: AppColors.primary),
-                          title: const Text('Detalhes da Jornada',
+                          leading: BackButton(color: AppColors.primary),
+                          title: Text('Detalhes da Jornada',
                               style:
                                   TextStyle(color: Colors.white, fontSize: 18)),
                         ),

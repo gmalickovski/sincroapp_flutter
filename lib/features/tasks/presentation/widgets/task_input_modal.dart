@@ -3,7 +3,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
-import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
@@ -47,7 +46,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   DateTime _selectedDateForPill = DateTime.now();
   int _personalDay = 0;
-  VibrationContent? _dayInfo;
   late RecurrenceRule _selectedRecurrenceRule;
   TimeOfDay? _selectedTime;
   final FocusNode _textFieldFocusNode = FocusNode();
@@ -179,10 +177,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
           setState(() {
             _selectedDateForPill = dateMidnight;
             _personalDay = day;
-            _dayInfo =
-                ContentData.vibracoes['diaPessoal']?.containsKey(day) ?? false
-                    ? ContentData.vibracoes['diaPessoal']![day]
-                    : null;
           });
         }
       } catch (e) {
@@ -190,7 +184,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
           setState(() {
             _selectedDateForPill = dateMidnight;
             _personalDay = 0;
-            _dayInfo = null;
           });
         }
       }
@@ -199,7 +192,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
         setState(() {
           _selectedDateForPill = dateMidnight;
           _personalDay = 0;
-          _dayInfo = null;
         });
       }
     }

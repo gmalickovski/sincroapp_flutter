@@ -261,7 +261,7 @@ class _DayCellState extends State<_DayCell> {
           .map((e) => e.type)
           .toSet() // Tipos únicos
           .map((type) {
-            final markerSize = 5.0;
+            const markerSize = 5.0;
             final markerColor = _getColorForEventType(type)
                 .withValues(alpha: isPast ? 0.9 : 1.0);
             return Container(

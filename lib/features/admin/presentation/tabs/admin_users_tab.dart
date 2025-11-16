@@ -215,14 +215,14 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
           child: _isLoading
               ? const Center(child: CustomLoadingSpinner())
               : _filteredUsers.isEmpty
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.search_off,
                               size: 64, color: AppColors.secondaryText),
-                          const SizedBox(height: 16),
-                          const Text(
+                          SizedBox(height: 16),
+                          Text(
                             'Nenhum usuário encontrado',
                             style: TextStyle(
                               color: AppColors.secondaryText,

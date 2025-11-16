@@ -1,7 +1,7 @@
 import 'dart:io';
 
 void main() {
-  final path = 'lib/features/tasks/presentation/foco_do_dia_screen.dart';
+  const path = 'lib/features/tasks/presentation/foco_do_dia_screen.dart';
   final lines = File(path).readAsLinesSync();
   int cum = 0;
   for (var i = 0; i < lines.length; i++) {

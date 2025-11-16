@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
@@ -55,7 +54,7 @@ class PaymentService {
   Future<bool> _purchaseWeb(String userId, SubscriptionPlan plan) async {
     // Redireciona para checkout do PagBank
     // O checkout será processado via Firebase Functions
-    final checkoutUrl = await _createPagBankCheckout(userId, plan);
+    await _createPagBankCheckout(userId, plan);
 
     if (kIsWeb) {
       // No web, redireciona para URL de checkout
@@ -73,23 +72,11 @@ class PaymentService {
   ) async {
     // TODO: Chamar Firebase Function que cria checkout PagBank
     // A function retornará a URL de checkout
+    // Exemplo de payload:
+    // final productId = plan == SubscriptionPlan.plus ? productIdDesperta : productIdSinergia;
+    // userId, plan.name, productId, prices[productId], returnUrl, cancelUrl
 
-    final productId =
-        plan == SubscriptionPlan.plus ? productIdDesperta : productIdSinergia;
-
-    final price = prices[productId]!;
-
-    // Exemplo de payload para a function
-    final checkoutData = {
-      'userId': userId,
-      'plan': plan.name,
-      'productId': productId,
-      'price': price,
-      'returnUrl': 'https://seuapp.com/payment/success',
-      'cancelUrl': 'https://seuapp.com/payment/cancel',
-    };
-
-    // TODO: Implementar chamada para Firebase Function
+    // Mock: retorna URL fake por enquanto
     // final response = await _firestoreService.callFunction('createPagBankCheckout', checkoutData);
     // return response['checkoutUrl'];
 

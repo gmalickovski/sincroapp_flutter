@@ -2,7 +2,6 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
@@ -100,10 +99,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formattedDate = toBeginningOfSentenceCase(
-      DateFormat("EEEE, d 'de' MMMM 'de' yyyy", 'pt_BR').format(_noteDate),
-    );
-
     return Scaffold(
       backgroundColor: AppColors.cardBackground,
       appBar: AppBar(

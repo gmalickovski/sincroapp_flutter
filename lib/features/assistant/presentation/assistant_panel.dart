@@ -180,12 +180,12 @@ class _AssistantPanelState extends State<AssistantPanel> {
             ),
           ),
         ),
-        Padding(
+        const Padding(
           padding:
-              const EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
+              EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
-            children: const [
+            children: [
               Icon(
                 Icons.auto_awesome,
                 color: AppColors.primary,

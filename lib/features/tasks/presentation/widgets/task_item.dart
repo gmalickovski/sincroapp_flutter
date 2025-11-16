@@ -141,8 +141,8 @@ class TaskItem extends StatelessWidget {
         verticalPaddingOverride ?? baseVerticalPadding;
 
     // Tamanhos (inalterado)
-    final double mainFontSize = 16.0;
-    final double iconIndicatorSize = 16.0;
+    const double mainFontSize = 16.0;
+    const double iconIndicatorSize = 16.0;
 
     // Ajuste fino do padding vertical (inalterado)
     const double verticalAlignmentPadding = 2.5;
@@ -230,35 +230,35 @@ class TaskItem extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (shouldShowDateIcon)
-                          Padding(
+                          const Padding(
                             padding:
-                                const EdgeInsets.symmetric(horizontal: 3.0),
+                                EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.calendar_today_outlined,
                               size: iconIndicatorSize,
-                              color: const Color(
+                              color: Color(
                                   0xFFFB923C), // orange-400 (laranja como no chip)
                             ),
                           ),
                         if (shouldShowGoalIcon)
-                          Padding(
+                          const Padding(
                             padding:
-                                const EdgeInsets.symmetric(horizontal: 3.0),
+                                EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.flag_outlined,
                               size: iconIndicatorSize,
-                              color: const Color(
+                              color: Color(
                                   0xFF06B6D4), // cyan-500 (ciano como no chip)
                             ),
                           ),
                         if (shouldShowTagIcon)
-                          Padding(
+                          const Padding(
                             padding:
-                                const EdgeInsets.symmetric(horizontal: 3.0),
+                                EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
                               Icons.label_outline,
                               size: iconIndicatorSize,
-                              color: const Color(
+                              color: Color(
                                   0xFFEC4899), // pink-500 (rosa/magenta como no chip)
                             ),
                           ),

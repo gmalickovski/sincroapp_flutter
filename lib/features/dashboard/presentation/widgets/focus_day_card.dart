@@ -181,7 +181,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
     );
     final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
 
-    DateTime? _localDateOnly(DateTime? d) {
+    DateTime? localDateOnly(DateTime? d) {
       if (d == null) return null;
       final dl = d.toLocal();
       return DateTime(dl.year, dl.month, dl.day);
@@ -190,8 +190,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
     final filtered = widget.tasks.where((task) {
       if (task.completed) return false;
 
-      final DateTime? taskDate = task.dueDate ?? task.createdAt;
-      final taskDateOnly = _localDateOnly(taskDate);
+      final DateTime taskDate = task.dueDate ?? task.createdAt;
+      final taskDateOnly = localDateOnly(taskDate);
       if (taskDateOnly == null) return false;
 
       if (!(taskDateOnly.year == todayLocal.year &&

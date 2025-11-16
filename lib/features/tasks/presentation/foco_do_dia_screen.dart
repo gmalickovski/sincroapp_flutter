@@ -372,10 +372,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: Text('Excluir Tarefas', style: TextStyle(color: Colors.white)),
+        title: const Text('Excluir Tarefas', style: TextStyle(color: Colors.white)),
         content: Text(
             'Você tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
-            style: TextStyle(color: AppColors.secondaryText)),
+            style: const TextStyle(color: AppColors.secondaryText)),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
@@ -425,7 +425,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
         final int? todayPersonal = _calculatePersonalDay(todayLocal);
 
-        DateTime? _localDateOnly(DateTime? d) {
+        DateTime? localDateOnly(DateTime? d) {
           if (d == null) return null;
           final dl = d.toLocal();
           return DateTime(dl.year, dl.month, dl.day);
@@ -434,8 +434,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         baseTasks = allTasks.where((task) {
           if (task.completed) return false;
 
-          final DateTime? taskDate = task.dueDate ?? task.createdAt;
-          final taskDateOnly = _localDateOnly(taskDate);
+          final DateTime taskDate = task.dueDate ?? task.createdAt;
+          final taskDateOnly = localDateOnly(taskDate);
           if (taskDateOnly == null) return false;
 
           // Date must match local today
@@ -707,7 +707,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     final double titleFontSize = isMobile ? 28 : 32;
     // --- INÍCIO DA CORREÇÃO (Problema 2) ---
     // Padronizando o espaçamento
-    final double chipSpacing = 8.0;
+    const double chipSpacing = 8.0;
     // --- FIM DA CORREÇÃO ---
 
     return SingleChildScrollView(
@@ -765,11 +765,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   final isSelected = _selectedFilter == filterType;
 
                   return Padding(
-                    padding: EdgeInsets.only(right: chipSpacing), // Espaçamento
+                    padding: const EdgeInsets.only(right: chipSpacing), // Espaçamento
                     child: ChoiceChip(
                       label: Text(label,
                           style:
-                              TextStyle(fontSize: 14)), // Consistent text size
+                              const TextStyle(fontSize: 14)), // Consistent text size
                       avatar: Icon(
                         icon,
                         size: 16, // Smaller icon size
@@ -807,7 +807,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           horizontal: 10, vertical: 6), // Reduced padding
                     ),
                   );
-                }).toList(),
+                }),
 
                 // --- INÍCIO DA CORREÇÃO (Problema 2) ---
                 // SizedBox(width: 12) removido
@@ -815,10 +815,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
                 // Tag filter (opens modal) - keep visible regardless of selection mode
                 Padding(
-                  padding: EdgeInsets.only(right: chipSpacing),
+                  padding: const EdgeInsets.only(right: chipSpacing),
                   child: ChoiceChip(
                     label: Text(_selectedTag ?? 'Tags',
-                        style: TextStyle(fontSize: 14)),
+                        style: const TextStyle(fontSize: 14)),
                     avatar: const Icon(Icons.label_outline, size: 16),
                     selected: _selectedTag != null,
                     onSelected: (selected) async {
@@ -880,7 +880,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                             final colors = getColorsForVibration(number);
 
                             return Padding(
-                              padding: EdgeInsets.only(
+                              padding: const EdgeInsets.only(
                                   right: chipSpacing), // Espaçamento
                               child: ChoiceChip(
                                 label: Text('$number'),
@@ -1023,7 +1023,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                       onTap: tasksToShow.isEmpty
                           ? null
                           : () => _selectAll(tasksToShow),
-                      child: Text(
+                      child: const Text(
                         'Selecionar Todas',
                         style: TextStyle(color: AppColors.secondaryText),
                         overflow: TextOverflow
@@ -1033,7 +1033,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                     ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.close_rounded, color: Colors.white),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
                     onPressed: _clearSelection,
                     tooltip: 'Cancelar seleção',
                   ),

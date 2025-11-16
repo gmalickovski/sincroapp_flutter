@@ -73,8 +73,8 @@ class _AssistantInsightsCardState extends State<AssistantInsightsCard> {
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Row(
-              children: const [
+            return const Row(
+              children: [
                 SizedBox(
                     width: 18,
                     height: 18,
@@ -87,15 +87,15 @@ class _AssistantInsightsCardState extends State<AssistantInsightsCard> {
             );
           }
           if (snapshot.hasError) {
-            return Text('Não foi possível gerar o insight hoje.',
-                style: const TextStyle(color: Colors.redAccent));
+            return const Text('Não foi possível gerar o insight hoje.',
+                style: TextStyle(color: Colors.redAccent));
           }
           final text = snapshot.data ?? 'Sem insights no momento.';
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: const [
+              const Row(
+                children: [
                   Icon(Icons.auto_awesome, color: AppColors.primaryAccent),
                   SizedBox(width: 8),
                   Text('Insight do dia',

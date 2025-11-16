@@ -157,7 +157,7 @@ class _BussolaCardState extends State<BussolaCard> {
                     ],
                   ),
                 ))
-            .toList(),
+            ,
       ],
     );
   }

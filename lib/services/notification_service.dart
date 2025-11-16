@@ -22,7 +22,7 @@ import 'package:timezone/timezone.dart' as tz;
 @pragma('vm:entry-point')
 Future<void> _showEndOfDayReminder(NotificationResponse response) async {
   // Precisamos inicializar o Firebase aqui para acesso em background
-  await WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -92,7 +92,7 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
-    final InitializationSettings settings =
+    const InitializationSettings settings =
         InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _localNotifications.initialize(
@@ -155,7 +155,7 @@ class NotificationService {
 
   /// Cria os canais de notificação para Android (Oreo+)
   Future<void> _createAndroidChannels() async {
-    final AndroidNotificationChannel reminderChannel =
+    const AndroidNotificationChannel reminderChannel =
         AndroidNotificationChannel(
       _channelIdReminder,
       _channelNameReminder,
@@ -164,7 +164,7 @@ class NotificationService {
       playSound: true,
     );
 
-    final AndroidNotificationChannel dailyChannel = AndroidNotificationChannel(
+    const AndroidNotificationChannel dailyChannel = AndroidNotificationChannel(
       _channelIdDaily,
       _channelNameDaily,
       description: _channelDescDaily,
@@ -241,14 +241,14 @@ class NotificationService {
   }) async {
     await _localNotifications.cancel(_dailyPersonalDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       _channelIdDaily,
       _channelNameDaily,
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
     );
     const iosDetails = DarwinNotificationDetails();
-    final platformDetails =
+    const platformDetails =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(
@@ -282,7 +282,7 @@ class NotificationService {
       return;
     }
 
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       _channelIdReminder,
       _channelNameReminder,
       importance: Importance.max,
@@ -290,7 +290,7 @@ class NotificationService {
     );
     const iosDetails =
         DarwinNotificationDetails(presentAlert: true, presentSound: true);
-    final platformDetails =
+    const platformDetails =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(
@@ -322,14 +322,14 @@ class NotificationService {
       String userId, TimeOfDay scheduleTime) async {
     await _localNotifications.cancel(_dailyEndOfDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
-    final androidDetails = AndroidNotificationDetails(
+    const androidDetails = AndroidNotificationDetails(
       _channelIdDaily,
       _channelNameDaily,
       importance: Importance.low,
       priority: Priority.low,
     );
     const iosDetails = DarwinNotificationDetails(presentAlert: true);
-    final platformDetails =
+    const platformDetails =
         NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(

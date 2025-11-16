@@ -93,7 +93,7 @@ class AIService {
       if (jsonMatch != null) {
         text = jsonMatch.group(0)!;
       } else {
-        throw FormatException("A IA não retornou um array JSON válido.");
+        throw const FormatException("A IA não retornou um array JSON válido.");
       }
 
       // --- PASSO 4: Validar e Formatar a Saída ---

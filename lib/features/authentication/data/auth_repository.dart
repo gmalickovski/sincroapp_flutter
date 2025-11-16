@@ -53,9 +53,9 @@ class AuthRepository {
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
       await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
-    } on FirebaseAuthException catch (e) {
+    } on FirebaseAuthException {
       // Repassa para a UI decidir a mensagem
-      throw e;
+      rethrow;
     } catch (e) {
       rethrow;
     }

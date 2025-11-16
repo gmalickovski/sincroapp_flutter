@@ -219,17 +219,17 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
             _focusedDay = focusedDay;
           });
         },
-        headerStyle: HeaderStyle(
+        headerStyle: const HeaderStyle(
           titleCentered: true, // Centralizado
           formatButtonVisible: false,
-          titleTextStyle: const TextStyle(height: 0, fontSize: 0),
+          titleTextStyle: TextStyle(height: 0, fontSize: 0),
           leftChevronPadding: EdgeInsets.zero,
           rightChevronPadding: EdgeInsets.zero,
-          leftChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
-          rightChevronMargin: const EdgeInsets.symmetric(horizontal: 4),
-          leftChevronIcon: const Icon(Icons.chevron_left,
+          leftChevronMargin: EdgeInsets.symmetric(horizontal: 4),
+          rightChevronMargin: EdgeInsets.symmetric(horizontal: 4),
+          leftChevronIcon: Icon(Icons.chevron_left,
               color: AppColors.primaryText, size: 24),
-          rightChevronIcon: const Icon(Icons.chevron_right,
+          rightChevronIcon: Icon(Icons.chevron_right,
               color: AppColors.primaryText, size: 24),
         ),
         daysOfWeekStyle: const DaysOfWeekStyle(

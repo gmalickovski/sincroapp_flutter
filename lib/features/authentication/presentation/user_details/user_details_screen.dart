@@ -270,18 +270,18 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
       case 3: // Tela de Carregamento
       default:
-        return Column(
-          key: const ValueKey('step3'),
+        return const Column(
+          key: ValueKey('step3'),
           children: [
-            const CustomLoadingSpinner(),
-            const SizedBox(height: 24),
-            const Text('Calculando sua rota...',
+            CustomLoadingSpinner(),
+            SizedBox(height: 24),
+            Text('Calculando sua rota...',
                 style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: AppColors.secondaryAccent)),
-            const SizedBox(height: 12),
-            const Text('Estamos alinhando os números para você.',
+            SizedBox(height: 12),
+            Text('Estamos alinhando os números para você.',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w500,

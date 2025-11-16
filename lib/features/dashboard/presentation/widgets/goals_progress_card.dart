@@ -460,7 +460,7 @@ class _FullWidthGoalProgress extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.calendar_today,
                         size: 11,
                         color: AppColors.primary,
@@ -468,7 +468,7 @@ class _FullWidthGoalProgress extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(
                         formattedDate,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.w600,

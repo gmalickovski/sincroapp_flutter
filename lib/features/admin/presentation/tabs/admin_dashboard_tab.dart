@@ -262,11 +262,11 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.pie_chart_outline, color: AppColors.primary),
-              const SizedBox(width: 12),
-              const Text(
+              SizedBox(width: 12),
+              Text(
                 'Distribuição por Plano',
                 style: TextStyle(
                   color: AppColors.primaryText,
@@ -390,11 +390,11 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
               Icon(Icons.check_circle_outline, color: AppColors.primary),
-              const SizedBox(width: 12),
-              const Text(
+              SizedBox(width: 12),
+              Text(
                 'Status de Assinaturas',
                 style: TextStyle(
                   color: AppColors.primaryText,

@@ -405,7 +405,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
   }
 
   Widget _buildInitialFooterInput() {
-    final bool _isGenerating = _state == AiModalState.loadingAi;
+    final bool isGenerating = _state == AiModalState.loadingAi;
     final currentLength = _additionalInfoController.text.length;
 
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
@@ -492,7 +492,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
-                      icon: _isGenerating
+                      icon: isGenerating
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -504,7 +504,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
                               ),
                             )
                           : const Icon(Icons.send, color: Colors.white),
-                      onPressed: _isGenerating ? null : _handleGenerate,
+                      onPressed: isGenerating ? null : _handleGenerate,
                     ),
                   ),
                 ],

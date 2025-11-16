@@ -447,7 +447,7 @@ class _CustomRecurrencePickerModalState
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Row(
             children: [
-              Icon(Icons.event_busy_outlined,
+              const Icon(Icons.event_busy_outlined,
                   color: AppColors.tertiaryText, size: 20),
               const SizedBox(width: 16),
               Text(
@@ -475,7 +475,7 @@ class _CustomRecurrencePickerModalState
               ),
               const SizedBox(width: 4),
               if (isRecurrenceSelected)
-                Icon(Icons.chevron_right,
+                const Icon(Icons.chevron_right,
                     color: AppColors.tertiaryText, size: 20),
             ],
           ),

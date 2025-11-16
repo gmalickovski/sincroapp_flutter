@@ -100,7 +100,7 @@ class Goal extends Equatable {
   factory Goal.fromFirestore(DocumentSnapshot doc) {
     Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
 
-    DateTime? _parseDate(dynamic dateValue) {
+    DateTime? parseDate(dynamic dateValue) {
       if (dateValue == null) return null;
       if (dateValue is Timestamp) {
         return dateValue.toDate();
@@ -130,11 +130,11 @@ class Goal extends Equatable {
       id: doc.id,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      targetDate: _parseDate(data['targetDate']),
+      targetDate: parseDate(data['targetDate']),
       // Usa o progresso salvo ou calcula se não existir/for zero? (Decisão de design)
       // Por ora, vamos usar o valor salvo. O cálculo pode ser feito na UI se necessário.
       progress: (data['progress'] ?? 0).toInt(),
-      createdAt: _parseDate(data['createdAt']) ??
+      createdAt: parseDate(data['createdAt']) ??
           DateTime.now(), // Usa now() como fallback
       userId: data['userId'] ?? '',
       category: data['category'] as String?,

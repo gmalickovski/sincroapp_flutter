@@ -44,7 +44,7 @@ class _AdminScreenState extends State<AdminScreen>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline,
+              const Icon(Icons.lock_outline,
                   size: 80, color: AppColors.secondaryText),
               const SizedBox(height: 24),
               const Text(
@@ -89,11 +89,11 @@ class _AdminScreenState extends State<AdminScreen>
       appBar: AppBar(
         backgroundColor: AppColors.cardBackground,
         elevation: 0,
-        title: Row(
+        title: const Row(
           children: [
             Icon(Icons.admin_panel_settings, color: AppColors.primary),
-            const SizedBox(width: 12),
-            const Text(
+            SizedBox(width: 12),
+            Text(
               'Painel Administrativo',
               style: TextStyle(
                 color: AppColors.primaryText,

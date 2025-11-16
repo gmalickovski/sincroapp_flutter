@@ -271,13 +271,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               const SizedBox(width: 12),
-              Expanded(
+              const Expanded(
                 child: Text.rich(
                   TextSpan(
                     text: 'Eu li e concordo com os ',
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12, color: AppColors.tertiaryText),
-                    children: const [
+                    children: [
                       TextSpan(
                           text: 'Termos de Serviço',
                           style:

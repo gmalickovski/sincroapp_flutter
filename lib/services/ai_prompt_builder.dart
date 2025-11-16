@@ -175,7 +175,7 @@ Antes de responder, certifique-se que:
 ═══════════════════════════════════════════════════════════════════
 
 Responda APENAS com um array JSON válido. NÃO inclua:
-- A palavra "json" ou marcadores de código (\`\`\`)
+- A palavra "json" ou marcadores de código (```)
 - Explicações ou texto adicional
 - Quebras de linha desnecessárias
 

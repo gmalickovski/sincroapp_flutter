@@ -361,7 +361,7 @@ class _RadialProgressPainter extends CustomPainter {
       ..strokeWidth = 16
       ..strokeCap = StrokeCap.round;
     final rect = Offset.zero & size;
-    final start = -90 * 3.1415926535 / 180; // topo
+    const start = -90 * 3.1415926535 / 180; // topo
     final sweep = percent * 2 * 3.1415926535;
     canvas.drawArc(rect.deflate(8), start, sweep, false, progress);
   }
