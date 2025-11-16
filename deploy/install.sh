@@ -306,17 +306,19 @@ server {
         return 301 /app/;
     }
     
+    # Assets JS/CSS do app (DEVE VIR ANTES de location /app/)
+    location ~* ^/app/.*\.(js|css|wasm|json|map)$ {
+        try_files \$uri =404;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header Content-Type "application/javascript" always;
+    }
+    
     location /app/ {
         try_files \$uri \$uri/ /app/index.html;
         add_header Cache-Control "no-cache, no-store, must-revalidate";
         add_header Pragma "no-cache";
         add_header Expires "0";
-    }
-
-    # Assets JS/CSS do app (DEVE VIR ANTES de location /app/)
-    location ~* ^/app/.*\.(js|css|wasm|json|map)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
     }
 
     # Arquivos estáticos gerais
