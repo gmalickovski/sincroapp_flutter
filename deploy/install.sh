@@ -311,7 +311,7 @@ server {
         try_files \$uri =404;
         expires 1y;
         add_header Cache-Control "public, immutable";
-        add_header Content-Type "application/javascript" always;
+        # Não force Content-Type; deixe o mime.types definir corretamente
     }
     
     location /app/ {
@@ -327,10 +327,18 @@ server {
         add_header Cache-Control "public, immutable";
     }
 
-    # Landing scripts
+    # Landing HTML e scripts (sem cache para evitar versão antiga)
+    location = /landing.html {
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
+        try_files /landing.html =404;
+    }
+
     location ~* ^/(landing|firebase-config)\.js$ {
-        expires 1h;
-        add_header Cache-Control "public";
+        add_header Cache-Control "no-cache, no-store, must-revalidate";
+        add_header Pragma "no-cache";
+        add_header Expires "0";
     }
 
     # Manifest/Service Worker

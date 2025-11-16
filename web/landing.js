@@ -119,7 +119,7 @@ async function handleSelectPlan(planId) {
     console.log('✅ Token reCAPTCHA gerado para checkout');
     
     // Valida no backend (isso gera a pontuação que o Firebase precisa!)
-    const validateResponse = await fetch('https://us-central1-sincroapp-e9cda.cloudfunctions.net/validateRecaptcha', {
+    const validateResponse = await fetch('https://us-central1-sincroapp-529cc.cloudfunctions.net/validateRecaptcha', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
