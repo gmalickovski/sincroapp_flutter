@@ -127,10 +127,9 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                 items: [
                   const DropdownMenuItem<int?>(
                       value: null, child: Text('Todos os Dias Pessoais')),
-                  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
-                      .map((v) => DropdownMenuItem<int?>(
-                          value: v, child: Text('Dia Pessoal $v')))
-                      ,
+                  ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) =>
+                      DropdownMenuItem<int?>(
+                          value: v, child: Text('Dia Pessoal $v'))),
                 ],
               ),
             ),
@@ -199,32 +198,33 @@ class _MoodSelector extends StatelessWidget {
 
         return GestureDetector(
           onTap: () => onMoodSelected(moodId),
-          child: AnimatedContainer(
+          child: AnimatedScale(
+            scale: isSelected ? 1.2 : 1.0,
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.3)
-                  : Colors.transparent,
-              border: isSelected
-                  ? Border.all(color: AppColors.primary, width: 1)
-                  : null,
-            ),
-            transform: isSelected
-                ? (Matrix4.identity()..scale(1.2))
-                : Matrix4.identity(),
-            // *** INÍCIO DA CORREÇÃO: Cor dos Emoticons ***
-            // Envolvemos o Text com um DefaultTextStyle para "proteger" a cor do emoji
-            // do tema do popover.
-            child: DefaultTextStyle(
-              style: const TextStyle(),
-              child: Text(
-                emoji,
-                style: const TextStyle(fontSize: 24),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.3)
+                    : Colors.transparent,
+                border: isSelected
+                    ? Border.all(color: AppColors.primary, width: 1)
+                    : null,
               ),
+              // *** INÍCIO DA CORREÇÃO: Cor dos Emoticons ***
+              // Envolvemos o Text com um DefaultTextStyle para "proteger" a cor do emoji
+              // do tema do popover.
+              child: DefaultTextStyle(
+                style: const TextStyle(),
+                child: Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 24),
+                ),
+              ),
+              // *** FIM DA CORREÇÃO ***
             ),
-            // *** FIM DA CORREÇÃO ***
           ),
         );
       }).toList(),

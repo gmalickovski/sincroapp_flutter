@@ -45,6 +45,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         MediaQuery.of(context).size.width >= kDesktopBreakpoint;
 
     if (isDesktop) {
+      final messenger = ScaffoldMessenger.of(context);
       // --- VERSÃO DESKTOP: CHAMA O DIÁLOGO ---
       showDialog(
         context: context,
@@ -59,7 +60,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
         if (result == true) {
           if (!mounted) return;
           // Meta salva com sucesso, opcionalmente mostrar um SnackBar
-          ScaffoldMessenger.of(context).showSnackBar(
+          messenger.showSnackBar(
             SnackBar(
               content: Text(goalToEdit != null
                   ? "Jornada atualizada com sucesso!"
@@ -104,6 +105,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   // *** NOVO MÉTODO PARA DELETAR JORNADA ***
   Future<void> _handleDeleteGoal(BuildContext context, Goal goal) async {
+    final messenger = ScaffoldMessenger.of(context);
     // 1. Mostrar diálogo de confirmação
     final bool? confirmDelete = await showDialog<bool>(
       context: context,
@@ -132,27 +134,23 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
 
     // 2. Se confirmado, deletar do Firestore
-    if (confirmDelete == true && mounted) {
+    if (confirmDelete == true) {
       try {
         await _firestoreService.deleteGoal(_userId, goal.id);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Jornada excluída com sucesso.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Jornada excluída com sucesso.'),
+            backgroundColor: Colors.green,
+          ),
+        );
       } catch (e) {
         debugPrint("Erro ao deletar meta: $e");
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao excluir jornada: $e'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Erro ao excluir jornada: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

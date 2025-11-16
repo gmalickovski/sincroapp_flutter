@@ -20,3 +20,15 @@ class AppColors {
   static const Color goalTaskMarker = Color(0xFFEC4899); // pink-500
   static const Color journalMarker = Color(0xFF14B8A6); // teal-500
 }
+
+// Compat: Flutter < 3.27 não possui Color.withValues. Este extension
+// fornece uma versão limitada que respeita apenas o alpha, mapeando
+// para withOpacity. Em SDKs mais novos, o método nativo tem prioridade.
+extension ColorWithValuesCompat on Color {
+  Color withValues({double? alpha, double? red, double? green, double? blue}) {
+    if (alpha != null) {
+      return withOpacity(alpha); // ignore: deprecated_member_use
+    }
+    return this;
+  }
+}

@@ -486,8 +486,9 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         // Arrasta para expandir/recolher
         if (details.primaryDelta! < -4 && !_isExpanded) {
           _toggleExpand(); // Arrasta pra cima
-        } else if (details.primaryDelta! > 4 && _isExpanded)
+        } else if (details.primaryDelta! > 4 && _isExpanded) {
           _toggleExpand(); // Arrasta pra baixo
+        }
       },
       child: Container(
         color: Colors.transparent,
@@ -877,8 +878,9 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     required bool isEnabled,
   }) {
     // Lógica visual da célula (sem alterações)
-    Color borderColor =
-        isOutside ? Colors.transparent : AppColors.border.withValues(alpha: 0.5);
+    Color borderColor = isOutside
+        ? Colors.transparent
+        : AppColors.border.withValues(alpha: 0.5);
     Color cellFillColor = Colors.transparent;
     double borderWidth = 0.8;
     if (isToday && isEnabled && !isSelected) {

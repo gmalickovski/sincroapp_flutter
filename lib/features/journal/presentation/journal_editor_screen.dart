@@ -209,19 +209,20 @@ class _MoodSelector extends StatelessWidget {
 
         return GestureDetector(
           onTap: () => onMoodSelected(moodId),
-          child: AnimatedContainer(
+          child: AnimatedScale(
+            scale: isSelected ? 1.2 : 1.0,
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.3)
-                  : Colors.transparent,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.3)
+                    : Colors.transparent,
+              ),
+              child: Text(emoji, style: const TextStyle(fontSize: 28)),
             ),
-            transform: isSelected
-                ? (Matrix4.identity()..scale(1.2))
-                : Matrix4.identity(),
-            child: Text(emoji, style: const TextStyle(fontSize: 28)),
           ),
         );
       }).toList(),

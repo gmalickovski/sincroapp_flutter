@@ -181,8 +181,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
           ),
         ),
         const Padding(
-          padding:
-              EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
+          padding: EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
@@ -225,8 +224,8 @@ class _AssistantPanelState extends State<AssistantPanel> {
                         ? AppColors.primaryAccent.withValues(alpha: 0.15)
                         : AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(10),
-                    border:
-                        Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                    border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.6)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -493,6 +492,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
   Future<void> _handleAction(BuildContext context, AssistantAction a) async {
     final fs = FirestoreService();
     final user = widget.userData;
+    final messenger = ScaffoldMessenger.of(context);
     if (a.type == AssistantActionType.create_task ||
         a.type == AssistantActionType.schedule) {
       final due = a.date ?? a.startDate;
@@ -514,7 +514,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
               reminderTime: time,
               personalDay: personalDay));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      messenger.showSnackBar(const SnackBar(
           content: Text('Tarefa/evento criado com sucesso.'),
           backgroundColor: Colors.green));
     } else if (a.type == AssistantActionType.create_goal) {
@@ -522,7 +522,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
           (a.description == null || a.description!.isEmpty) ||
           a.date == null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        messenger.showSnackBar(const SnackBar(
             content: Text(
                 'Para criar uma meta, informe título, descrição (motivação) e data alvo (YYYY-MM-DD).'),
             backgroundColor: Colors.orange));
@@ -540,7 +540,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
       });
       await docRef.update({'id': docRef.id});
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      messenger.showSnackBar(SnackBar(
           content: Text(
               'Meta criada para ${targetUtc.day.toString().padLeft(2, '0')}/${targetUtc.month.toString().padLeft(2, '0')}/${targetUtc.year} com ${a.subtasks.length} marcos!'),
           backgroundColor: Colors.green));

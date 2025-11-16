@@ -253,8 +253,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       recurrenceId: null,
     );
 
-    final currentContext = context;
-    Navigator.of(currentContext).pop();
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    navigator.pop();
 
     try {
       await _firestoreService.addTask(widget.userData.uid, duplicatedTask);
@@ -264,14 +265,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             widget.userData.uid, duplicatedTask.journeyId!);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
             content: Text('Tarefa duplicada.'),
             backgroundColor: AppColors.primary),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
             content: Text('Erro ao duplicar: $e'), backgroundColor: Colors.red),
       );
@@ -282,10 +283,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     // ... (Lógica inalterada) ...
     if (_isLoading || !mounted) return;
     // _removeAutocompleteOverlay(); // Removido
-    final currentContext = context;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
     final bool? confirmed = await showDialog<bool>(
-      context: currentContext,
+      context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
         title: const Text('Confirmar Exclusão',
@@ -309,7 +311,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     String? goalIdToUpdate = widget.task.journeyId;
     if (!mounted) return;
-    Navigator.of(currentContext).pop();
+    navigator.pop();
 
     try {
       await _firestoreService.deleteTask(widget.userData.uid, widget.task.id);
@@ -318,13 +320,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             widget.userData.uid, goalIdToUpdate);
       }
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
             content: Text('Tarefa excluída.'), backgroundColor: Colors.orange),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
             content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
       );
@@ -384,9 +386,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     String? originalGoalId = _originalGoalId;
     String? currentGoalId = _selectedGoal?.id;
-    final currentContext = context;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
 
-    Navigator.of(currentContext).pop();
+    navigator.pop();
 
     try {
       await _firestoreService.updateTaskFields(
@@ -405,13 +408,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
 
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         const SnackBar(
             content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(currentContext).showSnackBar(
+      messenger.showSnackBar(
         SnackBar(
             content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
       );
@@ -500,7 +503,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
     if (mounted && _currentTags.length < 5) {
       _tagFocusNode.requestFocus();
-    } else if (mounted) _tagFocusNode.unfocus();
+    } else if (mounted) {
+      _tagFocusNode.unfocus();
+    }
   }
 
   void _removeTag(String tagToRemove) {
@@ -846,7 +851,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               // _removeAutocompleteOverlay(); // Removido
               if (value == 'duplicate') {
                 _duplicateTask();
-              } else if (value == 'delete') _deleteTask();
+              } else if (value == 'delete') {
+                _deleteTask();
+              }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
               _buildPopupMenuItem(

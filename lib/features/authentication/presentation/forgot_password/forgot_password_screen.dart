@@ -86,10 +86,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         backgroundColor: Colors.red,
       ));
     } finally {
-      if (!mounted) return;
-      setState(() {
-        _isSending = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
     }
   }
 
@@ -128,8 +129,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16.0),
-                    border:
-                        Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                    border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.5)),
                   ),
                   child: Form(
                     key: _formKey,

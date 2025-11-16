@@ -90,7 +90,9 @@ Future<void> main() async {
 
     try {
       await _connectToEmulators();
-    } catch (e) {}
+    } catch (e) {
+      // Intencional: ignorar falha ao conectar aos emuladores em debug
+    }
   } else {
     // ========================================
     // EM MODO RELEASE, ATIVE O APP CHECK

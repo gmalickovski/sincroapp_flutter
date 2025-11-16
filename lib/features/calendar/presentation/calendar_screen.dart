@@ -362,12 +362,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
               personalDay: finalPersonalDay,
             );
             // Chama o método de atualização do Firestore
+            final messenger = ScaffoldMessenger.of(context);
             _firestoreService
                 .updateTask(_userId, updatedTask)
                 .catchError((error) {
               debugPrint("Erro ao ATUALIZAR tarefa pelo calendário: $error");
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger.showSnackBar(
                   SnackBar(
                       content: Text('Erro ao atualizar tarefa: $error'),
                       backgroundColor: Colors.red),
@@ -416,10 +417,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
               recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
               personalDay: finalPersonalDay,
             );
+            final messenger2 = ScaffoldMessenger.of(context);
             _firestoreService.addTask(_userId, newTask).catchError((error) {
               debugPrint("Erro ao ADICIONAR tarefa pelo calendário: $error");
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                messenger2.showSnackBar(
                   SnackBar(
                       content: Text('Erro ao salvar tarefa: $error'),
                       backgroundColor: Colors.red),
@@ -620,7 +622,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                             if (_isChangingMonth)
                               Positioned.fill(
                                 child: Container(
-                                  color: AppColors.background.withValues(alpha: 0.5),
+                                  color: AppColors.background
+                                      .withValues(alpha: 0.5),
                                   child: const Center(
                                     child: CustomLoadingSpinner(),
                                   ),
@@ -768,7 +771,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         if (_isChangingMonth)
                           Positioned.fill(
                             child: Container(
-                              color: AppColors.background.withValues(alpha: 0.5),
+                              color:
+                                  AppColors.background.withValues(alpha: 0.5),
                               child: const Center(
                                 child: CustomLoadingSpinner(),
                               ),

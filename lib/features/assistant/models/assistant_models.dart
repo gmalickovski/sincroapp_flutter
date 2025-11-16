@@ -1,3 +1,5 @@
+// ignore_for_file: constant_identifier_names
+
 enum AssistantActionType { schedule, create_goal, create_task }
 
 class AssistantAction {
@@ -34,6 +36,7 @@ class AssistantAction {
       if (regex.hasMatch(s)) return DateTime.tryParse(s);
       return null;
     }
+
     // Support both "date" and "targetDate" keys
     final parsedDate = parseDate(json['date']) ?? parseDate(json['targetDate']);
     return AssistantAction(

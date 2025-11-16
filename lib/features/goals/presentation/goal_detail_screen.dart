@@ -46,6 +46,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       return;
     }
 
+    final messenger = ScaffoldMessenger.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -97,7 +98,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 .addTask(widget.userData.uid, newTask)
                 .catchError((error) {
               if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
+              messenger.showSnackBar(
                 SnackBar(
                     content: Text('Erro ao salvar marco: $error'),
                     backgroundColor: Colors.red),
@@ -451,6 +452,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             showTagsIconFlag: true,
             showVibrationPillFlag: true,
             onToggle: (isCompleted) async {
+              final messenger = ScaffoldMessenger.of(context);
               try {
                 await _firestoreService.updateTaskCompletion(
                     widget.userData.uid, task.id,
@@ -458,7 +460,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               } catch (e) {
                 debugPrint("Erro ao atualizar conclusão do marco: $e");
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                  messenger.showSnackBar(
                     SnackBar(
                         content: Text('Erro ao atualizar marco: $e'),
                         backgroundColor: Colors.red),
@@ -505,6 +507,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               showTagsIconFlag: true,
               showVibrationPillFlag: true,
               onToggle: (isCompleted) async {
+                final messenger = ScaffoldMessenger.of(context);
                 try {
                   await _firestoreService.updateTaskCompletion(
                       widget.userData.uid, task.id,
@@ -512,7 +515,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 } catch (e) {
                   debugPrint("Erro ao atualizar conclusão do marco: $e");
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    messenger.showSnackBar(
                       SnackBar(
                           content: Text('Erro ao atualizar marco: $e'),
                           backgroundColor: Colors.red),
