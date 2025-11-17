@@ -7,7 +7,6 @@ import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:sincro_app_flutter/firebase_options.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
@@ -80,55 +79,22 @@ Future<void> main() async {
     debugPrint('❌ Erro ao inicializar Notification Service: $e');
   }
 
-  if (kDebugMode) {
-    try {
-      await FirebaseAppCheck.instance.activate(
-        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
-        androidProvider: AndroidProvider.debug,
-        appleProvider: AppleProvider.debug,
-      );
-    } catch (e, s) {
-      debugPrint('⚠️ Falha ao ativar App Check (debug): $e');
-      debugPrint('$s');
-    }
+  // ========================================
+  // APP CHECK REMOVIDO DO MAIN
+  // ========================================
+  // App Check será ativado APÓS o login, pois reCAPTCHA v3
+  // requer usuário autenticado. Ativar aqui causa erro 400
+  // na página de login.
+  // Veja: lib/features/authentication/data/auth_repository.dart
+  // ========================================
 
+  if (kDebugMode) {
     try {
       await _connectToEmulators();
     } catch (e) {
       // Intencional: ignorar falha ao conectar aos emuladores em debug
     }
-  } else {
-    // ========================================
-    // EM MODO RELEASE, ATIVE O APP CHECK
-    // ========================================
-    try {
-      debugPrint('🔧 Inicializando Firebase App Check...');
-
-      // ========================================
-      // CONFIGURAÇÃO AUTOMÁTICA DO APP CHECK
-      // ========================================
-      await FirebaseAppCheck.instance.activate(
-        // ===== WEB =====
-        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
-
-        // ===== ANDROID =====
-        // Em release (kDebugMode = false): usa Play Integrity
-        androidProvider: AndroidProvider.playIntegrity,
-
-        // ===== iOS/macOS =====
-        // Em release: usa App Attest
-        appleProvider: AppleProvider.appAttest,
-      );
-    } catch (e, s) {
-      debugPrint('');
-      debugPrint('❌ ===== ERRO NO APP CHECK =====');
-      debugPrint('Erro: $e');
-      debugPrint('StackTrace: $s');
-      debugPrint('================================');
-      debugPrint('');
-    }
   }
-  // === FIM DA LÓGICA DE ATIVAÇÃO CONDICIONAL ===
 
   runApp(const SincroApp());
 }
