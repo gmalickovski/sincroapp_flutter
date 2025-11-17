@@ -22,8 +22,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 // --- INÍCIO DAS NOVAS IMPORTAÇÕES ---
 import 'package:sincro_app_flutter/services/notification_service.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
-import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
+// Removidos imports não utilizados após simplificação do fluxo de autenticação
 // --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 // Chave do Site reCAPTCHA v3 para Web
@@ -224,8 +223,7 @@ class _AuthCheckState extends State<AuthCheck> {
   User? _firebaseUser;
   bool _isLoading = true;
 
-  // --- NOVA VARIÁVEL DE ESTADO ---
-  bool _dailyNotificationsScheduled = false;
+  // Removido agendamento de notificações do fluxo inicial web para evitar interferência
 
   @override
   void initState() {
@@ -235,14 +233,12 @@ class _AuthCheckState extends State<AuthCheck> {
         setState(() {
           _firebaseUser = user;
           _isLoading = false;
-          // --- ADICIONADO ---
-          // Se o usuário deslogar, reseta o flag
-          if (user == null) {
-            _dailyNotificationsScheduled = false;
-          }
         });
+        debugPrint('[AuthCheck] authStateChanges emissão user=${user?.uid}');
       }
     });
+    debugPrint(
+        '[AuthCheck] initState concluído. currentUser inicial=${FirebaseAuth.instance.currentUser?.uid}');
   }
 
   @override
@@ -251,62 +247,7 @@ class _AuthCheckState extends State<AuthCheck> {
     super.dispose();
   }
 
-  // --- NOVA FUNÇÃO HELPER ---
-  /// Agenda as notificações diárias (Dia Pessoal e Lembrete de Fim de Dia)
-  void _scheduleDailyNotifications(UserModel user) {
-    // Evita quaisquer interações de notificação no Web
-    if (kIsWeb) return;
-    // Garante que só rode uma vez por login
-    if (_dailyNotificationsScheduled) return;
-    if (user.nomeAnalise.isEmpty || user.dataNasc.isEmpty) return;
-
-    try {
-      // 1. Agendar Notificação Matinal (Feature #2)
-      final engine = NumerologyEngine(
-        nomeCompleto: user.nomeAnalise,
-        dataNascimento: user.dataNasc,
-      );
-      final today = DateTime.now();
-      final personalDay = engine.calculatePersonalDayForDate(today);
-
-      final dayInfo = ContentData.vibracoes['diaPessoal']?[personalDay];
-      final title = "✨ Vibração do seu Dia: $personalDay";
-
-      // --- INÍCIO DA CORREÇÃO ---
-      // A propriedade correta é 'descricaoCurta', conforme
-      // lib/features/authentication/data/content_data.dart
-      final body = dayInfo?.descricaoCurta ??
-          "Veja o que a vibração de hoje significa para você.";
-      // --- FIM DA CORREÇÃO ---
-
-      NotificationService.instance.scheduleDailyPersonalDayNotification(
-        title: title,
-        body: body,
-        // --- INÍCIO DA CORREÇÃO ---
-        // Usa o construtor TimeOfDay
-        scheduleTime: const TimeOfDay(hour: 8, minute: 0), // 8:00 AM
-        // --- FIM DA CORREÇÃO ---
-      );
-
-      // 2. Agendar Verificação de Fim de Dia (Feature #1)
-      NotificationService.instance.scheduleDailyEndOfDayCheck(
-        user.uid,
-        // --- INÍCIO DA CORREÇÃO ---
-        // Usa o construtor TimeOfDay
-        const TimeOfDay(hour: 21, minute: 0), // 9:00 PM
-        // --- FIM DA CORREÇÃO ---
-      );
-
-      // Marca como agendado
-      setState(() {
-        _dailyNotificationsScheduled = true;
-      });
-      debugPrint(
-          "✅ Notificações diárias (Dia Pessoal e Fim de Dia) agendadas.");
-    } catch (e) {
-      debugPrint("❌ Erro ao agendar notificações diárias: $e");
-    }
-  }
+  // Removido agendamento antecipado para simplificar fluxo de autenticação
 
   @override
   Widget build(BuildContext context) {
@@ -321,76 +262,40 @@ class _AuthCheckState extends State<AuthCheck> {
       );
     }
 
-    if (_firebaseUser != null) {
-      // Aguarda uma pequena janela para o App Check tentar obter token no Web
-      return FutureBuilder<bool>(
-        future: _waitForAppCheckIfWeb(),
-        builder: (context, appCheckReadySnapshot) {
-          // Enquanto aguarda App Check (apenas Web), mostra loading
-          if (appCheckReadySnapshot.connectionState ==
-              ConnectionState.waiting) {
-            return const Scaffold(
-              backgroundColor: AppColors.background,
-              body: Center(
-                child: CircularProgressIndicator(color: AppColors.primary),
-              ),
-            );
-          }
-
-          return FutureBuilder<UserModel?>(
-            future: firestoreService.getUserData(_firebaseUser!.uid),
-            builder: (context, userSnapshot) {
-              // Se houve erro ao carregar os dados do usuário, não volte para a tela de login.
-              // Em vez disso, encaminhe para o Dashboard (ele próprio carrega os dados novamente).
-              if (userSnapshot.hasError) {
-                debugPrint('⚠️ Erro ao carregar dados do usuário: '
-                    '${userSnapshot.error}');
-                debugPrint('➡️ Navegando para Dashboard (fallback por erro em getUserData)');
-                return const DashboardScreen();
-              }
-              if (userSnapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  backgroundColor: AppColors.background,
-                  body: Center(
-                    child: CircularProgressIndicator(color: AppColors.primary),
-                  ),
-                );
-              }
-
-              if (userSnapshot.hasData &&
-                  userSnapshot.data != null &&
-                  userSnapshot.data!.nomeAnalise.isNotEmpty) {
-                // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
-                // Agenda as notificações diárias assim que temos os dados do usuário
-                _scheduleDailyNotifications(userSnapshot.data!);
-                // --- FIM DA LÓGICA DE AGENDAMENTO ---
-
-                debugPrint('✅ UserModel carregado com nomeAnalise. Abrindo Dashboard.');
-                return const DashboardScreen();
-              }
-
-              if (userSnapshot.data == null ||
-                  userSnapshot.data!.nomeAnalise.isEmpty) {
-                debugPrint('ℹ️ UserModel inexistente ou incompleto (nomeAnalise vazio). Redirecionando para UserDetailsScreen.');
-                return UserDetailsScreen(firebaseUser: _firebaseUser!);
-              }
-              // Fallback seguro: usuário autenticado, mas sem dados consistentes.
-              // Deixe o Dashboard cuidar de eventuais carregamentos/erros.
-              debugPrint('🔄 Fallback final: enviando para Dashboard.');
-              return const DashboardScreen();
-            },
-          );
-        },
-      );
+    if (_firebaseUser == null) {
+      return const LoginScreen();
     }
-    return const LoginScreen();
+
+    return FutureBuilder<UserModel?>(
+      future: firestoreService.getUserData(_firebaseUser!.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: AppColors.background,
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          debugPrint(
+              '[AuthCheck] Erro ao carregar UserModel: ${snapshot.error} -> Dashboard');
+          return const DashboardScreen();
+        }
+        final userModel = snapshot.data;
+        if (userModel == null) {
+          debugPrint('[AuthCheck] UserModel null -> UserDetails');
+          return UserDetailsScreen(firebaseUser: _firebaseUser!);
+        }
+        if (userModel.nomeAnalise.isEmpty) {
+          debugPrint('[AuthCheck] nomeAnalise vazio -> UserDetails');
+          return UserDetailsScreen(firebaseUser: _firebaseUser!);
+        }
+        debugPrint('[AuthCheck] UserModel válido -> Dashboard');
+        return const DashboardScreen();
+      },
+    );
   }
 }
 
-extension on _AuthCheckState {
-  Future<bool> _waitForAppCheckIfWeb() async {
-    // Não aguarda mais o token antes do primeiro acesso Firestore.
-    // App Check só será ativado depois de carregar os dados do usuário.
-    return true;
-  }
-}
+// Removida extensão auxiliar não utilizada

@@ -29,10 +29,16 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
+      debugPrint(
+          '[LoginScreen] Tentando login para ${_emailController.text.trim()}');
+      debugPrint(
+          '[LoginScreen] currentUser antes=${FirebaseAuth.instance.currentUser?.uid}');
       await _authRepository.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
+      debugPrint(
+          '[LoginScreen] signIn retornou. currentUser depois=${FirebaseAuth.instance.currentUser?.uid}');
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found' ||
           e.code == 'wrong-password' ||
@@ -50,6 +56,8 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _isLoading = false;
         });
+        debugPrint(
+            '[LoginScreen] Estado final login: isLoading=false, error=${_errorMessage}');
       }
     }
   }
@@ -91,8 +99,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16.0),
-                    border:
-                        Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                    border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.5)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,

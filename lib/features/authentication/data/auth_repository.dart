@@ -18,11 +18,15 @@ class AuthRepository {
     required String password,
   }) async {
     try {
+      debugPrint('[AuthRepository] Iniciando signIn email=${email.trim()}');
       await _firebaseAuth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
+      debugPrint(
+          '[AuthRepository] signIn concluído. currentUser=${_firebaseAuth.currentUser?.uid}');
     } catch (e) {
+      debugPrint('[AuthRepository] Erro no signIn: $e');
       rethrow;
     }
   }
