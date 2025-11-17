@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -72,6 +73,54 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // ========================================
+  // APP CHECK - ATIVAR IMEDIATAMENTE APÓS FIREBASE
+  // ========================================
+  // CRÍTICO: App Check DEVE ser ativado ANTES de qualquer
+  // chamada a Firestore, Auth ou Functions para evitar 400.
+  // Firebase SDK carrega reCAPTCHA v3 automaticamente quando
+  // ReCaptchaV3Provider() é instanciado.
+  // ========================================
+  try {
+    debugPrint(
+        '🔧 Ativando App Check no startup (ANTES de qualquer serviço Firebase)...');
+
+    if (kDebugMode) {
+      // Modo Debug: usa debug provider
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
+        androidProvider: AndroidProvider.debug,
+        appleProvider: AppleProvider.debug,
+      );
+      debugPrint('✅ App Check ativado em MODO DEBUG');
+    } else {
+      // Modo Produção: usa providers reais
+      await FirebaseAppCheck.instance.activate(
+        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
+        androidProvider: AndroidProvider.playIntegrity,
+        appleProvider: AppleProvider.appAttest,
+      );
+      debugPrint('✅ App Check ativado em MODO PRODUÇÃO');
+    }
+
+    // Aguarda token estar pronto (evita race condition com primeiros requests)
+    if (kIsWeb) {
+      try {
+        await FirebaseAppCheck.instance.getToken();
+        debugPrint('✅ Token App Check obtido com sucesso no startup');
+      } catch (e) {
+        debugPrint('⚠️ Erro ao obter token App Check no startup: $e');
+        debugPrint('   (Token será tentado novamente na primeira requisição)');
+      }
+    }
+  } catch (e, s) {
+    debugPrint('❌ ERRO CRÍTICO ao ativar App Check: $e');
+    debugPrint('Stack trace: $s');
+  }
+  // ========================================
+  // FIM APP CHECK
+  // ========================================
+
   // Inicializa o serviço de notificação (apenas mobile)
   if (!kIsWeb) {
     try {
@@ -80,15 +129,6 @@ Future<void> main() async {
       debugPrint('❌ Erro ao inicializar Notification Service: $e');
     }
   }
-
-  // ========================================
-  // APP CHECK REMOVIDO DO MAIN
-  // ========================================
-  // App Check será ativado APÓS o login, pois reCAPTCHA v3
-  // requer usuário autenticado. Ativar aqui causa erro 400
-  // na página de login.
-  // Veja: lib/features/authentication/data/auth_repository.dart
-  // ========================================
 
   if (kDebugMode) {
     try {
@@ -312,8 +352,6 @@ class _AuthCheckState extends State<AuthCheck> {
               if (userSnapshot.hasData &&
                   userSnapshot.data != null &&
                   userSnapshot.data!.nomeAnalise.isNotEmpty) {
-                // Ativa App Check após carregar dados do usuário
-                _authRepository.ensureAppCheckActivated();
                 // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
                 // Agenda as notificações diárias assim que temos os dados do usuário
                 _scheduleDailyNotifications(userSnapshot.data!);
