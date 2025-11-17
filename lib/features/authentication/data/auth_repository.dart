@@ -43,6 +43,15 @@ class AuthRepository {
 
       _appCheckActivated = true;
       debugPrint('✅ App Check ativado com sucesso');
+
+      // CRÍTICO: Aguarda o token estar disponível antes de continuar
+      // Isso evita erro 400 quando Firestore tentar acessar dados
+      try {
+        await FirebaseAppCheck.instance.getToken();
+        debugPrint('✅ Token App Check obtido e pronto para uso');
+      } catch (e) {
+        debugPrint('⚠️ Erro ao obter token App Check: $e');
+      }
     } catch (e, s) {
       debugPrint('⚠️ Erro ao ativar App Check: $e');
       debugPrint('$s');
