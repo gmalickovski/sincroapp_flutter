@@ -340,6 +340,13 @@ class _AuthCheckState extends State<AuthCheck> {
           return FutureBuilder<UserModel?>(
             future: firestoreService.getUserData(_firebaseUser!.uid),
             builder: (context, userSnapshot) {
+              // Se houve erro ao carregar os dados do usuário, não volte para a tela de login.
+              // Em vez disso, encaminhe para o Dashboard (ele próprio carrega os dados novamente).
+              if (userSnapshot.hasError) {
+                debugPrint('⚠️ Erro ao carregar dados do usuário: '
+                    '${userSnapshot.error}');
+                return const DashboardScreen();
+              }
               if (userSnapshot.connectionState == ConnectionState.waiting) {
                 return const Scaffold(
                   backgroundColor: AppColors.background,
@@ -364,8 +371,9 @@ class _AuthCheckState extends State<AuthCheck> {
                   userSnapshot.data!.nomeAnalise.isEmpty) {
                 return UserDetailsScreen(firebaseUser: _firebaseUser!);
               }
-
-              return const LoginScreen();
+              // Fallback seguro: usuário autenticado, mas sem dados consistentes.
+              // Deixe o Dashboard cuidar de eventuais carregamentos/erros.
+              return const DashboardScreen();
             },
           );
         },
