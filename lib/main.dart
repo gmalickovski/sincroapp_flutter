@@ -72,11 +72,13 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inicializa o serviço de notificação
-  try {
-    await NotificationService.instance.init();
-  } catch (e) {
-    debugPrint('❌ Erro ao inicializar Notification Service: $e');
+  // Inicializa o serviço de notificação (apenas mobile)
+  if (!kIsWeb) {
+    try {
+      await NotificationService.instance.init();
+    } catch (e) {
+      debugPrint('❌ Erro ao inicializar Notification Service: $e');
+    }
   }
 
   // ========================================
