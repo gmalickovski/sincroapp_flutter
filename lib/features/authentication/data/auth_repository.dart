@@ -68,9 +68,6 @@ class AuthRepository {
         email: email.trim(),
         password: password.trim(),
       );
-
-      // Ativa App Check APÓS login bem-sucedido
-      await _activateAppCheckIfNeeded();
     } catch (e) {
       rethrow;
     }
@@ -89,9 +86,6 @@ class AuthRepository {
       );
       // Atualiza o nome de exibição do utilizador recém-criado
       await userCredential.user?.updateDisplayName(displayName.trim());
-
-      // Ativa App Check APÓS registro bem-sucedido
-      await _activateAppCheckIfNeeded();
     } catch (e) {
       rethrow;
     }
@@ -112,5 +106,10 @@ class AuthRepository {
     } catch (e) {
       rethrow;
     }
+  }
+
+  // Exposto para ativar App Check depois que os dados principais do usuário forem carregados
+  Future<void> ensureAppCheckActivated() async {
+    await _activateAppCheckIfNeeded();
   }
 }

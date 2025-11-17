@@ -214,6 +214,8 @@ class _AuthCheckState extends State<AuthCheck> {
   // --- NOVA FUNÇÃO HELPER ---
   /// Agenda as notificações diárias (Dia Pessoal e Lembrete de Fim de Dia)
   void _scheduleDailyNotifications(UserModel user) {
+    // Evita quaisquer interações de notificação no Web
+    if (kIsWeb) return;
     // Garante que só rode uma vez por login
     if (_dailyNotificationsScheduled) return;
     if (user.nomeAnalise.isEmpty || user.dataNasc.isEmpty) return;
@@ -280,10 +282,13 @@ class _AuthCheckState extends State<AuthCheck> {
     }
 
     if (_firebaseUser != null) {
-      return FutureBuilder<UserModel?>(
-        future: firestoreService.getUserData(_firebaseUser!.uid),
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
+      // Aguarda uma pequena janela para o App Check tentar obter token no Web
+      return FutureBuilder<bool>(
+        future: _waitForAppCheckIfWeb(),
+        builder: (context, appCheckReadySnapshot) {
+          // Enquanto aguarda App Check (apenas Web), mostra loading
+          if (appCheckReadySnapshot.connectionState ==
+              ConnectionState.waiting) {
             return const Scaffold(
               backgroundColor: AppColors.background,
               body: Center(
@@ -292,26 +297,50 @@ class _AuthCheckState extends State<AuthCheck> {
             );
           }
 
-          if (userSnapshot.hasData &&
-              userSnapshot.data != null &&
-              userSnapshot.data!.nomeAnalise.isNotEmpty) {
-            // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
-            // Agenda as notificações diárias assim que temos os dados do usuário
-            _scheduleDailyNotifications(userSnapshot.data!);
-            // --- FIM DA LÓGICA DE AGENDAMENTO ---
+          return FutureBuilder<UserModel?>(
+            future: firestoreService.getUserData(_firebaseUser!.uid),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  backgroundColor: AppColors.background,
+                  body: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary),
+                  ),
+                );
+              }
 
-            return const DashboardScreen();
-          }
+              if (userSnapshot.hasData &&
+                  userSnapshot.data != null &&
+                  userSnapshot.data!.nomeAnalise.isNotEmpty) {
+                // Ativa App Check somente após carregar dados principais do usuário (reduz falhas 400 iniciais)
+                _authRepository.ensureAppCheckActivated();
+                // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
+                // Agenda as notificações diárias assim que temos os dados do usuário
+                _scheduleDailyNotifications(userSnapshot.data!);
+                // --- FIM DA LÓGICA DE AGENDAMENTO ---
 
-          if (userSnapshot.data == null ||
-              userSnapshot.data!.nomeAnalise.isEmpty) {
-            return UserDetailsScreen(firebaseUser: _firebaseUser!);
-          }
+                return const DashboardScreen();
+              }
 
-          return const LoginScreen();
+              if (userSnapshot.data == null ||
+                  userSnapshot.data!.nomeAnalise.isEmpty) {
+                return UserDetailsScreen(firebaseUser: _firebaseUser!);
+              }
+
+              return const LoginScreen();
+            },
+          );
         },
       );
     }
     return const LoginScreen();
+  }
+}
+
+extension on _AuthCheckState {
+  Future<bool> _waitForAppCheckIfWeb() async {
+    // Não aguarda mais o token antes do primeiro acesso Firestore.
+    // App Check só será ativado depois de carregar os dados do usuário.
+    return true;
   }
 }
