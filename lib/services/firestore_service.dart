@@ -59,10 +59,23 @@ class FirestoreService {
   }
 
   Future<UserModel?> getUserData(String uid) async {
+    debugPrint('[FirestoreService] ========== getUserData INICIADO ==========');
+    debugPrint('[FirestoreService] uid solicitado: $uid');
+
     try {
+      debugPrint('[FirestoreService] Buscando documento users/$uid...');
       DocumentSnapshot doc = await _db.collection('users').doc(uid).get();
+
+      debugPrint('[FirestoreService] Documento existe: ${doc.exists}');
+
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
+        debugPrint('[FirestoreService] Dados brutos: ${data.keys.toList()}');
+        debugPrint(
+            '[FirestoreService] nomeAnalise: "${data['nomeAnalise'] ?? 'VAZIO'}"');
+        debugPrint(
+            '[FirestoreService] dataNasc: "${data['dataNasc'] ?? 'VAZIO'}"');
+
         // Tratamento robusto para lista (caso null ou tipo errado)
         List<String> cardOrder = UserModel.defaultCardOrder;
         if (data['dashboardCardOrder'] is List) {
@@ -115,7 +128,7 @@ class FirestoreService {
           }
         }
 
-        return UserModel(
+        final userModel = UserModel(
           uid: doc.id,
           email: data['email'] ?? '',
           photoUrl: data['photoUrl'] as String?,
@@ -129,10 +142,25 @@ class FirestoreService {
           dashboardHiddenCards: hiddenCards,
           subscription: subscription,
         );
+
+        debugPrint('[FirestoreService] UserModel criado com sucesso');
+        debugPrint('[FirestoreService] - uid: ${userModel.uid}');
+        debugPrint('[FirestoreService] - email: ${userModel.email}');
+        debugPrint(
+            '[FirestoreService] - nomeAnalise: "${userModel.nomeAnalise}"');
+        debugPrint(
+            '[FirestoreService] ==================================================');
+
+        return userModel;
       }
+      debugPrint('[FirestoreService] Documento não existe -> retornando null');
+      debugPrint(
+          '[FirestoreService] ==================================================');
       return null;
     } catch (e) {
-      debugPrint("Erro ao buscar dados do usuário: $e");
+      debugPrint("[FirestoreService] ❌ ERRO ao buscar dados do usuário: $e");
+      debugPrint(
+          '[FirestoreService] ==================================================');
       return null;
     }
   }

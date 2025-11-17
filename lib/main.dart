@@ -229,13 +229,19 @@ class _AuthCheckState extends State<AuthCheck> {
   void initState() {
     super.initState();
     _authSubscription = _authRepository.authStateChanges.listen((user) {
+      debugPrint('[AuthCheck] ========== authStateChanges EMISSÃO ==========');
+      debugPrint('[AuthCheck] user recebido: ${user?.uid ?? "NULL"}');
+      debugPrint('[AuthCheck] email: ${user?.email ?? "N/A"}');
       if (mounted) {
         setState(() {
           _firebaseUser = user;
           _isLoading = false;
         });
-        debugPrint('[AuthCheck] authStateChanges emissão user=${user?.uid}');
+        debugPrint(
+            '[AuthCheck] setState concluído. _firebaseUser=${_firebaseUser?.uid}, _isLoading=$_isLoading');
       }
+      debugPrint(
+          '[AuthCheck] ================================================');
     });
     debugPrint(
         '[AuthCheck] initState concluído. currentUser inicial=${FirebaseAuth.instance.currentUser?.uid}');
@@ -263,13 +269,25 @@ class _AuthCheckState extends State<AuthCheck> {
     }
 
     if (_firebaseUser == null) {
+      debugPrint('[AuthCheck] Nenhum usuário autenticado -> LoginScreen');
       return const LoginScreen();
     }
 
+    debugPrint(
+        '[AuthCheck] Usuário autenticado: ${_firebaseUser!.uid}, carregando dados Firestore...');
+
     return FutureBuilder<UserModel?>(
+      key: ValueKey(
+          _firebaseUser!.uid), // CRITICAL: força rebuild quando usuário muda
       future: firestoreService.getUserData(_firebaseUser!.uid),
       builder: (context, snapshot) {
+        debugPrint(
+            '[AuthCheck] FutureBuilder - connectionState: ${snapshot.connectionState}');
+        debugPrint(
+            '[AuthCheck] FutureBuilder - hasData: ${snapshot.hasData}, hasError: ${snapshot.hasError}');
+
         if (snapshot.connectionState == ConnectionState.waiting) {
+          debugPrint('[AuthCheck] Aguardando dados do Firestore...');
           return const Scaffold(
             backgroundColor: AppColors.background,
             body: Center(
