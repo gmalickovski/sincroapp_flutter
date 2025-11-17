@@ -30,7 +30,7 @@ import 'package:sincro_app_flutter/features/authentication/data/content_data.dar
 // Em produção, injete via --dart-define=RECAPTCHA_V3_SITE_KEY=... no build.
 const String kReCaptchaSiteKey = String.fromEnvironment(
   'RECAPTCHA_V3_SITE_KEY',
-  defaultValue: '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU',
+  defaultValue: '6LfPrg8sAAAAAEM0C6vuU0H9qMlXr89zr553zi_B',
 );
 
 // ========================================

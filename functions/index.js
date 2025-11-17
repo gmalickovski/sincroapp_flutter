@@ -19,7 +19,7 @@ const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
 
 // Configurações reCAPTCHA (sincroapp-529cc - PROJETO CORRETO)
 const RECAPTCHA_PROJECT_ID = "sincroapp-529cc";
-const RECAPTCHA_SITE_KEY = "6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU";
+const RECAPTCHA_SITE_KEY = "6LfPrg8sAAAAAEM0C6vuU0H9qMlXr89zr553zi_B";
 
 /**
  * Valida token reCAPTCHA e retorna score de risco (0.0 a 1.0)

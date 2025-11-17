@@ -24,7 +24,7 @@ BRANCH="${BRANCH:-${1:-main}}"  # Branch padrão: main
 DOMAIN="${DOMAIN:-sincroapp.com.br}"
 RENDERER="${RENDERER:-html}"   # html | canvaskit
 AUTO_DEPLOY_FUNCTIONS="${AUTO_DEPLOY_FUNCTIONS:-0}" # 1 para deploy automático das functions
-RECAPTCHA_V3_SITE_KEY="${RECAPTCHA_V3_SITE_KEY:-6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU}"
+RECAPTCHA_V3_SITE_KEY="${RECAPTCHA_V3_SITE_KEY:-6LfPrg8sAAAAAEM0C6vuU0H9qMlXr89zr553zi_B}"
 
 # Função para log colorido
 log_info() {
@@ -165,7 +165,7 @@ log_success "Build anterior removido"
 
 # 11. GERAR NOVO BUILD
 log_info "Gerando novo build Flutter Web (isso pode demorar alguns minutos)..."
-flutter build web --release --web-renderer "$RENDERER" \
+flutter build web --release \
     --base-href /app/ \
     --dart-define=RECAPTCHA_V3_SITE_KEY="$RECAPTCHA_V3_SITE_KEY"
 

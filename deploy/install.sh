@@ -211,7 +211,7 @@ export PATH="$PATH:/opt/flutter/bin"
 flutter clean || true
 
 # Fazer build
-flutter build web --release --web-renderer "$RENDERER" \
+flutter build web --release \
     --base-href /app/ \
     --dart-define=RECAPTCHA_V3_SITE_KEY="$RECAPTCHA_V3_SITE_KEY"
 
