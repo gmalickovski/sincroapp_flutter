@@ -345,6 +345,7 @@ class _AuthCheckState extends State<AuthCheck> {
               if (userSnapshot.hasError) {
                 debugPrint('⚠️ Erro ao carregar dados do usuário: '
                     '${userSnapshot.error}');
+                debugPrint('➡️ Navegando para Dashboard (fallback por erro em getUserData)');
                 return const DashboardScreen();
               }
               if (userSnapshot.connectionState == ConnectionState.waiting) {
@@ -364,15 +365,18 @@ class _AuthCheckState extends State<AuthCheck> {
                 _scheduleDailyNotifications(userSnapshot.data!);
                 // --- FIM DA LÓGICA DE AGENDAMENTO ---
 
+                debugPrint('✅ UserModel carregado com nomeAnalise. Abrindo Dashboard.');
                 return const DashboardScreen();
               }
 
               if (userSnapshot.data == null ||
                   userSnapshot.data!.nomeAnalise.isEmpty) {
+                debugPrint('ℹ️ UserModel inexistente ou incompleto (nomeAnalise vazio). Redirecionando para UserDetailsScreen.');
                 return UserDetailsScreen(firebaseUser: _firebaseUser!);
               }
               // Fallback seguro: usuário autenticado, mas sem dados consistentes.
               // Deixe o Dashboard cuidar de eventuais carregamentos/erros.
+              debugPrint('🔄 Fallback final: enviando para Dashboard.');
               return const DashboardScreen();
             },
           );
