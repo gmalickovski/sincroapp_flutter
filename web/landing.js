@@ -27,16 +27,19 @@ document.addEventListener('DOMContentLoaded', () => {
  * Abre modal de login ou redireciona para app
  */
 async function handleLogin() {
-  // Redireciona para a rota de login do Flutter (hash-based)
-  window.location.href = '/app/#/login';
+  // Mostra overlay de loading e navega na próxima frame
+  try { showLoading(true); } catch (_) {}
+  // Usa timeout 0 para garantir pintura do overlay antes da navegação
+  setTimeout(() => { window.location.href = '/app/#/login'; }, 0);
 }
 
 /**
  * Registra novo usuário
  */
 async function handleRegister() {
-  // Redireciona para a rota de cadastro do Flutter (hash-based)
-  window.location.href = '/app/#/register';
+  // Mostra overlay de loading e navega na próxima frame
+  try { showLoading(true); } catch (_) {}
+  setTimeout(() => { window.location.href = '/app/#/register'; }, 0);
 }
 
 /**
