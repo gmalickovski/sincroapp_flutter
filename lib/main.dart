@@ -260,9 +260,10 @@ class _AuthCheckState extends State<AuthCheck> {
     final firestoreService = FirestoreService();
 
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
+        key: const ValueKey('loading'),
         backgroundColor: AppColors.background,
-        body: Center(
+        body: const Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
@@ -270,7 +271,7 @@ class _AuthCheckState extends State<AuthCheck> {
 
     if (_firebaseUser == null) {
       debugPrint('[AuthCheck] Nenhum usuário autenticado -> LoginScreen');
-      return const LoginScreen();
+      return LoginScreen(key: const ValueKey('login'));
     }
 
     debugPrint(
@@ -288,9 +289,10 @@ class _AuthCheckState extends State<AuthCheck> {
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           debugPrint('[AuthCheck] Aguardando dados do Firestore...');
-          return const Scaffold(
+          return Scaffold(
+            key: const ValueKey('loading-user'),
             backgroundColor: AppColors.background,
-            body: Center(
+            body: const Center(
               child: CircularProgressIndicator(color: AppColors.primary),
             ),
           );
@@ -298,19 +300,28 @@ class _AuthCheckState extends State<AuthCheck> {
         if (snapshot.hasError) {
           debugPrint(
               '[AuthCheck] Erro ao carregar UserModel: ${snapshot.error} -> Dashboard');
-          return const DashboardScreen();
+          return DashboardScreen(
+              key: ValueKey('dashboard-error-${_firebaseUser!.uid}'));
         }
         final userModel = snapshot.data;
         if (userModel == null) {
           debugPrint('[AuthCheck] UserModel null -> UserDetails');
-          return UserDetailsScreen(firebaseUser: _firebaseUser!);
+          return UserDetailsScreen(
+            key: ValueKey('userdetails-null-${_firebaseUser!.uid}'),
+            firebaseUser: _firebaseUser!,
+          );
         }
         if (userModel.nomeAnalise.isEmpty) {
           debugPrint('[AuthCheck] nomeAnalise vazio -> UserDetails');
-          return UserDetailsScreen(firebaseUser: _firebaseUser!);
+          return UserDetailsScreen(
+            key: ValueKey('userdetails-empty-${_firebaseUser!.uid}'),
+            firebaseUser: _firebaseUser!,
+          );
         }
         debugPrint('[AuthCheck] UserModel válido -> Dashboard');
-        return const DashboardScreen();
+        debugPrint('[AuthCheck] 🎯 RETORNANDO DashboardScreen()');
+        return DashboardScreen(
+            key: ValueKey('dashboard-${_firebaseUser!.uid}'));
       },
     );
   }
