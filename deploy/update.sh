@@ -24,6 +24,7 @@ BRANCH="${BRANCH:-${1:-main}}"  # Branch padrão: main
 DOMAIN="${DOMAIN:-sincroapp.com.br}"
 RENDERER="${RENDERER:-html}"   # html | canvaskit
 AUTO_DEPLOY_FUNCTIONS="${AUTO_DEPLOY_FUNCTIONS:-0}" # 1 para deploy automático das functions
+RECAPTCHA_V3_SITE_KEY="${RECAPTCHA_V3_SITE_KEY:-6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU}"
 
 # Função para log colorido
 log_info() {
@@ -153,8 +154,29 @@ log_success "Build anterior removido"
 
 # 11. GERAR NOVO BUILD
 log_info "Gerando novo build Flutter Web (isso pode demorar alguns minutos)..."
-flutter build web --release --web-renderer "$RENDERER"
+flutter build web --release --web-renderer "$RENDERER" \
+    --base-href /app/ \
+    --dart-define=RECAPTCHA_V3_SITE_KEY="$RECAPTCHA_V3_SITE_KEY"
+
+if [ ! -d "$INSTALL_DIR/build/web" ]; then
+    log_error "Build falhou - diretório build/web não foi criado"
+    exit 1
+fi
+
 log_success "Novo build gerado"
+
+# Publicar landing e arquivos públicos adicionais no build (consistência com install.sh)
+log_info "Publicando landing (landing.html/js e firebase-config.js) no build/web..."
+cp -f "$INSTALL_DIR/web/landing.html" "$INSTALL_DIR/build/web/landing.html" 2>/dev/null || true
+cp -f "$INSTALL_DIR/web/landing.js" "$INSTALL_DIR/build/web/landing.js" 2>/dev/null || true
+cp -f "$INSTALL_DIR/web/firebase-config.js" "$INSTALL_DIR/build/web/firebase-config.js" 2>/dev/null || true
+cp -f "$INSTALL_DIR/web/favicon.png" "$INSTALL_DIR/build/web/favicon.png" 2>/dev/null || true
+
+if [ -d "$INSTALL_DIR/web/icons" ]; then
+    mkdir -p "$INSTALL_DIR/build/web/icons"
+    cp -rf "$INSTALL_DIR/web/icons/"* "$INSTALL_DIR/build/web/icons/" 2>/dev/null || true
+fi
+log_success "Landing publicada em build/web"
 
 # 12. CONFIGURAR PERMISSÕES
 log_info "Configurando permissões..."
