@@ -18,10 +18,14 @@
 
   <!-- 
     ========================================
-    DETECÇÃO AUTOMÁTICA DE AMBIENTE
+    CONFIGURAÇÃO APP CHECK - DEBUG MODE
     ========================================
-    Este script detecta se está rodando em localhost
-    e ativa o debug token APENAS em desenvolvimento
+    Ativa debug token APENAS em localhost.
+    Em PRODUÇÃO, o Firebase SDK carrega o reCAPTCHA automaticamente.
+    
+    IMPORTANTE: NÃO carregue o script reCAPTCHA manualmente!
+    O Firebase App Check SDK faz isso internamente quando você
+    passa a site key para ReCaptchaV3Provider().
   -->
   <script>
     // Detecta se está em localhost (desenvolvimento)
@@ -32,34 +36,15 @@
       window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
     );
 
-    // ===== MODO DEBUG (localhost) =====
     if (isLocalhost) {
-      // Ativa o debug token automaticamente
+      // ===== MODO DEBUG (localhost) =====
       self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-      console.log('🛠️ Modo DEBUG: App Check debug token ativado');
-      console.log('📝 Procure no console pelo token gerado e registre no Firebase Console');
-    }
-  </script>
-
-  <!-- 
-    ========================================
-    RECAPTCHA V3 PARA PRODUÇÃO
-    ========================================
-    Carrega ANTES do Flutter para garantir disponibilidade
-  -->
-  <script>
-    const isLocalhost = Boolean(
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '[::1]' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
-    );
-
-    if (!isLocalhost) {
-      console.log('🚀 Modo PRODUÇÃO: Carregando reCAPTCHA v3...');
-      // Carrega reCAPTCHA v3 de forma SÍNCRONA antes do Flutter
-      document.write('<script src="https://www.google.com/recaptcha/api.js?render=6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU"><\/script>');
-      console.log('✅ reCAPTCHA v3 carregado');
+      console.log('🛠️ Modo DEBUG: App Check debug token ativado automaticamente');
+      console.log('📝 Procure no console pelo token gerado e registre no Firebase Console > App Check > Gerenciar tokens de depuração');
+    } else {
+      // ===== MODO PRODUÇÃO =====
+      console.log('🚀 Modo PRODUÇÃO: Firebase SDK carregará reCAPTCHA v3 automaticamente');
+      console.log('📌 Site Key será fornecida via ReCaptchaV3Provider no código Dart');
     }
   </script>
 </head>
