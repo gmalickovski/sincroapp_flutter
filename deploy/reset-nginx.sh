@@ -78,12 +78,13 @@ server {
         return 301 /app/;
     }
     
-    # Assets JS/CSS do app (DEVE VIR ANTES de location /app/)
-    location ~* ^/app/.*\.(js|css|wasm|json|map)$ {
+    # Assets JS/CSS/WASM do app (DEVE VIR ANTES de location /app/)
+    # CRÍTICO: Remove trailing slashes antes de processar
+    location ~ ^/app/(.+)\.(js|css|wasm|json|map)/?$ {
+        rewrite ^/app/(.*)/$ /app/$1 permanent;
         try_files $uri =404;
         expires 1y;
         add_header Cache-Control "public, immutable";
-        # Não force Content-Type; deixe o mime.types definir corretamente
     }
     
     location /app/ {
