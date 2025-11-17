@@ -42,8 +42,13 @@
     // ===== MODO PRODUÇÃO (domínio real) =====
     else {
       console.log('🚀 Modo PRODUÇÃO: Usando reCAPTCHA v3');
-      // Em produção, o reCAPTCHA v3 funciona automaticamente
-      // Não é necessário configurar nada aqui
+      // Carrega o script reCAPTCHA v3 necessário para App Check
+      const recaptchaScript = document.createElement('script');
+      recaptchaScript.src = 'https://www.google.com/recaptcha/api.js?render=6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU';
+      recaptchaScript.async = true;
+      recaptchaScript.defer = true;
+      document.head.appendChild(recaptchaScript);
+      console.log('✅ reCAPTCHA v3 script carregado');
     }
   </script>
 </head>

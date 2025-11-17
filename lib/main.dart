@@ -312,7 +312,7 @@ class _AuthCheckState extends State<AuthCheck> {
               if (userSnapshot.hasData &&
                   userSnapshot.data != null &&
                   userSnapshot.data!.nomeAnalise.isNotEmpty) {
-                // Ativa App Check somente após carregar dados principais do usuário (reduz falhas 400 iniciais)
+                // Ativa App Check após carregar dados do usuário
                 _authRepository.ensureAppCheckActivated();
                 // --- INÍCIO DA LÓGICA DE AGENDAMENTO ---
                 // Agenda as notificações diárias assim que temos os dados do usuário
