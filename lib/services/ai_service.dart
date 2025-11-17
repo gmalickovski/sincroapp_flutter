@@ -15,11 +15,12 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class AIService {
   static GenerativeModel? _cachedModel;
+  static Future<void>? _appCheckReady;
 
   // --- MUDANÇA (v8): _getModel SEM generationConfig ---
   // Isso permite que a IA responda com texto (que será um JSON)
   // em vez de forçar um JSON que conflita com o prompt.
-  static GenerativeModel _getModel() {
+  static Future<GenerativeModel> _getModel() async {
     if (_cachedModel != null) {
       return _cachedModel!;
     }
@@ -29,6 +30,8 @@ class AIService {
         throw Exception(
             "Usuário não autenticado. FirebaseAuth.instance.currentUser é null.");
       }
+
+      await _ensureAppCheckReady();
 
       final model = FirebaseAI.vertexAI(
         auth: FirebaseAuth.instance,
@@ -40,7 +43,6 @@ class AIService {
       _cachedModel = model;
       return model;
     } catch (e, stackTrace) {
-      // Mantém seu tratamento de erro
       debugPrint("❌ ERRO ao inicializar o modelo Gemini: $e");
       debugPrint("📍 StackTrace: $stackTrace");
       throw Exception("Falha ao inicializar o modelo de IA.\n\n"
@@ -51,6 +53,30 @@ class AIService {
           "✓ Token de debug registrado no Firebase Console?\n\n"
           "Erro técnico: ${e.toString()}");
     }
+  }
+
+  static Future<void> _ensureAppCheckReady() {
+    // Memoriza a mesma Future para evitar corridas/estouro de requisições
+    _appCheckReady ??= _prefetchAppCheckToken();
+    return _appCheckReady!;
+  }
+
+  static Future<void> _prefetchAppCheckToken() async {
+    // Em Web, a troca do token pode falhar inicialmente; tente rapidamente algumas vezes
+    if (!kIsWeb) return;
+    const totalMs = 2000; // 2s
+    const stepMs = 250; // 8 tentativas
+    final deadline = DateTime.now().millisecondsSinceEpoch + totalMs;
+    while (DateTime.now().millisecondsSinceEpoch < deadline) {
+      try {
+        await FirebaseAppCheck.instance.getToken();
+        return;
+      } catch (e) {
+        // Aguardamos um pouco e tentamos novamente, evitando tempestade de 400/throttled
+        await Future.delayed(const Duration(milliseconds: stepMs));
+      }
+    }
+    // Continua sem erro: em "Monitoring" o backend aceita; em "Enforced" o Console precisa estar correto
   }
 
   // --- MÉTODO generateSuggestions ATUALIZADO (v8) ---
@@ -78,7 +104,7 @@ class AIService {
         existingSubTasks: goal.subTasks,
       );
 
-      final generativeModel = _getModel();
+      final generativeModel = await _getModel();
       final content = [Content.text(prompt)];
 
       final response = await generativeModel.generateContent(content);
