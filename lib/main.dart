@@ -222,6 +222,7 @@ class _AuthCheckState extends State<AuthCheck> {
   final AuthRepository _authRepository = AuthRepository();
   User? _firebaseUser;
   bool _isLoading = true;
+  bool _hasNavigated = false; // Previne navegações múltiplas
 
   // Removido agendamento de notificações do fluxo inicial web para evitar interferência
 
@@ -236,6 +237,7 @@ class _AuthCheckState extends State<AuthCheck> {
         setState(() {
           _firebaseUser = user;
           _isLoading = false;
+          _hasNavigated = false; // Reset ao mudar usuário
         });
         debugPrint(
             '[AuthCheck] setState concluído. _firebaseUser=${_firebaseUser?.uid}, _isLoading=$_isLoading');
@@ -251,6 +253,25 @@ class _AuthCheckState extends State<AuthCheck> {
   void dispose() {
     _authSubscription.cancel();
     super.dispose();
+  }
+
+  void _navigateToScreen(Widget screen, String screenName) {
+    if (_hasNavigated) {
+      debugPrint(
+          '[AuthCheck] ⚠️  Navegação para $screenName já realizada, ignorando');
+      return;
+    }
+
+    _hasNavigated = true;
+    debugPrint('[AuthCheck] 🚀 Navegando para $screenName via pushReplacement');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => screen),
+        );
+      }
+    });
   }
 
   // Removido agendamento antecipado para simplificar fluxo de autenticação
@@ -300,28 +321,59 @@ class _AuthCheckState extends State<AuthCheck> {
         if (snapshot.hasError) {
           debugPrint(
               '[AuthCheck] Erro ao carregar UserModel: ${snapshot.error} -> Dashboard');
-          return DashboardScreen(
-              key: ValueKey('dashboard-error-${_firebaseUser!.uid}'));
+          _navigateToScreen(const DashboardScreen(), 'DashboardScreen (error)');
+          return Scaffold(
+            key: const ValueKey('navigating'),
+            backgroundColor: AppColors.background,
+            body: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
+          );
         }
+
         final userModel = snapshot.data;
         if (userModel == null) {
           debugPrint('[AuthCheck] UserModel null -> UserDetails');
-          return UserDetailsScreen(
-            key: ValueKey('userdetails-null-${_firebaseUser!.uid}'),
-            firebaseUser: _firebaseUser!,
+          _navigateToScreen(
+            UserDetailsScreen(firebaseUser: _firebaseUser!),
+            'UserDetailsScreen (null)',
+          );
+          return Scaffold(
+            key: const ValueKey('navigating'),
+            backgroundColor: AppColors.background,
+            body: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
           );
         }
+
         if (userModel.nomeAnalise.isEmpty) {
           debugPrint('[AuthCheck] nomeAnalise vazio -> UserDetails');
-          return UserDetailsScreen(
-            key: ValueKey('userdetails-empty-${_firebaseUser!.uid}'),
-            firebaseUser: _firebaseUser!,
+          _navigateToScreen(
+            UserDetailsScreen(firebaseUser: _firebaseUser!),
+            'UserDetailsScreen (empty)',
+          );
+          return Scaffold(
+            key: const ValueKey('navigating'),
+            backgroundColor: AppColors.background,
+            body: const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            ),
           );
         }
+
         debugPrint('[AuthCheck] UserModel válido -> Dashboard');
-        debugPrint('[AuthCheck] 🎯 RETORNANDO DashboardScreen()');
-        return DashboardScreen(
-            key: ValueKey('dashboard-${_firebaseUser!.uid}'));
+        debugPrint(
+            '[AuthCheck] 🎯 NAVEGANDO para DashboardScreen via Navigator');
+        _navigateToScreen(const DashboardScreen(), 'DashboardScreen');
+
+        return Scaffold(
+          key: const ValueKey('navigating'),
+          backgroundColor: AppColors.background,
+          body: const Center(
+            child: CircularProgressIndicator(color: AppColors.primary),
+          ),
+        );
       },
     );
   }
