@@ -347,11 +347,20 @@ class _AuthCheckState extends State<AuthCheck> {
           );
         }
 
-        if (userModel.nomeAnalise.isEmpty) {
-          debugPrint('[AuthCheck] nomeAnalise vazio -> UserDetails');
+        // Valida dados essenciais do usuário para navegação
+        final String nomeAnalise = (userModel.nomeAnalise).trim();
+        final String dataNasc = (userModel.dataNasc).trim();
+        final bool dataValida =
+            RegExp(r'^\d{2}/\d{2}/\d{4} ?$').hasMatch(dataNasc) ||
+                RegExp(r'^\d{2}/\d{2}/\d{4}$')
+                    .hasMatch(dataNasc); // salvaguarda contra chars estranhos
+
+        if (nomeAnalise.isEmpty || dataNasc.isEmpty || !dataValida) {
+          debugPrint(
+              '[AuthCheck] Dados incompletos -> UserDetails | nomeAnalise="${nomeAnalise.isEmpty ? 'VAZIO' : nomeAnalise}" dataNasc="${dataNasc.isEmpty ? 'VAZIO' : dataNasc}" dataValida=$dataValida');
           _navigateToScreen(
             UserDetailsScreen(firebaseUser: _firebaseUser!),
-            'UserDetailsScreen (empty)',
+            'UserDetailsScreen (missing-or-invalid)',
           );
           return Scaffold(
             key: const ValueKey('navigating'),

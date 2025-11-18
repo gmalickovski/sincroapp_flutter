@@ -1312,11 +1312,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (tendencias.isEmpty) {
       return const VibrationContent(
         titulo: 'Sem Tendências Ocultas',
-        descricaoCurta: 'Nenhum número aparece com frequência acima da média.',
+        descricaoCurta:
+            'Parabéns: você não possui tendências ocultas (nenhum número aparece 4 ou mais vezes).',
         descricaoCompleta:
-            'Seu campo energético não mostra sobrecarga em nenhum arquétipo. Há espaço para equilíbrio e desenvolvimento diversificado.',
-        inspiracao: 'Equilíbrio abre espaço para expressão plena.',
-        tags: ['Equilíbrio'],
+            'Nenhum número do seu nome aparece quatro ou mais vezes após a redução numerológica, indicando ausência de padrões repetitivos intensificados de outras vidas. Isso sugere um campo equilibrado e maior flexibilidade para desenvolver diferentes potenciais sem condicionamentos fortes. Caso futuramente você adote abreviações ou variações do nome, as contagens podem mudar – mas na forma atual há neutralidade. Use essa base equilibrada para direcionar conscientemente suas escolhas.',
+        inspiracao: 'Equilíbrio silencioso sustenta expansão consciente.',
+        tags: ['Equilíbrio', 'Flexibilidade'],
       );
     }
 

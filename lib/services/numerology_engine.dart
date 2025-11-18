@@ -18,6 +18,447 @@ class NumerologyResult {
 }
 
 class NumerologyEngine {
+  // Tabela completa dos dias básicos por dia/mês
+  static const Map<int, Map<int, List<int>>> _diasBasicosTabelaCompleta = {
+    1: {
+      // Janeiro
+      1: [1, 5],
+      2: [1, 6],
+      3: [3, 6],
+      4: [1, 5],
+      5: [5, 6],
+      6: [5, 6],
+      7: [1, 7],
+      8: [1, 3],
+      9: [6, 9],
+      10: [1, 5],
+      11: [1, 6],
+      12: [6, 9],
+      13: [1, 5],
+      14: [5, 6],
+      15: [5, 6],
+      16: [1, 5],
+      17: [1, 3],
+      18: [5, 6],
+      19: [1, 5],
+      20: [1, 6],
+      21: [3, 6],
+      22: [1, 5],
+      23: [5, 6],
+      24: [5, 6],
+      25: [1, 5],
+      26: [2, 3],
+      27: [6, 9],
+      28: [2, 7],
+      29: [5, 7],
+      30: [2, 3],
+      31: [2, 7]
+    },
+    2: {
+      // Fevereiro
+      1: [1, 5],
+      2: [2, 7],
+      3: [3, 6],
+      4: [2, 7],
+      5: [5, 6],
+      6: [3, 6],
+      7: [2, 7],
+      8: [2, 3],
+      9: [3, 6],
+      10: [2, 7],
+      11: [5, 7],
+      12: [5, 6],
+      13: [2, 7],
+      14: [5, 6],
+      15: [3, 6],
+      16: [2, 5],
+      17: [2, 3],
+      18: [3, 6],
+      19: [2, 7],
+      20: [2, 7],
+      21: [3, 6],
+      22: [2, 7],
+      23: [5, 6],
+      24: [5, 6],
+      25: [2, 7],
+      26: [2, 3],
+      27: [6, 9],
+      28: [2, 7],
+      29: [6, 7],
+      30: [3, 9],
+      31: [1, 7]
+    },
+    3: {
+      // Março
+      1: [1, 7],
+      2: [2, 7],
+      3: [3, 6],
+      4: [1, 7],
+      5: [5, 7],
+      6: [3, 6],
+      7: [2, 7],
+      8: [3, 6],
+      9: [6, 9],
+      10: [1, 7],
+      11: [1, 7],
+      12: [6, 7],
+      13: [1, 5],
+      14: [5, 7],
+      15: [3, 6],
+      16: [1, 2],
+      17: [3, 6],
+      18: [3, 6],
+      19: [1, 7],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 7],
+      23: [6, 7],
+      24: [3, 6],
+      25: [2, 7],
+      26: [1, 3],
+      27: [1, 9],
+      28: [5, 9],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 5]
+    },
+    4: {
+      // Abril
+      1: [1, 7],
+      2: [1, 7],
+      3: [3, 9],
+      4: [1, 7],
+      5: [5, 7],
+      6: [3, 6],
+      7: [5, 7],
+      8: [1, 3],
+      9: [3, 9],
+      10: [1, 7],
+      11: [1, 7],
+      12: [1, 9],
+      13: [1, 7],
+      14: [5, 7],
+      15: [3, 6],
+      16: [1, 2],
+      17: [1, 3],
+      18: [1, 3],
+      19: [1, 7],
+      20: [2, 7],
+      21: [1, 3],
+      22: [1, 7],
+      23: [5, 7],
+      24: [3, 5],
+      25: [5, 7],
+      26: [2, 3],
+      27: [3, 6],
+      28: [2, 7],
+      29: [1, 7],
+      30: [5, 6],
+      31: [1, 3]
+    },
+    5: {
+      // Maio
+      1: [1, 2],
+      2: [2, 7],
+      3: [3, 6],
+      4: [1, 7],
+      5: [5, 6],
+      6: [5, 6],
+      7: [2, 7],
+      8: [2, 5],
+      9: [5, 9],
+      10: [1, 5],
+      11: [1, 7],
+      12: [2, 6],
+      13: [1, 7],
+      14: [5, 6],
+      15: [5, 6],
+      16: [2, 5],
+      17: [2, 3],
+      18: [5, 6],
+      19: [1, 2],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 7],
+      23: [5, 6],
+      24: [5, 6],
+      25: [2, 7],
+      26: [2, 5],
+      27: [5, 9],
+      28: [2, 7],
+      29: [5, 7],
+      30: [2, 3],
+      31: [1, 5]
+    },
+    6: {
+      // Junho
+      1: [1, 5],
+      2: [2, 7],
+      3: [5, 6],
+      4: [1, 5],
+      5: [5, 6],
+      6: [5, 6],
+      7: [2, 7],
+      8: [3, 5],
+      9: [5, 9],
+      10: [1, 5],
+      11: [5, 7],
+      12: [5, 6],
+      13: [1, 5],
+      14: [5, 6],
+      15: [5, 6],
+      16: [2, 5],
+      17: [2, 5],
+      18: [5, 6],
+      19: [1, 5],
+      20: [2, 7],
+      21: [5, 6],
+      22: [1, 5],
+      23: [5, 6],
+      24: [5, 6],
+      25: [2, 7],
+      26: [2, 5],
+      27: [5, 6],
+      28: [2, 7],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 5]
+    },
+    7: {
+      // Julho
+      1: [1, 2],
+      2: [2, 7],
+      3: [2, 3],
+      4: [1, 7],
+      5: [5, 7],
+      6: [2, 6],
+      7: [2, 7],
+      8: [2, 3],
+      9: [2, 3],
+      10: [1, 2],
+      11: [1, 7],
+      12: [2, 6],
+      13: [1, 2],
+      14: [5, 7],
+      15: [6, 7],
+      16: [1, 2],
+      17: [2, 3],
+      18: [2, 3],
+      19: [1, 2],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 2],
+      23: [5, 7],
+      24: [6, 7],
+      25: [2, 7],
+      26: [2, 3],
+      27: [1, 9],
+      28: [2, 7],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 7]
+    },
+    8: {
+      // Agosto
+      1: [1, 2],
+      2: [1, 5],
+      3: [3, 6],
+      4: [1, 2],
+      5: [1, 5],
+      6: [3, 6],
+      7: [2, 7],
+      8: [2, 3],
+      9: [3, 6],
+      10: [1, 2],
+      11: [1, 7],
+      12: [1, 6],
+      13: [1, 5],
+      14: [1, 5],
+      15: [1, 6],
+      16: [1, 2],
+      17: [1, 3],
+      18: [1, 3],
+      19: [1, 2],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 2],
+      23: [1, 5],
+      24: [3, 6],
+      25: [2, 7],
+      26: [2, 3],
+      27: [3, 6],
+      28: [2, 5],
+      29: [1, 5],
+      30: [3, 6],
+      31: [1, 5]
+    },
+    9: {
+      // Setembro
+      1: [1, 5],
+      2: [2, 5],
+      3: [3, 6],
+      4: [1, 5],
+      5: [5, 6],
+      6: [5, 6],
+      7: [2, 5],
+      8: [2, 3],
+      9: [3, 6],
+      10: [1, 2],
+      11: [1, 5],
+      12: [3, 6],
+      13: [1, 7],
+      14: [5, 6],
+      15: [5, 6],
+      16: [2, 5],
+      17: [2, 3],
+      18: [3, 6],
+      19: [1, 5],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 7],
+      23: [5, 6],
+      24: [3, 6],
+      25: [2, 7],
+      26: [3, 6],
+      27: [6, 9],
+      28: [2, 7],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 5]
+    },
+    10: {
+      // Outubro
+      1: [2, 7],
+      2: [2, 7],
+      3: [3, 6],
+      4: [1, 7],
+      5: [5, 6],
+      6: [3, 6],
+      7: [2, 7],
+      8: [3, 6],
+      9: [3, 6],
+      10: [1, 5],
+      11: [1, 6],
+      12: [2, 6],
+      13: [1, 7],
+      14: [5, 6],
+      15: [3, 6],
+      16: [1, 2],
+      17: [3, 6],
+      18: [3, 6],
+      19: [2, 7],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 7],
+      23: [5, 6],
+      24: [3, 6],
+      25: [2, 7],
+      26: [3, 6],
+      27: [6, 9],
+      28: [2, 7],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 3]
+    },
+    11: {
+      // Novembro
+      1: [1, 7],
+      2: [1, 7],
+      3: [3, 9],
+      4: [1, 7],
+      5: [5, 7],
+      6: [3, 5],
+      7: [1, 7],
+      8: [3, 9],
+      9: [3, 9],
+      10: [2, 7],
+      11: [1, 7],
+      12: [1, 9],
+      13: [1, 7],
+      14: [5, 7],
+      15: [3, 5],
+      16: [1, 5],
+      17: [3, 9],
+      18: [3, 9],
+      19: [1, 7],
+      20: [2, 7],
+      21: [3, 9],
+      22: [1, 7],
+      23: [5, 7],
+      24: [3, 5],
+      25: [1, 7],
+      26: [3, 9],
+      27: [3, 9],
+      28: [2, 7],
+      29: [1, 7],
+      30: [3, 6],
+      31: [1, 7]
+    },
+    12: {
+      // Dezembro
+      1: [1, 7],
+      2: [2, 7],
+      3: [3, 6],
+      4: [1, 7],
+      5: [3, 6],
+      6: [3, 6],
+      7: [2, 7],
+      8: [2, 3],
+      9: [3, 9],
+      10: [1, 7],
+      11: [1, 7],
+      12: [6, 9],
+      13: [1, 3],
+      14: [5, 6],
+      15: [3, 6],
+      16: [1, 2],
+      17: [2, 3],
+      18: [3, 6],
+      19: [1, 7],
+      20: [2, 7],
+      21: [3, 6],
+      22: [1, 7],
+      23: [5, 6],
+      24: [3, 6],
+      25: [3, 7],
+      26: [3, 6],
+      27: [6, 9],
+      28: [5, 6],
+      29: [1, 6],
+      30: [3, 6],
+      31: [1, 7]
+    },
+  };
+
+  /// Calcula os dias favoráveis conforme tabela e passos do documento
+  List<int> calcularDiasFavoraveis() {
+    final dataNasc = _parseDate(dataNascimento);
+    if (dataNasc == null) return [];
+    final dia = dataNasc.day;
+    final mes = dataNasc.month;
+    final tabelaMes = _diasBasicosTabelaCompleta[mes];
+    if (tabelaMes == null) return [];
+    final basicos = tabelaMes[dia];
+    if (basicos == null || basicos.length != 2) return [];
+    final b1 = basicos[0];
+    final b2 = basicos[1];
+    List<int> dias = [b1, b2];
+    int atual = b2 * 2;
+    dias.add(atual);
+    bool alterna = true;
+    int anterior = b1;
+    int ultimo = atual;
+    while (true) {
+      int soma = alterna ? anterior + ultimo : b2 + ultimo;
+      if (soma > 31) break;
+      dias.add(soma);
+      alterna = !alterna;
+      anterior = alterna ? b1 : b2;
+      ultimo = soma;
+    }
+    return dias;
+  }
+
   final String nomeCompleto;
   final String dataNascimento;
 
@@ -188,7 +629,8 @@ class NumerologyEngine {
         soma += _calcularValor(letra);
       }
     }
-    return _reduzirNumero(soma, mestre: true);
+    // Número de Impressão não preserva mestres (11/22 devem ser reduzidos)
+    return _reduzirNumero(soma, mestre: false);
   }
 
   int _calcularTalentoOculto(int motivacao, int expressao) {
@@ -216,37 +658,82 @@ class NumerologyEngine {
     };
   }
 
-  // Momentos Decisivos (Pinnacles):
+  // Momentos Decisivos (Pinnacles): períodos e regentes conforme documento
   // P1 = reduzir(mês + dia), P2 = reduzir(dia + ano),
   // P3 = reduzir(P1 + P2), P4 = reduzir(mês + ano)
-  Map<String, dynamic> _calcularMomentosDecisivos(
-      DateTime dataNasc, int idade) {
+  // Durações:
+  //  - P1: do ano de nascimento até (ano de nascimento + (37 - destino(1..9)))
+  //  - P2: 9 anos seguintes
+  //  - P3: 9 anos seguintes
+  //  - P4: resto da vida
+  Map<String, dynamic> _calcularMomentosDecisivos(DateTime dataNasc) {
     final mesR = _reduzirNumero(dataNasc.month);
     final diaR = _reduzirNumero(dataNasc.day);
     final anoR = _reduzirNumero(dataNasc.year);
 
-    final p1 = _reduzirNumero(mesR + diaR, mestre: true);
-    final p2 = _reduzirNumero(diaR + anoR, mestre: true);
-    final p3 = _reduzirNumero(p1 + p2, mestre: true);
-    final p4 = _reduzirNumero(mesR + anoR, mestre: true);
+    final p1Reg = _reduzirNumero(mesR + diaR, mestre: true);
+    final p2Reg = _reduzirNumero(diaR + anoR, mestre: true);
+    final p3Reg = _reduzirNumero(p1Reg + p2Reg, mestre: true);
+    final p4Reg = _reduzirNumero(mesR + anoR, mestre: true);
 
-    int atual;
-    if (idade <= 36) {
-      atual = p1;
-    } else if (idade <= 45) {
-      atual = p2;
-    } else if (idade <= 54) {
-      atual = p3;
+    // Destino com mestres preservados (1..9, 11, 22) para duração do 1º ciclo
+    final destinoMestre = _reduzirNumero(
+      dataNasc.day + dataNasc.month + dataNasc.year,
+      mestre: true,
+    );
+    final anosP1 =
+        37 - destinoMestre; // ex.: 31/05/1991 => 11 -> 26 anos, até 2017
+
+    final anoNasc = dataNasc.year;
+    final p1Inicio = anoNasc;
+    final p1Fim = anoNasc + anosP1; // exemplo: 1969 -> 2002
+
+    final p2Inicio = p1Fim;
+    final p2Fim = p2Inicio + 9; // 9 anos
+
+    final p3Inicio = p2Fim;
+    final p3Fim = p3Inicio + 9; // 9 anos
+
+    final p4Inicio = p3Fim;
+
+    final anoAtual = DateTime.now().year;
+    int atualRegente;
+    if (anoAtual < p1Fim) {
+      atualRegente = p1Reg;
+    } else if (anoAtual < p2Fim) {
+      atualRegente = p2Reg;
+    } else if (anoAtual < p3Fim) {
+      atualRegente = p3Reg;
     } else {
-      atual = p4;
+      atualRegente = p4Reg;
     }
 
     return {
-      'p1': p1,
-      'p2': p2,
-      'p3': p3,
-      'p4': p4,
-      'atual': atual,
+      'p1': {
+        'regente': p1Reg,
+        'inicioAno': p1Inicio,
+        'fimAno': p1Fim,
+        'periodo': '$p1Inicio a $p1Fim',
+      },
+      'p2': {
+        'regente': p2Reg,
+        'inicioAno': p2Inicio,
+        'fimAno': p2Fim,
+        'periodo': '$p2Inicio a $p2Fim',
+      },
+      'p3': {
+        'regente': p3Reg,
+        'inicioAno': p3Inicio,
+        'fimAno': p3Fim,
+        'periodo': '$p3Inicio a $p3Fim',
+      },
+      'p4': {
+        'regente': p4Reg,
+        'inicioAno': p4Inicio,
+        'fimAno': null,
+        'periodo': '$p4Inicio a XXXX',
+      },
+      'atual': atualRegente,
     };
   }
 
@@ -306,8 +793,9 @@ class NumerologyEngine {
     }
 
     final tendencias = <int>[];
+    // Tendência Oculta: aparece MAIS de três vezes (>=4 ocorrências)
     for (int i = 1; i <= 9; i++) {
-      if ((contagem[i] ?? 0) >= 3) {
+      if ((contagem[i] ?? 0) >= 4) {
         tendencias.add(i);
       }
     }
@@ -421,7 +909,7 @@ class NumerologyEngine {
         mestre: true);
 
     // Momentos decisivos (pinnacles)
-    final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate, idade);
+    final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate);
 
     // Cálculos de listas (lições, débitos, tendências)
     final licoesCarmicas = _calcularLicoesCarmicas();
@@ -470,26 +958,19 @@ class NumerologyEngine {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return 0;
 
-    // Ensure we work with UTC date consistently
-    final utcDate = DateTime.utc(date.year, date.month, date.day);
-    final dataNascUtc =
-        DateTime.utc(dataNasc.year, dataNasc.month, dataNasc.day);
+    // Ano pessoal muda no aniversário. Se a data consultada ainda não
+    // alcançou o aniversário no ano corrente, usa-se (ano - 1).
+    final aniversarioNoAno = DateTime(date.year, dataNasc.month, dataNasc.day);
+    final anoParaCalculo =
+        date.isBefore(aniversarioNoAno) ? date.year - 1 : date.year;
 
-    // Redução inicial dos números
-    int diaNascReduzido = _reduzirNumero(dataNascUtc.day);
-    int mesNascReduzido = _reduzirNumero(dataNascUtc.month);
+    final anoPessoal =
+        _reduzirNumero(dataNasc.day + dataNasc.month + anoParaCalculo);
+    final mesPessoal = _reduzirNumero(anoPessoal + date.month);
+    final diaPessoal = _reduzirNumero(
+        mesPessoal + _reduzirNumero(date.day, mestre: true),
+        mestre: true);
 
-    // Redução do ano atual
-    int anoAtualReduzido = _reduzirNumero(utcDate.year);
-
-    // Cálculo do ano pessoal
-    int anoPessoal =
-        _reduzirNumero(diaNascReduzido + mesNascReduzido + anoAtualReduzido);
-
-    // Cálculo do mês pessoal
-    int mesPessoal = _reduzirNumero(anoPessoal + _reduzirNumero(utcDate.month));
-
-    // Cálculo final do dia pessoal
-    return _reduzirNumero(mesPessoal + _reduzirNumero(utcDate.day));
+    return diaPessoal;
   }
 }
