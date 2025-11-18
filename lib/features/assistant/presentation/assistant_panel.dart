@@ -1,3 +1,5 @@
+// lib/features/assistant/presentation/assistant_panel.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -18,33 +20,78 @@ class AssistantPanel extends StatefulWidget {
   State<AssistantPanel> createState() => _AssistantPanelState();
 }
 
-class _AssistantPanelState extends State<AssistantPanel> {
+class _AssistantPanelState extends State<AssistantPanel>
+    with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _firestore = FirestoreService();
+
   bool _isSending = false;
   final List<AssistantMessage> _messages = [];
-  bool _isListening = false; // estado do reconhecimento de voz
 
-  // Dependência de reconhecimento de voz (lazy init)
+  // --- Configuração de Voz e Animação ---
+  bool _isListening = false;
   SpeechToText? _speech;
   bool _speechAvailable = false;
+  bool _speechInitialized = false;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Configura a animação de pulso para o microfone
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+
+    // Animação suave de escala (1.0 -> 1.2)
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
+    // Loop da animação (respiração)
+    _pulseController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        _pulseController.reverse();
+      } else if (status == AnimationStatus.dismissed) {
+        _pulseController.forward();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _speech?.stop();
+    _pulseController.dispose();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // --- Lógica de Envio de Mensagem ---
 
   Future<void> _send() async {
     final q = _controller.text.trim();
     if (q.isEmpty) return;
+
+    // Se estiver ouvindo, para antes de enviar
+    if (_isListening) _stopListening();
+
     setState(() {
       _messages.add(
           AssistantMessage(role: 'user', content: q, time: DateTime.now()));
       _isSending = true;
     });
+
     // Persist user message
     _firestore.addAssistantMessage(widget.userData.uid,
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
 
-    // Auto-confirmation: if user just says "sim/ok/confirmo" and there's a pending action,
-    // execute the most recent suggested action and short-circuit.
+    // Auto-confirmation logic
     final pendingActions = _lastAssistantActions();
     if (_isAffirmative(q) && pendingActions.isNotEmpty) {
       try {
@@ -54,12 +101,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
             fromAuto: true, messageIndex: idx);
       } finally {
         if (mounted) setState(() => _isSending = false);
-        await Future.delayed(const Duration(milliseconds: 100));
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-        );
+        await _scrollToBottom();
       }
       return;
     }
@@ -92,7 +134,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
         chatHistory: _messages,
       );
 
-      // Ajuste fino: alinhar actions ao conteúdo textual (data/hora mencionadas)
+      // Ajuste fino: alinhar actions ao conteúdo textual
       final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
 
       setState(() {
@@ -103,6 +145,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
           actions: alignedActions,
         ));
       });
+
       // Persist assistant message
       _firestore.addAssistantMessage(
           widget.userData.uid,
@@ -111,8 +154,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
               content: ans.answer,
               time: DateTime.now(),
               actions: alignedActions));
-
-      // Não abrimos mais bottom sheet automático; as ações aparecem inline.
     } catch (e) {
       setState(() {
         _messages.add(AssistantMessage(
@@ -123,7 +164,13 @@ class _AssistantPanelState extends State<AssistantPanel> {
       });
     } finally {
       if (mounted) setState(() => _isSending = false);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await _scrollToBottom();
+    }
+  }
+
+  Future<void> _scrollToBottom() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (_scrollController.hasClients) {
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
         duration: const Duration(milliseconds: 250),
@@ -132,17 +179,101 @@ class _AssistantPanelState extends State<AssistantPanel> {
     }
   }
 
-  @override
-  void dispose() {
-    _speech?.stop();
-    _controller.dispose();
-    _scrollController.dispose();
-    super.dispose();
+  // --- Lógica de Reconhecimento de Voz ---
+
+  Future<void> _initSpeech() async {
+    if (_speech != null) return;
+    _speech = SpeechToText();
+
+    try {
+      _speechAvailable = await _speech!.initialize(
+        onError: (e) {
+          debugPrint('Speech error: $e');
+          _stopListeningUI();
+        },
+        onStatus: (s) {
+          debugPrint('Speech status: $s');
+          if (s == 'done' || s == 'notListening') {
+            _stopListeningUI();
+          }
+        },
+      );
+      _speechInitialized = true;
+    } catch (e) {
+      debugPrint('Error initializing speech: $e');
+      _speechAvailable = false;
+      _speechInitialized = true;
+    }
+
+    if (mounted) setState(() {});
   }
+
+  void _stopListeningUI() {
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        _pulseController.stop();
+        _pulseController.reset();
+      });
+    }
+  }
+
+  Future<void> _onMicPressed() async {
+    if (!_speechInitialized) {
+      await _initSpeech();
+    }
+
+    if (!_speechAvailable) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content:
+                Text('Reconhecimento de voz indisponível ou permissão negada.'),
+            backgroundColor: Colors.redAccent));
+      }
+      return;
+    }
+
+    if (_isListening) {
+      _stopListening();
+    } else {
+      _startListening();
+    }
+  }
+
+  Future<void> _startListening() async {
+    setState(() {
+      _isListening = true;
+      _pulseController.forward();
+    });
+
+    await _speech!.listen(
+      localeId: 'pt_BR',
+      onResult: (result) {
+        if (mounted) {
+          setState(() {
+            _controller.text = result.recognizedWords;
+            // Mantém o cursor no final do texto
+            _controller.selection = TextSelection.fromPosition(
+                TextPosition(offset: _controller.text.length));
+          });
+        }
+      },
+      listenMode: ListenMode.dictation,
+      partialResults: true,
+      pauseFor: const Duration(seconds: 3), // Pausa automática após silêncio
+    );
+  }
+
+  Future<void> _stopListening() async {
+    if (_speech == null) return;
+    await _speech!.stop();
+    _stopListeningUI();
+  }
+
+  // --- UI do Painel ---
 
   @override
   Widget build(BuildContext context) {
-    // Calcula tamanho dinâmico baseado no teclado
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final hasKeyboard = bottomInset > 0;
 
@@ -175,6 +306,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
   Widget _buildPanelContent() {
     return Column(
       children: [
+        // Handle de arrasto
         Container(
           height: 44,
           alignment: Alignment.center,
@@ -187,6 +319,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
             ),
           ),
         ),
+        // Cabeçalho
         const Padding(
           padding: EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
           child: Row(
@@ -211,6 +344,8 @@ class _AssistantPanelState extends State<AssistantPanel> {
           ),
         ),
         const Divider(height: 1, color: AppColors.border),
+
+        // Lista de Mensagens
         Expanded(
           child: ListView.builder(
             controller: _scrollController,
@@ -255,7 +390,8 @@ class _AssistantPanelState extends State<AssistantPanel> {
             },
           ),
         ),
-        // Input fixo na parte inferior (acompanha o teclado)
+
+        // Input Area
         AnimatedPadding(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
@@ -275,7 +411,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     child: TextField(
                       controller: _controller,
                       onSubmitted: (_) => _send(),
-                      maxLines: null,
+                      maxLines: 4,
                       minLines: 1,
                       textInputAction: TextInputAction.newline,
                       style: const TextStyle(
@@ -284,9 +420,13 @@ class _AssistantPanelState extends State<AssistantPanel> {
                         height: 1.45,
                       ),
                       decoration: InputDecoration(
-                        hintText: 'Pergunte o que quiser...',
-                        hintStyle: const TextStyle(
-                          color: AppColors.tertiaryText,
+                        hintText: _isListening
+                            ? 'Ouvindo...'
+                            : 'Pergunte o que quiser...',
+                        hintStyle: TextStyle(
+                          color: _isListening
+                              ? AppColors.primary
+                              : AppColors.tertiaryText,
                           fontSize: 14,
                         ),
                         filled: true,
@@ -302,7 +442,9 @@ class _AssistantPanelState extends State<AssistantPanel> {
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12.0),
                           borderSide: BorderSide(
-                            color: AppColors.border.withValues(alpha: 0.5),
+                            color: _isListening
+                                ? AppColors.primary
+                                : AppColors.border.withValues(alpha: 0.5),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -316,30 +458,44 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Botão de microfone agora dentro do modal do assistente
-                  // Estilo neutro para diferenciar do botão Enviar
-                  Material(
-                    color: Colors.transparent,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: AppColors.border.withValues(alpha: 0.5),
+
+                  // Botão de Microfone Animado
+                  GestureDetector(
+                    onTap: _onMicPressed,
+                    child: ScaleTransition(
+                      scale: _isListening
+                          ? _pulseAnimation
+                          : const AlwaysStoppedAnimation(1.0),
+                      child: Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          color: _isListening
+                              ? Colors.redAccent.withValues(alpha: 0.1)
+                              : AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _isListening
+                                ? Colors.redAccent
+                                : AppColors.border.withValues(alpha: 0.5),
+                          ),
                         ),
-                      ),
-                      child: IconButton(
-                        tooltip: 'Entrada por voz',
-                        icon: const Icon(
-                          Icons.mic_none,
-                          color: AppColors.secondaryText,
+                        child: Icon(
+                          _isListening ? Icons.mic : Icons.mic_none,
+                          color: _isListening
+                              ? Colors.redAccent
+                              : AppColors.secondaryText,
                         ),
-                        onPressed: _onMicPressed,
                       ),
                     ),
                   ),
+
                   const SizedBox(width: 8),
+
+                  // Botão Enviar
                   Container(
+                    width: 48,
+                    height: 48,
                     decoration: BoxDecoration(
                       color: AppColors.primary,
                       borderRadius: BorderRadius.circular(12),
@@ -369,58 +525,9 @@ class _AssistantPanelState extends State<AssistantPanel> {
     );
   }
 
-  void _onMicPressed() {
-    if (_isListening) {
-      _stopListening();
-      return;
-    }
-    _startListening();
-  }
-
-  Future<void> _initSpeech() async {
-    if (_speech != null) return;
-    _speech = SpeechToText();
-    _speechAvailable = await _speech!.initialize(
-      onError: (e) => debugPrint('Speech error: $e'),
-      onStatus: (s) => debugPrint('Speech status: $s'),
-    );
-    if (!_speechAvailable && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content:
-              Text('Reconhecimento de voz indisponível neste dispositivo.'),
-          backgroundColor: Colors.redAccent));
-    }
-  }
-
-  Future<void> _startListening() async {
-    await _initSpeech();
-    if (!_speechAvailable || _speech == null) return;
-    setState(() => _isListening = true);
-    await _speech!.listen(
-      localeId: 'pt_BR',
-      onResult: (result) {
-        final words = result.recognizedWords;
-        if (mounted) {
-          setState(() {
-            _controller.text = words;
-            _controller.selection = TextSelection.fromPosition(
-                TextPosition(offset: _controller.text.length));
-          });
-        }
-      },
-      listenMode: ListenMode.dictation,
-      partialResults: true,
-    );
-  }
-
-  Future<void> _stopListening() async {
-    if (_speech == null) return;
-    await _speech!.stop();
-    if (mounted) setState(() => _isListening = false);
-  }
+  // --- Helpers e Métodos Auxiliares (Mantidos) ---
 
   Widget _buildMarkdownMessage(String raw, {required bool isUser}) {
-    // Sanitização básica para evitar inserção de tags potencialmente perigosas
     final sanitized = raw
         .replaceAll(
             RegExp(r'<script[^>]*>[\s\S]*?</script>', caseSensitive: false), '')
@@ -470,7 +577,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
             content: Text('Links externos desativados: $href'),
             backgroundColor: Colors.orange));
       },
-      builders: {},
     );
   }
 
@@ -481,7 +587,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
         String dateStr = '';
         if (d != null) {
           dateStr = _formatDateReadable(d);
-          // Extrai horário do título se houver
           final time = _extractTimeFromTitle(a.title ?? '');
           if (time != null) {
             final hh = time.hour.toString().padLeft(2, '0');
@@ -497,7 +602,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     }
   }
 
-  // Formata data de forma legível: "12 de Dezembro" ou "12 de Dezembro de 2026"
   String _formatDateReadable(DateTime date) {
     final now = DateTime.now();
     final months = [
@@ -525,23 +629,21 @@ class _AssistantPanelState extends State<AssistantPanel> {
     }
   }
 
-  // Constrói chip de ação com cores padrão do sistema
   Widget _buildActionChip(AssistantAction action, int messageIndex) {
     Color chipColor;
     IconData chipIcon;
 
     switch (action.type) {
       case AssistantActionType.schedule:
-        chipColor = const Color(0xFFFB923C); // orange-400 (calendário)
+        chipColor = const Color(0xFFFB923C);
         chipIcon = Icons.calendar_today;
         break;
       case AssistantActionType.create_goal:
-        chipColor = const Color(0xFF06B6D4); // cyan-500 (metas)
+        chipColor = const Color(0xFF06B6D4);
         chipIcon = Icons.flag_rounded;
         break;
       case AssistantActionType.create_task:
-        chipColor = const Color(
-            0xFFFB923C); // orange-400 (tarefas também usam calendário)
+        chipColor = const Color(0xFFFB923C);
         chipIcon = Icons.check_circle_outline;
         break;
     }
@@ -562,11 +664,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              chipIcon,
-              color: chipColor,
-              size: 16,
-            ),
+            Icon(chipIcon, color: chipColor, size: 16),
             const SizedBox(width: 6),
             Flexible(
               child: Text(
@@ -584,11 +682,10 @@ class _AssistantPanelState extends State<AssistantPanel> {
     );
   }
 
-  // Unified action executor: performs the action and appends a confirmation message.
   Future<void> _executeAction(BuildContext context, AssistantAction a,
       {bool fromAuto = false, int? messageIndex}) async {
     await _handleAction(context, a);
-    // Remove action from UI if it belongs to a message
+
     if (messageIndex != null &&
         messageIndex >= 0 &&
         messageIndex < _messages.length) {
@@ -617,7 +714,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     setState(() {
       _messages.add(confirmation);
     });
-    // Persist confirmation
     _firestore.addAssistantMessage(widget.userData.uid, confirmation);
   }
 
@@ -625,6 +721,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
     final fs = FirestoreService();
     final user = widget.userData;
     final messenger = ScaffoldMessenger.of(context);
+
     if (a.type == AssistantActionType.create_task ||
         a.type == AssistantActionType.schedule) {
       final due = a.date ?? a.startDate;
@@ -632,7 +729,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
       final utcDate = DateTime.utc(due.year, due.month, due.day);
       final time = _extractTimeFromTitle(a.title ?? '');
 
-      // Calcula o Dia Pessoal para a data da tarefa
       final int? personalDay = _calculatePersonalDay(utcDate);
 
       await fs.addTask(
@@ -656,7 +752,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
         if (!mounted) return;
         messenger.showSnackBar(const SnackBar(
             content: Text(
-                'Para criar uma meta, informe título, descrição (motivação) e data alvo (YYYY-MM-DD).'),
+                'Para criar uma meta, informe título, descrição e data alvo.'),
             backgroundColor: Colors.orange));
         return;
       }
@@ -673,13 +769,11 @@ class _AssistantPanelState extends State<AssistantPanel> {
       await docRef.update({'id': docRef.id});
       if (!mounted) return;
       messenger.showSnackBar(SnackBar(
-          content: Text(
-              'Meta criada para ${targetUtc.day.toString().padLeft(2, '0')}/${targetUtc.month.toString().padLeft(2, '0')}/${targetUtc.year} com ${a.subtasks.length} marcos!'),
+          content: Text('Meta criada com sucesso!'),
           backgroundColor: Colors.green));
     }
   }
 
-  // Returns actions from the most recent assistant message that proposed actions.
   List<AssistantAction> _lastAssistantActions() {
     for (int i = _messages.length - 1; i >= 0; i--) {
       final m = _messages[i];
@@ -698,7 +792,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     return null;
   }
 
-  // Detects short affirmative replies suitable for auto-confirmation.
   bool _isAffirmative(String input) {
     final lc = input.toLowerCase().trim();
     final r = RegExp(
@@ -707,7 +800,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     return r.hasMatch(lc);
   }
 
-  // Extrai horário do título ("14:30", "14h") para ReminderTime
   TimeOfDay? _extractTimeFromTitle(String title) {
     final r1 = RegExp(r'(\b|\D)([01]?\d|2[0-3]):([0-5]\d)(\b|\D)');
     final r2 = RegExp(r'(\b|\D)([01]?\d|2[0-3])h(\b|\D)', caseSensitive: false);
@@ -725,7 +817,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     return null;
   }
 
-  // Choose which pending action to execute based on user's intent: keep (first) or change (second)
   AssistantAction _chooseActionForAffirmative(
       String input, List<AssistantAction> actions) {
     if (actions.isEmpty) return actions.first;
@@ -735,10 +826,9 @@ class _AssistantPanelState extends State<AssistantPanel> {
     final wantsKeep = RegExp(r'(manter|deixar|ficar assim|ficar)').hasMatch(lc);
     if (wantsChange && actions.length >= 2) return actions[1];
     if (wantsKeep) return actions.first;
-    return actions.first; // default
+    return actions.first;
   }
 
-  // Calcula o Dia Pessoal para uma data específica
   int? _calculatePersonalDay(DateTime date) {
     final user = widget.userData;
     if (user.dataNasc.isEmpty || user.nomeAnalise.isEmpty) {
@@ -757,26 +847,20 @@ class _AssistantPanelState extends State<AssistantPanel> {
     }
   }
 
-  // Alinha as ações sugeridas com a data/hora mencionadas no texto da resposta
-  // ou na última entrada do usuário, para garantir que os chips reflitam exatamente
-  // o que foi dito (ex.: incluir horário 14:00 e ajustar a data correta).
   List<AssistantAction> _alignActionsWithAnswer(
       List<AssistantAction> actions, String answerText) {
     if (actions.isEmpty) return actions;
 
-    // Tenta extrair data/hora do texto da resposta; se não houver, tenta do input atual do usuário.
     final extractedDate = _extractDateFromText(answerText) ??
         _extractDateFromText(_controller.text);
     final extractedTime = _extractTimeFromText(answerText) ??
         _extractTimeFromText(_controller.text);
 
-    // Se nada foi extraído, mantém ações como estão.
     if (extractedDate == null && extractedTime == null) return actions;
 
     return actions.map((a) {
       if (a.type == AssistantActionType.schedule ||
           a.type == AssistantActionType.create_task) {
-        // Não sobrescreve a data já definida pelo modelo; apenas preenche se faltou.
         final newDate = a.date ?? a.startDate ?? extractedDate;
         final newTitle = _ensureTimeInTitle(a.title ?? 'Evento', extractedTime);
         return AssistantAction(
@@ -793,8 +877,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     }).toList();
   }
 
-  // Extrai data de textos como "08/11/2025", "08/11" (assume ano atual),
-  // "8 de novembro de 2025" ou "dia 08" (assume mês/ano atuais)
   DateTime? _extractDateFromText(String text) {
     final now = DateTime.now().toUtc();
     // dd/MM/yyyy
@@ -857,7 +939,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     return null;
   }
 
-  // Extrai horário do texto livre (além do título), como "14:30" ou "14h".
   TimeOfDay? _extractTimeFromText(String text) {
     final r1 = RegExp(r'(\b|\D)([01]?\d|2[0-3]):([0-5]\d)(\b|\D)');
     final r2 = RegExp(r'(\b|\D)([01]?\d|2[0-3])h(\b|\D)', caseSensitive: false);
@@ -875,7 +956,6 @@ class _AssistantPanelState extends State<AssistantPanel> {
     return null;
   }
 
-  // Garante que o horário apareça no título do chip (se ainda não existir)
   String _ensureTimeInTitle(String title, TimeOfDay? time) {
     if (time == null) return title;
     if (title.contains(':') || title.toLowerCase().contains('h')) return title;
