@@ -23,6 +23,11 @@ class _AssistantPanelState extends State<AssistantPanel> {
   final _firestore = FirestoreService();
   bool _isSending = false;
   final List<AssistantMessage> _messages = [];
+  bool _isListening = false; // estado do reconhecimento de voz
+
+  // Dependência de reconhecimento de voz (lazy init)
+  SpeechToText? _speech;
+  bool _speechAvailable = false;
 
   Future<void> _send() async {
     final q = _controller.text.trim();
@@ -128,6 +133,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
 
   @override
   void dispose() {
+    _speech?.stop();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -230,10 +236,7 @@ class _AssistantPanelState extends State<AssistantPanel> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        m.content,
-                        style: const TextStyle(color: AppColors.secondaryText),
-                      ),
+                      _buildMarkdownMessage(m.content, isUser: isUser),
                       if (!isUser && m.actions.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -366,11 +369,107 @@ class _AssistantPanelState extends State<AssistantPanel> {
   }
 
   void _onMicPressed() {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Entrada por voz chegará em breve.'),
+    if (_isListening) {
+      _stopListening();
+      return;
+    }
+    _startListening();
+  }
+
+  Future<void> _initSpeech() async {
+    if (_speech != null) return;
+    _speech = SpeechToText();
+    _speechAvailable = await _speech!.initialize(
+      onError: (e) => debugPrint('Speech error: $e'),
+      onStatus: (s) => debugPrint('Speech status: $s'),
+    );
+    if (!_speechAvailable && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content:
+              Text('Reconhecimento de voz indisponível neste dispositivo.'),
+          backgroundColor: Colors.redAccent));
+    }
+  }
+
+  Future<void> _startListening() async {
+    await _initSpeech();
+    if (!_speechAvailable || _speech == null) return;
+    setState(() => _isListening = true);
+    await _speech!.listen(
+      localeId: 'pt_BR',
+      onResult: (result) {
+        final words = result.recognizedWords;
+        if (mounted) {
+          setState(() {
+            _controller.text = words;
+            _controller.selection = TextSelection.fromPosition(
+                TextPosition(offset: _controller.text.length));
+          });
+        }
+      },
+      listenMode: ListenMode.dictation,
+      partialResults: true,
+    );
+  }
+
+  Future<void> _stopListening() async {
+    if (_speech == null) return;
+    await _speech!.stop();
+    if (mounted) setState(() => _isListening = false);
+  }
+
+  Widget _buildMarkdownMessage(String raw, {required bool isUser}) {
+    // Sanitização básica para evitar inserção de tags potencialmente perigosas
+    final sanitized = raw
+        .replaceAll(
+            RegExp(r'<script[^>]*>[\s\S]*?</script>', caseSensitive: false), '')
+        .replaceAll(
+            RegExp(r'<style[^>]*>[\s\S]*?</style>', caseSensitive: false), '')
+        .trim();
+
+    final baseStyle = const TextStyle(
+      fontSize: 14,
+      height: 1.45,
+      color: AppColors.secondaryText,
+    );
+
+    return MarkdownBody(
+      data: sanitized,
+      selectable: false,
+      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+        p: baseStyle,
+        strong: baseStyle.copyWith(
+            fontWeight: FontWeight.bold, color: AppColors.primaryText),
+        em: baseStyle.copyWith(
+            fontStyle: FontStyle.italic, color: AppColors.primaryText),
+        code: baseStyle.copyWith(
+          fontFamily: 'monospace',
+          backgroundColor: AppColors.primaryAccent.withValues(alpha: 0.12),
+          color: AppColors.primaryText,
+        ),
+        codeblockDecoration: BoxDecoration(
+          color: AppColors.cardBackground.withValues(alpha: 0.6),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        blockquoteDecoration: BoxDecoration(
+          border: Border(
+              left: BorderSide(color: AppColors.primaryAccent, width: 4)),
+          color: AppColors.primaryAccent.withValues(alpha: 0.08),
+        ),
+        blockquote: baseStyle.copyWith(fontStyle: FontStyle.italic),
+        h1: baseStyle.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+        h2: baseStyle.copyWith(fontSize: 20, fontWeight: FontWeight.bold),
+        h3: baseStyle.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
+        listBullet: baseStyle.copyWith(color: AppColors.primaryAccent),
       ),
+      onTapLink: (text, href, title) {
+        if (href == null) return;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text('Links externos desativados: $href'),
+            backgroundColor: Colors.orange));
+      },
+      builders: {},
     );
   }
 

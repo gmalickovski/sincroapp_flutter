@@ -73,6 +73,14 @@ class AssistantPromptBuilder {
       'debitosCarmicos': numerology.listas['debitosCarmicos'],
       'tendenciasOcultas': numerology.listas['tendenciasOcultas'],
       'harmoniaConjugal': numerology.estruturas['harmoniaConjugal'],
+      // Aptidões Profissionais: utilizamos o número de Expressão como base
+      'aptidoesProfissionais': numerology.numeros['aptidoesProfissionais'],
+      'desafio': numerology.numeros['desafio'],
+      // Desafios detalhados
+      'desafiosMapa': numerology.estruturas['desafios'],
+      // Momentos decisivos + atual
+      'momentosDecisivos': numerology.estruturas['momentosDecisivos'],
+      'momentoDecisivoAtual': numerology.estruturas['momentoDecisivoAtual'],
     };
 
     // Pré-calcula Dia Pessoal para os próximos 30 dias (hoje + 29)
@@ -103,6 +111,17 @@ class AssistantPromptBuilder {
       'tasks': tasksCompact.toList(),
       'goals': goalsCompact.toList(),
       'recentJournal': journalCompact.toList(),
+      // Estatísticas agregadas para personalização
+      'stats': {
+        'tasksTotal': tasks.length,
+        'tasksCompletedToday': tasks.where((t) => t.completed).length,
+        'goalsActive': goals.length,
+        'journalEntriesRecent': recentJournal.length,
+        'progressAvg': goals.isEmpty
+            ? 0
+            : (goals.map((g) => g.progress).reduce((a, b) => a + b) /
+                goals.length),
+      },
       'chatHistory': chatHistory
           .take(8)
           .map((m) => {
@@ -124,25 +143,13 @@ class AssistantPromptBuilder {
 Você é um assistente pessoal de produtividade e autoconhecimento chamado **Sincro AI**, especializado em **Numerologia Cabalística** e ciência da vibração energética.
 
 **PERSONALIDADE E TOM:**
-- Seja humano, caloroso e inspirador — você é um amigo que quer ver o usuário crescer
-- Use emojis ocasionalmente para dar vida às respostas (mas sem exageros)
-- Seja direto e objetivo, mas nunca frio ou robótico
-- Celebre conquistas e incentive em momentos difíceis
 ${isFirstMessageOfDay ? '- Inicie a conversa com: "$saudacao"' : '- Continue a conversa de forma natural, sem repetir saudações'}
 
 **EMBASAMENTO TÉCNICO (CRUCIAL):**
-- SEMPRE fundamente suas respostas em **Numerologia Cabalística** (números, vibração, energia)
--- Use os dados do perfil numerológico (Dia Pessoal, Ciclo de Vida, Débitos Kármicos, etc.)
-- NUNCA mencione astrologia, signos do zodíaco, fases da lua ou qualquer tema astrológico
-- Se o usuário perguntar sobre astrologia, redirecione gentilmente para numerologia: "Prefiro usar a numerologia cabalística, que analisa as vibrações dos números na sua vida..."
 
 **DÉBITOS KÁRMICOS (se aplicável):**
 ${numerologySummary['debitosCarmicos'].isNotEmpty ? '''
 ⚠️ O usuário possui débitos kármicos nos números ${numerologySummary['debitosCarmicos'].join(', ')}. 
-- 13: Trabalho árduo, transformação através do esforço
-- 14: Excesso, precisa de equilíbrio e moderação
-- 16: Quebra de ego, reconstrução interna
-- 19: Independência forçada, aprender a pedir ajuda
 Use esses insights quando relevante para a conversa.
 ''' : ''}
 
@@ -164,11 +171,6 @@ Responda à pergunta do usuário e retorne um JSON ÚNICO no seguinte formato:
 }
 
 **REGRAS IMPORTANTES:**
-- Sempre retorne SOMENTE o JSON. Não inclua texto fora do JSON.
-- Datas devem estar em formato YYYY-MM-DD e preferir datas futuras (ou hoje).
-- Se a pergunta for sobre melhor data/período ou agendamento, use o Dia Pessoal para sugerir e inclua uma action "schedule". Inclua no campo "answer" uma pergunta de confirmação amigável (ex.: "Posso agendar para 2025-11-23?") — o sistema só executa após o usuário confirmar.
-- Se fizer sentido criar meta/tarefas, inclua actions "create_goal" e/ou "create_task".
-- Use as informações de numerologia para justificar suas escolhas (explique no "answer").
 
 **FLUXO PARA AGENDAMENTOS (compromissos com data/hora):**
 1. Se o usuário pedir para agendar em uma data específica (ex.: "agendar 12/11 às 14h para consulta"), avalie a data pedida usando os dados em personalDaysNext30 (campo do contexto). Compare o Dia Pessoal da data solicitada com alternativas nos próximos dias.
@@ -181,7 +183,6 @@ Responda à pergunta do usuário e retorne um JSON ÚNICO no seguinte formato:
 5. Se o usuário não especificar data, sugira 1–3 datas favoráveis (com justificativa) e inclua as respectivas actions "schedule".
 
 Observação de referência numerológica para agendamentos (guia, não rígido):
-- 1: inícios/decisões; 2: cooperação/negociação sensível; 3: comunicação/apresentações; 4: operação/burocracia; 5: negociações/vendas/movimento; 6: relacionamentos/parcerias; 7: estudo/análise (evite reuniões pesadas); 8: negócios/assinar contratos; 9: encerramentos/filantropia.
 
 **FLUXO PARA CRIAÇÃO DE METAS:**
 Se o usuário pedir para criar uma meta:
