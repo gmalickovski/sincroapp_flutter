@@ -1,11 +1,8 @@
-// lib/features/assistant/presentation/assistant_panel.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
-// Certifique-se de que o SpeechService foi criado no caminho abaixo
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -26,16 +23,18 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _firestore = FirestoreService();
-  final _speechService = SpeechService(); // Instância do serviço de voz
+  final _speechService = SpeechService();
+
+  // FocusNode para detectar toque na caixa de texto
+  final _inputFocusNode = FocusNode();
 
   bool _isSending = false;
   final List<AssistantMessage> _messages = [];
 
-  // --- Controle de Estado Visual (Botão Dinâmico) ---
+  // --- Controle de Estado Visual ---
   bool _isListening = false;
   bool _isInputEmpty = true;
 
-  // --- Animação do Pulso (Microfone) ---
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
@@ -43,10 +42,15 @@ class _AssistantPanelState extends State<AssistantPanel>
   void initState() {
     super.initState();
 
-    // 1. Listener para saber se o input está vazio (controla a troca Mic <-> Enviar)
     _controller.addListener(_updateInputState);
 
-    // 2. Configuração da animação de "respiração" do botão
+    // Listener para parar o microfone se o usuário tocar na caixa de texto
+    _inputFocusNode.addListener(() {
+      if (_inputFocusNode.hasFocus && _isListening) {
+        _stopListening();
+      }
+    });
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -78,19 +82,19 @@ class _AssistantPanelState extends State<AssistantPanel>
   void dispose() {
     _speechService.stop();
     _controller.removeListener(_updateInputState);
+    _inputFocusNode.dispose(); // Não esquecer de dar dispose
     _pulseController.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
-  // --- Lógica de Envio de Mensagem ---
+  // --- Lógica de Envio ---
 
   Future<void> _send() async {
     final q = _controller.text.trim();
     if (q.isEmpty) return;
 
-    // Se estiver ouvindo, para antes de enviar
     if (_isListening) await _stopListening();
 
     setState(() {
@@ -99,12 +103,13 @@ class _AssistantPanelState extends State<AssistantPanel>
       _isSending = true;
     });
 
-    // Persist user message
     _firestore.addAssistantMessage(widget.userData.uid,
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
 
-    // Auto-confirmation logic
+    // Fecha o teclado ao enviar para ver melhor a resposta
+    _inputFocusNode.unfocus();
+
     final pendingActions = _lastAssistantActions();
     if (_isAffirmative(q) && pendingActions.isNotEmpty) {
       try {
@@ -120,7 +125,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     }
 
     try {
-      // Build context
       final user = widget.userData;
       NumerologyResult? numerology;
       if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
@@ -147,7 +151,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         chatHistory: _messages,
       );
 
-      // Ajuste fino: alinhar actions ao conteúdo textual
       final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
 
       setState(() {
@@ -159,7 +162,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         ));
       });
 
-      // Persist assistant message
       _firestore.addAssistantMessage(
           widget.userData.uid,
           AssistantMessage(
@@ -195,9 +197,10 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Lógica de Reconhecimento de Voz ---
 
   Future<void> _onMicPressed() async {
-    // 1. Tenta inicializar o serviço (que busca o idioma PT)
-    final available = await _speechService.init();
+    // Remove o foco do input para esconder teclado enquanto fala
+    _inputFocusNode.unfocus();
 
+    final available = await _speechService.init();
     if (!available) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -208,24 +211,37 @@ class _AssistantPanelState extends State<AssistantPanel>
       return;
     }
 
-    // 2. Atualiza UI para estado "Ouvindo"
     setState(() {
       _isListening = true;
       _pulseController.forward();
     });
 
-    // 3. Inicia a escuta
-    await _speechService.start(
-      onResult: (text) {
-        if (!mounted) return;
-        setState(() {
-          _controller.text = text;
-          // Mantém cursor no final
-          _controller.selection = TextSelection.fromPosition(
-              TextPosition(offset: _controller.text.length));
-        });
-      },
-    );
+    // Salva o texto atual para não perder o que o usuário já digitou
+    // ou limpa se você preferir que a voz substitua tudo.
+    // Aqui optei por substituir para evitar duplicação,
+    // mas se quiser concatenar, teríamos que guardar em uma variável temp.
+    // Para chat, geralmente substitui ou limpa antes.
+    _controller.clear();
+
+    await _speechService.start(onResult: (text) {
+      if (!mounted) return;
+      setState(() {
+        // CORREÇÃO DO ECO: Substitui todo o texto pelo resultado atual
+        // O plugin speech_to_text geralmente retorna a frase inteira acumulada.
+        _controller.text = text;
+
+        // Mantém cursor no final
+        if (text.isNotEmpty) {
+          _controller.selection =
+              TextSelection.fromPosition(TextPosition(offset: text.length));
+        }
+      });
+    }, onDone: () {
+      // Callback chamado quando o SpeechService detecta silêncio ou finaliza
+      if (mounted && _isListening) {
+        _stopListening();
+      }
+    });
   }
 
   Future<void> _stopListening() async {
@@ -239,13 +255,12 @@ class _AssistantPanelState extends State<AssistantPanel>
     }
   }
 
-  // --- UI: Botão Dinâmico (AnimatedSwitcher) ---
+  // --- UI: Botão Dinâmico ---
 
   Widget _buildDynamicButton() {
     Key key;
     Widget buttonContent;
 
-    // ESTADO A: Ouvindo -> Mostra botão de Parar (Mic Vermelho Pulsante)
     if (_isListening) {
       key = const ValueKey('mic_stop');
       buttonContent = GestureDetector(
@@ -263,13 +278,12 @@ class _AssistantPanelState extends State<AssistantPanel>
                 width: 1.5,
               ),
             ),
-            child: const Icon(Icons.mic, color: Colors.redAccent),
+            child: const Icon(Icons.stop_rounded,
+                color: Colors.redAccent), // Ícone stop é mais intuitivo aqui
           ),
         ),
       );
-    }
-    // ESTADO B: Input com texto -> Mostra botão Enviar
-    else if (!_isInputEmpty) {
+    } else if (!_isInputEmpty) {
       key = const ValueKey('send_button');
       buttonContent = Container(
         width: 48,
@@ -292,9 +306,7 @@ class _AssistantPanelState extends State<AssistantPanel>
           onPressed: _isSending ? null : _send,
         ),
       );
-    }
-    // ESTADO C: Input vazio e parado -> Mostra botão Mic Normal
-    else {
+    } else {
       key = const ValueKey('mic_start');
       buttonContent = GestureDetector(
         onTap: _onMicPressed,
@@ -314,7 +326,6 @@ class _AssistantPanelState extends State<AssistantPanel>
       );
     }
 
-    // AnimatedSwitcher faz a troca suave entre os widgets baseados na Key
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
       transitionBuilder: (child, animation) {
@@ -355,7 +366,7 @@ class _AssistantPanelState extends State<AssistantPanel>
           ),
           child: Column(
             children: [
-              // Handle de arrasto
+              // Handle
               Container(
                 height: 44,
                 alignment: Alignment.center,
@@ -368,7 +379,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                   ),
                 ),
               ),
-              // Cabeçalho
+              // Header
               const Padding(
                 padding:
                     EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
@@ -382,7 +393,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                     ),
                     SizedBox(width: 10),
                     Text(
-                      'Assistente Sincro IA',
+                      'Sincro IA',
                       style: TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 18,
@@ -395,7 +406,7 @@ class _AssistantPanelState extends State<AssistantPanel>
               ),
               const Divider(height: 1, color: AppColors.border),
 
-              // Lista de Mensagens
+              // Lista
               Expanded(
                 child: ListView.builder(
                   controller: _scrollController,
@@ -442,7 +453,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                 ),
               ),
 
-              // Input Area com Botão Dinâmico
+              // Input
               AnimatedPadding(
                 duration: const Duration(milliseconds: 150),
                 curve: Curves.easeOut,
@@ -460,6 +471,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                       children: [
                         Expanded(
                           child: TextField(
+                            focusNode: _inputFocusNode, // Vincula o FocusNode
                             controller: _controller,
                             onSubmitted: (_) => _send(),
                             maxLines: 4,
@@ -515,7 +527,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                         ),
                         const SizedBox(width: 8),
 
-                        // SLOT PARA O BOTÃO DINÂMICO (Mic vs Send)
+                        // Botão Dinâmico
                         _buildDynamicButton(),
                       ],
                     ),
@@ -883,7 +895,6 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   DateTime? _extractDateFromText(String text) {
     final now = DateTime.now().toUtc();
-    // dd/MM/yyyy
     final rFull = RegExp(r'(\b|\D)(\d{1,2})/(\d{1,2})/(\d{4})(\b|\D)');
     final mFull = rFull.firstMatch(text);
     if (mFull != null) {
@@ -894,7 +905,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         return DateTime.utc(y, m, d);
       }
     }
-    // dd/MM -> assume ano atual
     final rShort = RegExp(r'(\b|\D)(\d{1,2})/(\d{1,2})(\b|\D)');
     final mShort = rShort.firstMatch(text);
     if (mShort != null) {
@@ -904,7 +914,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         return DateTime.utc(now.year, m, d);
       }
     }
-    // "8 de novembro de 2025"
     final meses = {
       'janeiro': 1,
       'fevereiro': 2,
@@ -933,7 +942,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         return DateTime.utc(y, mm, d);
       }
     }
-    // "dia 08" -> assume mês/ano atuais
     final rDia = RegExp(r'dia\s+(\d{1,2})', caseSensitive: false);
     final mDia = rDia.firstMatch(text);
     if (mDia != null) {
