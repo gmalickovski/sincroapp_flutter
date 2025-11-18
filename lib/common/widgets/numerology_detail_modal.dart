@@ -215,23 +215,65 @@ class NumerologyDetailModal extends StatelessWidget {
   Widget _buildContent(String displayTitle) {
     if (content == null) return const SizedBox.shrink();
 
+    // Detecta se é card de número único e se precisa de subtítulos
+    final isSingleNumberCard = number != null && number!.trim().isNotEmpty;
+    final titleLower = title.trim().toLowerCase();
+    final looksPlural = titleLower.endsWith('s') ||
+        titleLower.endsWith('ões') ||
+        titleLower.endsWith('ais') ||
+        titleLower.endsWith('eis') ||
+        titleLower.endsWith('is');
+    final firstSubtitle = looksPlural ? 'O que são?' : 'O que é?';
+    final onlyWhatIs = title == 'Desafios' ||
+        title == 'Ciclo de Vida' ||
+        title == 'Momentos Decisivos';
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (categoryIntro != null) ...[
+        // 1) Subtítulo "O que é?/são?" ANTES do categoryIntro (parágrafo em itálico)
+        if (categoryIntro != null && isSingleNumberCard) ...[
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Text(
+              firstSubtitle,
+              style: TextStyle(
+                color: color ?? AppColors.primaryAccent,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
           Text(
             categoryIntro!,
             style: const TextStyle(
               color: AppColors.secondaryText,
               fontSize: 15,
               height: 1.6,
+              fontStyle: FontStyle.italic,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          // 2) Subtítulo "Número: X" ANTES da descrição completa (exceto itens especiais)
+          if (!onlyWhatIs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Número: ${number!}',
+                style: TextStyle(
+                  color: color ?? AppColors.primaryAccent,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
         ],
-        // Removido: número de destaque para cards multi-número (já está no título)
-        // if (number != null) _buildNumberSection(displayTitle),
-        // if (number != null) const SizedBox(height: 32),
+        // Caso não tenha categoryIntro mas seja single-number, insere subtítulos na descrição
+        if (categoryIntro == null && isSingleNumberCard) ...[
+          const SizedBox(height: 8),
+        ],
         _buildDescriptionSection(),
         if (content!.inspiracao.isNotEmpty) ...[
           const SizedBox(height: 32),
@@ -314,72 +356,8 @@ class NumerologyDetailModal extends StatelessWidget {
       );
     }
 
-    // Para cards de número único (InfoCard), inserir subtítulos pedidos:
-    // 1) "O que é?" ou "O que são?" antes do primeiro parágrafo
-    // 2) "Número: <n>" antes dos demais parágrafos
-    final isSingleNumberCard = number != null && number!.trim().isNotEmpty;
-    final widgets = <Widget>[];
-
-    if (isSingleNumberCard && paragraphs.isNotEmpty) {
-      final titleLower = title.trim().toLowerCase();
-      final looksPlural = titleLower.endsWith('s') ||
-          titleLower.endsWith('ões') ||
-          titleLower.endsWith('ais') ||
-          titleLower.endsWith('eis') ||
-          titleLower.endsWith('is');
-
-      final firstSubtitle = looksPlural ? 'O que são?' : 'O que é?';
-      // Itens especiais: manter apenas "O que são?" e omitir "Número: X"
-      final onlyWhatIs = title == 'Desafios' ||
-          title == 'Ciclo de Vida' ||
-          title == 'Momentos Decisivos';
-
-      // Sempre posicionar os subtítulos em torno do PRIMEIRO parágrafo
-      widgets.add(Padding(
-        padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
-        child: Text(
-          firstSubtitle,
-          style: TextStyle(
-            color: color ?? AppColors.primaryAccent,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
-          ),
-        ),
-      ));
-      // Primeiro parágrafo do texto completo
-      widgets.add(buildParagraph(paragraphs.first));
-
-      // "Número: X" deve começar a partir do próximo parágrafo (exceto itens especiais)
-      if (!onlyWhatIs) {
-        widgets.add(Padding(
-          padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
-          child: Text(
-            'Número: ${number!}',
-            style: TextStyle(
-              color: color ?? AppColors.primaryAccent,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
-            ),
-          ),
-        ));
-      }
-
-      // Demais parágrafos, mantendo itálicos, subtítulos e rich text
-      if (paragraphs.length > 1) {
-        for (var i = 1; i < paragraphs.length; i++) {
-          widgets.add(buildParagraph(paragraphs[i]));
-        }
-      }
-
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: widgets,
-      );
-    }
-
-    // Caso contrário (multi-number ou sem número), renderização padrão
+    // Se já temos categoryIntro (parágrafo em itálico), os subtítulos já foram inseridos
+    // Apenas renderiza a descrição completa normalmente
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: paragraphs.map(buildParagraph).toList(),
