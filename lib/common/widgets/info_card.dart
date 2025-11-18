@@ -226,7 +226,9 @@ class _InfoCardState extends State<InfoCard> {
                   color: widget.color,
                   height: 1,
                   shadows: [
-                    Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
+                    Shadow(
+                        color: widget.color.withValues(alpha: 0.5),
+                        blurRadius: 15)
                   ])),
           Container(
               height: 60,
@@ -262,6 +264,11 @@ class _InfoCardState extends State<InfoCard> {
             spacing: 8.0,
             runSpacing: 8.0,
             children: widget.info.tags.map((tag) {
+              // Detecta se a tag é um período (anos: "1991 a 2017", "até 36 anos", etc.)
+              final isPeriodTag = RegExp(
+                      r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos')
+                  .hasMatch(tag);
+
               return Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
@@ -270,11 +277,24 @@ class _InfoCardState extends State<InfoCard> {
                     borderRadius: BorderRadius.circular(20.0),
                     border: Border.all(
                         color: AppColors.primaryAccent.withValues(alpha: 0.3))),
-                child: Text(tag,
-                    style: const TextStyle(
-                        color: Color(0xffe9d5ff),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isPeriodTag) ...[
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: const Color(0xffe9d5ff),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(tag,
+                        style: const TextStyle(
+                            color: Color(0xffe9d5ff),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               );
             }).toList(),
           ),
@@ -310,7 +330,9 @@ class _InfoCardState extends State<InfoCard> {
                   color: widget.color,
                   height: 1,
                   shadows: [
-                    Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
+                    Shadow(
+                        color: widget.color.withValues(alpha: 0.5),
+                        blurRadius: 15)
                   ],
                 ),
               ),
@@ -350,6 +372,11 @@ class _InfoCardState extends State<InfoCard> {
             spacing: 8.0,
             runSpacing: 8.0,
             children: widget.info.tags.map((tag) {
+              // Detecta se a tag é um período (anos: "1991 a 2017", "até 36 anos", etc.)
+              final isPeriodTag = RegExp(
+                      r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos')
+                  .hasMatch(tag);
+
               return Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
@@ -358,11 +385,24 @@ class _InfoCardState extends State<InfoCard> {
                     borderRadius: BorderRadius.circular(20.0),
                     border: Border.all(
                         color: AppColors.primaryAccent.withValues(alpha: 0.3))),
-                child: Text(tag,
-                    style: const TextStyle(
-                        color: Color(0xffe9d5ff),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isPeriodTag) ...[
+                      Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: const Color(0xffe9d5ff),
+                      ),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(tag,
+                        style: const TextStyle(
+                            color: Color(0xffe9d5ff),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
               );
             }).toList(),
           ),

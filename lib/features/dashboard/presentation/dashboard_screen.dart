@@ -1562,6 +1562,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final isToday = nextDay == now.day;
     final titulo =
         isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
+    // Usa ContentData short text
     final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
         'Dia de energia especial para você.';
 
@@ -1855,7 +1856,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final titulo = nomeAtual;
     final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
-    final descricaoCurta = '${conteudoMomento.descricaoCurta}\n\n$periodoAtual';
+    // Card: usa descricaoCurta do ContentData; período vai na tag
+    final descricaoCurta = conteudoMomento.descricaoCurta;
 
     // Modal com períodos exatos
     final buffer = StringBuffer();
@@ -1888,7 +1890,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       descricaoCurta: descricaoCurta,
       descricaoCompleta: buffer.toString().trim(),
       inspiracao: conteudoMomento.inspiracao,
-      tags: conteudoMomento.tags,
+      tags: [periodoAtual, ...conteudoMomento.tags],
     );
   }
 
