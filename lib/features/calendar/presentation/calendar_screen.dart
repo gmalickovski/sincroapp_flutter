@@ -553,13 +553,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   builder: (_) => AssistantPanel(userData: widget.userData),
                 );
               },
-              onMic: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Entrada por voz chegará em breve.'),
-                  ),
-                );
-              },
             )
           : FloatingActionButton(
               onPressed: _openAddTaskModal,

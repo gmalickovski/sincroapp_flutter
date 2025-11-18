@@ -186,13 +186,13 @@ class _AssistantPanelState extends State<AssistantPanel> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Icon(
-                Icons.auto_awesome,
+                Icons.smart_toy_outlined,
                 color: AppColors.primary,
                 size: 24,
               ),
               SizedBox(width: 10),
               Text(
-                'Sincro IA',
+                'Assistente Sincro IA',
                 style: TextStyle(
                   color: AppColors.primaryText,
                   fontSize: 18,
@@ -312,6 +312,29 @@ class _AssistantPanelState extends State<AssistantPanel> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // Botão de microfone agora dentro do modal do assistente
+                  // Estilo neutro para diferenciar do botão Enviar
+                  Material(
+                    color: Colors.transparent,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: AppColors.border.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: IconButton(
+                        tooltip: 'Entrada por voz',
+                        icon: const Icon(
+                          Icons.mic_none,
+                          color: AppColors.secondaryText,
+                        ),
+                        onPressed: _onMicPressed,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.primary,
@@ -339,6 +362,15 @@ class _AssistantPanelState extends State<AssistantPanel> {
           ),
         ),
       ],
+    );
+  }
+
+  void _onMicPressed() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Entrada por voz chegará em breve.'),
+      ),
     );
   }
 

@@ -372,7 +372,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Excluir Tarefas', style: TextStyle(color: Colors.white)),
+        title: const Text('Excluir Tarefas',
+            style: TextStyle(color: Colors.white)),
         content: Text(
             'Você tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
             style: const TextStyle(color: AppColors.secondaryText)),
@@ -539,7 +540,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           return const Center(child: CustomLoadingSpinner());
                         }
                         if (snapshot.hasError) {
-                          debugPrint("Erro no Stream de Tarefas: ${snapshot.error}");
+                          debugPrint(
+                              "Erro no Stream de Tarefas: ${snapshot.error}");
                           return Center(
                               child: Text(
                                   'Erro ao carregar tarefas: ${snapshot.error}'));
@@ -683,13 +685,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                       ),
                     );
                   },
-                  onMic: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Entrada por voz chegará em breve.'),
-                      ),
-                    );
-                  },
                 )
               : FloatingActionButton(
                   onPressed: _openAddTaskModal,
@@ -765,11 +760,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   final isSelected = _selectedFilter == filterType;
 
                   return Padding(
-                    padding: const EdgeInsets.only(right: chipSpacing), // Espaçamento
+                    padding: const EdgeInsets.only(
+                        right: chipSpacing), // Espaçamento
                     child: ChoiceChip(
                       label: Text(label,
-                          style:
-                              const TextStyle(fontSize: 14)), // Consistent text size
+                          style: const TextStyle(
+                              fontSize: 14)), // Consistent text size
                       avatar: Icon(
                         icon,
                         size: 16, // Smaller icon size
@@ -903,7 +899,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                 labelStyle: TextStyle(
                                   color: isSelected
                                       ? colors.text
-                                      : colors.background.withValues(alpha: 0.9),
+                                      : colors.background
+                                          .withValues(alpha: 0.9),
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,

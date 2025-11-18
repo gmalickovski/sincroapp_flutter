@@ -2029,13 +2029,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 builder: (_) => AssistantPanel(userData: _userData!),
               );
             },
-            onMic: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Entrada por voz chegará em breve.'),
-                ),
-              );
-            },
           );
           break;
         case 1: // Calendar: usa o FAB nativo da tela CalendarScreen

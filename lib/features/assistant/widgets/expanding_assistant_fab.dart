@@ -7,7 +7,7 @@ class ExpandingAssistantFab extends StatefulWidget {
   final IconData? primaryIcon; // ícone da ação principal - opcional
   final String primaryTooltip; // dica da ação principal
   final VoidCallback onOpenAssistant; // abrir chat da IA
-  final VoidCallback onMic; // entrada por voz
+  final VoidCallback? onMic; // entrada por voz (agora opcional)
 
   const ExpandingAssistantFab({
     super.key,
@@ -15,7 +15,7 @@ class ExpandingAssistantFab extends StatefulWidget {
     this.primaryIcon,
     this.primaryTooltip = 'Ação',
     required this.onOpenAssistant,
-    required this.onMic,
+    this.onMic,
   });
 
   @override
@@ -43,8 +43,9 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     );
 
     // Calcula largura expandida baseada na quantidade de ações
-    final int actionsCount =
-        2 + (widget.onPrimary != null ? 1 : 0); // chat, mic, [primary]
+    final int actionsCount = 1 + // chat
+        (widget.onMic != null ? 1 : 0) +
+        (widget.onPrimary != null ? 1 : 0); // mic?, [primary]
     _expandedWidth = _kFabHeight + // espaço do toggle (+/x)
         _kOuterPad +
         (actionsCount * _kIconSlot) +
@@ -63,8 +64,11 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   @override
   void didUpdateWidget(covariant ExpandingAssistantFab oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.onPrimary != widget.onPrimary) {
-      final int actionsCount = 2 + (widget.onPrimary != null ? 1 : 0);
+    if (oldWidget.onPrimary != widget.onPrimary ||
+        oldWidget.onMic != widget.onMic) {
+      final int actionsCount = 1 +
+          (widget.onMic != null ? 1 : 0) +
+          (widget.onPrimary != null ? 1 : 0);
       _expandedWidth = _kFabHeight +
           _kOuterPad +
           (actionsCount * _kIconSlot) +
@@ -106,7 +110,9 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       animation: _controller,
       builder: (context, child) {
         // Cálculo de disponibilidade de largura para evitar overflow do Row durante a animação
-        final int actionsCount = 2 + (widget.onPrimary != null ? 1 : 0);
+        final int actionsCount = 1 +
+            (widget.onMic != null ? 1 : 0) +
+            (widget.onPrimary != null ? 1 : 0);
         final double actionsWidth = actionsCount > 0
             ? (actionsCount * _kIconSlot) + ((actionsCount - 1) * _kGap)
             : 0.0;
@@ -172,15 +178,16 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                             },
                           ),
                           const SizedBox(width: _kGap),
-                          _AnimatedActionSlot(
-                            controller: _controller,
-                            tooltip: 'Entrada por voz',
-                            icon: Icons.mic_none,
-                            onPressed: () {
-                              _toggle();
-                              widget.onMic();
-                            },
-                          ),
+                          if (widget.onMic != null)
+                            _AnimatedActionSlot(
+                              controller: _controller,
+                              tooltip: 'Entrada por voz',
+                              icon: Icons.mic_none,
+                              onPressed: () {
+                                _toggle();
+                                widget.onMic!();
+                              },
+                            ),
                         ],
                       ],
                     ),
