@@ -1856,8 +1856,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     final titulo = nomeAtual;
     final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
-    // Card: usa descricaoCurta do ContentData; período vai na tag
-    final descricaoCurta = conteudoMomento.descricaoCurta;
+    // Card: texto curto + nova linha + período destacado (igual ao card Desafios)
+    final descricaoCurta = '${conteudoMomento.descricaoCurta}\n\n$periodoAtual';
 
     // Modal com períodos exatos
     final buffer = StringBuffer();
@@ -1890,7 +1890,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       descricaoCurta: descricaoCurta,
       descricaoCompleta: buffer.toString().trim(),
       inspiracao: conteudoMomento.inspiracao,
-      tags: [periodoAtual, ...conteudoMomento.tags],
+      tags: conteudoMomento.tags,
     );
   }
 
