@@ -1507,26 +1507,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Removido helper _relacaoDescricaoPorNumero (agora usa ContentData.textosHarmoniaConjugal)
 
-  // Dias favoráveis: aproximação — dias do mês em que o dia do calendário reduz
-  // para algum dos números principais (destino, motivacao, expressao, missao, impressao)
-  List<int> _computeFavorableDaysThisMonth({int limit = 30}) {
+  // Dias Favoráveis: usa o algoritmo/tabela do NumerologyEngine (PDF)
+  List<int> _computeFavorableDaysThisMonth({int limit = 31}) {
+    if (_userData == null) return const [];
     final now = DateTime.now();
-    final year = now.year;
-    final month = now.month;
-    final destino = _numerologyData!.numeros['destino'] ?? 0;
-    final motivacao = _numerologyData!.numeros['motivacao'] ?? 0;
-    final expressao = _numerologyData!.numeros['expressao'] ?? 0;
-    final missao = _numerologyData!.numeros['missao'] ?? 0;
-    final impressao = _numerologyData!.numeros['impressao'] ?? 0;
-    final chave = {destino, motivacao, expressao, missao, impressao};
-    int daysInMonth = DateTime(year, month + 1, 0).day;
-    final favorable = <int>[];
-    for (int d = 1; d <= daysInMonth; d++) {
-      final redu = _reduzirLocal(d); // redução simples local
-      if (chave.contains(redu)) favorable.add(d);
-      if (favorable.length >= limit) break;
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final engine = NumerologyEngine(
+      nomeCompleto: _userData!.nomeAnalise,
+      dataNascimento: _userData!.dataNasc,
+    );
+    final all = engine.calcularDiasFavoraveis();
+    final filtered = all.where((d) => d >= 1 && d <= daysInMonth).toList();
+    filtered.sort();
+    if (filtered.length > limit) {
+      return filtered.sublist(0, limit);
     }
-    return favorable;
+    return filtered;
   }
 
   /// Retorna o dia favorável de hoje ou o próximo dia favorável do mês
@@ -1807,67 +1803,84 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Builder para Momentos Decisivos: versão curta (card) mostra apenas o momento atual, versão completa mostra todos os momentos com intervalos.
   VibrationContent _buildMomentosDecisivosContent(
       Map<String, dynamic> momentos, int idadeAtual) {
-    final p1 = momentos['p1'] ?? 0;
-    final p2 = momentos['p2'] ?? 0;
-    final p3 = momentos['p3'] ?? 0;
-    final p4 = momentos['p4'] ?? 0;
+    // Extrai estrutura completa do engine
+    Map<String, dynamic> _asMap(dynamic v) =>
+        (v is Map<String, dynamic>) ? v : <String, dynamic>{};
 
-    // Identifica momento atual
-    int momentoAtual;
-    String nomeAtual;
-    String intervaloAtual;
-    if (idadeAtual <= 36) {
-      momentoAtual = p1;
-      nomeAtual = 'Primeiro Momento Decisivo';
-      intervaloAtual = 'nascimento até 36 anos';
-    } else if (idadeAtual <= 45) {
-      momentoAtual = p2;
-      nomeAtual = 'Segundo Momento Decisivo';
-      intervaloAtual = '37 a 45 anos';
-    } else if (idadeAtual <= 54) {
-      momentoAtual = p3;
-      nomeAtual = 'Terceiro Momento Decisivo';
-      intervaloAtual = '46 a 54 anos';
-    } else {
-      momentoAtual = p4;
-      nomeAtual = 'Quarto Momento Decisivo';
-      intervaloAtual = 'a partir de 55 anos';
+    final p1 = _asMap(momentos['p1']);
+    final p2 = _asMap(momentos['p2']);
+    final p3 = _asMap(momentos['p3']);
+    final p4 = _asMap(momentos['p4']);
+
+    final p1Reg = (p1['regente'] ?? 0) as int;
+    final p2Reg = (p2['regente'] ?? 0) as int;
+    final p3Reg = (p3['regente'] ?? 0) as int;
+    final p4Reg = (p4['regente'] ?? 0) as int;
+
+    final p1Periodo = (p1['periodo'] ?? '') as String;
+    final p2Periodo = (p2['periodo'] ?? '') as String;
+    final p3Periodo = (p3['periodo'] ?? '') as String;
+    final p4Periodo = (p4['periodo'] ?? '') as String;
+
+    int anoAtual = DateTime.now().year;
+    String periodoAtual = '';
+    int momentoAtual = p4Reg;
+    String nomeAtual = 'Quarto Momento Decisivo';
+
+    bool _inPeriodo(Map<String, dynamic> p) {
+      final inicio = p['inicioAno'] as int?;
+      final fim = p['fimAno'] as int?; // null para P4
+      if (inicio == null) return false;
+      if (fim == null) return anoAtual >= inicio;
+      return anoAtual >= inicio && anoAtual < fim;
     }
 
-    final titulo = nomeAtual; // Removido o número do título do card
-    final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
-    // Remover número antes do texto: texto curta + nova linha + intervalo destacado
-    final descricaoCurta =
-        '${conteudoMomento.descricaoCurta}\n\n$intervaloAtual';
+    if (_inPeriodo(p1)) {
+      momentoAtual = p1Reg;
+      nomeAtual = 'Primeiro Momento Decisivo';
+      periodoAtual = p1Periodo;
+    } else if (_inPeriodo(p2)) {
+      momentoAtual = p2Reg;
+      nomeAtual = 'Segundo Momento Decisivo';
+      periodoAtual = p2Periodo;
+    } else if (_inPeriodo(p3)) {
+      momentoAtual = p3Reg;
+      nomeAtual = 'Terceiro Momento Decisivo';
+      periodoAtual = p3Periodo;
+    } else {
+      momentoAtual = p4Reg;
+      nomeAtual = 'Quarto Momento Decisivo';
+      periodoAtual = p4Periodo;
+    }
 
-    // Modal: todos os momentos decisivos com subtítulos destacados
+    final titulo = nomeAtual;
+    final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
+    final descricaoCurta = '${conteudoMomento.descricaoCurta}\n\n$periodoAtual';
+
+    // Modal com períodos exatos
     final buffer = StringBuffer();
 
-    // Primeiro Momento Decisivo
-    buffer.writeln('**Primeiro Momento Decisivo $p1**');
-    buffer.writeln('*nascimento até 36 anos*\n');
-    final cont1 = _getMomentoDecisivoContent(p1);
+    buffer.writeln('**Primeiro Momento Decisivo $p1Reg**');
+    buffer.writeln('*$p1Periodo*\n');
+    final cont1 = _getMomentoDecisivoContent(p1Reg);
     buffer.writeln(cont1.descricaoCompleta);
     buffer.writeln('');
 
-    // Segundo Momento Decisivo
-    buffer.writeln('**Segundo Momento Decisivo $p2**');
-    buffer.writeln('*37 a 45 anos*\n');
-    final cont2 = _getMomentoDecisivoContent(p2);
+    buffer.writeln('**Segundo Momento Decisivo $p2Reg**');
+    buffer.writeln('*$p2Periodo*\n');
+    final cont2 = _getMomentoDecisivoContent(p2Reg);
     buffer.writeln(cont2.descricaoCompleta);
     buffer.writeln('');
 
-    // Terceiro Momento Decisivo
-    buffer.writeln('**Terceiro Momento Decisivo $p3**');
-    buffer.writeln('*46 a 54 anos*\n');
-    final cont3 = _getMomentoDecisivoContent(p3);
+    buffer.writeln('**Terceiro Momento Decisivo $p3Reg**');
+    buffer.writeln('*$p3Periodo*\n');
+    final cont3 = _getMomentoDecisivoContent(p3Reg);
     buffer.writeln(cont3.descricaoCompleta);
     buffer.writeln('');
 
-    // Quarto Momento Decisivo
-    buffer.writeln('**Quarto Momento Decisivo $p4**');
-    buffer.writeln('*a partir de 55 anos*\n');
-    final cont4 = _getMomentoDecisivoContent(p4);
+    buffer.writeln('**Quarto Momento Decisivo $p4Reg**');
+    buffer.writeln('*$p4Periodo*\n');
+    final cont4 = _getMomentoDecisivoContent(p4Reg);
     buffer.writeln(cont4.descricaoCompleta);
 
     return VibrationContent(
