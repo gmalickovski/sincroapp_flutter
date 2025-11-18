@@ -300,6 +300,41 @@ class NumerologyDetailModal extends StatelessWidget {
     // Helper local para renderizar um parágrafo aplicando as mesmas regras
     Widget buildParagraph(String text) {
       final t = text.trim();
+
+      // Detectar linha especial "**Seus números são:** numeros" para Dias Favoráveis
+      final seusNumerosMatch =
+          RegExp(r'^\*\*Seus números são:\*\*\s*(.+)$').firstMatch(t);
+      if (seusNumerosMatch != null) {
+        final numeros = seusNumerosMatch.group(1)!;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+          child: RichText(
+            text: TextSpan(
+              children: [
+                const TextSpan(
+                  text: 'Seus números são: ',
+                  style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    height: 1.7,
+                  ),
+                ),
+                TextSpan(
+                  text: numeros,
+                  style: TextStyle(
+                    color: color ?? AppColors.primaryAccent,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    height: 1.7,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+
       // Detectar subtítulo destacado com **texto**
       final subtitleMatch = RegExp(r'^\*\*(.+?)\*\*$').firstMatch(t);
       if (subtitleMatch != null) {

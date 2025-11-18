@@ -1029,7 +1029,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     color: Colors.greenAccent.shade200,
                     icon: Icons.event_available,
                     categoryIntro:
-                        "Os Dias Favoráveis são datas do mês em que a vibração do seu Dia Pessoal entra em ressonância com números-chave do seu mapa (como Destino, Expressão, Motivação, Impressão e Missão). Nessas datas, decisões e iniciativas tendem a fluir com mais naturalidade.",
+                        "São os dias do mês (de todos os meses) que vibram favoráveis de acordo com o dia natalício. É sugerido marcar os compromissos mais importantes num desses dias, como entrevistas, assinaturas de contratos, reuniões, transações financeiras e outras decisões importantes.",
                   )),
         },
         'bussola': BussolaCard(
@@ -1578,7 +1578,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Constrói o conteúdo completo para o modal dos Dias Favoráveis
   VibrationContent _buildDiasFavoraveisCompleteContent() {
     final nextDay = _getNextFavorableDay();
-    final now = DateTime.now();
     final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
 
     if (nextDay == null || allFavorableDays.isEmpty) {
@@ -1592,41 +1591,22 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
-    final isToday = nextDay == now.day;
-    final titulo =
-        isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
-    final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
-        'Dia de energia especial para você.';
     final mensagemLonga = ContentData.textosDiasFavoraveisLongos[nextDay] ??
         'Este é um dia alinhado com seus números principais.';
 
-    // Criar lista de todos os dias favoráveis do mês
-    final diasFormatados = allFavorableDays.map((d) => d.toString()).join(', ');
-    final monthName = _getMonthName(now.month);
+    // Linha com números destacados (formatada para o modal)
+    final diasFormatados = allFavorableDays.join(', ');
+    final numerosList = '**Seus números são:** $diasFormatados';
 
-    final descricaoCompleta = StringBuffer();
-    descricaoCompleta.writeln(mensagemLonga);
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln('═══════════════════════════');
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln('📅 Todos os Dias Favoráveis de $monthName:');
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln(diasFormatados);
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln(
-        'Estes dias estão em ressonância com seus números principais (Destino, Expressão, Motivação, Impressão e Missão).');
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln(
-        'Aproveite essas datas para tomar decisões importantes, iniciar projetos ou realizar atividades que exigem maior fluidez energética.');
+    final descricaoCompleta = '$numerosList\n\n$mensagemLonga';
 
     return VibrationContent(
-      titulo: titulo,
-      descricaoCurta: mensagemCurta,
-      descricaoCompleta: descricaoCompleta.toString(),
-      inspiracao: isToday
-          ? 'Aproveite a energia de hoje!'
-          : 'Prepare-se para estes dias especiais.',
-      tags: ['Dia $nextDay', 'Sintonia', 'Oportunidade'],
+      titulo: 'Dias Favoráveis',
+      descricaoCurta: ContentData.textosDiasFavoraveis[nextDay] ??
+          'Dia de energia especial para você.',
+      descricaoCompleta: descricaoCompleta,
+      inspiracao: 'Aproveite a energia destes dias especiais!',
+      tags: [],
     );
   }
 
