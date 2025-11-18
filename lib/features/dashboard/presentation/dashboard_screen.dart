@@ -1211,8 +1211,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     linhasCurtas.add('Lições Kármicas: ${_joinComE(licoes)}');
     // Completa: título do número + descrição completa original.
     final buffer = StringBuffer();
-    buffer.writeln(
-        'Estas lições indicam áreas onde a vida pedirá prática consciente e desenvolvimento gradual.');
     for (final n in licoes) {
       final content = ContentData.textosLicoesCarmicas[n];
       if (content != null) {
@@ -1269,8 +1267,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final linhasCurtas = <String>[];
     linhasCurtas.add('Débitos Kármicos: ${_joinComE(debitos)}');
     final buffer = StringBuffer();
-    buffer.writeln(
-        'Cada débito evidencia um ciclo de ajuste que, quando consciente, acelera evolução e clareza.');
     for (final d in debitos) {
       final content = ContentData.textosDebitosCarmicos[d];
       if (content != null) {
@@ -1325,8 +1321,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final linhasCurtas = <String>[];
     linhasCurtas.add('Tendências Ocultas: ${_joinComE(tendencias)}');
     final buffer = StringBuffer();
-    buffer.writeln(
-        'Esses números repetidos no nome sugerem potenciais intensificados que podem se manifestar de forma espontânea.');
     for (final t in tendencias) {
       final content = ContentData.textosTendenciasOcultas[t];
       if (content != null) {

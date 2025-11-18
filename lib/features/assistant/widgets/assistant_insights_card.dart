@@ -96,17 +96,22 @@ class _AssistantInsightsCardState extends State<AssistantInsightsCard> {
             children: [
               const Row(
                 children: [
-                  Icon(Icons.auto_awesome, color: AppColors.primaryAccent),
-                  SizedBox(width: 8),
+                  Icon(Icons.auto_awesome,
+                      color: AppColors.primaryAccent, size: 24),
+                  SizedBox(width: 12),
                   Text('Insight do dia',
                       style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontWeight: FontWeight.w600)),
+                          color: AppColors.primaryText,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
                 ],
               ),
               const SizedBox(height: 8),
               Text(text,
-                  style: const TextStyle(color: AppColors.secondaryText)),
+                  style: const TextStyle(
+                      color: AppColors.tertiaryText,
+                      fontSize: 14,
+                      height: 1.4)),
             ],
           );
         },
