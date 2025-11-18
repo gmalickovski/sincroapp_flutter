@@ -51,8 +51,11 @@ class _InfoCardState extends State<InfoCard> {
 
       // Detectar linha de intervalo destacado para textos de ciclos/desafios/momentos
       // Verifica se contém padrões de idade (números seguidos de "anos", "a", "até", etc.)
+      // ou padrões de anos completos (2019 a 2028)
       final isIntervaloDestacado =
           RegExp(r'^\d+\s+a\s+\d+\s+anos$').hasMatch(line) || // "29 a 56 anos"
+              RegExp(r'^\d{4}\s+a\s+\d{4}$').hasMatch(line) || // "2019 a 2028"
+              RegExp(r'^\d{4}\s+a\s+XXXX$').hasMatch(line) || // "2028 a XXXX"
               RegExp(r'^nascimento até \d+\s+anos$')
                   .hasMatch(line) || // "nascimento até 36 anos"
               RegExp(r'^até \d+\s+anos$').hasMatch(line) || // "até 36 anos"
