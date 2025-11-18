@@ -330,48 +330,95 @@ class NumerologyDetailModal extends StatelessWidget {
 
       final firstSubtitle = looksPlural ? 'O que são?' : 'O que é?';
 
-      // Subtítulo 1
-      widgets.add(Padding(
-        padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
-        child: Text(
-          firstSubtitle,
-          style: TextStyle(
-            color: color ?? AppColors.primaryAccent,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+      // Encontra o primeiro parágrafo em itálico (linha no formato *texto*)
+      final italicIndex = paragraphs
+          .indexWhere((p) => RegExp(r'^\*(.+?)\*$').hasMatch(p.trim()));
+
+      if (italicIndex >= 0) {
+        // 1) Renderiza quaisquer parágrafos antes do itálico normalmente
+        if (italicIndex > 0) {
+          for (var i = 0; i < italicIndex; i++) {
+            widgets.add(buildParagraph(paragraphs[i]));
+          }
+        }
+
+        // 2) Subtítulo "O que é?/são?" imediatamente antes do parágrafo em itálico
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+          child: Text(
+            firstSubtitle,
+            style: TextStyle(
+              color: color ?? AppColors.primaryAccent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-      ));
+        ));
 
-      // Primeiro parágrafo (explicação do que é/são)
-      widgets.add(buildParagraph(paragraphs.first));
+        // 3) Parágrafo em itálico
+        widgets.add(buildParagraph(paragraphs[italicIndex]));
 
-      // Subtítulo 2: Número
-      widgets.add(Padding(
-        padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
-        child: Text(
-          'Número: ${number!}',
-          style: TextStyle(
-            color: color ?? AppColors.primaryAccent,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 0.5,
+        // 4) Subtítulo "Número: X" imediatamente após o parágrafo em itálico
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
+          child: Text(
+            'Número: ${number!}',
+            style: TextStyle(
+              color: color ?? AppColors.primaryAccent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
           ),
-        ),
-      ));
+        ));
 
-      // Demais parágrafos
-      if (paragraphs.length > 1) {
-        for (var i = 1; i < paragraphs.length; i++) {
+        // 5) Renderiza os parágrafos restantes após o itálico
+        for (var i = italicIndex + 1; i < paragraphs.length; i++) {
           widgets.add(buildParagraph(paragraphs[i]));
         }
-      }
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: widgets,
-      );
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widgets,
+        );
+      } else {
+        // Fallback: se não houver parágrafo em itálico, mantém o comportamento anterior
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+          child: Text(
+            firstSubtitle,
+            style: TextStyle(
+              color: color ?? AppColors.primaryAccent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ));
+        widgets.add(buildParagraph(paragraphs.first));
+        widgets.add(Padding(
+          padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
+          child: Text(
+            'Número: ${number!}',
+            style: TextStyle(
+              color: color ?? AppColors.primaryAccent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ));
+        if (paragraphs.length > 1) {
+          for (var i = 1; i < paragraphs.length; i++) {
+            widgets.add(buildParagraph(paragraphs[i]));
+          }
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: widgets,
+        );
+      }
     }
 
     // Caso contrário (multi-number ou sem número), renderização padrão
