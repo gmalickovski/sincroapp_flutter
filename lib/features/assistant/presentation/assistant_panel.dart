@@ -2,10 +2,11 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:speech_to_text/speech_to_text.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
+// Certifique-se de que o SpeechService foi criado no caminho abaixo
+import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
@@ -25,34 +26,36 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _firestore = FirestoreService();
+  final _speechService = SpeechService(); // Instância do serviço de voz
 
   bool _isSending = false;
   final List<AssistantMessage> _messages = [];
 
-  // --- Configuração de Voz e Animação ---
+  // --- Controle de Estado Visual (Botão Dinâmico) ---
   bool _isListening = false;
-  SpeechToText? _speech;
-  bool _speechAvailable = false;
-  bool _speechInitialized = false;
+  bool _isInputEmpty = true;
 
+  // --- Animação do Pulso (Microfone) ---
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    // Configura a animação de pulso para o microfone
+
+    // 1. Listener para saber se o input está vazio (controla a troca Mic <-> Enviar)
+    _controller.addListener(_updateInputState);
+
+    // 2. Configuração da animação de "respiração" do botão
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
     );
 
-    // Animação suave de escala (1.0 -> 1.2)
     _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Loop da animação (respiração)
     _pulseController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         _pulseController.reverse();
@@ -62,9 +65,19 @@ class _AssistantPanelState extends State<AssistantPanel>
     });
   }
 
+  void _updateInputState() {
+    final isEmpty = _controller.text.trim().isEmpty;
+    if (_isInputEmpty != isEmpty) {
+      setState(() {
+        _isInputEmpty = isEmpty;
+      });
+    }
+  }
+
   @override
   void dispose() {
-    _speech?.stop();
+    _speechService.stop();
+    _controller.removeListener(_updateInputState);
     _pulseController.dispose();
     _controller.dispose();
     _scrollController.dispose();
@@ -78,7 +91,7 @@ class _AssistantPanelState extends State<AssistantPanel>
     if (q.isEmpty) return;
 
     // Se estiver ouvindo, para antes de enviar
-    if (_isListening) _stopListening();
+    if (_isListening) await _stopListening();
 
     setState(() {
       _messages.add(
@@ -181,49 +194,11 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   // --- Lógica de Reconhecimento de Voz ---
 
-  Future<void> _initSpeech() async {
-    if (_speech != null) return;
-    _speech = SpeechToText();
-
-    try {
-      _speechAvailable = await _speech!.initialize(
-        onError: (e) {
-          debugPrint('Speech error: $e');
-          _stopListeningUI();
-        },
-        onStatus: (s) {
-          debugPrint('Speech status: $s');
-          if (s == 'done' || s == 'notListening') {
-            _stopListeningUI();
-          }
-        },
-      );
-      _speechInitialized = true;
-    } catch (e) {
-      debugPrint('Error initializing speech: $e');
-      _speechAvailable = false;
-      _speechInitialized = true;
-    }
-
-    if (mounted) setState(() {});
-  }
-
-  void _stopListeningUI() {
-    if (mounted) {
-      setState(() {
-        _isListening = false;
-        _pulseController.stop();
-        _pulseController.reset();
-      });
-    }
-  }
-
   Future<void> _onMicPressed() async {
-    if (!_speechInitialized) {
-      await _initSpeech();
-    }
+    // 1. Tenta inicializar o serviço (que busca o idioma PT)
+    final available = await _speechService.init();
 
-    if (!_speechAvailable) {
+    if (!available) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
             content:
@@ -233,51 +208,132 @@ class _AssistantPanelState extends State<AssistantPanel>
       return;
     }
 
-    if (_isListening) {
-      _stopListening();
-    } else {
-      _startListening();
-    }
-  }
-
-  Future<void> _startListening() async {
+    // 2. Atualiza UI para estado "Ouvindo"
     setState(() {
       _isListening = true;
       _pulseController.forward();
     });
 
-    await _speech!.listen(
-      localeId: 'pt_BR',
-      onResult: (result) {
-        if (mounted) {
-          setState(() {
-            _controller.text = result.recognizedWords;
-            // Mantém o cursor no final do texto
-            _controller.selection = TextSelection.fromPosition(
-                TextPosition(offset: _controller.text.length));
-          });
-        }
+    // 3. Inicia a escuta
+    await _speechService.start(
+      onResult: (text) {
+        if (!mounted) return;
+        setState(() {
+          _controller.text = text;
+          // Mantém cursor no final
+          _controller.selection = TextSelection.fromPosition(
+              TextPosition(offset: _controller.text.length));
+        });
       },
-      listenMode: ListenMode.dictation,
-      partialResults: true,
-      pauseFor: const Duration(seconds: 3), // Pausa automática após silêncio
     );
   }
 
   Future<void> _stopListening() async {
-    if (_speech == null) return;
-    await _speech!.stop();
-    _stopListeningUI();
+    await _speechService.stop();
+    if (mounted) {
+      setState(() {
+        _isListening = false;
+        _pulseController.stop();
+        _pulseController.reset();
+      });
+    }
   }
 
-  // --- UI do Painel ---
+  // --- UI: Botão Dinâmico (AnimatedSwitcher) ---
+
+  Widget _buildDynamicButton() {
+    Key key;
+    Widget buttonContent;
+
+    // ESTADO A: Ouvindo -> Mostra botão de Parar (Mic Vermelho Pulsante)
+    if (_isListening) {
+      key = const ValueKey('mic_stop');
+      buttonContent = GestureDetector(
+        onTap: _stopListening,
+        child: ScaleTransition(
+          scale: _pulseAnimation,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: Colors.redAccent.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.redAccent,
+                width: 1.5,
+              ),
+            ),
+            child: const Icon(Icons.mic, color: Colors.redAccent),
+          ),
+        ),
+      );
+    }
+    // ESTADO B: Input com texto -> Mostra botão Enviar
+    else if (!_isInputEmpty) {
+      key = const ValueKey('send_button');
+      buttonContent = Container(
+        width: 48,
+        height: 48,
+        decoration: BoxDecoration(
+          color: AppColors.primary,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: IconButton(
+          icon: _isSending
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Icon(Icons.send, color: Colors.white),
+          onPressed: _isSending ? null : _send,
+        ),
+      );
+    }
+    // ESTADO C: Input vazio e parado -> Mostra botão Mic Normal
+    else {
+      key = const ValueKey('mic_start');
+      buttonContent = GestureDetector(
+        onTap: _onMicPressed,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.border.withValues(alpha: 0.5),
+              width: 1,
+            ),
+          ),
+          child: const Icon(Icons.mic_none, color: AppColors.secondaryText),
+        ),
+      );
+    }
+
+    // AnimatedSwitcher faz a troca suave entre os widgets baseados na Key
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      transitionBuilder: (child, animation) {
+        return ScaleTransition(
+          scale: animation,
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      },
+      child: Container(key: key, child: buttonContent),
+    );
+  }
+
+  // --- UI Principal ---
 
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final hasKeyboard = bottomInset > 0;
 
-    // Usa DraggableScrollableSheet sempre, mas ajusta os tamanhos dinamicamente
     return DraggableScrollableSheet(
       initialChildSize: hasKeyboard ? 0.95 : 0.6,
       minChildSize: hasKeyboard ? 0.95 : 0.5,
@@ -297,235 +353,183 @@ class _AssistantPanelState extends State<AssistantPanel>
                   offset: const Offset(0, -2)),
             ],
           ),
-          child: _buildPanelContent(),
+          child: Column(
+            children: [
+              // Handle de arrasto
+              Container(
+                height: 44,
+                alignment: Alignment.center,
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Cabeçalho
+              const Padding(
+                padding:
+                    EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.smart_toy_outlined,
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                    SizedBox(width: 10),
+                    Text(
+                      'Assistente Sincro IA',
+                      style: TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: AppColors.border),
+
+              // Lista de Mensagens
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _messages.length,
+                  itemBuilder: (_, i) {
+                    final m = _messages[i];
+                    final isUser = m.role == 'user';
+                    return Align(
+                      alignment:
+                          isUser ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.all(12),
+                        constraints: const BoxConstraints(maxWidth: 560),
+                        decoration: BoxDecoration(
+                          color: isUser
+                              ? AppColors.primaryAccent.withValues(alpha: 0.15)
+                              : AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.6)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildMarkdownMessage(m.content, isUser: isUser),
+                            if (!isUser && m.actions.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (final a in m.actions)
+                                    _buildActionChip(a, i),
+                                ],
+                              ),
+                            ]
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+              // Input Area com Botão Dinâmico
+              AnimatedPadding(
+                duration: const Duration(milliseconds: 150),
+                curve: Curves.easeOut,
+                padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom),
+                child: SafeArea(
+                  top: false,
+                  left: false,
+                  right: false,
+                  bottom: true,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _controller,
+                            onSubmitted: (_) => _send(),
+                            maxLines: 4,
+                            minLines: 1,
+                            textInputAction: TextInputAction.newline,
+                            style: const TextStyle(
+                              color: AppColors.primaryText,
+                              fontSize: 15,
+                              height: 1.45,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: _isListening
+                                  ? 'Fale agora...'
+                                  : 'Pergunte o que quiser...',
+                              hintStyle: TextStyle(
+                                color: _isListening
+                                    ? AppColors.primary
+                                    : AppColors.tertiaryText,
+                                fontSize: 14,
+                                fontWeight: _isListening
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                              filled: true,
+                              fillColor: AppColors.cardBackground,
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(
+                                  color:
+                                      AppColors.border.withValues(alpha: 0.5),
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide(
+                                  color: _isListening
+                                      ? AppColors.primary
+                                      : AppColors.border.withValues(alpha: 0.5),
+                                  width: _isListening ? 2 : 1,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: const BorderSide(
+                                  color: AppColors.primary,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // SLOT PARA O BOTÃO DINÂMICO (Mic vs Send)
+                        _buildDynamicButton(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildPanelContent() {
-    return Column(
-      children: [
-        // Handle de arrasto
-        Container(
-          height: 44,
-          alignment: Alignment.center,
-          child: Container(
-            width: 40,
-            height: 4,
-            decoration: BoxDecoration(
-              color: AppColors.border,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ),
-        // Cabeçalho
-        const Padding(
-          padding: EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: [
-              Icon(
-                Icons.smart_toy_outlined,
-                color: AppColors.primary,
-                size: 24,
-              ),
-              SizedBox(width: 10),
-              Text(
-                'Assistente Sincro IA',
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: AppColors.border),
-
-        // Lista de Mensagens
-        Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(16),
-            itemCount: _messages.length,
-            itemBuilder: (_, i) {
-              final m = _messages[i];
-              final isUser = m.role == 'user';
-              return Align(
-                alignment:
-                    isUser ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  padding: const EdgeInsets.all(12),
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  decoration: BoxDecoration(
-                    color: isUser
-                        ? AppColors.primaryAccent.withValues(alpha: 0.15)
-                        : AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: AppColors.border.withValues(alpha: 0.6)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildMarkdownMessage(m.content, isUser: isUser),
-                      if (!isUser && m.actions.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            for (final a in m.actions) _buildActionChip(a, i),
-                          ],
-                        ),
-                      ]
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-
-        // Input Area
-        AnimatedPadding(
-          duration: const Duration(milliseconds: 150),
-          curve: Curves.easeOut,
-          padding:
-              EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-          child: SafeArea(
-            top: false,
-            left: false,
-            right: false,
-            bottom: true,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _controller,
-                      onSubmitted: (_) => _send(),
-                      maxLines: 4,
-                      minLines: 1,
-                      textInputAction: TextInputAction.newline,
-                      style: const TextStyle(
-                        color: AppColors.primaryText,
-                        fontSize: 15,
-                        height: 1.45,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: _isListening
-                            ? 'Ouvindo...'
-                            : 'Pergunte o que quiser...',
-                        hintStyle: TextStyle(
-                          color: _isListening
-                              ? AppColors.primary
-                              : AppColors.tertiaryText,
-                          fontSize: 14,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.cardBackground,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: _isListening
-                                ? AppColors.primary
-                                : AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-
-                  // Botão de Microfone Animado
-                  GestureDetector(
-                    onTap: _onMicPressed,
-                    child: ScaleTransition(
-                      scale: _isListening
-                          ? _pulseAnimation
-                          : const AlwaysStoppedAnimation(1.0),
-                      child: Container(
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(
-                          color: _isListening
-                              ? Colors.redAccent.withValues(alpha: 0.1)
-                              : AppColors.cardBackground,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: _isListening
-                                ? Colors.redAccent
-                                : AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        child: Icon(
-                          _isListening ? Icons.mic : Icons.mic_none,
-                          color: _isListening
-                              ? Colors.redAccent
-                              : AppColors.secondaryText,
-                        ),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  // Botão Enviar
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: _isSending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.send, color: Colors.white),
-                      onPressed: _isSending ? null : _send,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // --- Helpers e Métodos Auxiliares (Mantidos) ---
+  // --- Helpers e Métodos Auxiliares ---
 
   Widget _buildMarkdownMessage(String raw, {required bool isUser}) {
     final sanitized = raw
