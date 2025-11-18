@@ -103,9 +103,7 @@ class NumerologyDetailModal extends StatelessWidget {
                 ),
               ],
               const SizedBox(height: 18),
-              ...numerosFavoraveis!
-                  .map((n) => _buildDiaFavoravelLongo(n))
-                  ,
+              ...numerosFavoraveis!.map((n) => _buildDiaFavoravelLongo(n)),
             ],
           ),
         ),
@@ -257,66 +255,129 @@ class NumerologyDetailModal extends StatelessWidget {
     final paragraphs =
         normalized.split('\n').where((p) => p.trim().isNotEmpty).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: paragraphs.map((paragraph) {
-        final text = paragraph.trim();
-
-        // Detectar subtítulo destacado com **texto**
-        final subtitleMatch = RegExp(r'^\*\*(.+?)\*\*$').firstMatch(text);
-        if (subtitleMatch != null) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
-            child: Text(
-              subtitleMatch.group(1)!,
-              style: TextStyle(
-                color: color ?? AppColors.primaryAccent,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-              ),
-            ),
-          );
-        }
-
-        // Detectar período destacado com *texto* (linha completa em itálico)
-        final periodMatch = RegExp(r'^\*(.+?)\*$').firstMatch(text);
-        if (periodMatch != null) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12.0),
-            child: Text(
-              periodMatch.group(1)!,
-              style: TextStyle(
-                color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.9),
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                fontStyle: FontStyle.italic,
-              ),
-            ),
-          );
-        }
-
-        // Detectar texto com markdown inline (ex: *Inspiração:* texto normal)
-        if (text.contains(RegExp(r'\*[^*]+?\*'))) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 16.0),
-            child: _buildRichTextWithMarkdown(text),
-          );
-        }
-
-        // Texto normal
+    // Helper local para renderizar um parágrafo aplicando as mesmas regras
+    Widget buildParagraph(String text) {
+      final t = text.trim();
+      // Detectar subtítulo destacado com **texto**
+      final subtitleMatch = RegExp(r'^\*\*(.+?)\*\*$').firstMatch(t);
+      if (subtitleMatch != null) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
+          padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
           child: Text(
-            text,
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 16,
-              height: 1.7,
+            subtitleMatch.group(1)!,
+            style: TextStyle(
+              color: color ?? AppColors.primaryAccent,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
         );
-      }).toList(),
+      }
+
+      // Detectar período destacado com *texto* (linha completa em itálico)
+      final periodMatch = RegExp(r'^\*(.+?)\*$').firstMatch(t);
+      if (periodMatch != null) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12.0),
+          child: Text(
+            periodMatch.group(1)!,
+            style: TextStyle(
+              color: (color ?? AppColors.primaryAccent).withValues(alpha: 0.9),
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        );
+      }
+
+      // Detectar texto com markdown inline (ex: *Inspiração:* texto normal)
+      if (t.contains(RegExp(r'\*[^*]+?\*'))) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: _buildRichTextWithMarkdown(t),
+        );
+      }
+
+      // Texto normal
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16.0),
+        child: Text(
+          t,
+          style: const TextStyle(
+            color: AppColors.secondaryText,
+            fontSize: 16,
+            height: 1.7,
+          ),
+        ),
+      );
+    }
+
+    // Para cards de número único (InfoCard), inserir subtítulos pedidos:
+    // 1) "O que é?" ou "O que são?" antes do primeiro parágrafo
+    // 2) "Número: <n>" antes dos demais parágrafos
+    final isSingleNumberCard = number != null && number!.trim().isNotEmpty;
+    final widgets = <Widget>[];
+
+    if (isSingleNumberCard && paragraphs.isNotEmpty) {
+      final titleLower = title.trim().toLowerCase();
+      final looksPlural = titleLower.endsWith('s') ||
+          titleLower.endsWith('ões') ||
+          titleLower.endsWith('ais') ||
+          titleLower.endsWith('eis') ||
+          titleLower.endsWith('is');
+
+      final firstSubtitle = looksPlural ? 'O que são?' : 'O que é?';
+
+      // Subtítulo 1
+      widgets.add(Padding(
+        padding: const EdgeInsets.only(bottom: 8.0, top: 8.0),
+        child: Text(
+          firstSubtitle,
+          style: TextStyle(
+            color: color ?? AppColors.primaryAccent,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ));
+
+      // Primeiro parágrafo (explicação do que é/são)
+      widgets.add(buildParagraph(paragraphs.first));
+
+      // Subtítulo 2: Número
+      widgets.add(Padding(
+        padding: const EdgeInsets.only(bottom: 8.0, top: 16.0),
+        child: Text(
+          'Número: ${number!}',
+          style: TextStyle(
+            color: color ?? AppColors.primaryAccent,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ));
+
+      // Demais parágrafos
+      if (paragraphs.length > 1) {
+        for (var i = 1; i < paragraphs.length; i++) {
+          widgets.add(buildParagraph(paragraphs[i]));
+        }
+      }
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: widgets,
+      );
+    }
+
+    // Caso contrário (multi-number ou sem número), renderização padrão
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: paragraphs.map(buildParagraph).toList(),
     );
   }
 
