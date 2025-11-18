@@ -25,18 +25,20 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _firestore = FirestoreService();
   final _speechService = SpeechService();
 
-  // FocusNode para detectar toque na caixa de texto
   final _inputFocusNode = FocusNode();
 
   bool _isSending = false;
   final List<AssistantMessage> _messages = [];
 
-  // --- Controle de Estado Visual ---
+  // Controle visual e estado da voz
   bool _isListening = false;
   bool _isInputEmpty = true;
 
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnimation;
+  // Variável chave para corrigir o ECO
+  String _textBeforeListening = '';
+
+  late AnimationController _animController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
@@ -44,29 +46,22 @@ class _AssistantPanelState extends State<AssistantPanel>
 
     _controller.addListener(_updateInputState);
 
-    // Listener para parar o microfone se o usuário tocar na caixa de texto
+    // Se o usuário tocar na caixa, para de ouvir
     _inputFocusNode.addListener(() {
       if (_inputFocusNode.hasFocus && _isListening) {
         _stopListening();
       }
     });
 
-    _pulseController = AnimationController(
+    // Animação sutil (apenas entrada/saída, sem loop)
+    _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 200), // Rápido e sutil
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
+      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
-
-    _pulseController.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
-        _pulseController.reverse();
-      } else if (status == AnimationStatus.dismissed) {
-        _pulseController.forward();
-      }
-    });
   }
 
   void _updateInputState() {
@@ -82,8 +77,8 @@ class _AssistantPanelState extends State<AssistantPanel>
   void dispose() {
     _speechService.stop();
     _controller.removeListener(_updateInputState);
-    _inputFocusNode.dispose(); // Não esquecer de dar dispose
-    _pulseController.dispose();
+    _inputFocusNode.dispose();
+    _animController.dispose();
     _controller.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -106,8 +101,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     _firestore.addAssistantMessage(widget.userData.uid,
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
-
-    // Fecha o teclado ao enviar para ver melhor a resposta
     _inputFocusNode.unfocus();
 
     final pendingActions = _lastAssistantActions();
@@ -194,10 +187,9 @@ class _AssistantPanelState extends State<AssistantPanel>
     }
   }
 
-  // --- Lógica de Reconhecimento de Voz ---
+  // --- Lógica de Reconhecimento de Voz (CORREÇÃO DO ECO) ---
 
   Future<void> _onMicPressed() async {
-    // Remove o foco do input para esconder teclado enquanto fala
     _inputFocusNode.unfocus();
 
     final available = await _speechService.init();
@@ -211,33 +203,32 @@ class _AssistantPanelState extends State<AssistantPanel>
       return;
     }
 
+    // 1. Salva o texto que JÁ existia antes de começar a falar
+    _textBeforeListening = _controller.text;
+    // Adiciona espaço se já tiver texto
+    if (_textBeforeListening.isNotEmpty &&
+        !_textBeforeListening.endsWith(' ')) {
+      _textBeforeListening += ' ';
+    }
+
     setState(() {
       _isListening = true;
-      _pulseController.forward();
+      _animController.forward(); // Ativa animação (sem loop)
     });
-
-    // Salva o texto atual para não perder o que o usuário já digitou
-    // ou limpa se você preferir que a voz substitua tudo.
-    // Aqui optei por substituir para evitar duplicação,
-    // mas se quiser concatenar, teríamos que guardar em uma variável temp.
-    // Para chat, geralmente substitui ou limpa antes.
-    _controller.clear();
 
     await _speechService.start(onResult: (text) {
       if (!mounted) return;
-      setState(() {
-        // CORREÇÃO DO ECO: Substitui todo o texto pelo resultado atual
-        // O plugin speech_to_text geralmente retorna a frase inteira acumulada.
-        _controller.text = text;
 
-        // Mantém cursor no final
-        if (text.isNotEmpty) {
-          _controller.selection =
-              TextSelection.fromPosition(TextPosition(offset: text.length));
-        }
+      // 2. A mágica anti-eco: Sempre reconstrói usando (Texto Antigo + Voz Atual)
+      // O 'text' vindo do serviço é a frase completa da sessão de voz atual.
+      final newFullText = '$_textBeforeListening$text';
+
+      setState(() {
+        _controller.text = newFullText;
+        _controller.selection = TextSelection.fromPosition(
+            TextPosition(offset: _controller.text.length));
       });
     }, onDone: () {
-      // Callback chamado quando o SpeechService detecta silêncio ou finaliza
       if (mounted && _isListening) {
         _stopListening();
       }
@@ -249,8 +240,7 @@ class _AssistantPanelState extends State<AssistantPanel>
     if (mounted) {
       setState(() {
         _isListening = false;
-        _pulseController.stop();
-        _pulseController.reset();
+        _animController.reverse(); // Desativa animação
       });
     }
   }
@@ -266,7 +256,7 @@ class _AssistantPanelState extends State<AssistantPanel>
       buttonContent = GestureDetector(
         onTap: _stopListening,
         child: ScaleTransition(
-          scale: _pulseAnimation,
+          scale: _scaleAnimation,
           child: Container(
             width: 48,
             height: 48,
@@ -278,8 +268,8 @@ class _AssistantPanelState extends State<AssistantPanel>
                 width: 1.5,
               ),
             ),
-            child: const Icon(Icons.stop_rounded,
-                color: Colors.redAccent), // Ícone stop é mais intuitivo aqui
+            // Ícone de Stop para indicar que vai parar
+            child: const Icon(Icons.stop_rounded, color: Colors.redAccent),
           ),
         ),
       );
@@ -393,7 +383,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                     ),
                     SizedBox(width: 10),
                     Text(
-                      'Sincro IA',
+                      'Sincro IA', // Ajustado conforme pedido
                       style: TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 18,
@@ -471,7 +461,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                       children: [
                         Expanded(
                           child: TextField(
-                            focusNode: _inputFocusNode, // Vincula o FocusNode
+                            focusNode: _inputFocusNode,
                             controller: _controller,
                             onSubmitted: (_) => _send(),
                             maxLines: 4,

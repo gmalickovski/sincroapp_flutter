@@ -11,7 +11,6 @@ class SpeechService {
   bool _available = false;
   String? _detectedLocaleId;
 
-  // Timer para garantir timeout se a plataforma falhar em detectar silêncio
   Timer? _silenceTimer;
 
   bool get isAvailable => _available;
@@ -58,24 +57,20 @@ class SpeechService {
 
   Future<void> start({
     required Function(String text) onResult,
-    VoidCallback? onDone, // Novo callback para avisar quando parar
+    VoidCallback? onDone,
   }) async {
     if (_speech == null) await init();
     if (!_available) return;
 
-    // Reinicia o timer de silêncio
     _resetSilenceTimer(onDone);
 
     await _speech!.listen(
       localeId: _detectedLocaleId ?? 'pt_BR',
       onResult: (result) {
-        // Reinicia o timer a cada palavra detectada
         _resetSilenceTimer(onDone);
-
-        // Retorna EXATAMENTE o que foi reconhecido, sem concatenação manual externa
+        // Retorna apenas as palavras reconhecidas na sessão atual
         onResult(result.recognizedWords);
 
-        // Se for resultado final, para o serviço
         if (result.finalResult) {
           stop();
           onDone?.call();
@@ -84,7 +79,7 @@ class SpeechService {
       cancelOnError: true,
       partialResults: true,
       listenMode: ListenMode.dictation,
-      pauseFor: const Duration(seconds: 3), // Tenta usar o nativo primeiro
+      pauseFor: const Duration(seconds: 3),
     );
   }
 
@@ -96,7 +91,7 @@ class SpeechService {
 
   void _resetSilenceTimer(VoidCallback? onDone) {
     _silenceTimer?.cancel();
-    // Timeout de segurança: 5 segundos sem reconhecimento = parar
+    // Timeout de segurança manual (5s) caso o nativo falhe
     _silenceTimer = Timer(const Duration(seconds: 5), () {
       stop();
       onDone?.call();
