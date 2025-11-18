@@ -232,7 +232,8 @@ class NumerologyDetailModal extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // 1) Subtítulo "O que é?/são?" ANTES do categoryIntro (parágrafo em itálico)
-        if (categoryIntro != null && isSingleNumberCard) ...[
+        // Aplica para single-number cards OU multi-number cards com categoryIntro
+        if (categoryIntro != null) ...[
           Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: Text(
@@ -255,8 +256,8 @@ class NumerologyDetailModal extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          // 2) Subtítulo "Número: X" ANTES da descrição completa (exceto itens especiais)
-          if (!onlyWhatIs)
+          // 2) Subtítulo "Número: X" ANTES da descrição completa (exceto itens especiais e multi-número)
+          if (isSingleNumberCard && !onlyWhatIs)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Text(

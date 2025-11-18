@@ -1256,12 +1256,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   VibrationContent _buildDebitosCarmicosContent(List<int> debitos) {
     if (debitos.isEmpty) {
       return const VibrationContent(
-        titulo: 'Sem Débitos Kármicos',
-        descricaoCurta: 'Nenhum dos números clássicos (13,14,16,19) ativo.',
+        titulo: 'Débitos Kármicos',
+        descricaoCurta: 'Você não possui débitos kármicos.',
         descricaoCompleta:
-            'Não há indicadores de débitos kármicos clássicos. Sua jornada foca mais em lapidar talentos do que em corrigir padrões críticos.',
-        inspiracao: 'Fluxo livre favorece o aperfeiçoamento dos talentos.',
-        tags: ['Fluxo'],
+            'Parabéns! Você não carrega débitos kármicos clássicos (13, 14, 16 ou 19) no seu mapa numerológico.\n\nIsso significa que sua jornada de vida está mais focada em desenvolver talentos, explorar potenciais e cumprir sua missão de alma do que em corrigir padrões críticos de vidas passadas.\n\nVocê tem o privilégio de caminhar com mais liberdade e leveza, podendo direcionar sua energia para o crescimento e a autorrealização sem o peso de ajustes kármicos intensos.',
+        inspiracao: 'Sua jornada é de expansão e florescimento livre.',
+        tags: ['Liberdade', 'Crescimento'],
       );
     }
 
