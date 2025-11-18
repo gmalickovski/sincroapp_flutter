@@ -11,6 +11,7 @@ class SpeechService {
   bool _available = false;
   String? _detectedLocaleId;
 
+  // Timer manual para garantir que pare após silêncio (essencial para web/android)
   Timer? _silenceTimer;
 
   bool get isAvailable => _available;
@@ -21,10 +22,16 @@ class SpeechService {
 
     _speech = SpeechToText();
     try {
+      // AQUI ESTÁ A CORREÇÃO DO ECO PARA WEB:
+      // A opção 'webDoNotAggregate' impede que o plugin tente juntar pedaços
+      // que o navegador já juntou, evitando a duplicação "testandotestando".
+      var options = [SpeechToText.webDoNotAggregate];
+
       _available = await _speech!.initialize(
         onError: (e) => debugPrint('Speech error: $e'),
         onStatus: (s) => debugPrint('Speech status: $s'),
         debugLogging: kDebugMode,
+        options: options, // Passamos a opção aqui
       );
 
       if (_available) {
@@ -40,10 +47,12 @@ class SpeechService {
   Future<String> _findBestPortugueseLocale() async {
     try {
       var locales = await _speech!.locales();
+      // Prioriza pt_BR
       try {
         var ptBR = locales.firstWhere((l) => l.localeId == 'pt_BR');
         return ptBR.localeId;
       } catch (_) {}
+      // Tenta qualquer pt
       try {
         var anyPt = locales
             .firstWhere((l) => l.localeId.toLowerCase().startsWith('pt'));
@@ -62,15 +71,19 @@ class SpeechService {
     if (_speech == null) await init();
     if (!_available) return;
 
+    // Inicia o timer de silêncio
     _resetSilenceTimer(onDone);
 
     await _speech!.listen(
       localeId: _detectedLocaleId ?? 'pt_BR',
       onResult: (result) {
+        // Reinicia o timer pois o usuário ainda está falando
         _resetSilenceTimer(onDone);
-        // Retorna apenas as palavras reconhecidas na sessão atual
+
+        // Com a flag webDoNotAggregate, result.recognizedWords agora é seguro
         onResult(result.recognizedWords);
 
+        // Se o motor nativo decidir que acabou, paramos.
         if (result.finalResult) {
           stop();
           onDone?.call();
@@ -79,6 +92,7 @@ class SpeechService {
       cancelOnError: true,
       partialResults: true,
       listenMode: ListenMode.dictation,
+      // pauseFor ajuda, mas o nosso timer manual _silenceTimer é a garantia real
       pauseFor: const Duration(seconds: 3),
     );
   }
@@ -91,8 +105,8 @@ class SpeechService {
 
   void _resetSilenceTimer(VoidCallback? onDone) {
     _silenceTimer?.cancel();
-    // Timeout de segurança manual (5s) caso o nativo falhe
-    _silenceTimer = Timer(const Duration(seconds: 5), () {
+    // Se ficar 3 segundos sem receber novas palavras, encerra a escuta
+    _silenceTimer = Timer(const Duration(seconds: 3), () {
       stop();
       onDone?.call();
     });
