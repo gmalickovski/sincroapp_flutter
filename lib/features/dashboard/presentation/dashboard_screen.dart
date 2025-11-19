@@ -1743,10 +1743,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     final desafio1 = desafios['desafio1'] ?? 0;
     final desafio2 = desafios['desafio2'] ?? 0;
 
-    // Cálculo das idades baseado no número de destino
+    // Cálculo dos períodos baseado nos ciclos de vida
     final destino = _numerologyData?.numeros['destino'] ?? 1;
     final idadeFimDesafio1 = 37 - destino;
     final idadeFimDesafio2 = idadeFimDesafio1 + 9;
+    final idadeInicioDesafio3 = idadeFimDesafio2;
 
     // Identifica desafio atual
     int desafioAtual;
@@ -1763,37 +1764,41 @@ class _DashboardScreenState extends State<DashboardScreen>
     } else {
       desafioAtual = desafio2;
       nomeAtual = 'Terceiro Desafio';
-      intervaloAtual = 'a partir de $idadeFimDesafio2 anos';
+      intervaloAtual = 'a partir de $idadeInicioDesafio3 anos';
     }
 
-    final titulo = nomeAtual; // Removido o número do título do card
     final conteudoDesafio = _getDesafioContent(desafioAtual);
-    // Remover número antes do texto: texto curto + nova linha + intervalo destacado
-    final descricaoCurta =
-        '${conteudoDesafio.descricaoCurta}\n\n$intervaloAtual';
+    final titulo = nomeAtual;
+    final descricaoCurta = (conteudoDesafio.descricaoCurta.isNotEmpty
+            ? conteudoDesafio.descricaoCurta
+            : 'Desafio $desafioAtual') +
+        '\n\n$intervaloAtual';
 
     // Modal: todos os desafios com subtítulos destacados
     final buffer = StringBuffer();
 
-    // Primeiro Desafio
     buffer.writeln('**Primeiro Desafio $desafio1**');
     buffer.writeln('*nascimento até $idadeFimDesafio1 anos*\n');
     final cont1 = _getDesafioContent(desafio1);
-    buffer.writeln(cont1.descricaoCompleta);
+    buffer.writeln(cont1.descricaoCompleta.isNotEmpty
+        ? cont1.descricaoCompleta
+        : 'Desafio $desafio1');
     buffer.writeln('');
 
-    // Desafio Principal
     buffer.writeln('**Desafio Principal $desafioPrincipal**');
     buffer.writeln('*$idadeFimDesafio1 a $idadeFimDesafio2 anos*\n');
     final contPrinc = _getDesafioContent(desafioPrincipal);
-    buffer.writeln(contPrinc.descricaoCompleta);
+    buffer.writeln(contPrinc.descricaoCompleta.isNotEmpty
+        ? contPrinc.descricaoCompleta
+        : 'Desafio $desafioPrincipal');
     buffer.writeln('');
 
-    // Terceiro Desafio
     buffer.writeln('**Terceiro Desafio $desafio2**');
-    buffer.writeln('*a partir de $idadeFimDesafio2 anos*\n');
+    buffer.writeln('*a partir de $idadeInicioDesafio3 anos*\n');
     final cont2 = _getDesafioContent(desafio2);
-    buffer.writeln(cont2.descricaoCompleta);
+    buffer.writeln(cont2.descricaoCompleta.isNotEmpty
+        ? cont2.descricaoCompleta
+        : 'Desafio $desafio2');
 
     return VibrationContent(
       titulo: titulo,
@@ -1812,6 +1817,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     final p3 = momentos['p3'] ?? 0;
     final p4 = momentos['p4'] ?? 0;
 
+    // Períodos reais dos momentos decisivos (usando anos do cálculo)
+    final p1Inicio = momentos['p1Inicio'] ?? '';
+    final p1Fim = momentos['p1Fim'] ?? '';
+    final p2Inicio = momentos['p2Inicio'] ?? '';
+    final p2Fim = momentos['p2Fim'] ?? '';
+    final p3Inicio = momentos['p3Inicio'] ?? '';
+    final p3Fim = momentos['p3Fim'] ?? '';
+    final p4Inicio = momentos['p4Inicio'] ?? '';
+
     // Identifica momento atual
     int momentoAtual;
     String nomeAtual;
@@ -1819,56 +1833,61 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (idadeAtual <= 36) {
       momentoAtual = p1;
       nomeAtual = 'Primeiro Momento Decisivo';
-      intervaloAtual = 'nascimento até 36 anos';
+      intervaloAtual = '$p1Inicio a $p1Fim';
     } else if (idadeAtual <= 45) {
       momentoAtual = p2;
       nomeAtual = 'Segundo Momento Decisivo';
-      intervaloAtual = '37 a 45 anos';
+      intervaloAtual = '$p2Inicio a $p2Fim';
     } else if (idadeAtual <= 54) {
       momentoAtual = p3;
       nomeAtual = 'Terceiro Momento Decisivo';
-      intervaloAtual = '46 a 54 anos';
+      intervaloAtual = '$p3Inicio a $p3Fim';
     } else {
       momentoAtual = p4;
       nomeAtual = 'Quarto Momento Decisivo';
-      intervaloAtual = 'a partir de 55 anos';
+      intervaloAtual = '$p4Inicio a XXXX';
     }
 
-    final titulo = nomeAtual; // Removido o número do título do card
     final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
-    // Remover número antes do texto: texto curta + nova linha + intervalo destacado
-    final descricaoCurta =
-        '${conteudoMomento.descricaoCurta}\n\n$intervaloAtual';
+    final titulo = nomeAtual;
+    final descricaoCurta = (conteudoMomento.descricaoCurta.isNotEmpty
+            ? conteudoMomento.descricaoCurta
+            : 'Momento $momentoAtual') +
+        '\n\n$intervaloAtual';
 
     // Modal: todos os momentos decisivos com subtítulos destacados
     final buffer = StringBuffer();
 
-    // Primeiro Momento Decisivo
     buffer.writeln('**Primeiro Momento Decisivo $p1**');
-    buffer.writeln('*nascimento até 36 anos*\n');
+    buffer.writeln('*$p1Inicio a $p1Fim*\n');
     final cont1 = _getMomentoDecisivoContent(p1);
-    buffer.writeln(cont1.descricaoCompleta);
+    buffer.writeln(cont1.descricaoCompleta.isNotEmpty
+        ? cont1.descricaoCompleta
+        : 'Momento $p1');
     buffer.writeln('');
 
-    // Segundo Momento Decisivo
     buffer.writeln('**Segundo Momento Decisivo $p2**');
-    buffer.writeln('*37 a 45 anos*\n');
+    buffer.writeln('*$p2Inicio a $p2Fim*\n');
     final cont2 = _getMomentoDecisivoContent(p2);
-    buffer.writeln(cont2.descricaoCompleta);
+    buffer.writeln(cont2.descricaoCompleta.isNotEmpty
+        ? cont2.descricaoCompleta
+        : 'Momento $p2');
     buffer.writeln('');
 
-    // Terceiro Momento Decisivo
     buffer.writeln('**Terceiro Momento Decisivo $p3**');
-    buffer.writeln('*46 a 54 anos*\n');
+    buffer.writeln('*$p3Inicio a $p3Fim*\n');
     final cont3 = _getMomentoDecisivoContent(p3);
-    buffer.writeln(cont3.descricaoCompleta);
+    buffer.writeln(cont3.descricaoCompleta.isNotEmpty
+        ? cont3.descricaoCompleta
+        : 'Momento $p3');
     buffer.writeln('');
 
-    // Quarto Momento Decisivo
     buffer.writeln('**Quarto Momento Decisivo $p4**');
-    buffer.writeln('*a partir de 55 anos*\n');
+    buffer.writeln('*$p4Inicio a XXXX*\n');
     final cont4 = _getMomentoDecisivoContent(p4);
-    buffer.writeln(cont4.descricaoCompleta);
+    buffer.writeln(cont4.descricaoCompleta.isNotEmpty
+        ? cont4.descricaoCompleta
+        : 'Momento $p4');
 
     return VibrationContent(
       titulo: titulo,
