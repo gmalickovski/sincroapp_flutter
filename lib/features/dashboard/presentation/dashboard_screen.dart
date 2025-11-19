@@ -1709,61 +1709,68 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Builder para Desafios: versão curta (card) mostra apenas o desafio atual, versão completa mostra todos os desafios com intervalos.
   VibrationContent _buildDesafiosContent(
-      Map<String, int> desafios, int idadeAtual) {
-    final desafioPrincipal = desafios['desafioPrincipal'] ?? 0;
-    final desafio1 = desafios['desafio1'] ?? 0;
-    final desafio2 = desafios['desafio2'] ?? 0;
+      Map<String, dynamic> desafios, int idadeAtual) {
+    // Extrai os mapas dos desafios
+    final desafio1 = desafios['desafio1'] as Map<String, dynamic>? ?? {};
+    final desafio2 = desafios['desafio2'] as Map<String, dynamic>? ?? {};
+    final desafioPrincipal =
+        desafios['desafioPrincipal'] as Map<String, dynamic>? ?? {};
 
-    // Cálculo das idades baseado no número de destino
-    final destino = _numerologyData?.numeros['destino'] ?? 1;
-    final idadeFimDesafio1 = 37 - destino;
-    final idadeFimDesafio2 = idadeFimDesafio1 + 9;
+    // Valores
+    final valor1 = desafio1['valor'] ?? 0;
+    final valor2 = desafio2['valor'] ?? 0;
+    final valorPrincipal = desafioPrincipal['valor'] ?? 0;
+
+    // Períodos
+    final periodo1 = desafio1['periodo'] ?? '';
+    final periodo2 = desafio2['periodo'] ?? '';
+    final periodoPrincipal = desafioPrincipal['periodo'] ?? '';
+
+    // Nomes
+    final nome1 = desafio1['nome'] ?? 'Primeiro Desafio';
+    final nome2 = desafio2['nome'] ?? 'Terceiro Desafio';
+    final nomePrincipal = desafioPrincipal['nome'] ?? 'Desafio Principal';
 
     // Identifica desafio atual
-    int desafioAtual;
+    int desafioAtualValor;
     String nomeAtual;
-    String intervaloAtual;
-    if (idadeAtual < idadeFimDesafio1) {
-      desafioAtual = desafio1;
-      nomeAtual = 'Primeiro Desafio';
-      intervaloAtual = 'nascimento até $idadeFimDesafio1 anos';
-    } else if (idadeAtual < idadeFimDesafio2) {
-      desafioAtual = desafioPrincipal;
-      nomeAtual = 'Desafio Principal';
-      intervaloAtual = '$idadeFimDesafio1 a $idadeFimDesafio2 anos';
+    String periodoAtual;
+    if (idadeAtual < (desafio1['idadeFim'] ?? 0)) {
+      desafioAtualValor = valor1;
+      nomeAtual = nome1;
+      periodoAtual = periodo1;
+    } else if (desafio2.containsKey('idadeInicio') &&
+        idadeAtual < (desafio2['idadeFim'] ?? 0)) {
+      desafioAtualValor = valorPrincipal;
+      nomeAtual = nomePrincipal;
+      periodoAtual = periodoPrincipal;
     } else {
-      desafioAtual = desafio2;
-      nomeAtual = 'Terceiro Desafio';
-      intervaloAtual = 'a partir de $idadeFimDesafio2 anos';
+      desafioAtualValor = valor2;
+      nomeAtual = nome2;
+      periodoAtual = periodo2;
     }
 
-    final titulo = nomeAtual; // Removido o número do título do card
-    final conteudoDesafio = _getDesafioContent(desafioAtual);
-    // Remover número antes do texto: texto curto + nova linha + intervalo destacado
-    final descricaoCurta =
-        '${conteudoDesafio.descricaoCurta}\n\n$intervaloAtual';
+    final titulo = nomeAtual;
+    final conteudoDesafio = _getDesafioContent(desafioAtualValor);
+    final descricaoCurta = '${conteudoDesafio.descricaoCurta}\n\n$periodoAtual';
 
-    // Modal: todos os desafios com subtítulos destacados
+    // Modal: todos os desafios com subtítulos destacados e períodos reais
     final buffer = StringBuffer();
-
-    // Primeiro Desafio
-    buffer.writeln('**Primeiro Desafio $desafio1**');
-    buffer.writeln('*nascimento até $idadeFimDesafio1 anos*\n');
-    final cont1 = _getDesafioContent(desafio1);
+    buffer.writeln('**$nome1 $valor1**');
+    buffer.writeln('*$periodo1*\n');
+    final cont1 = _getDesafioContent(valor1);
     buffer.writeln(cont1.descricaoCompleta);
     buffer.writeln('');
 
-    // Desafio Principal
-    buffer.writeln('**Desafio Principal $desafioPrincipal**');
-    buffer.writeln('*$idadeFimDesafio1 a $idadeFimDesafio2 anos*\n');
-    final contPrinc = _getDesafioContent(desafioPrincipal);
+    buffer.writeln('**$nomePrincipal $valorPrincipal**');
+    buffer.writeln('*$periodoPrincipal*\n');
+    final contPrinc = _getDesafioContent(valorPrincipal);
     buffer.writeln(contPrinc.descricaoCompleta);
     buffer.writeln('');
 
-    // Terceiro Desafio
-    buffer.writeln('**Terceiro Desafio $desafio2**');
-    buffer.writeln('*a partir de $idadeFimDesafio2 anos*\n');
-    final cont2 = _getDesafioContent(desafio2);
+    buffer.writeln('**$nome2 $valor2**');
+    buffer.writeln('*$periodo2*\n');
+    final cont2 = _getDesafioContent(valor2);
     buffer.writeln(cont2.descricaoCompleta);
 
     return VibrationContent(
