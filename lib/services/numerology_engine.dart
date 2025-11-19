@@ -609,15 +609,31 @@ class NumerologyEngine {
   }
 
   int _calcularNumeroMotivacao() {
-    const vogais = 'AEIOUY';
-    int soma = 0;
-    for (var letra in nomeCompleto.split('')) {
-      final char = letra.toUpperCase();
-      if (vogais.contains(char)) {
-        soma += _calcularValor(letra);
+    const vogais = 'AEIOUYÃÕÁÉÍÓÚÀÂÊÔ'; // Inclui vogais acentuadas
+    int somaTotal = 0;
+    for (var letra in nomeCompleto.toUpperCase().split('')) {
+      if (vogais.contains(letra)) {
+        somaTotal += _calcularValor(letra);
       }
     }
-    return _reduzirNumero(soma, mestre: true);
+
+    int e = _reduzirNumero(somaTotal, mestre: true);
+
+    // REGRA ESPECIAL: Se o resultado for 2 ou 4, refaz o cálculo por palavra.
+    if (e == 2 || e == 4) {
+      final palavras = nomeCompleto.split(RegExp(r'\s+'));
+      int totalPalavras = 0;
+      for (final p in palavras) {
+        int somaPalavra = p
+            .toUpperCase()
+            .split('')
+            .where((l) => vogais.contains(l))
+            .fold(0, (acc, l) => acc + _calcularValor(l));
+        totalPalavras += _reduzirNumero(somaPalavra);
+      }
+      e = _reduzirNumero(totalPalavras, mestre: true);
+    }
+    return e;
   }
 
   int _calcularNumeroImpressao() {
@@ -634,7 +650,7 @@ class NumerologyEngine {
   }
 
   int _calcularTalentoOculto(int motivacao, int expressao) {
-    return _reduzirNumero(motivacao + expressao);
+    return _reduzirNumero(motivacao + expressao, mestre: true);
   }
 
   // Número Psíquico: redução do dia de nascimento (1–9)
