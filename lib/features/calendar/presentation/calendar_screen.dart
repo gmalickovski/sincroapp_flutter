@@ -54,6 +54,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isScreenLoading = true;
   bool _isChangingMonth = false;
 
+  // --- INÍCIO DA MUDANÇA: Estado para controlar o layout da gaveta ---
+  bool _isPanelDragging = false;
+  // --- FIM DA MUDANÇA ---
+
   StreamSubscription? _tasksDueDateSubscription;
   StreamSubscription? _tasksCreatedAtSubscription;
 
@@ -569,6 +573,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final orientation = MediaQuery.of(context).orientation;
 
     void handleTodayTap() {
+      // --- INÍCIO DA MUDANÇA: Reseta o estado da gaveta ---
+      if (_isPanelDragging) setState(() => _isPanelDragging = false);
+      // --- FIM DA MUDANÇA ---
+
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
@@ -653,61 +661,72 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     } else {
       // Layout Retrato
-      // --- INÍCIO DA MUDANÇA: Usa Stack para permitir sobreposição ---
-      // A Stack é necessária para que o DraggableScrollableSheet possa
-      // flutuar sobre o calendário quando expandido.
-      return Stack(
+      // --- INÍCIO DA MUDANÇA: Layout dinâmico com base no estado _isPanelDragging ---
+      final calendarWidget = Column(
         children: [
-          // 1. O Calendário (ocupa a parte de cima)
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              children: [
+                CalendarHeader(
+                  focusedDay: _focusedDay,
+                  onTodayButtonTap: handleTodayTap,
+                  onLeftArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                  onRightArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                ),
+                const SizedBox(height: 8),
+                Stack(
+                  alignment: Alignment.topCenter,
                   children: [
-                    CalendarHeader(
+                    CustomCalendar(
                       focusedDay: _focusedDay,
-                      onTodayButtonTap: handleTodayTap,
-                      onLeftArrowTap: () => _onPageChanged(
-                          DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                      onRightArrowTap: () => _onPageChanged(
-                          DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                      selectedDay: _selectedDay,
+                      onDaySelected: _onDaySelected,
+                      onPageChanged: _onPageChanged,
+                      isDesktop: false,
+                      events: eventsMapUtc,
+                      personalDayNumber: _personalDayNumber,
                     ),
-                    const SizedBox(height: 8),
-                    Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        CustomCalendar(
-                          focusedDay: _focusedDay,
-                          selectedDay: _selectedDay,
-                          onDaySelected: _onDaySelected,
-                          onPageChanged: _onPageChanged,
-                          isDesktop: false,
-                          events: eventsMapUtc,
-                          personalDayNumber: _personalDayNumber,
+                    if (_isChangingMonth)
+                      Positioned.fill(
+                        child: Container(
+                          color: AppColors.background.withValues(alpha: 0.5),
+                          child: const Center(child: CustomLoadingSpinner()),
                         ),
-                        if (_isChangingMonth)
-                          Positioned.fill(
-                            child: Container(
-                              color:
-                                  AppColors.background.withValues(alpha: 0.5),
-                              child:
-                                  const Center(child: CustomLoadingSpinner()),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8.0),
+                      ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8.0),
+              ],
+            ),
           ),
-          // 2. A "Gaveta" (flutua por cima)
-          DraggableScrollableSheet(
+        ],
+      );
+
+      final panelWidget = NotificationListener<DraggableScrollableNotification>(
+        onNotification: (notification) {
+          // Quando o usuário começa a arrastar para cima, mudamos para o layout de Stack
+          if (notification.extent > notification.minExtent &&
+              !_isPanelDragging) {
+            setState(() {
+              _isPanelDragging = true;
+            });
+          }
+          // Quando ele volta para o estado inicial, voltamos para o layout de Column
+          else if (notification.extent <= notification.minExtent &&
+              _isPanelDragging) {
+            setState(() {
+              _isPanelDragging = false;
+            });
+          }
+          return true;
+        },
+        child: DraggableScrollableSheet(
               // O tamanho inicial é calculado para ocupar o espaço restante
-              initialChildSize: 0.45,
-              minChildSize: 0.45,
+              initialChildSize: 0.4, // Altura inicial menor
+              minChildSize: 0.4, // Altura mínima igual à inicial
               maxChildSize: 0.9, // Expande até quase o topo
               builder: (context, scrollController) {
                 return DayDetailPanel(
@@ -720,8 +739,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   onToggleTask: _onToggleTask,
                   onTaskTap: _handleTaskTap,
                 );
-              }),
-        ],
+              },
+            ),
+      );
+
+      // Retorna o layout apropriado com base no estado de arrasto
+      if (_isPanelDragging) {
+        return Stack(
+          children: [calendarWidget, panelWidget],
+        );
+      } else {
+        return Column(
+          children: [calendarWidget, Expanded(child: panelWidget)],
+        );
+      }
+      // --- FIM DA MUDANÇA ---
       );
     }
   }
