@@ -822,23 +822,29 @@ class _DashboardScreenState extends State<DashboardScreen>
           'desafios': InfoCard(
             // CARD CORRIGIDO
             key: const ValueKey('desafios'),
-            title: "Desafio Pessoal",
-            number: (_numerologyData!.numeros['desafio'] ?? '-').toString(),
-            info: _getDesafioContent(_numerologyData!.numeros['desafio'] ??
-                0), // Lógica simplificada
+            title: "Desafios",
+            number:
+                (_numerologyData!.estruturas['desafioAtual']?['regente'] ?? '-')
+                    .toString(),
+            info: _buildDesafiosContent(
+                _numerologyData!.estruturas['desafios'] ?? {},
+                _numerologyData!.idade),
             icon: Icons.warning_amber_outlined,
             color: Colors.orangeAccent.shade200,
             isEditMode: _isEditMode,
             dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
             onTap: () => _showNumerologyDetail(
-              title: "Desafio Pessoal", // Título ajustado
-              number: (_numerologyData!.numeros['desafio'] ?? 0).toString(),
-              content: _getDesafioContent(_numerologyData!.numeros['desafio'] ??
-                  0), // Lógica simplificada
+              title: "Desafios",
+              number:
+                  (_numerologyData!.estruturas['desafioAtual']?['regente'] ?? 0)
+                      .toString(),
+              content: _buildDesafiosContent(
+                  _numerologyData!.estruturas['desafios'] ?? {},
+                  _numerologyData!.idade),
               color: Colors.orangeAccent.shade200,
               icon: Icons.warning_amber_outlined,
               categoryIntro:
-                  "O Desafio Pessoal representa a principal lição que você veio aprender nesta vida. Superá-lo traz crescimento e equilíbrio.",
+                  "Os Desafios representam áreas de crescimento e superação em diferentes fases da vida. Cada período tem seu próprio desafio específico.",
             ),
           ),
           'momentosDecisivos': InfoCard(
@@ -1732,6 +1738,61 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
+  /// Builder para Desafios: versão curta (card) mostra apenas o desafio atual, versão completa mostra todos os desafios com intervalos.
+  VibrationContent _buildDesafiosContent(
+      Map<String, dynamic> desafios, int idadeAtual) {
+    // Identifica desafio atual
+    Map<String, dynamic>? desafioAtual;
+    for (final key in ['desafio1', 'desafioPrincipal', 'desafio2']) {
+      final desafio = desafios[key];
+      if (desafio == null) continue;
+      final idadeInicio = desafio['idadeInicio'] ?? 0;
+      final idadeFim = desafio['idadeFim'] ?? 200;
+      if (idadeAtual >= idadeInicio && idadeAtual < idadeFim) {
+        desafioAtual = desafio;
+        break;
+      }
+    }
+    desafioAtual ??= desafios['desafio2'] ??
+        desafios['desafioPrincipal'] ??
+        desafios['desafio1'];
+
+    // Card: só desafio atual
+    final regente = desafioAtual?['regente'] ?? 0;
+    final nome = desafioAtual?['nome'] ?? '';
+    final intervalo = desafioAtual?['periodoIdade'] ?? '';
+
+    final conteudoDesafio = _getDesafioContent(regente);
+    // Remover número antes do texto: texto curto + nova linha + intervalo destacado
+    final descricaoCurta = '${conteudoDesafio.descricaoCurta}\n\n$intervalo';
+
+    // Modal: todos os desafios com subtítulos destacados
+    final buffer = StringBuffer();
+    for (final key in ['desafio1', 'desafioPrincipal', 'desafio2']) {
+      final desafio = desafios[key];
+      if (desafio == null) continue;
+      final reg = desafio['regente'] ?? 0;
+      final nm = desafio['nome'] ?? '';
+      final intv = desafio['periodoIdade'] ?? '';
+
+      // Subtítulo destacado: Nome + Número
+      buffer.writeln('**$nm $reg**');
+      // Período destacado em nova linha
+      buffer.writeln('*$intv*\n');
+      final conteudo = _getDesafioContent(reg);
+      buffer.writeln(conteudo.descricaoCompleta);
+      buffer.writeln('');
+    }
+
+    return VibrationContent(
+      titulo: nome,
+      descricaoCurta: descricaoCurta,
+      descricaoCompleta: buffer.toString().trim(),
+      inspiracao: conteudoDesafio.inspiracao,
+      tags: conteudoDesafio.tags,
+    );
+  }
+
   /// Builder para Momentos Decisivos: versão curta (card) mostra apenas o momento atual, versão completa mostra todos os momentos com intervalos.
   VibrationContent _buildMomentosDecisivosContent(
       Map<String, dynamic> momentos, int idadeAtual) {
@@ -1740,87 +1801,49 @@ class _DashboardScreenState extends State<DashboardScreen>
     final p3 = momentos['p3'] ?? 0;
     final p4 = momentos['p4'] ?? 0;
 
-    final p1Inicio = momentos['p1Inicio'] ?? '';
-    final p1Fim = momentos['p1Fim'] ?? '';
-    final p2Inicio = momentos['p2Inicio'] ?? '';
-    final p2Fim = momentos['p2Fim'] ?? '';
-    final p3Inicio = momentos['p3Inicio'] ?? '';
-    final p3Fim = momentos['p3Fim'] ?? '';
-    final p4Inicio = momentos['p4Inicio'] ?? '';
-
-    int momentoAtual;
-    String nomeAtual;
-    String intervaloAtual;
-    if (idadeAtual <= 36) {
-      momentoAtual = p1;
-      nomeAtual = 'Primeiro Momento Decisivo';
-      intervaloAtual = '$p1Inicio a $p1Fim';
-    } else if (idadeAtual <= 45) {
-      momentoAtual = p2;
-      nomeAtual = 'Segundo Momento Decisivo';
-      intervaloAtual = '$p2Inicio a $p2Fim';
-    } else if (idadeAtual <= 54) {
-      momentoAtual = p3;
-      nomeAtual = 'Terceiro Momento Decisivo';
-      intervaloAtual = '$p3Inicio a $p3Fim';
-    } else {
-      momentoAtual = p4;
-      nomeAtual = 'Quarto Momento Decisivo';
-      intervaloAtual = '$p4Inicio a XXXX';
+    // Identifica momento atual
+    Map<String, dynamic>? momentoAtual;
+    for (final key in ['p1', 'p2', 'p3', 'p4']) {
+      final momento = momentos[key];
+      if (momento == null) continue;
+      final idadeInicio = momento['idadeInicio'] ?? 0;
+      final idadeFim = momento['idadeFim'] ?? 200;
+      if (idadeAtual >= idadeInicio && idadeAtual < idadeFim) {
+        momentoAtual = momento;
+        break;
+      }
     }
+    momentoAtual ??=
+        momentos['p4'] ?? momentos['p3'] ?? momentos['p2'] ?? momentos['p1'];
 
-    // Busca o conteúdo correto do content_data.dart
-    final conteudoMomento = ContentData.textosMomentosDecisivos[momentoAtual] ??
-        VibrationContent(
-          titulo: nomeAtual,
-          descricaoCurta: 'Momento $momentoAtual',
-          descricaoCompleta: 'Conteúdo não encontrado.',
-          inspiracao: '',
-          tags: [],
-        );
+    final regente = momentoAtual?['regente'] ?? 0;
+    final nomeAtual = momentoAtual?['nome'] ?? '';
+    final intervaloAtual = momentoAtual?['periodoIdade'] ?? '';
 
-    final titulo = nomeAtual;
+    final conteudoMomento = _getMomentoDecisivoContent(regente);
     final descricaoCurta = (conteudoMomento.descricaoCurta.isNotEmpty
             ? conteudoMomento.descricaoCurta
-            : 'Momento $momentoAtual') +
+            : 'Momento $regente') +
         '\n\n$intervaloAtual';
 
     // Modal: todos os momentos decisivos com subtítulos destacados
     final buffer = StringBuffer();
+    for (final key in ['p1', 'p2', 'p3', 'p4']) {
+      final momento = momentos[key];
+      if (momento == null) continue;
+      final reg = momento['regente'] ?? 0;
+      final nm = momento['nome'] ?? '';
+      final intv = momento['periodoIdade'] ?? '';
 
-    buffer.writeln('**Primeiro Momento Decisivo $p1**');
-    buffer.writeln('*$p1Inicio a $p1Fim*\n');
-    final cont1 = ContentData.textosMomentosDecisivos[p1] ?? conteudoMomento;
-    buffer.writeln(cont1.descricaoCompleta.isNotEmpty
-        ? cont1.descricaoCompleta
-        : 'Momento $p1');
-    buffer.writeln('');
-
-    buffer.writeln('**Segundo Momento Decisivo $p2**');
-    buffer.writeln('*$p2Inicio a $p2Fim*\n');
-    final cont2 = ContentData.textosMomentosDecisivos[p2] ?? conteudoMomento;
-    buffer.writeln(cont2.descricaoCompleta.isNotEmpty
-        ? cont2.descricaoCompleta
-        : 'Momento $p2');
-    buffer.writeln('');
-
-    buffer.writeln('**Terceiro Momento Decisivo $p3**');
-    buffer.writeln('*$p3Inicio a $p3Fim*\n');
-    final cont3 = ContentData.textosMomentosDecisivos[p3] ?? conteudoMomento;
-    buffer.writeln(cont3.descricaoCompleta.isNotEmpty
-        ? cont3.descricaoCompleta
-        : 'Momento $p3');
-    buffer.writeln('');
-
-    buffer.writeln('**Quarto Momento Decisivo $p4**');
-    buffer.writeln('*$p4Inicio a XXXX*\n');
-    final cont4 = ContentData.textosMomentosDecisivos[p4] ?? conteudoMomento;
-    buffer.writeln(cont4.descricaoCompleta.isNotEmpty
-        ? cont4.descricaoCompleta
-        : 'Momento $p4');
+      buffer.writeln('**$nm $reg**');
+      buffer.writeln('*$intv*\n');
+      final conteudo = _getMomentoDecisivoContent(reg);
+      buffer.writeln(conteudo.descricaoCompleta);
+      buffer.writeln('');
+    }
 
     return VibrationContent(
-      titulo: titulo,
+      titulo: nomeAtual,
       descricaoCurta: descricaoCurta,
       descricaoCompleta: buffer.toString().trim(),
       inspiracao: conteudoMomento.inspiracao,

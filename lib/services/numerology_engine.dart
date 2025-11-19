@@ -644,45 +644,64 @@ class NumerologyEngine {
 
   // Desafio Principal (0–8): |mês reduzido - dia reduzido|
   // Desafios: desafio1=|mes-dia|, desafio2=|ano-dia|, principal=|d1-d2|
-  Map<String, int> _calcularDesafios(DateTime dataNasc) {
+  Map<String, dynamic> _calcularDesafios(DateTime dataNasc, int numeroDestino) {
     final diaR = _reduzirNumero(dataNasc.day);
     final mesR = _reduzirNumero(dataNasc.month);
     final anoR = _reduzirNumero(dataNasc.year);
+
     final d1 = (mesR - diaR).abs();
     final d2 = (anoR - diaR).abs();
     final principal = (d1 - d2).abs();
+
+    // Períodos baseados nos Ciclos de Vida
+    final idadeFimDesafio1 = 37 - numeroDestino;
+    final idadeInicioDesafioPrincipal = idadeFimDesafio1;
+    final idadeFimDesafioPrincipal = idadeInicioDesafioPrincipal + 9;
+    final idadeInicioDesafio2 = idadeFimDesafioPrincipal;
+
     return {
-      'desafio1': d1,
-      'desafio2': d2,
-      'desafioPrincipal': principal,
+      'desafio1': {
+        'nome': 'Primeiro Desafio',
+        'regente': d1,
+        'idadeInicio': 0,
+        'idadeFim': idadeFimDesafio1,
+        'periodoIdade': 'nascimento até $idadeFimDesafio1 anos',
+      },
+      'desafioPrincipal': {
+        'nome': 'Desafio Principal',
+        'regente': principal,
+        'idadeInicio': idadeInicioDesafioPrincipal,
+        'idadeFim': idadeFimDesafioPrincipal,
+        'periodoIdade':
+            '$idadeInicioDesafioPrincipal a $idadeFimDesafioPrincipal anos',
+      },
+      'desafio2': {
+        'nome': 'Terceiro Desafio',
+        'regente': d2,
+        'idadeInicio': idadeInicioDesafio2,
+        'idadeFim': 200, // Resto da vida
+        'periodoIdade': 'a partir de $idadeInicioDesafio2 anos',
+      },
     };
   }
 
   // Momentos Decisivos (Pinnacles): períodos e regentes conforme documento
   // P1 = reduzir(mês + dia), P2 = reduzir(dia + ano),
   // P3 = reduzir(P1 + P2), P4 = reduzir(mês + ano)
-  // Durações:
-  //  - P1: do ano de nascimento até (ano de nascimento + (37 - destino(1..9)))
-  //  - P2: 9 anos seguintes
-  //  - P3: 9 anos seguintes
-  //  - P4: resto da vida
-  Map<String, dynamic> _calcularMomentosDecisivos(DateTime dataNasc) {
+  Map<String, dynamic> _calcularMomentosDecisivos(
+      DateTime dataNasc, int numeroDestino) {
     final mesR = _reduzirNumero(dataNasc.month);
     final diaR = _reduzirNumero(dataNasc.day);
     final anoR = _reduzirNumero(dataNasc.year);
 
+    // Números mestres não são preservados aqui, conforme documento
     final p1Reg = _reduzirNumero(mesR + diaR, mestre: true);
     final p2Reg = _reduzirNumero(diaR + anoR, mestre: true);
     final p3Reg = _reduzirNumero(p1Reg + p2Reg, mestre: true);
     final p4Reg = _reduzirNumero(mesR + anoR, mestre: true);
 
     // Destino com mestres preservados (1..9, 11, 22) para duração do 1º ciclo
-    final destinoMestre = _reduzirNumero(
-      dataNasc.day + dataNasc.month + dataNasc.year,
-      mestre: true,
-    );
-    final anosP1 =
-        37 - destinoMestre; // ex.: 31/05/1991 => 11 -> 26 anos, até 2017
+    final anosP1 = 37 - numeroDestino;
 
     final anoNasc = dataNasc.year;
     final p1Inicio = anoNasc;
@@ -696,44 +715,39 @@ class NumerologyEngine {
 
     final p4Inicio = p3Fim;
 
-    final anoAtual = DateTime.now().year;
-    int atualRegente;
-    if (anoAtual < p1Fim) {
-      atualRegente = p1Reg;
-    } else if (anoAtual < p2Fim) {
-      atualRegente = p2Reg;
-    } else if (anoAtual < p3Fim) {
-      atualRegente = p3Reg;
-    } else {
-      atualRegente = p4Reg;
-    }
-
     return {
       'p1': {
+        'nome': 'Primeiro Momento Decisivo',
         'regente': p1Reg,
-        'inicioAno': p1Inicio,
-        'fimAno': p1Fim,
-        'periodo': '$p1Inicio a $p1Fim',
+        'idadeInicio': 0,
+        'idadeFim': anosP1,
+        'periodoIdade': 'nascimento até $anosP1 anos',
+        'periodoAno': '$p1Inicio a $p1Fim',
       },
       'p2': {
+        'nome': 'Segundo Momento Decisivo',
         'regente': p2Reg,
-        'inicioAno': p2Inicio,
-        'fimAno': p2Fim,
-        'periodo': '$p2Inicio a $p2Fim',
+        'idadeInicio': anosP1,
+        'idadeFim': anosP1 + 9,
+        'periodoIdade': '$anosP1 a ${anosP1 + 9} anos',
+        'periodoAno': '$p2Inicio a $p2Fim',
       },
       'p3': {
+        'nome': 'Terceiro Momento Decisivo',
         'regente': p3Reg,
-        'inicioAno': p3Inicio,
-        'fimAno': p3Fim,
-        'periodo': '$p3Inicio a $p3Fim',
+        'idadeInicio': anosP1 + 9,
+        'idadeFim': anosP1 + 18,
+        'periodoIdade': '${anosP1 + 9} a ${anosP1 + 18} anos',
+        'periodoAno': '$p3Inicio a $p3Fim',
       },
       'p4': {
+        'nome': 'Quarto Momento Decisivo',
         'regente': p4Reg,
-        'inicioAno': p4Inicio,
-        'fimAno': null,
-        'periodo': '$p4Inicio a XXXX',
+        'idadeInicio': anosP1 + 18,
+        'idadeFim': 200, // Resto da vida
+        'periodoIdade': 'a partir de ${anosP1 + 18} anos',
+        'periodoAno': '$p4Inicio em diante',
       },
-      'atual': atualRegente,
     };
   }
 
@@ -881,7 +895,7 @@ class NumerologyEngine {
     final respostaSubconsciente = _calcularRespostaSubconsciente();
     final diaNatalicio = dataNascDate.day; // Dia de nascimento (1-31)
     final numeroPsiquico = _calcularNumeroPsiquico(dataNascDate);
-    final desafios = _calcularDesafios(dataNascDate);
+    final desafios = _calcularDesafios(dataNascDate, destino);
 
     final ciclosDeVida = _calcularCiclosDeVida(destino);
 
@@ -892,6 +906,16 @@ class NumerologyEngine {
       cicloDeVidaAtual = ciclosDeVida['ciclo2'];
     } else {
       cicloDeVidaAtual = ciclosDeVida['ciclo3'];
+    }
+
+    // Desafio Atual
+    Map<String, dynamic> desafioAtual;
+    if (idade < (desafios['desafio1']?['idadeFim'] ?? 0)) {
+      desafioAtual = desafios['desafio1'];
+    } else if (idade < (desafios['desafioPrincipal']?['idadeFim'] ?? 0)) {
+      desafioAtual = desafios['desafioPrincipal'];
+    } else {
+      desafioAtual = desafios['desafio2'];
     }
 
     // Arcanos descontinuados: removidos do cálculo.
@@ -909,7 +933,7 @@ class NumerologyEngine {
         mestre: true);
 
     // Momentos decisivos (pinnacles)
-    final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate);
+    final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate, destino);
 
     // Cálculos de listas (lições, débitos, tendências)
     final licoesCarmicas = _calcularLicoesCarmicas();
@@ -917,6 +941,18 @@ class NumerologyEngine {
         _calcularDebitosCarmicos(destino, motivacao, expressao);
     final tendenciasOcultas = _calcularTendenciasOcultas();
     final harmoniaConjugal = _calcularHarmoniaConjugal(missao);
+
+    // Momento Decisivo Atual
+    Map<String, dynamic> momentoDecisivoAtual;
+    if (idade < (momentosDecisivos['p1']?['idadeFim'] ?? 0)) {
+      momentoDecisivoAtual = momentosDecisivos['p1'];
+    } else if (idade < (momentosDecisivos['p2']?['idadeFim'] ?? 0)) {
+      momentoDecisivoAtual = momentosDecisivos['p2'];
+    } else if (idade < (momentosDecisivos['p3']?['idadeFim'] ?? 0)) {
+      momentoDecisivoAtual = momentosDecisivos['p3'];
+    } else {
+      momentoDecisivoAtual = momentosDecisivos['p4'];
+    }
 
     return NumerologyResult(
       idade: idade,
@@ -935,15 +971,16 @@ class NumerologyEngine {
         'numeroPsiquico': numeroPsiquico,
         // Aptidões Profissionais: utilizamos o número de Expressão como base
         'aptidoesProfissionais': expressao,
-        'desafio': desafios['desafioPrincipal'] ?? 0,
+        'desafio': desafios['desafioPrincipal']?['regente'] ?? 0,
       },
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
         'harmoniaConjugal': harmoniaConjugal,
         'desafios': desafios,
+        'desafioAtual': desafioAtual,
         'momentosDecisivos': momentosDecisivos,
-        'momentoDecisivoAtual': momentosDecisivos['atual'],
+        'momentoDecisivoAtual': momentoDecisivoAtual,
       },
       listas: {
         'licoesCarmicas': licoesCarmicas,
