@@ -12,6 +12,7 @@ import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/focus
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/goals_progress_card.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+// ATUALIZADO: Importa ParsedTask
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
@@ -34,6 +35,7 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_inpu
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reorder_dashboard_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/numerology_detail_modal.dart';
 
+// Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
   Set<PointerDeviceKind> get dragDevices => {
@@ -68,8 +70,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   Key _masonryGridKey = UniqueKey();
   StreamSubscription<List<TaskModel>>? _todayTasksSubscription;
   List<TaskModel> _currentTodayTasks = [];
-  StreamSubscription<List<Goal>>? _goalsSubscription;
+  StreamSubscription<List<Goal>>?
+      _goalsSubscription; // Stream de metas em tempo real
 
+  // initState, dispose, _loadInitialData, _initializeTasksStream,
+  // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
+  // (Seu código original, sem alterações)
+  // --- (Código omitido para brevidade) ---
   @override
   void initState() {
     super.initState();
@@ -77,23 +84,42 @@ class _DashboardScreenState extends State<DashboardScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
+
+    // Atrasa o carregamento inicial para garantir que o widget está completamente montado
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _loadInitialData();
+      if (mounted) {
+        _loadInitialData();
+      }
     });
   }
 
   @override
   void dispose() {
+    // Cancela streams e controllers de forma segura
     _cancelSubscriptions();
     _menuAnimationController.dispose();
     super.dispose();
   }
 
   Future<void> _cancelSubscriptions() async {
-    await _todayTasksSubscription?.cancel();
-    _todayTasksSubscription = null;
-    await _goalsSubscription?.cancel();
-    _goalsSubscription = null;
+    if (_todayTasksSubscription != null) {
+      try {
+        await _todayTasksSubscription!.cancel();
+      } catch (error, stack) {
+        debugPrint("Erro ao cancelar subscription: $error\n$stack");
+      } finally {
+        _todayTasksSubscription = null;
+      }
+    }
+    if (_goalsSubscription != null) {
+      try {
+        await _goalsSubscription!.cancel();
+      } catch (error, stack) {
+        debugPrint("Erro ao cancelar goals subscription: $error\n$stack");
+      } finally {
+        _goalsSubscription = null;
+      }
+    }
   }
 
   Future<void> _loadInitialData() async {
@@ -131,51 +157,144 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
       _initializeTasksStream(currentUser.uid);
       _initializeGoalsStream(currentUser.uid);
-    } catch (e) {
-      debugPrint("Erro ao carregar dados: $e");
-      if (mounted) setState(() => _isLoading = false);
+      _initializeGoalsStream(currentUser.uid); // ativa stream de metas
+    } catch (e, stackTrace) {
+      debugPrint(
+          "Erro detalhado ao carregar dados iniciais do dashboard: $e\n$stackTrace");
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isUpdatingLayout = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao carregar dados."),
+              backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
   void _initializeTasksStream(String userId) {
     _todayTasksSubscription?.cancel();
     _todayTasksSubscription =
-        _firestoreService.getTasksStreamForToday(userId).listen((tasks) {
-      if (mounted) {
-        setState(() {
-          _currentTodayTasks = tasks;
-          if (_isLoading) _isLoading = false;
-          _buildCardList();
-        });
-      }
-    });
+        _firestoreService.getTasksStreamForToday(userId).listen(
+      (tasks) {
+        if (mounted) {
+          setState(() {
+            _currentTodayTasks = tasks;
+            if (_isLoading) {
+              _isLoading = false;
+            }
+            _buildCardList();
+          });
+        }
+      },
+      onError: (error, stackTrace) {
+        debugPrint("Erro no stream de tarefas do dia: $error\n$stackTrace");
+        if (mounted) {
+          setState(() {
+            _currentTodayTasks = [];
+            _isLoading = false;
+            _buildCardList();
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text("Erro ao carregar tarefas do dia."),
+                backgroundColor: Colors.red),
+          );
+        }
+      },
+    );
   }
 
   void _initializeGoalsStream(String userId) {
     _goalsSubscription?.cancel();
-    _goalsSubscription =
-        _firestoreService.getGoalsStream(userId).listen((goals) {
-      if (mounted) {
+    _goalsSubscription = _firestoreService.getGoalsStream(userId).listen(
+      (goals) {
+        if (!mounted) return;
         setState(() {
           _userGoals = goals;
           _buildCardList();
         });
-      }
-    });
+      },
+      onError: (error) {
+        debugPrint('Erro no stream de metas: $error');
+      },
+    );
   }
 
   Future<void> _reloadDataNonStream({bool rebuildCards = true}) async {
-    await _loadInitialData();
+    final authRepository = AuthRepository();
+    final currentUser = authRepository.getCurrentUser();
+    if (currentUser == null || !mounted) return;
+
+    try {
+      final results = await Future.wait([
+        _firestoreService.getUserData(currentUser.uid),
+        _firestoreService.getActiveGoals(currentUser.uid),
+      ]);
+      if (!mounted) return;
+
+      final userData = results[0] as UserModel?;
+      _userGoals = results[1] as List<Goal>;
+
+      _userData = userData;
+
+      if (userData != null &&
+          userData.nomeAnalise.isNotEmpty &&
+          userData.dataNasc.isNotEmpty) {
+        final engine = NumerologyEngine(
+          nomeCompleto: userData.nomeAnalise,
+          dataNascimento: userData.dataNasc,
+        );
+        _numerologyData = engine.calcular();
+      } else {
+        _numerologyData = null;
+      }
+      if (rebuildCards && mounted) {
+        setState(() {
+          _buildCardList();
+        });
+      }
+      _initializeGoalsStream(currentUser.uid);
+    } catch (e, stackTrace) {
+      debugPrint("Erro ao recarregar dados (não stream): $e\n$stackTrace");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao recarregar dados."),
+              backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _handleTaskStatusChange(TaskModel task, bool isCompleted) {
     if (!mounted || _userData == null) return;
-    _firestoreService.updateTaskCompletion(_userData!.uid, task.id,
-        completed: isCompleted);
+    _firestoreService
+        .updateTaskCompletion(_userData!.uid, task.id, completed: isCompleted)
+        .then((_) {
+      if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+        _firestoreService.updateGoalProgress(_userData!.uid, task.journeyId!);
+      }
+    }).catchError((error) {
+      debugPrint("Erro ao atualizar status da tarefa: $error");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text("Erro ao atualizar tarefa."),
+              backgroundColor: Colors.red),
+        );
+      }
+    });
   }
 
   void _handleTaskTap(TaskModel task) {}
 
+  // ---
+  // --- ATUALIZAÇÃO NESTA FUNÇÃO ---
+  // ---
   Future<void> _handleAddTask() async {
     if (_userData == null) return;
     showModalBottomSheet<void>(
@@ -185,26 +304,34 @@ class _DashboardScreenState extends State<DashboardScreen>
       builder: (context) => TaskInputModal(
         userData: _userData!,
         userId: _userData!.uid,
-        onAddTask: _createSingleTaskWithPersonalDay,
+        onAddTask: (ParsedTask parsedTask) {
+          _createSingleTaskWithPersonalDay(parsedTask);
+        },
       ),
     );
   }
 
+  /// Cria uma única tarefa com cálculo do Dia Pessoal (mesma lógica do FocoDoDiaScreen)
   void _createSingleTaskWithPersonalDay(ParsedTask parsedTask) {
     if (_userData == null) return;
+
     DateTime? finalDueDateUtc;
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
+      // Se tem data específica, usa ela
       final dateLocal = parsedTask.dueDate!.toLocal();
       finalDueDateUtc =
           DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
       dateForPersonalDay = finalDueDateUtc;
     } else {
+      // Se não tem data específica, usa a data atual para calcular o personalDay
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
     }
 
+    // Calcula o dia pessoal usando a data determinada
     final int? finalPersonalDay = _calculatePersonalDay(dateForPersonalDay);
 
     final newTask = TaskModel(
@@ -222,26 +349,49 @@ class _DashboardScreenState extends State<DashboardScreen>
       personalDay: finalPersonalDay,
     );
 
-    _firestoreService.addTask(_userData!.uid, newTask);
+    _firestoreService.addTask(_userData!.uid, newTask).catchError((error) {
+      debugPrint("Erro ao adicionar tarefa pelo dashboard: $error");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao salvar tarefa: $error'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    });
   }
 
+  /// Calcula o Dia Pessoal para uma data específica (mesma lógica do FocoDoDiaScreen)
   int? _calculatePersonalDay(DateTime? date) {
     if (_userData == null ||
         _userData!.dataNasc.isEmpty ||
         _userData!.nomeAnalise.isEmpty ||
-        date == null) return null;
+        date == null) {
+      return null;
+    }
+
+    final engine = NumerologyEngine(
+      nomeCompleto: _userData!.nomeAnalise,
+      dataNascimento: _userData!.dataNasc,
+    );
+
     try {
-      final engine = NumerologyEngine(
-        nomeCompleto: _userData!.nomeAnalise,
-        dataNascimento: _userData!.dataNasc,
-      );
-      final day = engine.calculatePersonalDayForDate(date.toUtc());
+      final dateUtc = date.toUtc();
+      final day = engine.calculatePersonalDayForDate(dateUtc);
       return (day > 0) ? day : null;
     } catch (e) {
+      debugPrint("Erro ao calcular dia pessoal para $date: $e");
       return null;
     }
   }
 
+  // --- FIM DA ATUALIZAÇÃO ---
+
+  // Navegação, _buildCardList, _buildDragHandle, Getters de conteúdo,
+  // _buildCurrentPage, _openReorderModal, build principal, layouts, _buildDashboardContent
+  // (Seu código original, sem alterações)
+  // --- (Código omitido para brevidade) ---
   void _navigateToPage(int index) {
     if (!mounted) return;
     setState(() {
@@ -258,36 +408,30 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _navigateToGoalDetail(Goal goal) {
     if (_userData == null) return;
     Navigator.of(context)
-        .push(MaterialPageRoute(
-            builder: (context) =>
-                GoalDetailScreen(initialGoal: goal, userData: _userData!)))
-        .then((_) => _reloadDataNonStream());
+        .push(
+      MaterialPageRoute(
+          builder: (context) =>
+              GoalDetailScreen(initialGoal: goal, userData: _userData!)),
+    )
+        .then((_) {
+      if (mounted) _reloadDataNonStream();
+    });
   }
-
-  // --- HELPERS PARA LEITURA SEGURA DE DADOS ---
-
-  // Helper para evitar o crash de "Map is not int"
-  int _getDesafioValue(dynamic desafiosData) {
-    if (desafiosData is Map) {
-      final principal = desafiosData['desafioPrincipal'];
-      if (principal is int) return principal;
-      if (principal is Map) return principal['valor'] as int? ?? 0;
-    }
-    return 0;
-  }
-
-  // --- BUILDERS DE UI ---
 
   void _buildCardList() {
     if (!mounted || _userData == null) {
       _cards = [];
       return;
     }
+    // Conjunto de cards ocultos
     final Set<String> hidden = _userData?.dashboardHiddenCards.toSet() ?? {};
 
     final Map<String, Widget> allCardsMap = {
+      // Card de insights IA: disponível para todos os planos, mas IA só responde se não excedeu limite
       'assistantInsights': AssistantInsightsCard(
-          key: const ValueKey('assistantInsights'), user: _userData!),
+        key: const ValueKey('assistantInsights'),
+        user: _userData!,
+      ),
       'goalsProgress': GoalsProgressCard(
         key: const ValueKey('goalsProgress'),
         goals: _userGoals,
@@ -309,7 +453,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         dragHandle: _isEditMode ? _buildDragHandle('focusDay') : null,
       ),
       if (_numerologyData != null) ...{
-        // Cards Básicos
         'vibracaoDia': InfoCard(
             key: const ValueKey('vibracaoDia'),
             title: "Dia Pessoal",
@@ -328,7 +471,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['diaPessoal'] ?? 0),
                   color: Colors.cyan.shade300,
                   icon: Icons.sunny,
-                  categoryIntro: "O Dia Pessoal revela a energia de hoje...",
+                  categoryIntro:
+                      "O Dia Pessoal revela a energia que te acompanha hoje, influenciando suas emoções, decisões e oportunidades. Ele é calculado somando o dia atual com seu mês e ano pessoal, criando um ciclo de 1 a 9 que se renova diariamente.",
                 )),
         'vibracaoMes': InfoCard(
             key: const ValueKey('vibracaoMes'),
@@ -348,7 +492,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['mesPessoal'] ?? 0),
                   color: Colors.indigo.shade300,
                   icon: Icons.nightlight_round,
-                  categoryIntro: "O Mês Pessoal define o tema energético...",
+                  categoryIntro:
+                      "O Mês Pessoal define o tema energético que permeia todo este mês para você, trazendo lições, desafios e oportunidades específicas. É calculado combinando o mês atual com seu ano pessoal e se renova mensalmente.",
                 )),
         'vibracaoAno': InfoCard(
             key: const ValueKey('vibracaoAno'),
@@ -368,8 +513,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['anoPessoal'] ?? 0),
                   color: Colors.amber.shade300,
                   icon: Icons.star,
-                  categoryIntro: "O Ano Pessoal representa o tema principal...",
+                  categoryIntro:
+                      "O Ano Pessoal representa o tema principal de todo o seu ano, indicando as grandes lições, transformações e oportunidades que você encontrará. É calculado somando seu dia e mês de nascimento com o ano atual, criando um ciclo de 9 anos que se repete ao longo da vida.",
                 )),
+        // REMOVIDOS: Cards de Arcanos (Regente e Vigente) – não fazem mais parte do sistema.
         'cicloVida': InfoCard(
             key: const ValueKey('cicloVida'),
             title: "Ciclo de Vida",
@@ -395,45 +542,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.idade),
                   color: Colors.green.shade300,
                   icon: Icons.repeat,
-                  categoryIntro: "O Ciclo de Vida divide sua existência...",
+                  categoryIntro:
+                      "O Ciclo de Vida divide sua existência em três grandes fases, cada uma regida por um número diferente que traz temas, aprendizados e desafios específicos. O ciclo atual indica a energia que está moldando esta fase da sua jornada.",
                 )),
-
-        // Cards Premium
+        // NOVOS CARDS - Disponíveis apenas para planos pagos (Desperta e Sinergia)
         if (_userData!.subscription.plan != SubscriptionPlan.free) ...{
-          // --- CARD DE DESAFIOS (Corrigido para ler Map<String, dynamic>) ---
-          'desafios': InfoCard(
-              key: const ValueKey('desafios'),
-              title: "Desafio Pessoal",
-              // Usa helper seguro para obter o número
-              number: _getDesafioValue(_numerologyData!.estruturas['desafios'])
-                  .toString(),
-              // Cast seguro para Map<String, dynamic>
-              info: _buildDesafiosContent(
-                  _numerologyData!.estruturas['desafios']
-                          as Map<String, dynamic>? ??
-                      {},
-                  _numerologyData!.idade),
-              icon: Icons.warning_amber_outlined,
-              color: Colors.orangeAccent.shade200,
-              isEditMode: _isEditMode,
-              dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
-              onTap: () => _showNumerologyDetail(
-                    title: "Desafios",
-                    number: _getDesafioValue(
-                            _numerologyData!.estruturas['desafios'])
-                        .toString(),
-                    content: _buildDesafiosContent(
-                        _numerologyData!.estruturas['desafios']
-                                as Map<String, dynamic>? ??
-                            {},
-                        _numerologyData!.idade),
-                    color: Colors.orangeAccent.shade200,
-                    icon: Icons.warning_amber_outlined,
-                    categoryIntro:
-                        "Os Desafios representam áreas de crescimento...",
-                  )),
-          // --- Fim da correção do Card Desafios ---
-
           'numeroDestino': InfoCard(
               key: const ValueKey('numeroDestino'),
               title: "Número de Destino",
@@ -453,7 +566,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['destino'] ?? 0),
                     color: Colors.blue.shade300,
                     icon: Icons.explore,
-                    categoryIntro: "O Número de Destino revela o propósito...",
+                    categoryIntro:
+                        "O Número de Destino revela o propósito principal da sua vida, as lições que você veio aprender e as experiências que moldarão seu caminho. É calculado a partir da sua data de nascimento completa e representa a missão de alma que você carrega nesta jornada.",
                   )),
           'numeroExpressao': InfoCard(
               key: const ValueKey('numeroExpressao'),
@@ -474,7 +588,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['expressao'] ?? 0),
                     color: Colors.orange.shade300,
                     icon: Icons.face,
-                    categoryIntro: "O Número de Expressão representa...",
+                    categoryIntro:
+                        "O Número de Expressão representa como você se comunica com o mundo, seus talentos naturais e a forma como você expressa sua essência. É calculado a partir do seu nome completo de nascimento e mostra suas habilidades inatas e o modo como você impacta os outros.",
                   )),
           'numeroMotivacao': InfoCard(
               key: const ValueKey('numeroMotivacao'),
@@ -495,7 +610,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['motivacao'] ?? 0),
                     color: Colors.pink.shade300,
                     icon: Icons.favorite,
-                    categoryIntro: "O Número da Motivação revela...",
+                    categoryIntro:
+                        "O Número da Motivação revela seus desejos mais profundos, o que realmente move seu coração e as aspirações da sua alma. É calculado pelas vogais do seu nome e representa sua força motriz interior, aquilo que você verdadeiramente valoriza e busca na vida.",
                   )),
           'numeroImpressao': InfoCard(
               key: const ValueKey('numeroImpressao'),
@@ -516,7 +632,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['impressao'] ?? 0),
                     color: Colors.teal.shade300,
                     icon: Icons.visibility,
-                    categoryIntro: "O Número de Impressão mostra...",
+                    categoryIntro:
+                        "O Número de Impressão mostra como os outros te percebem no primeiro contato, a energia que você projeta e a primeira impressão que causa. É calculado pelas consoantes do seu nome e representa a 'máscara social' que você naturalmente usa ao interagir com o mundo.",
                   )),
           'missaoVida': InfoCard(
               key: const ValueKey('missaoVida'),
@@ -535,7 +652,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['missao'] ?? 0),
                     color: Colors.deepOrange.shade300,
                     icon: Icons.flag,
-                    categoryIntro: "A Missão de Vida representa...",
+                    categoryIntro:
+                        "A Missão de Vida representa o grande objetivo da sua existência, o legado que você veio deixar e a contribuição única que pode oferecer ao mundo. Este número indica o caminho de realização máxima e o propósito transcendental da sua jornada.",
                   )),
           'talentoOculto': InfoCard(
               key: const ValueKey('talentoOculto'),
@@ -546,9 +664,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['talentoOculto'] ?? 0] ??
                   const VibrationContent(
                       titulo: 'Talento Oculto',
-                      descricaoCurta: '...',
-                      descricaoCompleta: '',
-                      inspiracao: ''),
+                      descricaoCurta:
+                          'Habilidade latente aguardando uso consciente.',
+                      descricaoCompleta:
+                          'Seu Talento Oculto representa capacidades dormentes que emergem quando você integra suas motivações internas com a forma como se expressa no mundo.',
+                      inspiracao:
+                          'Quando você integra coração e expressão, talentos profundos despertam.'),
               icon: Icons.auto_awesome,
               color: Colors.yellow.shade300,
               isEditMode: _isEditMode,
@@ -562,12 +683,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                             _numerologyData!.numeros['talentoOculto'] ?? 0] ??
                         const VibrationContent(
                             titulo: 'Talento Oculto',
-                            descricaoCurta: '...',
-                            descricaoCompleta: '',
-                            inspiracao: ''),
+                            descricaoCurta:
+                                'Habilidade latente aguardando uso consciente.',
+                            descricaoCompleta:
+                                'Seu Talento Oculto representa capacidades dormentes que emergem quando você integra suas motivações internas com a forma como se expressa no mundo.',
+                            inspiracao:
+                                'Quando você integra coração e expressão, talentos profundos despertam.'),
                     color: Colors.yellow.shade300,
                     icon: Icons.auto_awesome,
-                    categoryIntro: "O Talento Oculto revela...",
+                    categoryIntro:
+                        "O Talento Oculto revela habilidades dormentes dentro de você, potenciais que ainda não foram completamente desenvolvidos ou reconhecidos. É uma força silenciosa que pode ser despertada e cultivada para transformar sua vida e ampliar suas possibilidades.",
                   )),
           'respostaSubconsciente': InfoCard(
               key: const ValueKey('respostaSubconsciente'),
@@ -578,9 +703,10 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['respostaSubconsciente'] ?? 0] ??
                   const VibrationContent(
                       titulo: 'Resposta Subconsciente',
-                      descricaoCurta: '...',
-                      descricaoCompleta: '',
-                      inspiracao: ''),
+                      descricaoCurta: 'Como você reage sob pressão.',
+                      descricaoCompleta:
+                          'Este número revela padrões automáticos de reação diante de desafios e crises. Ao reconhecê-los, você pode transformá-los em respostas mais conscientes.',
+                      inspiracao: 'Consciência transforma reação em escolha.'),
               icon: Icons.psychology,
               color: Colors.deepPurple.shade300,
               isEditMode: _isEditMode,
@@ -597,12 +723,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 0] ??
                         const VibrationContent(
                             titulo: 'Resposta Subconsciente',
-                            descricaoCurta: '...',
-                            descricaoCompleta: '',
-                            inspiracao: ''),
+                            descricaoCurta: 'Como você reage sob pressão.',
+                            descricaoCompleta:
+                                'Este número revela padrões automáticos de reação diante de desafios e crises. Ao reconhecê-los, você pode transformá-los em respostas mais conscientes.',
+                            inspiracao:
+                                'Consciência transforma reação em escolha.'),
                     color: Colors.deepPurple.shade300,
                     icon: Icons.psychology,
-                    categoryIntro: "A Resposta Subconsciente indica...",
+                    categoryIntro:
+                        "A Resposta Subconsciente indica como você reage instintivamente a desafios e situações de pressão, revelando seus padrões automáticos de comportamento. Este número mostra a quantidade de números ausentes no seu nome e como isso influencia suas respostas inconscientes.",
                   )),
           'diaNatalicio': InfoCard(
               key: const ValueKey('diaNatalicio'),
@@ -613,9 +742,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                       _numerologyData!.numeros['diaNatalicio'] ?? 1) ??
                   const VibrationContent(
                       titulo: 'Dia Natalício',
-                      descricaoCurta: '...',
-                      descricaoCompleta: '',
-                      inspiracao: ''),
+                      descricaoCurta:
+                          'Traços natos associados ao seu dia de nascimento.',
+                      descricaoCompleta:
+                          'O Dia Natalício é a vibração do próprio dia do seu nascimento (1–31) e revela qualidades naturais que acompanham sua personalidade desde o início da vida.',
+                      inspiracao:
+                          'Honre o que nasceu com você — é sua base de força.'),
               icon: Icons.cake,
               color: Colors.pink.shade300,
               isEditMode: _isEditMode,
@@ -628,12 +760,16 @@ class _DashboardScreenState extends State<DashboardScreen>
                             _numerologyData!.numeros['diaNatalicio'] ?? 1) ??
                         const VibrationContent(
                             titulo: 'Dia Natalício',
-                            descricaoCurta: '...',
-                            descricaoCompleta: '',
-                            inspiracao: ''),
+                            descricaoCurta:
+                                'Traços natos associados ao seu dia de nascimento.',
+                            descricaoCompleta:
+                                'O Dia Natalício é a vibração do próprio dia do seu nascimento (1–31) e revela qualidades naturais que acompanham sua personalidade desde o início da vida.',
+                            inspiracao:
+                                'Honre o que nasceu com você — é sua base de força.'),
                     color: Colors.pink.shade300,
                     icon: Icons.cake,
-                    categoryIntro: "O Dia Natalício revela...",
+                    categoryIntro:
+                        "O Dia Natalício revela as características naturais que você trouxe ao nascer, influenciando sua personalidade e seu caminho de vida desde o primeiro dia. É uma vibração que molda quem você é de forma inata e profunda.",
                   )),
           'numeroPsiquico': InfoCard(
               key: const ValueKey('numeroPsiquico'),
@@ -655,7 +791,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['numeroPsiquico'] ?? 0),
                     color: Colors.lightBlue.shade300,
                     icon: Icons.bubble_chart_outlined,
-                    categoryIntro: "O Número Psíquico é...",
+                    categoryIntro:
+                        "O Número Psíquico é a redução do dia do seu nascimento (1–9) e descreve sua essência íntima — como você sente, decide e reage de forma espontânea.",
                   )),
           'aptidoesProfissionais': InfoCard(
               key: const ValueKey('aptidoesProfissionais'),
@@ -679,7 +816,35 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['aptidoesProfissionais'] ?? 0),
                     color: Colors.cyan.shade300,
                     icon: Icons.work_outline,
-                    categoryIntro: "As Aptidões Profissionais mostram...",
+                    categoryIntro:
+                        "As Aptidões Profissionais mostram áreas de maior potencial de atuação, talentos naturais e estilos de trabalho mais favoráveis. Aqui utilizamos a vibração da Expressão como referência prática.",
+                  )),
+          'desafios': InfoCard(
+              key: const ValueKey('desafios'),
+              title: "Desafio Pessoal",
+              number: (_numerologyData!.numeros['desafio'] ?? '-').toString(),
+              info: _buildDesafiosContent(
+                  _numerologyData!.estruturas['desafios']
+                          as Map<String, int>? ??
+                      {},
+                  _numerologyData!.idade),
+              icon: Icons.warning_amber_outlined,
+              color: Colors.orangeAccent.shade200,
+              isEditMode: _isEditMode,
+              dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
+              onTap: () => _showNumerologyDetail(
+                    title: "Desafios",
+                    number:
+                        (_numerologyData!.numeros['desafio'] ?? 0).toString(),
+                    content: _buildDesafiosContent(
+                        _numerologyData!.estruturas['desafios']
+                                as Map<String, int>? ??
+                            {},
+                        _numerologyData!.idade),
+                    color: Colors.orangeAccent.shade200,
+                    icon: Icons.warning_amber_outlined,
+                    categoryIntro:
+                        "Os Desafios representam áreas de crescimento e superação em diferentes fases da vida. Cada período tem seu próprio desafio específico.",
                   )),
           'momentosDecisivos': InfoCard(
               key: const ValueKey('momentosDecisivos'),
@@ -710,23 +875,25 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.idade),
                     color: Colors.indigoAccent.shade200,
                     icon: Icons.timelapse,
-                    categoryIntro: "Os Momentos Decisivos...",
+                    categoryIntro:
+                        "Os Momentos Decisivos (Pinnacles) marcam períodos de oportunidade e realização em sua vida, mudando com a idade.",
                   )),
+          // Listas e Relacionamentos adicionais (mapa completo)
           'licoesCarmicas': MultiNumberCard(
               key: const ValueKey('licoesCarmicas'),
               title: "Lições Kármicas",
               numbers:
                   (_numerologyData!.listas['licoesCarmicas'] as List<int>?) ??
-                      [],
+                      const [],
               numberTexts: _getLicoesCarmicasTexts(
                   (_numerologyData!.listas['licoesCarmicas'] as List<int>?) ??
-                      []),
+                      const []),
               numberTitles: _getLicoesCarmicasTitles(
                   (_numerologyData!.listas['licoesCarmicas'] as List<int>?) ??
-                      []),
+                      const []),
               info: _buildLicoesCarmicasContent(
                   (_numerologyData!.listas['licoesCarmicas'] as List<int>?) ??
-                      []),
+                      const []),
               icon: Icons.menu_book_outlined,
               color: Colors.lightBlueAccent.shade200,
               isEditMode: _isEditMode,
@@ -735,14 +902,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: () {
                 final licoes =
                     (_numerologyData!.listas['licoesCarmicas'] as List<int>?) ??
-                        [];
+                        const [];
                 final content = _buildLicoesCarmicasContent(licoes);
                 _showNumerologyDetail(
-                  title: content.titulo,
+                  title: content
+                      .titulo, // Usa o título do content que já tem os números
                   content: content,
                   color: Colors.lightBlueAccent.shade200,
                   icon: Icons.menu_book_outlined,
-                  categoryIntro: "As Lições Kármicas representam...",
+                  categoryIntro:
+                      "As Lições Kármicas representam aprendizados que sua alma escolheu desenvolver nesta vida. Elas surgem quando determinados números de 1 a 9 estão ausentes no seu nome, indicando áreas onde a experiência prática e a consciência serão mais requisitadas.",
                 );
               }),
           'debitosCarmicos': MultiNumberCard(
@@ -750,16 +919,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               title: "Débitos Kármicos",
               numbers:
                   (_numerologyData!.listas['debitosCarmicos'] as List<int>?) ??
-                      [],
+                      const [],
               numberTexts: _getDebitosCarmicosTexts(
                   (_numerologyData!.listas['debitosCarmicos'] as List<int>?) ??
-                      []),
+                      const []),
               numberTitles: _getDebitosCarmicosTitles(
                   (_numerologyData!.listas['debitosCarmicos'] as List<int>?) ??
-                      []),
+                      const []),
               info: _buildDebitosCarmicosContent(
                   (_numerologyData!.listas['debitosCarmicos'] as List<int>?) ??
-                      []),
+                      const []),
               icon: Icons.balance_outlined,
               color: Colors.redAccent.shade200,
               isEditMode: _isEditMode,
@@ -768,14 +937,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: () {
                 final debitos = (_numerologyData!.listas['debitosCarmicos']
                         as List<int>?) ??
-                    [];
+                    const [];
                 final content = _buildDebitosCarmicosContent(debitos);
                 _showNumerologyDetail(
-                  title: content.titulo,
+                  title: content
+                      .titulo, // Usa o título do content que já tem os números
                   content: content,
                   color: Colors.redAccent.shade200,
                   icon: Icons.balance_outlined,
-                  categoryIntro: "Os Débitos Kármicos...",
+                  categoryIntro:
+                      "Os Débitos Kármicos (13, 14, 16 e 19) indicam experiências de ajuste e amadurecimento. Eles apontam hábitos ou padrões que precisam ser transformados para que a vida flua com mais leveza e propósito.",
                 );
               }),
           'tendenciasOcultas': MultiNumberCard(
@@ -783,16 +954,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               title: "Tendências Ocultas",
               numbers: (_numerologyData!.listas['tendenciasOcultas']
                       as List<int>?) ??
-                  [],
+                  const [],
               numberTexts: _getTendenciasOcultasTexts((_numerologyData!
                       .listas['tendenciasOcultas'] as List<int>?) ??
-                  []),
+                  const []),
               numberTitles: _getTendenciasOcultasTitles((_numerologyData!
                       .listas['tendenciasOcultas'] as List<int>?) ??
-                  []),
+                  const []),
               info: _buildTendenciasOcultasContent(
                   (_numerologyData!.listas['tendenciasOcultas'] as List<int>?) ??
-                      []),
+                      const []),
               icon: Icons.visibility_off_outlined,
               color: Colors.deepOrange.shade200,
               isEditMode: _isEditMode,
@@ -801,14 +972,16 @@ class _DashboardScreenState extends State<DashboardScreen>
               onTap: () {
                 final tendencias = (_numerologyData!.listas['tendenciasOcultas']
                         as List<int>?) ??
-                    [];
+                    const [];
                 final content = _buildTendenciasOcultasContent(tendencias);
                 _showNumerologyDetail(
-                  title: content.titulo,
+                  title: content
+                      .titulo, // Usa o título do content que já tem os números
                   content: content,
                   color: Colors.deepOrange.shade200,
                   icon: Icons.visibility_off_outlined,
-                  categoryIntro: "As Tendências Ocultas revelam...",
+                  categoryIntro:
+                      "As Tendências Ocultas revelam números que aparecem com maior frequência no seu nome, indicando inclinações latentes que influenciam suas escolhas e comportamentos mesmo sem você perceber conscientemente.",
                 );
               }),
           'harmoniaConjugal': InfoCard(
@@ -836,7 +1009,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                         _numerologyData!.numeros['missao'] ?? 0),
                     color: Colors.pink.shade200,
                     icon: Icons.favorite_border,
-                    categoryIntro: "A Harmonia Conjugal apresenta...",
+                    categoryIntro:
+                        "A Harmonia Conjugal apresenta combinações numéricas que vibram em sintonia com a sua Missão de Vida. Ela sugere perfis que naturalmente entram em ressonância com a sua energia, bem como dinâmicas que pedem maior consciência e diálogo.",
                   )),
           'diasFavoraveis': InfoCard(
               key: const ValueKey('diasFavoraveis'),
@@ -854,7 +1028,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                     content: _buildDiasFavoraveisCompleteContent(),
                     color: Colors.greenAccent.shade200,
                     icon: Icons.event_available,
-                    categoryIntro: "São os dias do mês...",
+                    categoryIntro:
+                        "São os dias do mês (de todos os meses) que vibram favoráveis de acordo com o dia natalício. É sugerido marcar os compromissos mais importantes num desses dias, como entrevistas, assinaturas de contratos, reuniões, transações financeiras e outras decisões importantes.",
                   )),
         },
         'bussola': BussolaCard(
@@ -866,7 +1041,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             onTap: () {}),
       }
     };
-
     final List<String> cardOrder = _userData!.dashboardCardOrder;
     final List<Widget> orderedCards = [];
     Set<String> addedKeys = {};
@@ -888,7 +1062,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildDragHandle(String cardKey) {
     int index = _cards.indexWhere((card) => card.key == ValueKey(cardKey));
-    if (index == -1) return const SizedBox(width: 24, height: 24);
+    if (index == -1) {
+      debugPrint(
+          "AVISO: Não foi possível encontrar o índice para a key '$cardKey' em _buildDragHandle.");
+      return const SizedBox(width: 24, height: 24);
+    }
     return ReorderableDragStartListener(
       index: index,
       child: const MouseRegion(
@@ -897,437 +1075,1139 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  VibrationContent _getInfoContent(String category, int number) =>
-      ContentData.vibracoes[category]?[number] ??
-      const VibrationContent(
-          titulo: '...',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-
-  VibrationContent _getCicloDeVidaContent(int number) =>
-      ContentData.textosCiclosDeVida[number] ??
-      const VibrationContent(
-          titulo: 'Ciclo',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-
-  BussolaContent _getBussolaContent(int number) =>
-      ContentData.bussolaAtividades[number] ??
-      ContentData.bussolaAtividades[0]!;
-
-  // Usando ContentData.textosDesafios (Corrigido!)
-  VibrationContent _getDesafioContent(int number) =>
-      ContentData.textosDesafios[number] ??
-      const VibrationContent(
-          titulo: 'Desafio',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-
-  VibrationContent _getDestinoContent(int number) =>
-      ContentData.textosDestino[number] ??
-      const VibrationContent(
-          titulo: 'Destino',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getExpressaoContent(int number) =>
-      ContentData.textosExpressao[number] ??
-      const VibrationContent(
-          titulo: 'Expressão',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getMotivacaoContent(int number) =>
-      ContentData.textosMotivacao[number] ??
-      const VibrationContent(
-          titulo: 'Motivação',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getImpressaoContent(int number) =>
-      ContentData.textosImpressao[number] ??
-      const VibrationContent(
-          titulo: 'Impressão',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getMissaoContent(int number) =>
-      ContentData.textosMissao[number] ??
-      const VibrationContent(
-          titulo: 'Missão',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getNumeroPsiquicoContent(int number) =>
-      ContentData.textosNumeroPsiquico[number] ??
-      const VibrationContent(
-          titulo: 'Psíquico',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getAptidoesProfissionaisContent(int number) =>
-      ContentData.textosAptidoesProfissionais[number] ??
-      const VibrationContent(
-          titulo: 'Aptidões',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-  VibrationContent _getMomentoDecisivoContent(int number) =>
-      ContentData.textosMomentosDecisivos[number] ??
-      const VibrationContent(
-          titulo: 'Momento',
-          descricaoCurta: '...',
-          descricaoCompleta: '',
-          inspiracao: '');
-
-  // ===============================================================
-  // BUILDER DO CONTEÚDO DE DESAFIOS (Corrigido com lógica de período)
-  // ===============================================================
-  VibrationContent _buildDesafiosContent(
-      Map<String, dynamic> desafios, int idadeAtual) {
-    final d1Map = desafios['desafio1_detalhe'] as Map<String, dynamic>?;
-    final d2Map = desafios['desafio2_detalhe'] as Map<String, dynamic>?;
-    final dmMap = desafios['desafioPrincipal_detalhe'] as Map<String, dynamic>?;
-
-    final d1Val = desafios['desafio1'] as int? ?? 0;
-    final d2Val = desafios['desafio2'] as int? ?? 0;
-    final dmVal = desafios['desafioPrincipal'] as int? ?? 0;
-
-    Map<String, dynamic>? currentDetail;
-    int currentVal = d1Val;
-    final fimD1 = d1Map?['idadeFim'] as int? ?? 999;
-    final fimD2 = d2Map?['idadeFim'] as int? ?? 999;
-
-    if (idadeAtual < fimD1) {
-      currentDetail = d1Map;
-      currentVal = d1Val;
-    } else if (idadeAtual < fimD2) {
-      currentDetail = dmMap;
-      currentVal = dmVal;
-    } else {
-      currentDetail = d2Map;
-      currentVal = d2Val;
-    }
-
-    final nomeAtual = currentDetail?['nome'] ?? 'Desafio Atual';
-    final periodoAtual = currentDetail?['periodo'] ?? '';
-
-    final content = _getDesafioContent(currentVal);
-    final descricaoCurta = '${content.descricaoCurta}\n\n$periodoAtual';
-
-    final buffer = StringBuffer();
-    void addSection(Map<String, dynamic>? detail, int val) {
-      if (detail == null) return;
-      buffer.writeln('**${detail['nome']} $val**');
-      buffer.writeln('*${detail['periodo']}*\n');
-      final c = _getDesafioContent(val);
-      buffer.writeln(c.descricaoCompleta);
-      buffer.writeln('');
-    }
-
-    addSection(d1Map, d1Val);
-    addSection(dmMap, dmVal);
-    addSection(d2Map, d2Val);
-
-    return VibrationContent(
-      titulo: nomeAtual,
-      descricaoCurta: descricaoCurta,
-      descricaoCompleta: buffer.toString().trim(),
-      inspiracao: content.inspiracao,
-      tags: content.tags,
-    );
+  VibrationContent _getInfoContent(String category, int number) {
+    return ContentData.vibracoes[category]?[number] ??
+        const VibrationContent(
+            titulo: 'Indisponível',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
   }
 
-  // Demais métodos mantidos...
-  VibrationContent _buildCiclosDeVidaContent(
-      Map<String, dynamic> ciclos, int idadeAtual) {
-    Map<String, dynamic>? cicloAtual;
-    if (idadeAtual < (ciclos['ciclo1']?['idadeFim'] ?? 0))
-      cicloAtual = ciclos['ciclo1'];
-    else if (idadeAtual < (ciclos['ciclo2']?['idadeFim'] ?? 0))
-      cicloAtual = ciclos['ciclo2'];
-    else
-      cicloAtual = ciclos['ciclo3'];
-    cicloAtual ??= ciclos['ciclo1'];
-    final regente = cicloAtual?['regente'] ?? 0;
-    final nome = cicloAtual?['nome'] ?? '';
-    String intervalo = '';
-    final ini = cicloAtual?['idadeInicio'];
-    final fim = cicloAtual?['idadeFim'];
-    if (ini != null && fim != null)
-      intervalo = '$ini a $fim anos';
-    else if (fim != null)
-      intervalo = 'nascimento até $fim anos';
-    else if (ini != null) intervalo = 'a partir de $ini anos';
-    final content = _getCicloDeVidaContent(regente);
-    final descricaoCurta = '${content.descricaoCurta}\n\n$intervalo';
-    final buffer = StringBuffer();
-    for (final k in ['ciclo1', 'ciclo2', 'ciclo3']) {
-      final c = ciclos[k];
-      if (c == null) continue;
-      buffer.writeln('**${c['nome']} ${c['regente']}**');
-      String iModal = '';
-      if (c['idadeInicio'] != null && c['idadeFim'] != null)
-        iModal = '${c['idadeInicio']} a ${c['idadeFim']} anos';
-      else if (c['idadeFim'] != null)
-        iModal = 'até ${c['idadeFim']} anos';
-      else
-        iModal = 'a partir de ${c['idadeInicio']} anos';
-      buffer.writeln('*$iModal*\n');
-      final txt = _getCicloDeVidaContent(c['regente'] ?? 0);
-      buffer.writeln(txt.descricaoCompleta);
-      buffer.writeln('');
-    }
-    return VibrationContent(
-        titulo: nome,
-        descricaoCurta: descricaoCurta,
-        descricaoCompleta: buffer.toString(),
-        inspiracao: content.inspiracao,
-        tags: content.tags);
+  // Removido: getter de conteúdo de Arcanos
+
+  VibrationContent _getCicloDeVidaContent(int number) {
+    return ContentData.textosCiclosDeVida[number] ??
+        const VibrationContent(
+            titulo: 'Ciclo Desconhecido',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
   }
 
-  VibrationContent _buildMomentosDecisivosContent(
-      Map<String, dynamic> m, int idade) {
-    return const VibrationContent(
-        titulo: 'Momento',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+  BussolaContent _getBussolaContent(int number) {
+    return ContentData.bussolaAtividades[number] ??
+        ContentData.bussolaAtividades[0]!;
+  }
+
+  // Novos getters para os cards adicionais
+  VibrationContent _getDestinoContent(int number) {
+    return ContentData.textosDestino[number] ??
+        const VibrationContent(
+            titulo: 'Destino Desconhecido',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getExpressaoContent(int number) {
+    return ContentData.textosExpressao[number] ??
+        const VibrationContent(
+            titulo: 'Expressão Desconhecida',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getMotivacaoContent(int number) {
+    return ContentData.textosMotivacao[number] ??
+        const VibrationContent(
+            titulo: 'Motivação Desconhecida',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getImpressaoContent(int number) {
+    return ContentData.textosImpressao[number] ??
+        const VibrationContent(
+            titulo: 'Impressão Desconhecida',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getMissaoContent(int number) {
+    return ContentData.textosMissao[number] ??
+        const VibrationContent(
+            titulo: 'Missão Desconhecida',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getNumeroPsiquicoContent(int number) {
+    return ContentData.textosNumeroPsiquico[number] ??
+        const VibrationContent(
+            titulo: 'Número Psíquico',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getAptidoesProfissionaisContent(int number) {
+    return ContentData.textosAptidoesProfissionais[number] ??
+        const VibrationContent(
+            titulo: 'Aptidões Profissionais',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getDesafioContent(int number) {
+    return ContentData.textosDesafios[number] ??
+        const VibrationContent(
+            titulo: 'Desafio',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  VibrationContent _getMomentoDecisivoContent(int number) {
+    return ContentData.textosMomentosDecisivos[number] ??
+        const VibrationContent(
+            titulo: 'Momento Decisivo',
+            descricaoCurta: '...',
+            descricaoCompleta: '',
+            inspiracao: '');
+  }
+
+  // ====== CONTEÚDOS DINÂMICOS PARA LISTAS ======
+  String _joinComE(List<int> numeros) {
+    if (numeros.isEmpty) return '';
+    if (numeros.length == 1) return numeros.first.toString();
+    final partes = numeros.map((e) => e.toString()).toList();
+    final ultimo = partes.removeLast();
+    return '${partes.join(', ')} e $ultimo';
   }
 
   VibrationContent _buildLicoesCarmicasContent(List<int> licoes) {
-    return const VibrationContent(
-        titulo: 'Lições Kármicas',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+    if (licoes.isEmpty) {
+      return const VibrationContent(
+        titulo: 'Sem Lições Kármicas',
+        descricaoCurta: 'Nenhum número ausente entre 1 e 9.',
+        descricaoCompleta:
+            'Seu nome contém representação de todos os números de 1 a 9, indicando que os aprendizados fundamentais já estão integrados.\n\nIsso não elimina desafios, mas sugere maior fluidez para assimilar experiências.',
+        inspiracao:
+            'Integração é reconhecer que cada experiência já deixou sua marca de aprendizado.',
+        tags: ['Integração'],
+      );
+    }
+
+    final titulo = 'Lições Kármicas (${licoes.join(', ')})';
+
+    // Curta (card): Cabeçalho + linhas por número no formato "n: texto curto".
+    final linhasCurtas = <String>[];
+    linhasCurtas.add('Lições Kármicas: ${_joinComE(licoes)}');
+    // Completa: título do número + descrição completa original.
+    final buffer = StringBuffer();
+    for (final n in licoes) {
+      final content = ContentData.textosLicoesCarmicas[n];
+      if (content != null) {
+        linhasCurtas.add('$n: ${content.descricaoCurta}');
+        buffer.writeln('\n**Lição Kármica $n**');
+        buffer.writeln(content.descricaoCompleta.trim());
+        if (content.inspiracao.isNotEmpty) {
+          buffer.writeln('\n*Inspiração:* ${content.inspiracao.trim()}');
+        }
+      } else {
+        linhasCurtas.add('$n: (conteúdo não encontrado)');
+        buffer.writeln('\n**Lição Kármica $n**');
+        buffer.writeln('Conteúdo não encontrado.');
+      }
+    }
+    buffer.writeln(
+        '\nA presença dessas lições não é punição — é convite de evolução. Ao reconhecer padrões, você acelera seu crescimento.');
+
+    // Tags agregadas (deduplicadas)
+    final tags = <String>{};
+    for (final n in licoes) {
+      final c = ContentData.textosLicoesCarmicas[n];
+      if (c != null) tags.addAll(c.tags);
+    }
+    // Limitar a no máximo 4 tags inspiracionais e evitar rótulos numéricos
+    final limitedTags = tags
+        .where((t) => !RegExp(r'^L(i|í)\w+|^\d+$').hasMatch(t))
+        .take(4)
+        .toList();
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: linhasCurtas.join('\n'),
+      descricaoCompleta: buffer.toString(),
+      inspiracao:
+          'Aprender conscientemente é libertar-se de repetições inconscientes.',
+      tags: limitedTags,
+    );
   }
 
   VibrationContent _buildDebitosCarmicosContent(List<int> debitos) {
-    return const VibrationContent(
+    if (debitos.isEmpty) {
+      return const VibrationContent(
         titulo: 'Débitos Kármicos',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+        descricaoCurta: 'Você não possui débitos kármicos.',
+        descricaoCompleta:
+            'Parabéns! Você não carrega débitos kármicos clássicos (13, 14, 16 ou 19) no seu mapa numerológico.\n\nIsso significa que sua jornada de vida está mais focada em desenvolver talentos, explorar potenciais e cumprir sua missão de alma do que em corrigir padrões críticos de vidas passadas.\n\nVocê tem o privilégio de caminhar com mais liberdade e leveza, podendo direcionar sua energia para o crescimento e a autorrealização sem o peso de ajustes kármicos intensos.',
+        inspiracao: 'Sua jornada é de expansão e florescimento livre.',
+        tags: ['Liberdade', 'Crescimento'],
+      );
+    }
+
+    final titulo = 'Débitos Kármicos (${debitos.join(', ')})';
+    final linhasCurtas = <String>[];
+    linhasCurtas.add('Débitos Kármicos: ${_joinComE(debitos)}');
+    final buffer = StringBuffer();
+    for (final d in debitos) {
+      final content = ContentData.textosDebitosCarmicos[d];
+      if (content != null) {
+        linhasCurtas.add('$d: ${content.descricaoCurta}');
+        buffer.writeln('\n**Débito Kármico $d**');
+        buffer.writeln(content.descricaoCompleta.trim());
+        if (content.inspiracao.isNotEmpty) {
+          buffer.writeln('\n*Inspiração:* ${content.inspiracao.trim()}');
+        }
+      } else {
+        linhasCurtas.add('$d: (conteúdo não encontrado)');
+        buffer.writeln('\n**Débito Kármico $d**');
+        buffer.writeln('Conteúdo não encontrado.');
+      }
+    }
+    buffer.writeln(
+        '\nA chave é transformar repetição inconsciente em escolha consciente alinhada ao seu propósito.');
+
+    final tags = <String>{};
+    for (final d in debitos) {
+      final c = ContentData.textosDebitosCarmicos[d];
+      if (c != null) tags.addAll(c.tags);
+    }
+    final limitedTags = tags
+        .where((t) => !RegExp(r'^D(é|e)bito|^\d+$').hasMatch(t))
+        .take(4)
+        .toList();
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: linhasCurtas.join('\n'),
+      descricaoCompleta: buffer.toString(),
+      inspiracao: 'O que é encarado com coragem vira potência evolutiva.',
+      tags: limitedTags,
+    );
   }
 
   VibrationContent _buildTendenciasOcultasContent(List<int> tendencias) {
-    return const VibrationContent(
-        titulo: 'Tendências Ocultas',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+    if (tendencias.isEmpty) {
+      return const VibrationContent(
+        titulo: 'Sem Tendências Ocultas',
+        descricaoCurta:
+            'Parabéns: você não possui tendências ocultas (nenhum número aparece 4 ou mais vezes).',
+        descricaoCompleta:
+            'Nenhum número do seu nome aparece quatro ou mais vezes após a redução numerológica, indicando ausência de padrões repetitivos intensificados de outras vidas. Isso sugere um campo equilibrado e maior flexibilidade para desenvolver diferentes potenciais sem condicionamentos fortes. Caso futuramente você adote abreviações ou variações do nome, as contagens podem mudar – mas na forma atual há neutralidade. Use essa base equilibrada para direcionar conscientemente suas escolhas.',
+        inspiracao: 'Equilíbrio silencioso sustenta expansão consciente.',
+        tags: ['Equilíbrio', 'Flexibilidade'],
+      );
+    }
+
+    final titulo = 'Tendências Ocultas (${tendencias.join(', ')})';
+    final linhasCurtas = <String>[];
+    linhasCurtas.add('Tendências Ocultas: ${_joinComE(tendencias)}');
+    final buffer = StringBuffer();
+    for (final t in tendencias) {
+      final content = ContentData.textosTendenciasOcultas[t];
+      if (content != null) {
+        linhasCurtas.add('$t: ${content.descricaoCurta}');
+        buffer.writeln('\n**Tendência Oculta $t**');
+        buffer.writeln(content.descricaoCompleta.trim());
+        if (content.inspiracao.isNotEmpty) {
+          buffer.writeln('\n*Inspiração:* ${content.inspiracao.trim()}');
+        }
+      } else {
+        linhasCurtas.add('$t: (conteúdo não encontrado)');
+        buffer.writeln('\n**Tendência Oculta $t**');
+        buffer.writeln('Conteúdo não encontrado.');
+      }
+    }
+    buffer.writeln(
+        '\nCanalize essas forças em ações consistentes e alinhadas ao seu propósito para evitar dispersão ou tensão interna.');
+
+    final tags = <String>{};
+    for (final t in tendencias) {
+      final c = ContentData.textosTendenciasOcultas[t];
+      if (c != null) tags.addAll(c.tags);
+    }
+    final limitedTags = tags
+        .where((t) => !RegExp(r'^Intensidade|^\d+$').hasMatch(t))
+        .take(4)
+        .toList();
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: linhasCurtas.join('\n'),
+      descricaoCompleta: buffer.toString(),
+      inspiracao: 'Potencial reconhecido é potencial direcionado.',
+      tags: limitedTags,
+    );
+  }
+
+  // Helpers para extrair mapas de textos curtos para MultiNumberCard
+  Map<int, String> _getLicoesCarmicasTexts(List<int> licoes) {
+    final map = <int, String>{};
+    for (final n in licoes) {
+      final content = ContentData.textosLicoesCarmicas[n];
+      if (content != null) {
+        map[n] = content.descricaoCurta;
+      }
+    }
+    return map;
+  }
+
+  // Títulos por número para Lições Kármicas
+  Map<int, String> _getLicoesCarmicasTitles(List<int> licoes) {
+    final map = <int, String>{};
+    for (final n in licoes) {
+      map[n] = 'Lição Kármica $n';
+    }
+    return map;
+  }
+
+  Map<int, String> _getDebitosCarmicosTexts(List<int> debitos) {
+    final map = <int, String>{};
+    for (final d in debitos) {
+      final content = ContentData.textosDebitosCarmicos[d];
+      if (content != null) {
+        map[d] = content.descricaoCurta;
+      }
+    }
+    return map;
+  }
+
+  // Títulos por número para Débitos Kármicos
+  Map<int, String> _getDebitosCarmicosTitles(List<int> debitos) {
+    final map = <int, String>{};
+    for (final d in debitos) {
+      map[d] = 'Débito Kármico $d';
+    }
+    return map;
+  }
+
+  Map<int, String> _getTendenciasOcultasTexts(List<int> tendencias) {
+    final map = <int, String>{};
+    for (final t in tendencias) {
+      final content = ContentData.textosTendenciasOcultas[t];
+      if (content != null) {
+        map[t] = content.descricaoCurta;
+      }
+    }
+    return map;
+  }
+
+  // Títulos por número para Tendências Ocultas
+  Map<int, String> _getTendenciasOcultasTitles(List<int> tendencias) {
+    final map = <int, String>{};
+    for (final t in tendencias) {
+      map[t] = 'Tendência Oculta $t';
+    }
+    return map;
   }
 
   VibrationContent _buildHarmoniaConjugalContent(
-      Map<String, dynamic> h, int m) {
-    return const VibrationContent(
-        titulo: 'Harmonia Conjugal',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+      Map<String, dynamic> harmonia, int missao) {
+    final vibra = (harmonia['vibra'] as List?)?.cast<int>() ?? const [];
+    final atrai = (harmonia['atrai'] as List?)?.cast<int>() ?? const [];
+    final oposto = (harmonia['oposto'] as List?)?.cast<int>() ?? const [];
+    final passivo = (harmonia['passivo'] as List?)?.cast<int>() ?? const [];
+    const titulo = 'Harmonia Conjugal';
+    const descricaoCurta =
+        'Compatibilidades e dinâmicas afetivas relacionadas à sua Missão.';
+    final buffer = StringBuffer();
+    buffer.writeln(
+        'Sua Missão estabelece padrões de afinidade, magnetismo e campo relacional.');
+
+    // Visão geral rápida (linhas-resumo como no card)
+    if (vibra.isNotEmpty) {
+      buffer.writeln(
+          '\n*Resumo:* Alta Sinergia — ${vibra.join(', ')}. Fluxo natural e fácil integração.');
+    }
+    if (atrai.isNotEmpty) {
+      buffer.writeln(
+          '*Resumo:* Atrai — ${atrai.join(', ')}. Perfis que estimulam crescimento e admiração mútua.');
+    }
+    if (oposto.isNotEmpty) {
+      buffer.writeln(
+          '*Resumo:* Desafio/Oposto — ${oposto.join(', ')}. Relações que pedem negociação consciente e respeito aos ritmos.');
+    }
+    if (passivo.isNotEmpty) {
+      buffer.writeln(
+          '*Resumo:* Passivo/Neutro — ${passivo.join(', ')}. Dinâmica suave; exige iniciativa para aprofundar vínculo.');
+    }
+
+    // Seções detalhadas com títulos destacados e texto completo por número
+    if (vibra.isNotEmpty) {
+      buffer.writeln('\n**Alta Sinergia**');
+      for (final n in vibra) {
+        final texto = ContentData.textosHarmoniaConjugal[n] ?? '';
+        if (texto.isNotEmpty) {
+          buffer.writeln('\n**$n**\n$texto');
+        }
+      }
+    }
+    if (atrai.isNotEmpty) {
+      buffer.writeln('\n**Atrai**');
+      for (final n in atrai) {
+        final texto = ContentData.textosHarmoniaConjugal[n] ?? '';
+        if (texto.isNotEmpty) {
+          buffer.writeln('\n**$n**\n$texto');
+        }
+      }
+    }
+    if (oposto.isNotEmpty) {
+      buffer.writeln('\n**Desafio/Oposto**');
+      for (final n in oposto) {
+        final texto = ContentData.textosHarmoniaConjugal[n] ?? '';
+        if (texto.isNotEmpty) {
+          buffer.writeln('\n**$n**\n$texto');
+        }
+      }
+    }
+    if (passivo.isNotEmpty) {
+      buffer.writeln('\n**Passivo/Neutro**');
+      for (final n in passivo) {
+        final texto = ContentData.textosHarmoniaConjugal[n] ?? '';
+        if (texto.isNotEmpty) {
+          buffer.writeln('\n**$n**\n$texto');
+        }
+      }
+    }
+
+    buffer.writeln(
+        '\nA harmonia não é destino fixo; é construção diária baseada em comunicação, autenticidade e propósito compartilhado.');
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: descricaoCurta,
+      descricaoCompleta: buffer.toString(),
+      inspiracao: 'Relacionar-se é co-criar campos de evolução.',
+      tags: const ['Relacionamentos', 'Sintonia'],
+    );
   }
 
+  // Removido helper _relacaoDescricaoPorNumero (agora usa ContentData.textosHarmoniaConjugal)
+
+  // Dias Favoráveis: usa o algoritmo/tabela do NumerologyEngine (PDF)
+  List<int> _computeFavorableDaysThisMonth({int limit = 31}) {
+    if (_userData == null) return const [];
+    final now = DateTime.now();
+    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final engine = NumerologyEngine(
+      nomeCompleto: _userData!.nomeAnalise,
+      dataNascimento: _userData!.dataNasc,
+    );
+    final all = engine.calcularDiasFavoraveis();
+    final filtered = all.where((d) => d >= 1 && d <= daysInMonth).toList();
+    filtered.sort();
+    if (filtered.length > limit) {
+      return filtered.sublist(0, limit);
+    }
+    return filtered;
+  }
+
+  /// Retorna o dia favorável de hoje ou o próximo dia favorável do mês
+  int? _getNextFavorableDay() {
+    final now = DateTime.now();
+    final todayDay = now.day;
+    final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
+
+    // Procura por hoje ou próximo dia
+    for (final day in allFavorableDays) {
+      if (day >= todayDay) {
+        return day;
+      }
+    }
+
+    // Se não encontrou nenhum dia >= hoje, retorna o primeiro do próximo mês
+    // ou null se não houver
+    return allFavorableDays.isNotEmpty ? allFavorableDays.first : null;
+  }
+
+  /// Constrói o conteúdo do card mostrando apenas o próximo dia favorável
   VibrationContent _buildProximoDiaFavoravelContent() {
-    return const VibrationContent(
-        titulo: 'Dias Favoráveis',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+    final nextDay = _getNextFavorableDay();
+    final now = DateTime.now();
+
+    if (nextDay == null) {
+      return const VibrationContent(
+        titulo: 'Sem Dias Favoráveis',
+        descricaoCurta: 'Nenhum dia favorável encontrado neste mês.',
+        descricaoCompleta:
+            'Este mês não apresenta alinhamentos com seus números principais. Ainda assim, intenção e preparo criam oportunidades.',
+        inspiracao: 'Cada dia é uma chance de criar sua própria sorte.',
+        tags: [],
+      );
+    }
+
+    final isToday = nextDay == now.day;
+    final titulo =
+        isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
+    // Usa ContentData short text
+    final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
+        'Dia de energia especial para você.';
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: mensagemCurta,
+      descricaoCompleta: '',
+      inspiracao: '',
+      tags: ['Dia $nextDay', 'Sintonia', 'Oportunidade'],
+    );
   }
 
+  /// Constrói o conteúdo completo para o modal dos Dias Favoráveis
   VibrationContent _buildDiasFavoraveisCompleteContent() {
-    return const VibrationContent(
-        titulo: 'Dias Favoráveis',
-        descricaoCurta: '...',
-        descricaoCompleta: '',
-        inspiracao: '');
+    final nextDay = _getNextFavorableDay();
+    final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
+
+    if (nextDay == null || allFavorableDays.isEmpty) {
+      return const VibrationContent(
+        titulo: 'Sem Dias Favoráveis',
+        descricaoCurta: 'Nenhum dia favorável encontrado neste mês.',
+        descricaoCompleta:
+            'Este mês não apresenta alinhamentos com seus números principais. Ainda assim, intenção e preparo criam oportunidades.',
+        inspiracao: 'Cada dia é uma chance de criar sua própria sorte.',
+        tags: [],
+      );
+    }
+
+    final mensagemLonga = ContentData.textosDiasFavoraveisLongos[nextDay] ??
+        'Este é um dia alinhado com seus números principais.';
+
+    // Linha com números destacados (formatada para o modal)
+    final diasFormatados = allFavorableDays.join(', ');
+    final numerosList = '**Seus números são:** $diasFormatados';
+
+    final descricaoCompleta = '$numerosList\n\n$mensagemLonga';
+
+    return VibrationContent(
+      titulo: 'Dias Favoráveis',
+      descricaoCurta: ContentData.textosDiasFavoraveis[nextDay] ??
+          'Dia de energia especial para você.',
+      descricaoCompleta: descricaoCompleta,
+      inspiracao: 'Aproveite a energia destes dias especiais!',
+      tags: [],
+    );
   }
 
-  // Helpers vazios para compilar se os métodos reais não estiverem (mas pelo contexto, estão no código anterior e devem ser mantidos).
-  // Se você precisar dos métodos completos (Momentos, Lições, etc.), por favor use os que estavam no arquivo anterior.
-  // Aqui foquei na correção crítica dos DESAFIOS.
-
-  Map<int, String> _getLicoesCarmicasTexts(List<int> l) => {};
-  Map<int, String> _getLicoesCarmicasTitles(List<int> l) => {};
-  Map<int, String> _getDebitosCarmicosTexts(List<int> l) => {};
-  Map<int, String> _getDebitosCarmicosTitles(List<int> l) => {};
-  Map<int, String> _getTendenciasOcultasTexts(List<int> l) => {};
-  Map<int, String> _getTendenciasOcultasTitles(List<int> l) => {};
-  int? _getNextFavorableDay() => 1;
-
-  Widget _buildDesktopLayout() {
-    return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      if (_userData != null)
-        DashboardSidebar(
-            isExpanded: _isDesktopSidebarExpanded,
-            selectedIndex: _sidebarIndex,
-            userData: _userData!,
-            onDestinationSelected: _navigateToPage),
-      Expanded(child: _buildCurrentPage())
-    ]);
+  String _getMonthName(int month) {
+    const months = [
+      '',
+      'Janeiro',
+      'Fevereiro',
+      'Março',
+      'Abril',
+      'Maio',
+      'Junho',
+      'Julho',
+      'Agosto',
+      'Setembro',
+      'Outubro',
+      'Novembro',
+      'Dezembro'
+    ];
+    return months[month];
   }
 
-  Widget _buildMobileLayout() {
-    return Stack(children: [
-      GestureDetector(
-          onTap: () {
-            if (_isMobileDrawerOpen)
-              setState(() {
-                _isMobileDrawerOpen = false;
-                _menuAnimationController.reverse();
-              });
-          },
-          onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
-              ? null
-              : _openReorderModal,
-          child: _buildCurrentPage()),
-      if (_isMobileDrawerOpen)
-        GestureDetector(
-            onTap: () {
-              setState(() {
-                _isMobileDrawerOpen = false;
-                _menuAnimationController.reverse();
-              });
-            },
-            child: Container(color: Colors.black.withValues(alpha: 0.5))),
-      AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          top: 0,
-          bottom: 0,
-          left: _isMobileDrawerOpen ? 0 : -280,
-          width: 280,
-          child: _userData != null
-              ? DashboardSidebar(
-                  isExpanded: true,
-                  selectedIndex: _sidebarIndex,
-                  userData: _userData!,
-                  onDestinationSelected: _navigateToPage)
-              : const SizedBox.shrink())
-    ]);
+  int _reduzirLocal(int n) {
+    while (n > 9) {
+      n = n.toString().split('').map(int.parse).reduce((a, b) => a + b);
+    }
+    return n;
   }
 
-  Widget _buildCurrentPage() {
-    if (_isLoading && _cards.isEmpty)
-      return const Center(child: CustomLoadingSpinner());
-    if (_userData == null)
-      return const Center(
-          child:
-              Text("Erro ao carregar.", style: TextStyle(color: Colors.red)));
-    return IndexedStack(index: _sidebarIndex, children: [
-      _buildDashboardContent(
-          isDesktop: MediaQuery.of(context).size.width > 800),
-      _userData != null
-          ? CalendarScreen(userData: _userData!)
-          : const SizedBox(),
-      _userData != null
-          ? JournalScreen(userData: _userData!)
-          : const SizedBox(),
-      _userData != null
-          ? FocoDoDiaScreen(userData: _userData!)
-          : const SizedBox(),
-      _userData != null ? GoalsScreen(userData: _userData!) : const SizedBox()
-    ]);
+  /// Builder para Ciclos de Vida: versão curta (card) mostra apenas o ciclo atual, versão completa mostra todos os ciclos com intervalos.
+  VibrationContent _buildCiclosDeVidaContent(
+      Map<String, dynamic> ciclos, int idadeAtual) {
+    // Identifica ciclo atual
+    Map<String, dynamic>? cicloAtual;
+    for (final key in ['ciclo1', 'ciclo2', 'ciclo3']) {
+      final ciclo = ciclos[key];
+      if (ciclo == null) continue;
+      final idadeInicio = ciclo['idadeInicio'] ?? 0;
+      final idadeFim = ciclo['idadeFim'] ?? 200;
+      if (idadeAtual >= idadeInicio && idadeAtual < idadeFim) {
+        cicloAtual = ciclo;
+        break;
+      }
+      // Para ciclo1, que só tem idadeFim
+      if (key == 'ciclo1' && idadeAtual < (ciclo['idadeFim'] ?? 0)) {
+        cicloAtual = ciclo;
+        break;
+      }
+    }
+    cicloAtual ??= ciclos['ciclo3'] ?? ciclos['ciclo2'] ?? ciclos['ciclo1'];
+
+    // Card: só ciclo atual
+    final regente = cicloAtual?['regente'] ?? 0;
+    final nome = cicloAtual?['nome'] ?? '';
+    final idadeIni = cicloAtual?['idadeInicio'];
+    final idadeFim = cicloAtual?['idadeFim'];
+    String intervalo = '';
+    if (idadeIni != null && idadeFim != null) {
+      intervalo = '$idadeIni a $idadeFim anos';
+    } else if (idadeFim != null) {
+      intervalo = 'até $idadeFim anos';
+    } else if (idadeIni != null) {
+      intervalo = 'a partir de $idadeIni anos';
+    }
+    final titulo = nome; // Removido o número do título do card
+    final conteudoCiclo = _getCicloDeVidaContent(regente);
+    // Remover número antes do texto: texto curto + nova linha + intervalo destacado
+    final descricaoCurta = '${conteudoCiclo.descricaoCurta}\n\n$intervalo';
+
+    // Modal: todos os ciclos com subtítulos destacados
+    final buffer = StringBuffer();
+    for (final key in ['ciclo1', 'ciclo2', 'ciclo3']) {
+      final ciclo = ciclos[key];
+      if (ciclo == null) continue;
+      final reg = ciclo['regente'] ?? 0;
+      final nm = ciclo['nome'] ?? '';
+      final per = ciclo['periodo'] ?? '';
+      final idIni = ciclo['idadeInicio'];
+      final idFim = ciclo['idadeFim'];
+      String intv = '';
+      if (idIni != null && idFim != null) {
+        intv = '$idIni a $idFim anos';
+      } else if (idFim != null) {
+        intv = 'até $idFim anos';
+      } else if (idIni != null) {
+        intv = 'a partir de $idIni anos';
+      }
+      // Subtítulo destacado: Nome + Número
+      buffer.writeln('**$nm $reg**');
+      // Período destacado em nova linha
+      buffer.writeln('*$intv*');
+      buffer.writeln('Período: $per\n');
+      final conteudo = _getCicloDeVidaContent(reg);
+      buffer.writeln(conteudo.descricaoCompleta);
+      buffer.writeln('');
+    }
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: descricaoCurta,
+      descricaoCompleta: buffer.toString().trim(),
+      inspiracao: conteudoCiclo.inspiracao,
+      tags: conteudoCiclo.tags,
+    );
   }
 
-  Widget _buildDashboardContent({required bool isDesktop}) {
-    if (_isLoading) return const Center(child: CustomLoadingSpinner());
-    if (_cards.isEmpty) return const Center(child: Text("Nenhum card."));
-    if (!isDesktop)
-      return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 80),
-          itemCount: _cards.length,
-          itemBuilder: (ctx, i) => Padding(
-              key: _cards[i].key,
-              padding: const EdgeInsets.only(bottom: 20.0),
-              child: _cards[i]));
-    final w = MediaQuery.of(context).size.width;
-    final cols = w > 1300 ? 3 : (w > 850 ? 2 : 1);
-    return ScrollConfiguration(
-        behavior: MyCustomScrollBehavior(),
-        child: ListView(padding: const EdgeInsets.all(24), children: [
-          MasonryGridView.count(
-              key: _masonryGridKey,
-              crossAxisCount: cols,
-              mainAxisSpacing: 24,
-              crossAxisSpacing: 24,
-              itemCount: _cards.length,
-              itemBuilder: (ctx, i) => _cards[i],
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics()),
-          const SizedBox(height: 60)
-        ]));
+  /// Builder para Desafios: versão curta (card) mostra apenas o desafio atual, versão completa mostra todos os desafios com intervalos.
+  VibrationContent _buildDesafiosContent(
+      Map<String, dynamic> desafios, int idadeAtual) {
+    // Extrai os mapas dos desafios
+    final desafio1 = desafios['desafio1'] as Map<String, dynamic>? ?? {};
+    final desafio2 = desafios['desafio2'] as Map<String, dynamic>? ?? {};
+    final desafioPrincipal =
+        desafios['desafioPrincipal'] as Map<String, dynamic>? ?? {};
+
+    // Valores
+    final valor1 = desafio1['valor'] ?? 0;
+    final valor2 = desafio2['valor'] ?? 0;
+    final valorPrincipal = desafioPrincipal['valor'] ?? 0;
+
+    // Períodos
+    final periodo1 = desafio1['periodo'] ?? '';
+    final periodo2 = desafio2['periodo'] ?? '';
+    final periodoPrincipal = desafioPrincipal['periodo'] ?? '';
+
+    // Nomes
+    final nome1 = desafio1['nome'] ?? 'Primeiro Desafio';
+    final nome2 = desafio2['nome'] ?? 'Terceiro Desafio';
+    final nomePrincipal = desafioPrincipal['nome'] ?? 'Desafio Principal';
+
+    // Identifica desafio atual
+    int desafioAtualValor;
+    String nomeAtual;
+    String periodoAtual;
+    if (idadeAtual < (desafio1['idadeFim'] ?? 0)) {
+      desafioAtualValor = valor1;
+      nomeAtual = nome1;
+      periodoAtual = periodo1;
+    } else if (desafio2.containsKey('idadeInicio') &&
+        idadeAtual < (desafio2['idadeFim'] ?? 0)) {
+      desafioAtualValor = valorPrincipal;
+      nomeAtual = nomePrincipal;
+      periodoAtual = periodoPrincipal;
+    } else {
+      desafioAtualValor = valor2;
+      nomeAtual = nome2;
+      periodoAtual = periodo2;
+    }
+
+    final titulo = nomeAtual;
+    final conteudoDesafio = _getDesafioContent(desafioAtualValor);
+    final descricaoCurta = '${conteudoDesafio.descricaoCurta}\n\n$periodoAtual';
+
+    // Modal: todos os desafios com subtítulos destacados e períodos reais
+    final buffer = StringBuffer();
+    buffer.writeln('**$nome1 $valor1**');
+    buffer.writeln('*$periodo1*\n');
+    final cont1 = _getDesafioContent(valor1);
+    buffer.writeln(cont1.descricaoCompleta);
+    buffer.writeln('');
+
+    buffer.writeln('**$nomePrincipal $valorPrincipal**');
+    buffer.writeln('*$periodoPrincipal*\n');
+    final contPrinc = _getDesafioContent(valorPrincipal);
+    buffer.writeln(contPrinc.descricaoCompleta);
+    buffer.writeln('');
+
+    buffer.writeln('**$nome2 $valor2**');
+    buffer.writeln('*$periodo2*\n');
+    final cont2 = _getDesafioContent(valor2);
+    buffer.writeln(cont2.descricaoCompleta);
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: descricaoCurta,
+      descricaoCompleta: buffer.toString().trim(),
+      inspiracao: conteudoDesafio.inspiracao,
+      tags: conteudoDesafio.tags,
+    );
   }
 
-  void _openReorderModal() {
-    if (!mounted || _userData == null) return;
-    setState(() => _isEditMode = true);
-    showModalBottomSheet(
+  /// Builder para Momentos Decisivos: versão curta (card) mostra apenas o momento atual, versão completa mostra todos os momentos com intervalos.
+  VibrationContent _buildMomentosDecisivosContent(
+      Map<String, dynamic> momentos, int idadeAtual) {
+    // Extrai estrutura completa do engine
+    Map<String, dynamic> _asMap(dynamic v) =>
+        (v is Map<String, dynamic>) ? v : <String, dynamic>{};
+
+    final p1 = _asMap(momentos['p1']);
+    final p2 = _asMap(momentos['p2']);
+    final p3 = _asMap(momentos['p3']);
+    final p4 = _asMap(momentos['p4']);
+
+    final p1Reg = (p1['regente'] ?? 0) as int;
+    final p2Reg = (p2['regente'] ?? 0) as int;
+    final p3Reg = (p3['regente'] ?? 0) as int;
+    final p4Reg = (p4['regente'] ?? 0) as int;
+
+    final p1Periodo = (p1['periodo'] ?? '') as String;
+    final p2Periodo = (p2['periodo'] ?? '') as String;
+    final p3Periodo = (p3['periodo'] ?? '') as String;
+    final p4Periodo = (p4['periodo'] ?? '') as String;
+
+    int anoAtual = DateTime.now().year;
+    String periodoAtual = '';
+    int momentoAtual = p4Reg;
+    String nomeAtual = 'Quarto Momento Decisivo';
+
+    bool _inPeriodo(Map<String, dynamic> p) {
+      final inicio = p['inicioAno'] as int?;
+      final fim = p['fimAno'] as int?; // null para P4
+      if (inicio == null) return false;
+      if (fim == null) return anoAtual >= inicio;
+      return anoAtual >= inicio && anoAtual < fim;
+    }
+
+    if (_inPeriodo(p1)) {
+      momentoAtual = p1Reg;
+      nomeAtual = 'Primeiro Momento Decisivo';
+      periodoAtual = p1Periodo;
+    } else if (_inPeriodo(p2)) {
+      momentoAtual = p2Reg;
+      nomeAtual = 'Segundo Momento Decisivo';
+      periodoAtual = p2Periodo;
+    } else if (_inPeriodo(p3)) {
+      momentoAtual = p3Reg;
+      nomeAtual = 'Terceiro Momento Decisivo';
+      periodoAtual = p3Periodo;
+    } else {
+      momentoAtual = p4Reg;
+      nomeAtual = 'Quarto Momento Decisivo';
+      periodoAtual = p4Periodo;
+    }
+
+    final titulo = nomeAtual;
+    final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
+    // Card: texto curto + nova linha + período destacado (igual ao card Desafios)
+    final descricaoCurta = '${conteudoMomento.descricaoCurta}\n\n$periodoAtual';
+
+    // Modal com períodos exatos
+    final buffer = StringBuffer();
+
+    buffer.writeln('**Primeiro Momento Decisivo $p1Reg**');
+    buffer.writeln('*$p1Periodo*\n');
+    final cont1 = _getMomentoDecisivoContent(p1Reg);
+    buffer.writeln(cont1.descricaoCompleta);
+    buffer.writeln('');
+
+    buffer.writeln('**Segundo Momento Decisivo $p2Reg**');
+    buffer.writeln('*$p2Periodo*\n');
+    final cont2 = _getMomentoDecisivoContent(p2Reg);
+    buffer.writeln(cont2.descricaoCompleta);
+    buffer.writeln('');
+
+    buffer.writeln('**Terceiro Momento Decisivo $p3Reg**');
+    buffer.writeln('*$p3Periodo*\n');
+    final cont3 = _getMomentoDecisivoContent(p3Reg);
+    buffer.writeln(cont3.descricaoCompleta);
+    buffer.writeln('');
+
+    buffer.writeln('**Quarto Momento Decisivo $p4Reg**');
+    buffer.writeln('*$p4Periodo*\n');
+    final cont4 = _getMomentoDecisivoContent(p4Reg);
+    buffer.writeln(cont4.descricaoCompleta);
+
+    return VibrationContent(
+      titulo: titulo,
+      descricaoCurta: descricaoCurta,
+      descricaoCompleta: buffer.toString().trim(),
+      inspiracao: conteudoMomento.inspiracao,
+      tags: conteudoMomento.tags,
+    );
+  }
+
+  /// Abre o modal de detalhes numerológicos de forma responsiva
+  /// Desktop: Modal centralizado
+  /// Mobile: Tela completa
+  void _showNumerologyDetail({
+    required String title,
+    String? number, // Agora opcional - não usado para cards multi-número
+    required VibrationContent content,
+    required Color color,
+    required IconData icon,
+    String? categoryIntro,
+  }) {
+    final isDesktop = MediaQuery.of(context).size.width > 600;
+
+    if (isDesktop) {
+      // Desktop: showDialog
+      showDialog(
         context: context,
-        backgroundColor: Colors.transparent,
-        isScrollControlled: true,
-        builder: (ctx) => DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            builder: (_, sc) => ReorderDashboardModal(
-                userId: _userData!.uid,
-                initialOrder: List.from(_userData!.dashboardCardOrder),
-                initialHidden: _userData!.dashboardHiddenCards,
-                scrollController: sc,
-                onSaveComplete: (s) {
-                  Navigator.pop(ctx);
-                  if (s) _reloadDataNonStream();
-                })));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    bool isDesktop = MediaQuery.of(context).size.width > 800;
-    return Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: CustomAppBar(
-            userData: _userData,
-            menuAnimationController: _menuAnimationController,
-            isEditMode: _isEditMode,
-            onEditPressed:
-                (_sidebarIndex == 0 && !_isLoading) ? _openReorderModal : null,
-            onMenuPressed: () => setState(() {
-                  if (isDesktop)
-                    _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
-                  else
-                    _isMobileDrawerOpen = !_isMobileDrawerOpen;
-                })),
-        body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
-        floatingActionButton: (_userData != null &&
-                _sidebarIndex == 0 &&
-                _userData!.subscription.plan == SubscriptionPlan.premium)
-            ? ExpandingAssistantFab(
-                onOpenAssistant: () => showModalBottomSheet(
-                    context: context,
-                    backgroundColor: Colors.transparent,
-                    isScrollControlled: true,
-                    builder: (_) => AssistantPanel(userData: _userData!)))
-            : null);
-  }
-
-  void _showNumerologyDetail(
-      {required String title,
-      String? number,
-      required VibrationContent content,
-      required Color color,
-      required IconData icon,
-      String? categoryIntro}) {
-    showDialog(
-        context: context,
-        builder: (ctx) => NumerologyDetailModal(
+        builder: (context) => NumerologyDetailModal(
+          title: title,
+          number: number,
+          content: content,
+          color: color,
+          icon: icon,
+          categoryIntro: categoryIntro,
+        ),
+      );
+    } else {
+      // Mobile: Navigator push full screen
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => NumerologyDetailModal(
             title: title,
             number: number,
             content: content,
             color: color,
             icon: icon,
-            categoryIntro: categoryIntro));
+            categoryIntro: categoryIntro,
+          ),
+        ),
+      );
+    }
   }
-}
+
+  Widget _buildCurrentPage() {
+    if (_isLoading && _cards.isEmpty && !_isUpdatingLayout) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+    if (_userData == null && !_isLoading) {
+      return const Center(
+          child: Text("Erro ao carregar dados do usuário.",
+              style: TextStyle(color: Colors.red)));
+    }
+    if (!_isLoading &&
+        _userData != null &&
+        _cards.isEmpty &&
+        _sidebarIndex == 0 &&
+        !_isUpdatingLayout) {
+      return const Center(
+          child: Text("Nenhum card para exibir.",
+              style: TextStyle(color: AppColors.secondaryText)));
+    }
+
+    return IndexedStack(
+      index: _sidebarIndex,
+      children: [
+        _buildDashboardContent(
+            isDesktop: MediaQuery.of(context).size.width > 800),
+        _userData != null
+            ? CalendarScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 1
+        _userData != null
+            ? JournalScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 2
+        _userData != null
+            ? FocoDoDiaScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 3
+        _userData != null
+            ? GoalsScreen(userData: _userData!)
+            : const Center(child: CustomLoadingSpinner()), // Aba 4
+      ],
+    );
+  }
+
+  void _openReorderModal() {
+    if (!mounted || _userData == null || _isUpdatingLayout) return;
+    final BuildContext currentContext = context;
+    setState(() => _isEditMode = true);
+
+    showModalBottomSheet<void>(
+      context: currentContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) {
+          final currentOrder = List<String>.from(_userData!.dashboardCardOrder);
+          return ReorderDashboardModal(
+            userId: _userData!.uid,
+            initialOrder: currentOrder,
+            initialHidden: _userData!.dashboardHiddenCards,
+            scrollController: scrollController,
+            onSaveComplete: (bool success) async {
+              if (!mounted) return;
+              try {
+                Navigator.of(currentContext).pop();
+              } catch (e) {
+                debugPrint("Erro ao fechar modal: $e");
+              }
+              await Future.delayed(const Duration(milliseconds: 50));
+              if (!mounted) return;
+
+              if (success) {
+                setState(() => _isUpdatingLayout = true);
+                await _reloadDataNonStream(rebuildCards: true);
+                await Future.delayed(const Duration(milliseconds: 100));
+                if (mounted) {
+                  setState(() {
+                    _masonryGridKey = UniqueKey();
+                    _isUpdatingLayout = false;
+                    _isEditMode = false;
+                  });
+                }
+              } else {
+                if (mounted) setState(() => _isEditMode = false);
+              }
+            },
+          );
+        },
+      ),
+    ).whenComplete(() {
+      if (mounted && (_isEditMode || _isUpdatingLayout)) {
+        setState(() {
+          _isEditMode = false;
+          _isUpdatingLayout = false;
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width > 800;
+    Widget? fab;
+    if (_userData != null &&
+        _userData!.subscription.isActive &&
+        _userData!.subscription.plan == SubscriptionPlan.premium) {
+      switch (_sidebarIndex) {
+        case 0: // Dashboard: chat e mic
+          fab = ExpandingAssistantFab(
+            onOpenAssistant: () {
+              if (_userData == null) return;
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (_) => AssistantPanel(userData: _userData!),
+              );
+            },
+          );
+          break;
+        case 1: // Calendar: usa o FAB nativo da tela CalendarScreen
+          fab =
+              null; // O CalendarScreen já tem seu próprio FAB com acesso ao _selectedDay
+          break;
+        case 2: // Journal: usa o FAB nativo da tela JournalScreen
+          fab = null; // O JournalScreen já tem seu próprio FAB
+          break;
+        case 3: // Foco do Dia: usa o FAB nativo da tela FocoDoDiaScreen
+          fab = null; // O FocoDoDiaScreen já tem seu próprio FAB
+          break;
+        case 4: // Goals: usa o FAB nativo da tela GoalsScreen
+          fab = null; // O GoalsScreen já tem seu próprio FAB
+          break;
+        default:
+          fab = null;
+      }
+    }
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: CustomAppBar(
+        userData: _userData,
+        menuAnimationController: _menuAnimationController,
+        isEditMode: _isEditMode,
+        onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+            ? _openReorderModal
+            : null,
+        onMenuPressed: () {
+          setState(() {
+            if (isDesktop) {
+              _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
+              _isDesktopSidebarExpanded
+                  ? _menuAnimationController.forward()
+                  : _menuAnimationController.reverse();
+            } else {
+              _isMobileDrawerOpen = !_isMobileDrawerOpen;
+              _isMobileDrawerOpen
+                  ? _menuAnimationController.forward()
+                  : _menuAnimationController.reverse();
+            }
+          });
+        },
+      ),
+      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      floatingActionButton: fab,
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_userData != null)
+          DashboardSidebar(
+              isExpanded: _isDesktopSidebarExpanded,
+              selectedIndex: _sidebarIndex,
+              userData: _userData!,
+              onDestinationSelected: _navigateToPage),
+        Expanded(child: _buildCurrentPage()),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    const double sidebarWidth = 280;
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: () {
+            if (_isMobileDrawerOpen) {
+              setState(() {
+                _isMobileDrawerOpen = false;
+                _menuAnimationController.reverse();
+              });
+            }
+          },
+          onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
+              ? null
+              : _openReorderModal,
+          child: _buildCurrentPage(),
+        ),
+        if (_isMobileDrawerOpen)
+          GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isMobileDrawerOpen = false;
+                  _menuAnimationController.reverse();
+                });
+              },
+              child: Container(color: Colors.black.withValues(alpha: 0.5))),
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          top: 0,
+          bottom: 0,
+          left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
+          width: sidebarWidth,
+          child: _userData != null
+              ? DashboardSidebar(
+                  isExpanded: true,
+                  selectedIndex: _sidebarIndex,
+                  userData: _userData!,
+                  onDestinationSelected: (index) {
+                    _navigateToPage(index);
+                  },
+                )
+              : const SizedBox.shrink(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDashboardContent({required bool isDesktop}) {
+    if (_isLoading && _cards.isEmpty) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+    if (_isUpdatingLayout) {
+      return const Center(child: CustomLoadingSpinner());
+    }
+    if (!_isLoading && !_isUpdatingLayout && _cards.isEmpty) {
+      return const Center(
+          child: Text("Nenhum card para exibir.",
+              style: TextStyle(color: AppColors.secondaryText)));
+    }
+
+    if (!isDesktop) {
+      return ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 80),
+        itemCount: _cards.length,
+        itemBuilder: (context, index) {
+          final itemWidget = _cards[index];
+          return Padding(
+              key: itemWidget.key ?? ValueKey('card_$index'),
+              padding: const EdgeInsets.only(bottom: 20.0),
+              child: itemWidget);
+        },
+      );
+    } else {
+      final screenWidth = MediaQuery.of(context).size.width;
+      const double spacing = 24.0;
+      final sidebarWidth = _isDesktopSidebarExpanded ? 250.0 : 80.0;
+      final availableWidth = screenWidth - sidebarWidth - (spacing * 2);
+      int crossAxisCount = 1;
+      if (availableWidth > 1300) {
+        crossAxisCount = 3;
+      } else if (availableWidth > 850) {
+        crossAxisCount = 2;
+      }
+      crossAxisCount = crossAxisCount.clamp(1, _cards.length);
+
+      return ScrollConfiguration(
+        behavior: MyCustomScrollBehavior(),
+        child: ListView(
+          padding: const EdgeInsets.all(spacing),
+          children: [
+            MasonryGridView.count(
+              key: _masonryGridKey,
+              crossAxisCount: crossAxisCount,
+              mainAxisSpacing: spacing,
+              crossAxisSpacing: spacing,
+              itemCount: _cards.length,
+              itemBuilder: (context, index) {
+                return _cards[index];
+              },
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+            ),
+            const SizedBox(height: 60),
+          ],
+        ),
+      );
+    }
+  }
+} // Fim da classe _DashboardScreenState

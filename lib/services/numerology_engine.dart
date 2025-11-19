@@ -7,7 +7,7 @@ class NumerologyResult {
   final int idade;
   final Map<String, int> numeros;
   final Map<String, dynamic> estruturas;
-  final Map<String, dynamic> listas;
+  final Map<String, dynamic> listas; // NOVO: lições, débitos, tendências, etc.
 
   NumerologyResult({
     required this.idade,
@@ -21,6 +21,7 @@ class NumerologyEngine {
   // Tabela completa dos dias básicos por dia/mês
   static const Map<int, Map<int, List<int>>> _diasBasicosTabelaCompleta = {
     1: {
+      // Janeiro
       1: [1, 5],
       2: [1, 6],
       3: [3, 6],
@@ -54,6 +55,7 @@ class NumerologyEngine {
       31: [2, 7]
     },
     2: {
+      // Fevereiro
       1: [1, 5],
       2: [2, 7],
       3: [3, 6],
@@ -87,6 +89,7 @@ class NumerologyEngine {
       31: [1, 7]
     },
     3: {
+      // Março
       1: [1, 7],
       2: [2, 7],
       3: [3, 6],
@@ -120,6 +123,7 @@ class NumerologyEngine {
       31: [1, 5]
     },
     4: {
+      // Abril
       1: [1, 7],
       2: [1, 7],
       3: [3, 9],
@@ -153,6 +157,7 @@ class NumerologyEngine {
       31: [1, 3]
     },
     5: {
+      // Maio
       1: [1, 2],
       2: [2, 7],
       3: [3, 6],
@@ -186,6 +191,7 @@ class NumerologyEngine {
       31: [1, 5]
     },
     6: {
+      // Junho
       1: [1, 5],
       2: [2, 7],
       3: [5, 6],
@@ -219,6 +225,7 @@ class NumerologyEngine {
       31: [1, 5]
     },
     7: {
+      // Julho
       1: [1, 2],
       2: [2, 7],
       3: [2, 3],
@@ -252,6 +259,7 @@ class NumerologyEngine {
       31: [1, 7]
     },
     8: {
+      // Agosto
       1: [1, 2],
       2: [1, 5],
       3: [3, 6],
@@ -285,6 +293,7 @@ class NumerologyEngine {
       31: [1, 5]
     },
     9: {
+      // Setembro
       1: [1, 5],
       2: [2, 5],
       3: [3, 6],
@@ -318,6 +327,7 @@ class NumerologyEngine {
       31: [1, 5]
     },
     10: {
+      // Outubro
       1: [2, 7],
       2: [2, 7],
       3: [3, 6],
@@ -351,6 +361,7 @@ class NumerologyEngine {
       31: [1, 3]
     },
     11: {
+      // Novembro
       1: [1, 7],
       2: [1, 7],
       3: [3, 9],
@@ -384,6 +395,7 @@ class NumerologyEngine {
       31: [1, 7]
     },
     12: {
+      // Dezembro
       1: [1, 7],
       2: [2, 7],
       3: [3, 6],
@@ -453,32 +465,14 @@ class NumerologyEngine {
   NumerologyEngine({required this.nomeCompleto, required this.dataNascimento});
 
   static const Map<String, int> _tabelaConversao = {
-    'A': 1,
-    'I': 1,
-    'Q': 1,
-    'J': 1,
-    'Y': 1,
-    'B': 2,
-    'K': 2,
-    'R': 2,
-    'C': 3,
-    'G': 3,
-    'L': 3,
-    'S': 3,
-    'D': 4,
-    'M': 4,
-    'T': 4,
-    'X': 4,
-    'E': 5,
-    'H': 5,
-    'N': 5,
-    'U': 6,
-    'V': 6,
-    'W': 6,
-    'O': 7,
-    'Z': 7,
-    'F': 8,
-    'P': 8,
+    'A': 1, 'I': 1, 'Q': 1, 'J': 1, 'Y': 1,
+    'B': 2, 'K': 2, 'R': 2,
+    'C': 3, 'G': 3, 'L': 3, 'S': 3,
+    'D': 4, 'M': 4, 'T': 4, 'X': 4, // Adicionado 'X'
+    'E': 5, 'H': 5, 'N': 5,
+    'U': 6, 'V': 6, 'W': 6,
+    'O': 7, 'Z': 7,
+    'F': 8, 'P': 8,
   };
 
   int _reduzirNumero(int n, {bool mestre = false}) {
@@ -492,6 +486,7 @@ class NumerologyEngine {
   }
 
   int _calcularValor(String letra) {
+    // Implementação simples anterior não suportava diacríticos aumentados; mantemos ajuste mestre.
     final upper = letra.toUpperCase();
     if (upper == 'Ç') return 6;
     int base = _tabelaConversao[upper
@@ -591,11 +586,16 @@ class NumerologyEngine {
     };
   }
 
+  // REMOVIDO: Funções de Arcanos (_calcularTrianguloDaVida e _calcularArcanoAtual) – não fazem mais parte do modelo numerológico atual.
+
+  // === NOVOS MÉTODOS DE CÁLCULO (baseados no JS) ===
+
   int _calcularNumeroExpressao() {
     final nomeLimpo = nomeCompleto.replaceAll(RegExp(r'\s+'), '');
     int soma = nomeLimpo.split('').fold(0, (acc, l) => acc + _calcularValor(l));
     int e = _reduzirNumero(soma, mestre: true);
     if (e == 2 || e == 4) {
+      // Regra do mestre: somar por palavra reduzida
       final palavras = nomeCompleto.split(RegExp(r'\s+'));
       int totalPalavras = 0;
       for (final p in palavras) {
@@ -629,6 +629,7 @@ class NumerologyEngine {
         soma += _calcularValor(letra);
       }
     }
+    // Número de Impressão não preserva mestres (11/22 devem ser reduzidos)
     return _reduzirNumero(soma, mestre: false);
   }
 
@@ -636,78 +637,35 @@ class NumerologyEngine {
     return _reduzirNumero(motivacao + expressao);
   }
 
+  // Número Psíquico: redução do dia de nascimento (1–9)
   int _calcularNumeroPsiquico(DateTime dataNasc) {
     return _reduzirNumero(dataNasc.day);
   }
 
-  // ==========================================================================
-  // CÁLCULO CORRIGIDO DOS DESAFIOS
-  // Regra: 11 e 22 reduzidos (mestre: false).
-  // Coincidem com os Ciclos de Vida (datas e durações).
-  // ==========================================================================
-  Map<String, dynamic> _calcularDesafios(DateTime dataNasc, int numeroDestino) {
-    // Reduzindo dia, mês e ano com mestre: false (obrigatório para desafios)
-    final diaR = _reduzirNumero(dataNasc.day, mestre: false);
-    final mesR = _reduzirNumero(dataNasc.month, mestre: false);
-    final anoR = _reduzirNumero(dataNasc.year, mestre: false);
-
-    // Cálculo dos valores
+  // Desafio Principal (0–8): |mês reduzido - dia reduzido|
+  // Desafios: desafio1=|mes-dia|, desafio2=|ano-dia|, principal=|d1-d2|
+  Map<String, int> _calcularDesafios(DateTime dataNasc) {
+    final diaR = _reduzirNumero(dataNasc.day);
+    final mesR = _reduzirNumero(dataNasc.month);
+    final anoR = _reduzirNumero(dataNasc.year);
     final d1 = (mesR - diaR).abs();
     final d2 = (anoR - diaR).abs();
     final principal = (d1 - d2).abs();
-
-    // Cálculo dos Períodos (Sincronizado com Ciclos de Vida)
-    final formatador = DateFormat('dd/MM/yyyy');
-
-    // Fim do 1º Ciclo = 37 - Destino
-    final idadeFimCiclo1 = 37 - numeroDestino;
-
-    // Datas
-    final dataFim1 = DateTime(
-        dataNasc.year + idadeFimCiclo1, dataNasc.month, dataNasc.day - 1);
-
-    final idadeInicioCiclo2 = idadeFimCiclo1;
-    final idadeFimCiclo2 = idadeInicioCiclo2 + 27;
-    final dataInicio2 = DateTime(
-        dataNasc.year + idadeInicioCiclo2, dataNasc.month, dataNasc.day);
-    final dataFim2 = DateTime(
-        dataNasc.year + idadeFimCiclo2, dataNasc.month, dataNasc.day - 1);
-
-    final idadeInicioCiclo3 = idadeFimCiclo2;
-    final dataInicio3 = DateTime(
-        dataNasc.year + idadeInicioCiclo3, dataNasc.month, dataNasc.day);
-
     return {
-      // Estrutura completa para os Cards
-      'desafio1': {
-        'valor': d1,
-        'nome': '1º Desafio',
-        'periodo': 'Nascimento até ${formatador.format(dataFim1)}',
-        'idadeFim': idadeFimCiclo1
-      },
-      'desafio2': {
-        'valor': d2,
-        'nome': '2º Desafio',
-        'periodo':
-            '${formatador.format(dataInicio2)} a ${formatador.format(dataFim2)}',
-        'idadeInicio': idadeInicioCiclo2,
-        'idadeFim': idadeFimCiclo2
-      },
-      'desafioPrincipal': {
-        'valor': principal,
-        'nome': 'Desafio Principal',
-        'periodo':
-            'A partir de ${formatador.format(dataInicio3)} (e por toda a vida)',
-        'idadeInicio': idadeInicioCiclo3
-      },
-
-      // Mantendo compatibilidade com códigos antigos que acessam direto o valor (se houver)
-      'd1_valor': d1,
-      'd2_valor': d2,
-      'dm_valor': principal,
+      'desafio1': d1,
+      'desafio2': d2,
+      'desafioPrincipal': principal,
     };
   }
 
+  // Momentos Decisivos (Pinnacles): períodos e regentes conforme documento
+  // P1 = reduzir(mês + dia), P2 = reduzir(dia + ano),
+  // P3 = reduzir(P1 + P2), P4 = reduzir(mês + ano)
+  // Durações:
+  //  - P1: do ano de nascimento até (ano de nascimento + (37 - destino(1..9)))
+  //  - P2: 9 anos seguintes
+  //  - P3: 9 anos seguintes
+  //  - P4: resto da vida
   Map<String, dynamic> _calcularMomentosDecisivos(DateTime dataNasc) {
     final mesR = _reduzirNumero(dataNasc.month);
     final diaR = _reduzirNumero(dataNasc.day);
@@ -718,21 +676,23 @@ class NumerologyEngine {
     final p3Reg = _reduzirNumero(p1Reg + p2Reg, mestre: true);
     final p4Reg = _reduzirNumero(mesR + anoR, mestre: true);
 
+    // Destino com mestres preservados (1..9, 11, 22) para duração do 1º ciclo
     final destinoMestre = _reduzirNumero(
       dataNasc.day + dataNasc.month + dataNasc.year,
       mestre: true,
     );
-    final anosP1 = 37 - destinoMestre;
+    final anosP1 =
+        37 - destinoMestre; // ex.: 31/05/1991 => 11 -> 26 anos, até 2017
 
     final anoNasc = dataNasc.year;
     final p1Inicio = anoNasc;
-    final p1Fim = anoNasc + anosP1;
+    final p1Fim = anoNasc + anosP1; // exemplo: 1969 -> 2002
 
     final p2Inicio = p1Fim;
-    final p2Fim = p2Inicio + 9;
+    final p2Fim = p2Inicio + 9; // 9 anos
 
     final p3Inicio = p2Fim;
-    final p3Fim = p3Inicio + 9;
+    final p3Fim = p3Inicio + 9; // 9 anos
 
     final p4Inicio = p3Fim;
 
@@ -803,10 +763,12 @@ class NumerologyEngine {
     final debitos = <int>{};
     final diaNascimento = dataNasc.day;
 
+    // Débitos kármicos diretos do dia de nascimento
     if ([13, 14, 16, 19].contains(diaNascimento)) {
       debitos.add(diaNascimento);
     }
 
+    // Mapeamento: número -> débito kármico
     const Map<int, int> mapeamento = {4: 13, 5: 14, 7: 16, 1: 19};
 
     for (var numero in [destino, motivacao, expressao]) {
@@ -831,6 +793,7 @@ class NumerologyEngine {
     }
 
     final tendencias = <int>[];
+    // Tendência Oculta: aparece MAIS de três vezes (>=4 ocorrências)
     for (int i = 1; i <= 9; i++) {
       if ((contagem[i] ?? 0) >= 4) {
         tendencias.add(i);
@@ -902,6 +865,8 @@ class NumerologyEngine {
     return harmonias[missao] ?? {};
   }
 
+  // === FIM DOS NOVOS MÉTODOS ===
+
   NumerologyResult? calcular() {
     final dataNascDate = _parseDate(dataNascimento);
     if (nomeCompleto.isEmpty || dataNascDate == null) return null;
@@ -914,11 +879,9 @@ class NumerologyEngine {
     final missao = _reduzirNumero(expressao + destino, mestre: true);
     final talentoOculto = _calcularTalentoOculto(motivacao, expressao);
     final respostaSubconsciente = _calcularRespostaSubconsciente();
-    final diaNatalicio = dataNascDate.day;
+    final diaNatalicio = dataNascDate.day; // Dia de nascimento (1-31)
     final numeroPsiquico = _calcularNumeroPsiquico(dataNascDate);
-
-    // Agora passamos o destino para calcular os períodos corretamente
-    final desafios = _calcularDesafios(dataNascDate, destino);
+    final desafios = _calcularDesafios(dataNascDate);
 
     final ciclosDeVida = _calcularCiclosDeVida(destino);
 
@@ -930,6 +893,8 @@ class NumerologyEngine {
     } else {
       cicloDeVidaAtual = ciclosDeVida['ciclo3'];
     }
+
+    // Arcanos descontinuados: removidos do cálculo.
 
     final hoje = DateTime.now();
     final aniversarioJaPassou = hoje.month > dataNascDate.month ||
@@ -943,8 +908,10 @@ class NumerologyEngine {
         mesPessoal + _reduzirNumero(hoje.day, mestre: true),
         mestre: true);
 
+    // Momentos decisivos (pinnacles)
     final momentosDecisivos = _calcularMomentosDecisivos(dataNascDate);
 
+    // Cálculos de listas (lições, débitos, tendências)
     final licoesCarmicas = _calcularLicoesCarmicas();
     final debitosCarmicos =
         _calcularDebitosCarmicos(destino, motivacao, expressao);
@@ -966,17 +933,15 @@ class NumerologyEngine {
         'respostaSubconsciente': respostaSubconsciente,
         'diaNatalicio': diaNatalicio,
         'numeroPsiquico': numeroPsiquico,
+        // Aptidões Profissionais: utilizamos o número de Expressão como base
         'aptidoesProfissionais': expressao,
-        // Acesso seguro ao valor do desafio principal
-        'desafio': desafios['desafioPrincipal'] is Map
-            ? desafios['desafioPrincipal']['valor']
-            : (desafios['desafioPrincipal'] ?? 0),
+        'desafio': desafios['desafioPrincipal'] ?? 0,
       },
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
         'harmoniaConjugal': harmoniaConjugal,
-        'desafios': desafios, // Agora contém valores e períodos
+        'desafios': desafios,
         'momentosDecisivos': momentosDecisivos,
         'momentoDecisivoAtual': momentosDecisivos['atual'],
       },
@@ -988,10 +953,13 @@ class NumerologyEngine {
     );
   }
 
+  // --- MÉTODO NOVO ADICIONADO PARA O CALENDÁRIO ---
   int calculatePersonalDayForDate(DateTime date) {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return 0;
 
+    // Ano pessoal muda no aniversário. Se a data consultada ainda não
+    // alcançou o aniversário no ano corrente, usa-se (ano - 1).
     final aniversarioNoAno = DateTime(date.year, dataNasc.month, dataNasc.day);
     final anoParaCalculo =
         date.isBefore(aniversarioNoAno) ? date.year - 1 : date.year;
