@@ -1978,6 +1978,8 @@ class _DashboardScreenState extends State<DashboardScreen>
         _userData!.subscription.plan == SubscriptionPlan.premium) {
       switch (_sidebarIndex) {
         case 0: // Dashboard: chat e mic
+          // ATUALIZADO: Agora o FAB só tem a função de abrir o assistente,
+          // ativando o novo modo simples do ExpandingAssistantFab.
           fab = ExpandingAssistantFab(
             onOpenAssistant: () {
               if (_userData == null) return;
@@ -1986,13 +1988,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (_) => AssistantPanel(userData: _userData!),
-              );
-            },
-            onMic: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Entrada por voz chegará em breve.'),
-                ),
               );
             },
           );

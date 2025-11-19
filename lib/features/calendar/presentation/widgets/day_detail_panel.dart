@@ -53,94 +53,87 @@ class DayDetailPanel extends StatelessWidget {
     // A verificação "if (selectedDay == null)" foi REMOVIDA.
     // O widget agora pressupõe que 'selectedDay' é válido.
     // --- FIM DA CORREÇÃO ---
-
     final formattedDate = toBeginningOfSentenceCase(
         DateFormat("EEEE, 'dia' d", 'pt_BR').format(selectedDay));
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                // Garante que a data não estoure
-                child: Text(
-                  formattedDate, // Removido '!' desnecessário
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold),
-                  overflow:
-                      TextOverflow.ellipsis, // Evita quebra se muito longo
-                ),
-              ),
-              if (personalDayNumber != null && personalDayNumber! > 0)
-                Padding(
-                  // Adiciona padding para não colar no botão add
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: VibrationPill(vibrationNumber: personalDayNumber!),
-                ),
-              // --- MUDANÇA (TAREFA 1): Botão de adicionar tarefa removido ---
-              // IconButton(
-              //   icon: const Icon(Icons.add_circle_outline,
-              //       color: AppColors.primary),
-              //   tooltip:
-              //       'Adicionar Tarefa para ${DateFormat('dd/MM').format(selectedDay!)}',
-              //   onPressed: onAddTask,
-              // ),
-              // --- FIM MUDANÇA ---
-            ],
+    // --- INÍCIO DA MUDANÇA: Adiciona Container para o "Sheet" ---
+    // Envolvemos o conteúdo em um Container para dar a ele uma aparência
+    // de "gaveta" com cantos arredondados no topo.
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black38,
+            blurRadius: 10,
+            offset: Offset(0, -5),
           ),
-        ),
-        const Divider(height: 32, color: AppColors.border),
-        Expanded(
-          child: events.isEmpty
-              ? _buildEmptyStateMobile()
-              : ListView.separated(
-                  controller: scrollController,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                  shrinkWrap: true,
-                  itemCount: events.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: 0), // TaskItem controla o padding
-                  itemBuilder: (context, index) {
-                    final event = events[index];
-                    if (event is TaskModel) {
-                      // --- MUDANÇA: Usar onTaskTap e remover callbacks antigos ---
-                      return TaskItem(
-                        key: ValueKey('task_${event.id}'),
-                        task: event,
-                        onToggle: (isCompleted) =>
-                            onToggleTask(event, isCompleted),
-                        onTap: () =>
-                            onTaskTap(event), // Chama o callback principal
-                        // Flags de exibição (mantidos)
-                        showGoalIconFlag: true,
-                        showTagsIconFlag: true,
-                        showVibrationPillFlag: true,
-                        // Padding customizado (mantido)
-                        verticalPaddingOverride: 4.0,
-                      );
-                      // --- FIM MUDANÇA ---
-                    }
-                    // --- MUDANÇA (TAREFA 3): Bloco do JournalEntry removido ---
-                    // if (event is JournalEntry) {
-                    //   return _JournalListItem(
-                    //     key: ValueKey('journal_${event.id}'),
-                    //     entry: event,
-                    //     onTap: () => onJournalTap(event),
-                    //   );
-                    // }
-                    // --- FIM MUDANÇA ---
-                    return const SizedBox.shrink();
-                  },
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  // Garante que a data não estoure
+                  child: Text(
+                    formattedDate, // Removido '!' desnecessário
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                    overflow:
+                        TextOverflow.ellipsis, // Evita quebra se muito longo
+                  ),
                 ),
-        ),
-      ],
+                if (personalDayNumber != null && personalDayNumber! > 0)
+                  Padding(
+                    // Adiciona padding para não colar no botão add
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: VibrationPill(vibrationNumber: personalDayNumber!),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 32, color: AppColors.border),
+          Expanded(
+            child: events.isEmpty
+                ? _buildEmptyStateMobile()
+                : ListView.separated(
+                    controller: scrollController, // Usa o controller passado
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                    shrinkWrap: true,
+                    itemCount: events.length,
+                    separatorBuilder: (_, __) => const SizedBox(
+                        height: 0), // TaskItem controla o padding
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      if (event is TaskModel) {
+                        return TaskItem(
+                          key: ValueKey('task_${event.id}'),
+                          task: event,
+                          onToggle: (isCompleted) =>
+                              onToggleTask(event, isCompleted),
+                          onTap: () =>
+                              onTaskTap(event), // Chama o callback principal
+                          showGoalIconFlag: true,
+                          showTagsIconFlag: true,
+                          showVibrationPillFlag: true,
+                          verticalPaddingOverride: 4.0,
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+          ),
+        ],
+      ),
     );
   }
 

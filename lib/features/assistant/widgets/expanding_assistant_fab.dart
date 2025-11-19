@@ -32,6 +32,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   late Animation<double> _widthAnim;
   late Animation<double> _rotationAnim;
   bool _expanded = false;
+  bool _isSimpleButton = false;
   late double _expandedWidth;
 
   @override
@@ -42,12 +43,16 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       duration: const Duration(milliseconds: 300),
     );
 
+    // --- INÍCIO DA MUDANÇA: Lógica para botão simples ---
+    // Se apenas onOpenAssistant for fornecido, ele se torna um botão simples.
+    _isSimpleButton = widget.onPrimary == null && widget.onMic == null;
+
     // Calcula largura expandida baseada na quantidade de ações
     final int actionsCount = 1 + // chat
         (widget.onMic != null ? 1 : 0) +
         (widget.onPrimary != null ? 1 : 0); // mic?, [primary]
     _expandedWidth = _kFabHeight + // espaço do toggle (+/x)
-        _kOuterPad +
+        _kOuterPad + // padding esquerdo
         (actionsCount * _kIconSlot) +
         ((actionsCount > 0 ? actionsCount - 1 : 0) * _kGap);
 
@@ -59,11 +64,15 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     _rotationAnim = Tween<double>(begin: 0, end: 0.125).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
+    // --- FIM DA MUDANÇA ---
   }
 
   @override
   void didUpdateWidget(covariant ExpandingAssistantFab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Recalcula se o botão é simples ou não quando o widget é atualizado
+    _isSimpleButton = widget.onPrimary == null && widget.onMic == null;
+
     if (oldWidget.onPrimary != widget.onPrimary ||
         oldWidget.onMic != widget.onMic) {
       final int actionsCount = 1 +
@@ -94,6 +103,12 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   }
 
   void _toggle() {
+    // --- INÍCIO DA MUDANÇA: Ação direta para botão simples ---
+    if (_isSimpleButton) {
+      widget.onOpenAssistant();
+      return;
+    }
+    // --- FIM DA MUDANÇA ---
     setState(() => _expanded = !_expanded);
     if (_expanded) {
       _controller.forward();
@@ -104,6 +119,38 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 
   @override
   Widget build(BuildContext context) {
+    // --- INÍCIO DA MUDANÇA: Renderização do botão simples ---
+    if (_isSimpleButton) {
+      return SizedBox(
+        width: _kFabHeight,
+        height: _kFabHeight,
+        child: FloatingActionButton(
+          onPressed: widget.onOpenAssistant,
+          backgroundColor: AppColors.primaryAccent,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          tooltip: 'Abrir Sincro IA',
+          heroTag:
+              'simple_assistant_fab', // Tag única para evitar conflitos de Hero
+          child: const Icon(
+            Icons.smart_toy_outlined, // Ícone de robô/IA
+            size: 28,
+          ),
+        ),
+      );
+    }
+    // --- FIM DA MUDANÇA ---
+
+    // O código abaixo só será executado se NÃO for um botão simples.
+    return _buildExpandingWidget();
+  }
+
+  /// Constrói o widget expansível original.
+  /// O código original do `build` foi movido para cá.
+  Widget _buildExpandingWidget() {
     // Para garantir que o FAB muda conforme a página, cada tela deve instanciar com props diferentes
     // e não usar uma key fixa compartilhada.
     return AnimatedBuilder(
@@ -117,7 +164,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
             ? (actionsCount * _kIconSlot) + ((actionsCount - 1) * _kGap)
             : 0.0;
         final double availableContentWidth = _widthAnim.value -
-            _kFabHeight -
+            _kFabHeight - // largura do toggle
             _kOuterPad; // total - toggle - padding esquerdo
         final bool showActions = _expanded &&
             availableContentWidth >= actionsWidth; // só mostra quando cabe

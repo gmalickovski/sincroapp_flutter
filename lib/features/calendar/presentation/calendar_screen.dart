@@ -696,19 +696,30 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
           Expanded(
-            // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
-            // _selectedDay agora é um 'DateTime' não-nulo,
-            // então podemos passá-lo diretamente.
-            child: DayDetailPanel(
-              selectedDay: _selectedDay,
-              personalDayNumber: _personalDayNumber,
-              events: _getRawEventsForDay(_selectedDay),
-              isDesktop: false,
-              onAddTask: _openAddTaskModal,
-              onToggleTask: _onToggleTask,
-              onTaskTap: _handleTaskTap,
+            // --- INÍCIO DA MUDANÇA: Adiciona DraggableScrollableSheet ---
+            // Substituímos o DayDetailPanel direto por um DraggableScrollableSheet
+            // para permitir que o painel seja arrastado para cima.
+            child: DraggableScrollableSheet(
+              initialChildSize:
+                  0.45, // Tamanho inicial (45% da área disponível)
+              minChildSize: 0.45, // Tamanho mínimo (não pode encolher mais)
+              maxChildSize: 0.9, // Tamanho máximo (quase tela cheia)
+              builder: (context, scrollController) {
+                // O builder nos dá um scrollController que DEVE ser passado
+                // para o widget rolável dentro do sheet (o ListView do DayDetailPanel).
+                return DayDetailPanel(
+                  scrollController: scrollController, // Passa o controller
+                  selectedDay: _selectedDay,
+                  personalDayNumber: _personalDayNumber,
+                  events: _getRawEventsForDay(_selectedDay),
+                  isDesktop: false,
+                  onAddTask: _openAddTaskModal,
+                  onToggleTask: _onToggleTask,
+                  onTaskTap: _handleTaskTap,
+                );
+              },
             ),
-            // --- FIM DA CORREÇÃO ---
+            // --- FIM DA MUDANÇA ---
           ),
         ],
       );
