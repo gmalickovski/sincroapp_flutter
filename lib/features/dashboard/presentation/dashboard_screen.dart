@@ -820,32 +820,27 @@ class _DashboardScreenState extends State<DashboardScreen>
                         "As Aptidões Profissionais mostram áreas de maior potencial de atuação, talentos naturais e estilos de trabalho mais favoráveis. Aqui utilizamos a vibração da Expressão como referência prática.",
                   )),
           'desafios': InfoCard(
-              key: const ValueKey('desafios'),
-              title: "Desafio Pessoal",
-              number: (_numerologyData!.numeros['desafio'] ?? '-').toString(),
-              info: _buildDesafiosContent(
-                  _numerologyData!.estruturas['desafios']
-                          as Map<String, int>? ??
-                      {},
-                  _numerologyData!.idade),
-              icon: Icons.warning_amber_outlined,
+            // CARD CORRIGIDO
+            key: const ValueKey('desafios'),
+            title: "Desafio Pessoal",
+            number: (_numerologyData!.numeros['desafio'] ?? '-').toString(),
+            info: _getDesafioContent(_numerologyData!.numeros['desafio'] ??
+                0), // Lógica simplificada
+            icon: Icons.warning_amber_outlined,
+            color: Colors.orangeAccent.shade200,
+            isEditMode: _isEditMode,
+            dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
+            onTap: () => _showNumerologyDetail(
+              title: "Desafio Pessoal", // Título ajustado
+              number: (_numerologyData!.numeros['desafio'] ?? 0).toString(),
+              content: _getDesafioContent(_numerologyData!.numeros['desafio'] ??
+                  0), // Lógica simplificada
               color: Colors.orangeAccent.shade200,
-              isEditMode: _isEditMode,
-              dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
-              onTap: () => _showNumerologyDetail(
-                    title: "Desafios",
-                    number:
-                        (_numerologyData!.numeros['desafio'] ?? 0).toString(),
-                    content: _buildDesafiosContent(
-                        _numerologyData!.estruturas['desafios']
-                                as Map<String, int>? ??
-                            {},
-                        _numerologyData!.idade),
-                    color: Colors.orangeAccent.shade200,
-                    icon: Icons.warning_amber_outlined,
-                    categoryIntro:
-                        "Os Desafios representam áreas de crescimento e superação em diferentes fases da vida. Cada período tem seu próprio desafio específico.",
-                  )),
+              icon: Icons.warning_amber_outlined,
+              categoryIntro:
+                  "O Desafio Pessoal representa a principal lição que você veio aprender nesta vida. Superá-lo traz crescimento e equilíbrio.",
+            ),
+          ),
           'momentosDecisivos': InfoCard(
               key: const ValueKey('momentosDecisivos'),
               title: "Momento Decisivo",
@@ -1164,19 +1159,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             inspiracao: '');
   }
 
-  VibrationContent _getDesafioContent(int number) {
-    return ContentData.textosDesafios[number] ??
+  VibrationContent _getMomentoDecisivoContent(int number) {
+    return ContentData.textosMomentosDecisivos[number] ??
         const VibrationContent(
-            titulo: 'Desafio',
+            titulo: 'Momento Decisivo',
             descricaoCurta: '...',
             descricaoCompleta: '',
             inspiracao: '');
   }
 
-  VibrationContent _getMomentoDecisivoContent(int number) {
-    return ContentData.textosMomentosDecisivos[number] ??
+  // FUNÇÃO _getDesafioContent (MOVENDO PARA CÁ)
+  VibrationContent _getDesafioContent(int number) {
+    return ContentData.textosDesafios[number] ??
         const VibrationContent(
-            titulo: 'Momento Decisivo',
+            titulo: 'Desafio',
             descricaoCurta: '...',
             descricaoCompleta: '',
             inspiracao: '');
@@ -1733,79 +1729,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       descricaoCompleta: buffer.toString().trim(),
       inspiracao: conteudoCiclo.inspiracao,
       tags: conteudoCiclo.tags,
-    );
-  }
-
-  /// Builder para Desafios: versão curta (card) mostra apenas o desafio atual, versão completa mostra todos os desafios com intervalos.
-  VibrationContent _buildDesafiosContent(
-      Map<String, int> desafios, int idadeAtual) {
-    final desafioPrincipal = desafios['desafioPrincipal'] ?? 0;
-    final desafio1 = desafios['desafio1'] ?? 0;
-    final desafio2 = desafios['desafio2'] ?? 0;
-
-    // Cálculo dos períodos baseado nos ciclos de vida
-    final destino = _numerologyData?.numeros['destino'] ?? 1;
-    final idadeFimDesafio1 = 37 - destino;
-    final idadeFimDesafio2 = idadeFimDesafio1 + 9;
-    final idadeInicioDesafio3 = idadeFimDesafio2;
-
-    // Identifica desafio atual
-    int desafioAtual;
-    String nomeAtual;
-    String intervaloAtual;
-    if (idadeAtual < idadeFimDesafio1) {
-      desafioAtual = desafio1;
-      nomeAtual = 'Primeiro Desafio';
-      intervaloAtual = 'nascimento até $idadeFimDesafio1 anos';
-    } else if (idadeAtual < idadeFimDesafio2) {
-      desafioAtual = desafioPrincipal;
-      nomeAtual = 'Desafio Principal';
-      intervaloAtual = '$idadeFimDesafio1 a $idadeFimDesafio2 anos';
-    } else {
-      desafioAtual = desafio2;
-      nomeAtual = 'Terceiro Desafio';
-      intervaloAtual = 'a partir de $idadeInicioDesafio3 anos';
-    }
-
-    final conteudoDesafio = _getDesafioContent(desafioAtual);
-    final titulo = nomeAtual;
-    final descricaoCurta = (conteudoDesafio.descricaoCurta.isNotEmpty
-            ? conteudoDesafio.descricaoCurta
-            : 'Desafio $desafioAtual') +
-        '\n\n$intervaloAtual';
-
-    // Modal: todos os desafios com subtítulos destacados
-    final buffer = StringBuffer();
-
-    buffer.writeln('**Primeiro Desafio $desafio1**');
-    buffer.writeln('*nascimento até $idadeFimDesafio1 anos*\n');
-    final cont1 = _getDesafioContent(desafio1);
-    buffer.writeln(cont1.descricaoCompleta.isNotEmpty
-        ? cont1.descricaoCompleta
-        : 'Desafio $desafio1');
-    buffer.writeln('');
-
-    buffer.writeln('**Desafio Principal $desafioPrincipal**');
-    buffer.writeln('*$idadeFimDesafio1 a $idadeFimDesafio2 anos*\n');
-    final contPrinc = _getDesafioContent(desafioPrincipal);
-    buffer.writeln(contPrinc.descricaoCompleta.isNotEmpty
-        ? contPrinc.descricaoCompleta
-        : 'Desafio $desafioPrincipal');
-    buffer.writeln('');
-
-    buffer.writeln('**Terceiro Desafio $desafio2**');
-    buffer.writeln('*a partir de $idadeInicioDesafio3 anos*\n');
-    final cont2 = _getDesafioContent(desafio2);
-    buffer.writeln(cont2.descricaoCompleta.isNotEmpty
-        ? cont2.descricaoCompleta
-        : 'Desafio $desafio2');
-
-    return VibrationContent(
-      titulo: titulo,
-      descricaoCurta: descricaoCurta,
-      descricaoCompleta: buffer.toString().trim(),
-      inspiracao: conteudoDesafio.inspiracao,
-      tags: conteudoDesafio.tags,
     );
   }
 
