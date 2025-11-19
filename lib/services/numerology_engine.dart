@@ -438,25 +438,27 @@ class NumerologyEngine {
     final mes = dataNasc.month;
     final tabelaMes = _diasBasicosTabelaCompleta[mes];
     if (tabelaMes == null) return [];
+
     final basicos = tabelaMes[dia];
     if (basicos == null || basicos.length != 2) return [];
+
     final b1 = basicos[0];
     final b2 = basicos[1];
-    List<int> dias = [b1, b2];
-    int atual = b2 * 2;
-    dias.add(atual);
+    final dias = <int>{b1, b2}; // Usar Set para evitar duplicatas
+
+    int soma = b2 * 2;
+    if (soma <= 31) dias.add(soma);
+
     bool alterna = true;
-    int anterior = b1;
-    int ultimo = atual;
     while (true) {
-      int soma = alterna ? anterior + ultimo : b2 + ultimo;
+      final valorASomar = alterna ? b1 : b2;
+      soma += valorASomar;
       if (soma > 31) break;
       dias.add(soma);
       alterna = !alterna;
-      anterior = alterna ? b1 : b2;
-      ultimo = soma;
     }
-    return dias;
+    final listaOrdenada = dias.toList()..sort();
+    return listaOrdenada;
   }
 
   final String nomeCompleto;
@@ -957,6 +959,7 @@ class NumerologyEngine {
     final debitosCarmicos =
         _calcularDebitosCarmicos(destino, motivacao, expressao);
     final tendenciasOcultas = _calcularTendenciasOcultas();
+    final diasFavoraveis = calcularDiasFavoraveis();
     final harmoniaConjugal = _calcularHarmoniaConjugal(missao);
 
     // Momento Decisivo Atual
@@ -1003,6 +1006,7 @@ class NumerologyEngine {
         'licoesCarmicas': licoesCarmicas,
         'debitosCarmicos': debitosCarmicos,
         'tendenciasOcultas': tendenciasOcultas,
+        'diasFavoraveis': diasFavoraveis,
       },
     );
   }

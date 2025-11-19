@@ -1013,7 +1013,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           'diasFavoraveis': InfoCard(
               key: const ValueKey('diasFavoraveis'),
               title: "Dias Favoráveis",
-              number: (_getNextFavorableDay() ?? 0).toString(),
+              number: (_getNextFavorableDay() ?? '-').toString(),
               info: _buildProximoDiaFavoravelContent(),
               icon: Icons.event_available,
               color: Colors.greenAccent.shade200,
@@ -1021,8 +1021,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               dragHandle:
                   _isEditMode ? _buildDragHandle('diasFavoraveis') : null,
               onTap: () => _showNumerologyDetail(
-                    title: "Dias Favoráveis",
-                    number: (_getNextFavorableDay() ?? 0).toString(),
+                    title: "Dias Favoráveis do Mês",
                     content: _buildDiasFavoraveisCompleteContent(),
                     color: Colors.greenAccent.shade200,
                     icon: Icons.event_available,
@@ -1508,31 +1507,18 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Dias favoráveis: aproximação — dias do mês em que o dia do calendário reduz
   // para algum dos números principais (destino, motivacao, expressao, missao, impressao)
-  List<int> _computeFavorableDaysThisMonth({int limit = 30}) {
-    final now = DateTime.now();
-    final year = now.year;
-    final month = now.month;
-    final destino = _numerologyData!.numeros['destino'] ?? 0;
-    final motivacao = _numerologyData!.numeros['motivacao'] ?? 0;
-    final expressao = _numerologyData!.numeros['expressao'] ?? 0;
-    final missao = _numerologyData!.numeros['missao'] ?? 0;
-    final impressao = _numerologyData!.numeros['impressao'] ?? 0;
-    final chave = {destino, motivacao, expressao, missao, impressao};
-    int daysInMonth = DateTime(year, month + 1, 0).day;
-    final favorable = <int>[];
-    for (int d = 1; d <= daysInMonth; d++) {
-      final redu = _reduzirLocal(d); // redução simples local
-      if (chave.contains(redu)) favorable.add(d);
-      if (favorable.length >= limit) break;
-    }
-    return favorable;
+  List<int> _getFavorableDays() {
+    if (_numerologyData == null) return [];
+    // Usa a lista pré-calculada pelo engine
+    return (_numerologyData!.listas['diasFavoraveis'] as List?)?.cast<int>() ??
+        [];
   }
 
   /// Retorna o dia favorável de hoje ou o próximo dia favorável do mês
   int? _getNextFavorableDay() {
     final now = DateTime.now();
     final todayDay = now.day;
-    final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
+    final allFavorableDays = _getFavorableDays();
 
     // Procura por hoje ou próximo dia
     for (final day in allFavorableDays) {
@@ -1581,7 +1567,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   VibrationContent _buildDiasFavoraveisCompleteContent() {
     final nextDay = _getNextFavorableDay();
     final now = DateTime.now();
-    final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
+    final allFavorableDays = _getFavorableDays();
 
     if (nextDay == null || allFavorableDays.isEmpty) {
       return const VibrationContent(
@@ -1594,32 +1580,28 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
-    final isToday = nextDay == now.day;
-    final titulo =
-        isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
-    final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
-        'Dia de energia especial para você.';
-    final mensagemLonga = ContentData.textosDiasFavoraveisLongos[nextDay] ??
-        'Este é um dia alinhado com seus números principais.';
-
     // Criar lista de todos os dias favoráveis do mês
     final diasFormatados = allFavorableDays.map((d) => d.toString()).join(', ');
     final monthName = _getMonthName(now.month);
 
     final descricaoCompleta = StringBuffer();
-    descricaoCompleta.writeln(mensagemLonga);
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln('═══════════════════════════');
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln('📅 Todos os Dias Favoráveis de $monthName:');
-    descricaoCompleta.writeln();
-    descricaoCompleta.writeln(diasFormatados);
-    descricaoCompleta.writeln();
     descricaoCompleta.writeln(
-        'Estes dias estão em ressonância com seus números principais (Destino, Expressão, Motivação, Impressão e Missão).');
+        'Estes são os dias do mês que vibram em harmonia com o seu dia de nascimento, tornando-os propícios para decisões e atividades importantes.');
     descricaoCompleta.writeln();
-    descricaoCompleta.writeln(
-        'Aproveite essas datas para tomar decisões importantes, iniciar projetos ou realizar atividades que exigem maior fluidez energética.');
+    descricaoCompleta.writeln('**Seus números são:** $diasFormatados');
+
+    // Adiciona a descrição longa de cada dia favorável
+    for (final dia in allFavorableDays) {
+      final textoLongo = ContentData.textosDiasFavoraveisLongos[dia];
+      if (textoLongo != null) {
+        descricaoCompleta.writeln('\n**Dia $dia**');
+        descricaoCompleta.writeln(textoLongo);
+      }
+    }
+
+    final isToday = nextDay == now.day;
+    final titulo = 'Dias Favoráveis de $monthName';
+    final mensagemCurta = 'Seus dias de sorte neste mês são: $diasFormatados.';
 
     return VibrationContent(
       titulo: titulo,
