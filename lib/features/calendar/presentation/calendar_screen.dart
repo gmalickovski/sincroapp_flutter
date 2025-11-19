@@ -653,76 +653,69 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     } else {
       // Layout Retrato
-      // --- INÍCIO DA MUDANÇA: Usa Stack em vez de Column ---
-      // A Stack permite que o DraggableScrollableSheet flutue sobre o calendário.
-      return Stack(
+      // --- INÍCIO DA MUDANÇA: Volta a usar Column e Expanded ---
+      // A Column garante que o calendário e a gaveta não se sobreponham inicialmente.
+      // O Expanded permite que a gaveta ocupe o espaço restante e se expanda a partir daí.
+      return Column(
         children: [
-          // 1. O Calendário (fica no fundo)
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
+          // 1. O Calendário (ocupa a parte de cima)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              children: [
+                CalendarHeader(
+                  focusedDay: _focusedDay,
+                  onTodayButtonTap: handleTodayTap,
+                  onLeftArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                  onRightArrowTap: () => _onPageChanged(
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                ),
+                const SizedBox(height: 8),
+                Stack(
+                  alignment: Alignment.topCenter,
                   children: [
-                    CalendarHeader(
+                    CustomCalendar(
                       focusedDay: _focusedDay,
-                      onTodayButtonTap: handleTodayTap,
-                      onLeftArrowTap: () => _onPageChanged(
-                          DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                      onRightArrowTap: () => _onPageChanged(
-                          DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                      selectedDay: _selectedDay,
+                      onDaySelected: _onDaySelected,
+                      onPageChanged: _onPageChanged,
+                      isDesktop: false,
+                      events: eventsMapUtc,
+                      personalDayNumber: _personalDayNumber,
                     ),
-                    const SizedBox(height: 8),
-                    Stack(
-                      alignment: Alignment.topCenter,
-                      children: [
-                        CustomCalendar(
-                          focusedDay: _focusedDay,
-                          selectedDay: _selectedDay,
-                          onDaySelected: _onDaySelected,
-                          onPageChanged: _onPageChanged,
-                          isDesktop: false,
-                          events: eventsMapUtc,
-                          personalDayNumber: _personalDayNumber,
+                    if (_isChangingMonth)
+                      Positioned.fill(
+                        child: Container(
+                          color: AppColors.background.withValues(alpha: 0.5),
+                          child: const Center(child: CustomLoadingSpinner()),
                         ),
-                        if (_isChangingMonth)
-                          Positioned.fill(
-                            child: Container(
-                              color:
-                                  AppColors.background.withValues(alpha: 0.5),
-                              child: const Center(
-                                child: CustomLoadingSpinner(),
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8.0),
+                      ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 8.0),
+              ],
+            ),
           ),
-          // 2. A "Gaveta" (flutua por cima)
-          // O Expanded foi removido, pois não é necessário dentro de uma Stack.
-          DraggableScrollableSheet(
-            initialChildSize: 0.45, // Tamanho inicial (45% da área disponível)
-            minChildSize: 0.45, // Tamanho mínimo (não pode encolher mais)
-            maxChildSize: 0.9, // Tamanho máximo (quase tela cheia)
-            builder: (context, scrollController) {
-              // O builder nos dá um scrollController que DEVE ser passado
-              // para o widget rolável dentro do sheet (o ListView do DayDetailPanel).
-              return DayDetailPanel(
-                scrollController: scrollController, // Passa o controller
-                selectedDay: _selectedDay,
-                personalDayNumber: _personalDayNumber,
-                events: _getRawEventsForDay(_selectedDay),
-                isDesktop: false,
-                onAddTask: _openAddTaskModal,
-                onToggleTask: _onToggleTask,
-                onTaskTap: _handleTaskTap,
-              );
-            },
+          // 2. A "Gaveta" (ocupa o espaço restante e pode ser expandida)
+          Expanded(
+            child: DraggableScrollableSheet(
+                initialChildSize:
+                    1.0, // Começa ocupando 100% do espaço do Expanded
+                minChildSize: 1.0,
+                maxChildSize: 1.0,
+                builder: (context, scrollController) {
+                  return DayDetailPanel(
+                    scrollController: scrollController,
+                    selectedDay: _selectedDay,
+                    personalDayNumber: _personalDayNumber,
+                    events: _getRawEventsForDay(_selectedDay),
+                    isDesktop: false,
+                    onAddTask: _openAddTaskModal,
+                    onToggleTask: _onToggleTask,
+                    onTaskTap: _handleTaskTap,
+                  );
+                }),
           ),
         ],
       );

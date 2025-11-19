@@ -74,8 +74,23 @@ class DayDetailPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // --- INÍCIO DA MUDANÇA: Adiciona o "Drag Handle" ---
+          // Este é o traço visual que indica que o painel é arrastável.
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 8.0, bottom: 12.0),
+              decoration: BoxDecoration(
+                color: AppColors.border.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          // --- FIM DA MUDANÇA ---
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            padding: const EdgeInsets.fromLTRB(
+                16, 0, 16, 0), // Padding superior removido
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
