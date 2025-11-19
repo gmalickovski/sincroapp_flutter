@@ -724,23 +724,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
           return true;
         },
         child: DraggableScrollableSheet(
-              // O tamanho inicial é calculado para ocupar o espaço restante
-              initialChildSize: 0.4, // Altura inicial menor
-              minChildSize: 0.4, // Altura mínima igual à inicial
-              maxChildSize: 0.9, // Expande até quase o topo
-              builder: (context, scrollController) {
-                return DayDetailPanel(
-                  scrollController: scrollController,
-                  selectedDay: _selectedDay,
-                  personalDayNumber: _personalDayNumber,
-                  events: _getRawEventsForDay(_selectedDay),
-                  isDesktop: false,
-                  onAddTask: _openAddTaskModal,
-                  onToggleTask: _onToggleTask,
-                  onTaskTap: _handleTaskTap,
-                );
-              },
-            ),
+          // O tamanho inicial é calculado para ocupar o espaço restante
+          initialChildSize: 0.4, // Altura inicial menor
+          minChildSize: 0.4, // Altura mínima igual à inicial
+          maxChildSize: 0.9, // Expande até quase o topo
+          builder: (context, scrollController) {
+            return DayDetailPanel(
+              scrollController: scrollController,
+              selectedDay: _selectedDay,
+              personalDayNumber: _personalDayNumber,
+              events: _getRawEventsForDay(_selectedDay),
+              isDesktop: false,
+              onAddTask: _openAddTaskModal,
+              onToggleTask: _onToggleTask,
+              onTaskTap: _handleTaskTap,
+            );
+          },
+        ),
       );
 
       // Retorna o layout apropriado com base no estado de arrasto
@@ -754,7 +754,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
         );
       }
       // --- FIM DA MUDANÇA ---
-      );
     }
   }
 
