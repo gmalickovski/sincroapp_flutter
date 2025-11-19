@@ -1817,7 +1817,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final p3 = momentos['p3'] ?? 0;
     final p4 = momentos['p4'] ?? 0;
 
-    // Períodos reais dos momentos decisivos (usando anos do cálculo)
     final p1Inicio = momentos['p1Inicio'] ?? '';
     final p1Fim = momentos['p1Fim'] ?? '';
     final p2Inicio = momentos['p2Inicio'] ?? '';
@@ -1826,7 +1825,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final p3Fim = momentos['p3Fim'] ?? '';
     final p4Inicio = momentos['p4Inicio'] ?? '';
 
-    // Identifica momento atual
     int momentoAtual;
     String nomeAtual;
     String intervaloAtual;
@@ -1848,7 +1846,16 @@ class _DashboardScreenState extends State<DashboardScreen>
       intervaloAtual = '$p4Inicio a XXXX';
     }
 
-    final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
+    // Busca o conteúdo correto do content_data.dart
+    final conteudoMomento = ContentData.textosMomentosDecisivos[momentoAtual] ??
+        VibrationContent(
+          titulo: nomeAtual,
+          descricaoCurta: 'Momento $momentoAtual',
+          descricaoCompleta: 'Conteúdo não encontrado.',
+          inspiracao: '',
+          tags: [],
+        );
+
     final titulo = nomeAtual;
     final descricaoCurta = (conteudoMomento.descricaoCurta.isNotEmpty
             ? conteudoMomento.descricaoCurta
@@ -1860,7 +1867,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     buffer.writeln('**Primeiro Momento Decisivo $p1**');
     buffer.writeln('*$p1Inicio a $p1Fim*\n');
-    final cont1 = _getMomentoDecisivoContent(p1);
+    final cont1 = ContentData.textosMomentosDecisivos[p1] ?? conteudoMomento;
     buffer.writeln(cont1.descricaoCompleta.isNotEmpty
         ? cont1.descricaoCompleta
         : 'Momento $p1');
@@ -1868,7 +1875,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     buffer.writeln('**Segundo Momento Decisivo $p2**');
     buffer.writeln('*$p2Inicio a $p2Fim*\n');
-    final cont2 = _getMomentoDecisivoContent(p2);
+    final cont2 = ContentData.textosMomentosDecisivos[p2] ?? conteudoMomento;
     buffer.writeln(cont2.descricaoCompleta.isNotEmpty
         ? cont2.descricaoCompleta
         : 'Momento $p2');
@@ -1876,7 +1883,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     buffer.writeln('**Terceiro Momento Decisivo $p3**');
     buffer.writeln('*$p3Inicio a $p3Fim*\n');
-    final cont3 = _getMomentoDecisivoContent(p3);
+    final cont3 = ContentData.textosMomentosDecisivos[p3] ?? conteudoMomento;
     buffer.writeln(cont3.descricaoCompleta.isNotEmpty
         ? cont3.descricaoCompleta
         : 'Momento $p3');
@@ -1884,7 +1891,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     buffer.writeln('**Quarto Momento Decisivo $p4**');
     buffer.writeln('*$p4Inicio a XXXX*\n');
-    final cont4 = _getMomentoDecisivoContent(p4);
+    final cont4 = ContentData.textosMomentosDecisivos[p4] ?? conteudoMomento;
     buffer.writeln(cont4.descricaoCompleta.isNotEmpty
         ? cont4.descricaoCompleta
         : 'Momento $p4');
