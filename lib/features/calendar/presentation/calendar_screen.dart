@@ -653,73 +653,76 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     } else {
       // Layout Retrato
-      return Column(
+      // --- INÍCIO DA MUDANÇA: Usa Stack em vez de Column ---
+      // A Stack permite que o DraggableScrollableSheet flutue sobre o calendário.
+      return Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                CalendarHeader(
-                  focusedDay: _focusedDay,
-                  onTodayButtonTap: handleTodayTap,
-                  onLeftArrowTap: () => _onPageChanged(
-                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                  onRightArrowTap: () => _onPageChanged(
-                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
-                ),
-                const SizedBox(height: 8),
-                Stack(
-                  alignment: Alignment.topCenter,
+          // 1. O Calendário (fica no fundo)
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
                   children: [
-                    CustomCalendar(
+                    CalendarHeader(
                       focusedDay: _focusedDay,
-                      selectedDay: _selectedDay,
-                      onDaySelected: _onDaySelected,
-                      onPageChanged: _onPageChanged,
-                      isDesktop: false,
-                      events: eventsMapUtc,
-                      personalDayNumber: _personalDayNumber,
+                      onTodayButtonTap: handleTodayTap,
+                      onLeftArrowTap: () => _onPageChanged(
+                          DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                      onRightArrowTap: () => _onPageChanged(
+                          DateTime(_focusedDay.year, _focusedDay.month + 1)),
                     ),
-                    if (_isChangingMonth)
-                      Positioned.fill(
-                        child: Container(
-                          color: AppColors.background.withValues(alpha: 0.5),
-                          child: const Center(
-                            child: CustomLoadingSpinner(),
-                          ),
+                    const SizedBox(height: 8),
+                    Stack(
+                      alignment: Alignment.topCenter,
+                      children: [
+                        CustomCalendar(
+                          focusedDay: _focusedDay,
+                          selectedDay: _selectedDay,
+                          onDaySelected: _onDaySelected,
+                          onPageChanged: _onPageChanged,
+                          isDesktop: false,
+                          events: eventsMapUtc,
+                          personalDayNumber: _personalDayNumber,
                         ),
-                      ),
+                        if (_isChangingMonth)
+                          Positioned.fill(
+                            child: Container(
+                              color:
+                                  AppColors.background.withValues(alpha: 0.5),
+                              child: const Center(
+                                child: CustomLoadingSpinner(),
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8.0),
                   ],
                 ),
-                const SizedBox(height: 8.0),
-              ],
-            ),
+              ),
+            ],
           ),
-          Expanded(
-            // --- INÍCIO DA MUDANÇA: Adiciona DraggableScrollableSheet ---
-            // Substituímos o DayDetailPanel direto por um DraggableScrollableSheet
-            // para permitir que o painel seja arrastado para cima.
-            child: DraggableScrollableSheet(
-              initialChildSize:
-                  0.45, // Tamanho inicial (45% da área disponível)
-              minChildSize: 0.45, // Tamanho mínimo (não pode encolher mais)
-              maxChildSize: 0.9, // Tamanho máximo (quase tela cheia)
-              builder: (context, scrollController) {
-                // O builder nos dá um scrollController que DEVE ser passado
-                // para o widget rolável dentro do sheet (o ListView do DayDetailPanel).
-                return DayDetailPanel(
-                  scrollController: scrollController, // Passa o controller
-                  selectedDay: _selectedDay,
-                  personalDayNumber: _personalDayNumber,
-                  events: _getRawEventsForDay(_selectedDay),
-                  isDesktop: false,
-                  onAddTask: _openAddTaskModal,
-                  onToggleTask: _onToggleTask,
-                  onTaskTap: _handleTaskTap,
-                );
-              },
-            ),
-            // --- FIM DA MUDANÇA ---
+          // 2. A "Gaveta" (flutua por cima)
+          // O Expanded foi removido, pois não é necessário dentro de uma Stack.
+          DraggableScrollableSheet(
+            initialChildSize: 0.45, // Tamanho inicial (45% da área disponível)
+            minChildSize: 0.45, // Tamanho mínimo (não pode encolher mais)
+            maxChildSize: 0.9, // Tamanho máximo (quase tela cheia)
+            builder: (context, scrollController) {
+              // O builder nos dá um scrollController que DEVE ser passado
+              // para o widget rolável dentro do sheet (o ListView do DayDetailPanel).
+              return DayDetailPanel(
+                scrollController: scrollController, // Passa o controller
+                selectedDay: _selectedDay,
+                personalDayNumber: _personalDayNumber,
+                events: _getRawEventsForDay(_selectedDay),
+                isDesktop: false,
+                onAddTask: _openAddTaskModal,
+                onToggleTask: _onToggleTask,
+                onTaskTap: _handleTaskTap,
+              );
+            },
           ),
         ],
       );
