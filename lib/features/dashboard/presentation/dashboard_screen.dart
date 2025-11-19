@@ -850,13 +850,12 @@ class _DashboardScreenState extends State<DashboardScreen>
           'momentosDecisivos': InfoCard(
               key: const ValueKey('momentosDecisivos'),
               title: "Momento Decisivo",
-              number:
-                  (_numerologyData!.estruturas['momentoDecisivoAtual'] ?? '-')
-                      .toString(),
+              number: (_numerologyData!.estruturas['momentoDecisivoAtual']
+                          ?['regente'] ??
+                      '-')
+                  .toString(),
               info: _buildMomentosDecisivosContent(
-                  _numerologyData!.estruturas['momentosDecisivos']
-                          as Map<String, dynamic>? ??
-                      {},
+                  _numerologyData!.estruturas['momentosDecisivos'] ?? {},
                   _numerologyData!.idade),
               icon: Icons.timelapse,
               color: Colors.indigoAccent.shade200,
@@ -865,14 +864,12 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _isEditMode ? _buildDragHandle('momentosDecisivos') : null,
               onTap: () => _showNumerologyDetail(
                     title: "Momentos Decisivos",
-                    number:
-                        (_numerologyData!.estruturas['momentoDecisivoAtual'] ??
-                                0)
-                            .toString(),
+                    number: (_numerologyData!.estruturas['momentoDecisivoAtual']
+                                ?['regente'] ??
+                            0)
+                        .toString(),
                     content: _buildMomentosDecisivosContent(
-                        _numerologyData!.estruturas['momentosDecisivos']
-                                as Map<String, dynamic>? ??
-                            {},
+                        _numerologyData!.estruturas['momentosDecisivos'] ?? {},
                         _numerologyData!.idade),
                     color: Colors.indigoAccent.shade200,
                     icon: Icons.timelapse,
@@ -1796,11 +1793,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Builder para Momentos Decisivos: versão curta (card) mostra apenas o momento atual, versão completa mostra todos os momentos com intervalos.
   VibrationContent _buildMomentosDecisivosContent(
       Map<String, dynamic> momentos, int idadeAtual) {
-    final p1 = momentos['p1'] ?? 0;
-    final p2 = momentos['p2'] ?? 0;
-    final p3 = momentos['p3'] ?? 0;
-    final p4 = momentos['p4'] ?? 0;
-
     // Identifica momento atual
     Map<String, dynamic>? momentoAtual;
     for (final key in ['p1', 'p2', 'p3', 'p4']) {
@@ -1835,7 +1827,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       final nm = momento['nome'] ?? '';
       final intv = momento['periodoIdade'] ?? '';
 
+      // Subtítulo destacado: Nome + Número
       buffer.writeln('**$nm $reg**');
+      // Período destacado em nova linha
       buffer.writeln('*$intv*\n');
       final conteudo = _getMomentoDecisivoContent(reg);
       buffer.writeln(conteudo.descricaoCompleta);

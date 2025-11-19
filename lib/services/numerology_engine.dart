@@ -700,8 +700,9 @@ class NumerologyEngine {
     final p3Reg = _reduzirNumero(p1Reg + p2Reg, mestre: true);
     final p4Reg = _reduzirNumero(mesR + anoR, mestre: true);
 
-    // Destino com mestres preservados (1..9, 11, 22) para duração do 1º ciclo
-    final anosP1 = 37 - numeroDestino;
+    // Duração do primeiro ciclo é 37 - destino (reduzido a 1 dígito)
+    final destinoReduzido = _reduzirNumero(numeroDestino);
+    final anosP1 = 37 - destinoReduzido;
 
     final anoNasc = dataNasc.year;
     final p1Inicio = anoNasc;
