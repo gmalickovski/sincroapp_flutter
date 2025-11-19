@@ -474,48 +474,54 @@ class _DashboardScreenState extends State<DashboardScreen>
                   categoryIntro:
                       "O Dia Pessoal revela a energia que te acompanha hoje, influenciando suas emoções, decisões e oportunidades. Ele é calculado somando o dia atual com seu mês e ano pessoal, criando um ciclo de 1 a 9 que se renova diariamente.",
                 )),
-        'vibracaoMes': InfoCard(
-            key: const ValueKey('vibracaoMes'),
-            title: "Mês Pessoal",
-            number: (_numerologyData!.numeros['mesPessoal'] ?? '-').toString(),
-            info: _getInfoContent(
-                'mesPessoal', _numerologyData!.numeros['mesPessoal'] ?? 0),
-            icon: Icons.nightlight_round,
-            color: Colors.indigo.shade300,
-            isEditMode: _isEditMode,
-            dragHandle: _isEditMode ? _buildDragHandle('vibracaoMes') : null,
-            onTap: () => _showNumerologyDetail(
-                  title: "Mês Pessoal",
-                  number:
-                      (_numerologyData!.numeros['mesPessoal'] ?? 0).toString(),
-                  content: _getInfoContent('mesPessoal',
-                      _numerologyData!.numeros['mesPessoal'] ?? 0),
-                  color: Colors.indigo.shade300,
-                  icon: Icons.nightlight_round,
-                  categoryIntro:
-                      "O Mês Pessoal define o tema energético que permeia todo este mês para você, trazendo lições, desafios e oportunidades específicas. É calculado combinando o mês atual com seu ano pessoal e se renova mensalmente.",
-                )),
-        'vibracaoAno': InfoCard(
-            key: const ValueKey('vibracaoAno'),
+        'desafios': InfoCard(
+          key: const ValueKey('desafios'),
+          title: "Desafio Pessoal",
+          number: (_numerologyData!.numeros['desafio'] ?? '-').toString(),
+          info: _buildDesafiosContent(
+              _numerologyData!.estruturas['desafios']
+                      as Map<String, dynamic>? ??
+                  {},
+              _numerologyData!.idade),
+          icon: Icons.warning_amber_outlined,
+          color: Colors.orangeAccent.shade200,
+          isEditMode: _isEditMode,
+          dragHandle: _isEditMode ? _buildDragHandle('desafios') : null,
+          onTap: () => _showNumerologyDetail(
+            title: "Desafios",
+            number: (_numerologyData!.numeros['desafio'] ?? 0).toString(),
+            content: _buildDesafiosContent(
+                _numerologyData!.estruturas['desafios']
+                        as Map<String, dynamic>? ??
+                    {},
+                _numerologyData!.idade),
+            color: Colors.orangeAccent.shade200,
+            icon: Icons.warning_amber_outlined,
+            categoryIntro:
+                "Os Desafios representam áreas de crescimento e superação em diferentes fases da vida. Cada período tem seu próprio desafio específico.",
+          ),
+        ),
+        'anoPessoal': InfoCard(
+          key: const ValueKey('anoPessoal'),
+          title: "Ano Pessoal",
+          number: (_numerologyData!.numeros['anoPessoal'] ?? 0).toString(),
+          info: _getInfoContent(
+              'anoPessoal', _numerologyData!.numeros['anoPessoal'] ?? 0),
+          icon: Icons.star,
+          color: Colors.amber.shade300,
+          isEditMode: _isEditMode,
+          dragHandle: _isEditMode ? _buildDragHandle('vibracaoAno') : null,
+          onTap: () => _showNumerologyDetail(
             title: "Ano Pessoal",
-            number: (_numerologyData!.numeros['anoPessoal'] ?? '-').toString(),
-            info: _getInfoContent(
+            number: (_numerologyData!.numeros['anoPessoal'] ?? 0).toString(),
+            content: _getInfoContent(
                 'anoPessoal', _numerologyData!.numeros['anoPessoal'] ?? 0),
-            icon: Icons.star,
             color: Colors.amber.shade300,
-            isEditMode: _isEditMode,
-            dragHandle: _isEditMode ? _buildDragHandle('vibracaoAno') : null,
-            onTap: () => _showNumerologyDetail(
-                  title: "Ano Pessoal",
-                  number:
-                      (_numerologyData!.numeros['anoPessoal'] ?? 0).toString(),
-                  content: _getInfoContent('anoPessoal',
-                      _numerologyData!.numeros['anoPessoal'] ?? 0),
-                  color: Colors.amber.shade300,
-                  icon: Icons.star,
-                  categoryIntro:
-                      "O Ano Pessoal representa o tema principal de todo o seu ano, indicando as grandes lições, transformações e oportunidades que você encontrará. É calculado somando seu dia e mês de nascimento com o ano atual, criando um ciclo de 9 anos que se repete ao longo da vida.",
-                )),
+            icon: Icons.star,
+            categoryIntro:
+                "O Ano Pessoal representa o tema principal de todo o seu ano, indicando as grandes lições, transformações e oportunidades que você encontrará. É calculado somando seu dia e mês de nascimento com o ano atual, criando um ciclo de 9 anos que se repete ao longo da vida.",
+          ),
+        ),
         // REMOVIDOS: Cards de Arcanos (Regente e Vigente) – não fazem mais parte do sistema.
         'cicloVida': InfoCard(
             key: const ValueKey('cicloVida'),
