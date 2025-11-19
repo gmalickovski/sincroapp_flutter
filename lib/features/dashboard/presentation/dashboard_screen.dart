@@ -1029,7 +1029,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     color: Colors.greenAccent.shade200,
                     icon: Icons.event_available,
                     categoryIntro:
-                        "São os dias do mês (de todos os meses) que vibram favoráveis de acordo com o dia natalício. É sugerido marcar os compromissos mais importantes num desses dias, como entrevistas, assinaturas de contratos, reuniões, transações financeiras e outras decisões importantes.",
+                        "Os Dias Favoráveis são datas do mês em que a vibração do seu Dia Pessoal entra em ressonância com números-chave do seu mapa (como Destino, Expressão, Motivação, Impressão e Missão). Nessas datas, decisões e iniciativas tendem a fluir com mais naturalidade.",
                   )),
         },
         'bussola': BussolaCard(
@@ -1211,6 +1211,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     linhasCurtas.add('Lições Kármicas: ${_joinComE(licoes)}');
     // Completa: título do número + descrição completa original.
     final buffer = StringBuffer();
+    buffer.writeln(
+        'Estas lições indicam áreas onde a vida pedirá prática consciente e desenvolvimento gradual.');
     for (final n in licoes) {
       final content = ContentData.textosLicoesCarmicas[n];
       if (content != null) {
@@ -1254,12 +1256,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   VibrationContent _buildDebitosCarmicosContent(List<int> debitos) {
     if (debitos.isEmpty) {
       return const VibrationContent(
-        titulo: 'Débitos Kármicos',
-        descricaoCurta: 'Você não possui débitos kármicos.',
+        titulo: 'Sem Débitos Kármicos',
+        descricaoCurta: 'Nenhum dos números clássicos (13,14,16,19) ativo.',
         descricaoCompleta:
-            'Parabéns! Você não carrega débitos kármicos clássicos (13, 14, 16 ou 19) no seu mapa numerológico.\n\nIsso significa que sua jornada de vida está mais focada em desenvolver talentos, explorar potenciais e cumprir sua missão de alma do que em corrigir padrões críticos de vidas passadas.\n\nVocê tem o privilégio de caminhar com mais liberdade e leveza, podendo direcionar sua energia para o crescimento e a autorrealização sem o peso de ajustes kármicos intensos.',
-        inspiracao: 'Sua jornada é de expansão e florescimento livre.',
-        tags: ['Liberdade', 'Crescimento'],
+            'Não há indicadores de débitos kármicos clássicos. Sua jornada foca mais em lapidar talentos do que em corrigir padrões críticos.',
+        inspiracao: 'Fluxo livre favorece o aperfeiçoamento dos talentos.',
+        tags: ['Fluxo'],
       );
     }
 
@@ -1267,6 +1269,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final linhasCurtas = <String>[];
     linhasCurtas.add('Débitos Kármicos: ${_joinComE(debitos)}');
     final buffer = StringBuffer();
+    buffer.writeln(
+        'Cada débito evidencia um ciclo de ajuste que, quando consciente, acelera evolução e clareza.');
     for (final d in debitos) {
       final content = ContentData.textosDebitosCarmicos[d];
       if (content != null) {
@@ -1321,6 +1325,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final linhasCurtas = <String>[];
     linhasCurtas.add('Tendências Ocultas: ${_joinComE(tendencias)}');
     final buffer = StringBuffer();
+    buffer.writeln(
+        'Esses números repetidos no nome sugerem potenciais intensificados que podem se manifestar de forma espontânea.');
     for (final t in tendencias) {
       final content = ContentData.textosTendenciasOcultas[t];
       if (content != null) {
@@ -1501,22 +1507,26 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   // Removido helper _relacaoDescricaoPorNumero (agora usa ContentData.textosHarmoniaConjugal)
 
-  // Dias Favoráveis: usa o algoritmo/tabela do NumerologyEngine (PDF)
-  List<int> _computeFavorableDaysThisMonth({int limit = 31}) {
-    if (_userData == null) return const [];
+  // Dias favoráveis: aproximação — dias do mês em que o dia do calendário reduz
+  // para algum dos números principais (destino, motivacao, expressao, missao, impressao)
+  List<int> _computeFavorableDaysThisMonth({int limit = 30}) {
     final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
-    final engine = NumerologyEngine(
-      nomeCompleto: _userData!.nomeAnalise,
-      dataNascimento: _userData!.dataNasc,
-    );
-    final all = engine.calcularDiasFavoraveis();
-    final filtered = all.where((d) => d >= 1 && d <= daysInMonth).toList();
-    filtered.sort();
-    if (filtered.length > limit) {
-      return filtered.sublist(0, limit);
+    final year = now.year;
+    final month = now.month;
+    final destino = _numerologyData!.numeros['destino'] ?? 0;
+    final motivacao = _numerologyData!.numeros['motivacao'] ?? 0;
+    final expressao = _numerologyData!.numeros['expressao'] ?? 0;
+    final missao = _numerologyData!.numeros['missao'] ?? 0;
+    final impressao = _numerologyData!.numeros['impressao'] ?? 0;
+    final chave = {destino, motivacao, expressao, missao, impressao};
+    int daysInMonth = DateTime(year, month + 1, 0).day;
+    final favorable = <int>[];
+    for (int d = 1; d <= daysInMonth; d++) {
+      final redu = _reduzirLocal(d); // redução simples local
+      if (chave.contains(redu)) favorable.add(d);
+      if (favorable.length >= limit) break;
     }
-    return filtered;
+    return favorable;
   }
 
   /// Retorna o dia favorável de hoje ou o próximo dia favorável do mês
@@ -1556,7 +1566,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final isToday = nextDay == now.day;
     final titulo =
         isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
-    // Usa ContentData short text
     final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
         'Dia de energia especial para você.';
 
@@ -1572,6 +1581,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Constrói o conteúdo completo para o modal dos Dias Favoráveis
   VibrationContent _buildDiasFavoraveisCompleteContent() {
     final nextDay = _getNextFavorableDay();
+    final now = DateTime.now();
     final allFavorableDays = _computeFavorableDaysThisMonth(limit: 200);
 
     if (nextDay == null || allFavorableDays.isEmpty) {
@@ -1585,22 +1595,41 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
 
+    final isToday = nextDay == now.day;
+    final titulo =
+        isToday ? 'Hoje é dia favorável!' : 'Próximo dia favorável: $nextDay';
+    final mensagemCurta = ContentData.textosDiasFavoraveis[nextDay] ??
+        'Dia de energia especial para você.';
     final mensagemLonga = ContentData.textosDiasFavoraveisLongos[nextDay] ??
         'Este é um dia alinhado com seus números principais.';
 
-    // Linha com números destacados (formatada para o modal)
-    final diasFormatados = allFavorableDays.join(', ');
-    final numerosList = '**Seus números são:** $diasFormatados';
+    // Criar lista de todos os dias favoráveis do mês
+    final diasFormatados = allFavorableDays.map((d) => d.toString()).join(', ');
+    final monthName = _getMonthName(now.month);
 
-    final descricaoCompleta = '$numerosList\n\n$mensagemLonga';
+    final descricaoCompleta = StringBuffer();
+    descricaoCompleta.writeln(mensagemLonga);
+    descricaoCompleta.writeln();
+    descricaoCompleta.writeln('═══════════════════════════');
+    descricaoCompleta.writeln();
+    descricaoCompleta.writeln('📅 Todos os Dias Favoráveis de $monthName:');
+    descricaoCompleta.writeln();
+    descricaoCompleta.writeln(diasFormatados);
+    descricaoCompleta.writeln();
+    descricaoCompleta.writeln(
+        'Estes dias estão em ressonância com seus números principais (Destino, Expressão, Motivação, Impressão e Missão).');
+    descricaoCompleta.writeln();
+    descricaoCompleta.writeln(
+        'Aproveite essas datas para tomar decisões importantes, iniciar projetos ou realizar atividades que exigem maior fluidez energética.');
 
     return VibrationContent(
-      titulo: 'Dias Favoráveis',
-      descricaoCurta: ContentData.textosDiasFavoraveis[nextDay] ??
-          'Dia de energia especial para você.',
-      descricaoCompleta: descricaoCompleta,
-      inspiracao: 'Aproveite a energia destes dias especiais!',
-      tags: [],
+      titulo: titulo,
+      descricaoCurta: mensagemCurta,
+      descricaoCompleta: descricaoCompleta.toString(),
+      inspiracao: isToday
+          ? 'Aproveite a energia de hoje!'
+          : 'Prepare-se para estes dias especiais.',
+      tags: ['Dia $nextDay', 'Sintonia', 'Oportunidade'],
     );
   }
 
@@ -1709,68 +1738,61 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   /// Builder para Desafios: versão curta (card) mostra apenas o desafio atual, versão completa mostra todos os desafios com intervalos.
   VibrationContent _buildDesafiosContent(
-      Map<String, dynamic> desafios, int idadeAtual) {
-    // Extrai os mapas dos desafios
-    final desafio1 = desafios['desafio1'] as Map<String, dynamic>? ?? {};
-    final desafio2 = desafios['desafio2'] as Map<String, dynamic>? ?? {};
-    final desafioPrincipal =
-        desafios['desafioPrincipal'] as Map<String, dynamic>? ?? {};
+      Map<String, int> desafios, int idadeAtual) {
+    final desafioPrincipal = desafios['desafioPrincipal'] ?? 0;
+    final desafio1 = desafios['desafio1'] ?? 0;
+    final desafio2 = desafios['desafio2'] ?? 0;
 
-    // Valores
-    final valor1 = desafio1['valor'] ?? 0;
-    final valor2 = desafio2['valor'] ?? 0;
-    final valorPrincipal = desafioPrincipal['valor'] ?? 0;
-
-    // Períodos
-    final periodo1 = desafio1['periodo'] ?? '';
-    final periodo2 = desafio2['periodo'] ?? '';
-    final periodoPrincipal = desafioPrincipal['periodo'] ?? '';
-
-    // Nomes
-    final nome1 = desafio1['nome'] ?? 'Primeiro Desafio';
-    final nome2 = desafio2['nome'] ?? 'Terceiro Desafio';
-    final nomePrincipal = desafioPrincipal['nome'] ?? 'Desafio Principal';
+    // Cálculo das idades baseado no número de destino
+    final destino = _numerologyData?.numeros['destino'] ?? 1;
+    final idadeFimDesafio1 = 37 - destino;
+    final idadeFimDesafio2 = idadeFimDesafio1 + 9;
 
     // Identifica desafio atual
-    int desafioAtualValor;
+    int desafioAtual;
     String nomeAtual;
-    String periodoAtual;
-    if (idadeAtual < (desafio1['idadeFim'] ?? 0)) {
-      desafioAtualValor = valor1;
-      nomeAtual = nome1;
-      periodoAtual = periodo1;
-    } else if (desafio2.containsKey('idadeInicio') &&
-        idadeAtual < (desafio2['idadeFim'] ?? 0)) {
-      desafioAtualValor = valorPrincipal;
-      nomeAtual = nomePrincipal;
-      periodoAtual = periodoPrincipal;
+    String intervaloAtual;
+    if (idadeAtual < idadeFimDesafio1) {
+      desafioAtual = desafio1;
+      nomeAtual = 'Primeiro Desafio';
+      intervaloAtual = 'nascimento até $idadeFimDesafio1 anos';
+    } else if (idadeAtual < idadeFimDesafio2) {
+      desafioAtual = desafioPrincipal;
+      nomeAtual = 'Desafio Principal';
+      intervaloAtual = '$idadeFimDesafio1 a $idadeFimDesafio2 anos';
     } else {
-      desafioAtualValor = valor2;
-      nomeAtual = nome2;
-      periodoAtual = periodo2;
+      desafioAtual = desafio2;
+      nomeAtual = 'Terceiro Desafio';
+      intervaloAtual = 'a partir de $idadeFimDesafio2 anos';
     }
 
-    final titulo = nomeAtual;
-    final conteudoDesafio = _getDesafioContent(desafioAtualValor);
-    final descricaoCurta = '${conteudoDesafio.descricaoCurta}\n\n$periodoAtual';
+    final titulo = nomeAtual; // Removido o número do título do card
+    final conteudoDesafio = _getDesafioContent(desafioAtual);
+    // Remover número antes do texto: texto curto + nova linha + intervalo destacado
+    final descricaoCurta =
+        '${conteudoDesafio.descricaoCurta}\n\n$intervaloAtual';
 
-    // Modal: todos os desafios com subtítulos destacados e períodos reais
+    // Modal: todos os desafios com subtítulos destacados
     final buffer = StringBuffer();
-    buffer.writeln('**$nome1 $valor1**');
-    buffer.writeln('*$periodo1*\n');
-    final cont1 = _getDesafioContent(valor1);
+
+    // Primeiro Desafio
+    buffer.writeln('**Primeiro Desafio $desafio1**');
+    buffer.writeln('*nascimento até $idadeFimDesafio1 anos*\n');
+    final cont1 = _getDesafioContent(desafio1);
     buffer.writeln(cont1.descricaoCompleta);
     buffer.writeln('');
 
-    buffer.writeln('**$nomePrincipal $valorPrincipal**');
-    buffer.writeln('*$periodoPrincipal*\n');
-    final contPrinc = _getDesafioContent(valorPrincipal);
+    // Desafio Principal
+    buffer.writeln('**Desafio Principal $desafioPrincipal**');
+    buffer.writeln('*$idadeFimDesafio1 a $idadeFimDesafio2 anos*\n');
+    final contPrinc = _getDesafioContent(desafioPrincipal);
     buffer.writeln(contPrinc.descricaoCompleta);
     buffer.writeln('');
 
-    buffer.writeln('**$nome2 $valor2**');
-    buffer.writeln('*$periodo2*\n');
-    final cont2 = _getDesafioContent(valor2);
+    // Terceiro Desafio
+    buffer.writeln('**Terceiro Desafio $desafio2**');
+    buffer.writeln('*a partir de $idadeFimDesafio2 anos*\n');
+    final cont2 = _getDesafioContent(desafio2);
     buffer.writeln(cont2.descricaoCompleta);
 
     return VibrationContent(
@@ -1785,85 +1807,67 @@ class _DashboardScreenState extends State<DashboardScreen>
   /// Builder para Momentos Decisivos: versão curta (card) mostra apenas o momento atual, versão completa mostra todos os momentos com intervalos.
   VibrationContent _buildMomentosDecisivosContent(
       Map<String, dynamic> momentos, int idadeAtual) {
-    // Extrai estrutura completa do engine
-    Map<String, dynamic> _asMap(dynamic v) =>
-        (v is Map<String, dynamic>) ? v : <String, dynamic>{};
+    final p1 = momentos['p1'] ?? 0;
+    final p2 = momentos['p2'] ?? 0;
+    final p3 = momentos['p3'] ?? 0;
+    final p4 = momentos['p4'] ?? 0;
 
-    final p1 = _asMap(momentos['p1']);
-    final p2 = _asMap(momentos['p2']);
-    final p3 = _asMap(momentos['p3']);
-    final p4 = _asMap(momentos['p4']);
-
-    final p1Reg = (p1['regente'] ?? 0) as int;
-    final p2Reg = (p2['regente'] ?? 0) as int;
-    final p3Reg = (p3['regente'] ?? 0) as int;
-    final p4Reg = (p4['regente'] ?? 0) as int;
-
-    final p1Periodo = (p1['periodo'] ?? '') as String;
-    final p2Periodo = (p2['periodo'] ?? '') as String;
-    final p3Periodo = (p3['periodo'] ?? '') as String;
-    final p4Periodo = (p4['periodo'] ?? '') as String;
-
-    int anoAtual = DateTime.now().year;
-    String periodoAtual = '';
-    int momentoAtual = p4Reg;
-    String nomeAtual = 'Quarto Momento Decisivo';
-
-    bool _inPeriodo(Map<String, dynamic> p) {
-      final inicio = p['inicioAno'] as int?;
-      final fim = p['fimAno'] as int?; // null para P4
-      if (inicio == null) return false;
-      if (fim == null) return anoAtual >= inicio;
-      return anoAtual >= inicio && anoAtual < fim;
-    }
-
-    if (_inPeriodo(p1)) {
-      momentoAtual = p1Reg;
+    // Identifica momento atual
+    int momentoAtual;
+    String nomeAtual;
+    String intervaloAtual;
+    if (idadeAtual <= 36) {
+      momentoAtual = p1;
       nomeAtual = 'Primeiro Momento Decisivo';
-      periodoAtual = p1Periodo;
-    } else if (_inPeriodo(p2)) {
-      momentoAtual = p2Reg;
+      intervaloAtual = 'nascimento até 36 anos';
+    } else if (idadeAtual <= 45) {
+      momentoAtual = p2;
       nomeAtual = 'Segundo Momento Decisivo';
-      periodoAtual = p2Periodo;
-    } else if (_inPeriodo(p3)) {
-      momentoAtual = p3Reg;
+      intervaloAtual = '37 a 45 anos';
+    } else if (idadeAtual <= 54) {
+      momentoAtual = p3;
       nomeAtual = 'Terceiro Momento Decisivo';
-      periodoAtual = p3Periodo;
+      intervaloAtual = '46 a 54 anos';
     } else {
-      momentoAtual = p4Reg;
+      momentoAtual = p4;
       nomeAtual = 'Quarto Momento Decisivo';
-      periodoAtual = p4Periodo;
+      intervaloAtual = 'a partir de 55 anos';
     }
 
-    final titulo = nomeAtual;
+    final titulo = nomeAtual; // Removido o número do título do card
     final conteudoMomento = _getMomentoDecisivoContent(momentoAtual);
-    // Card: texto curto + nova linha + período destacado (igual ao card Desafios)
-    final descricaoCurta = '${conteudoMomento.descricaoCurta}\n\n$periodoAtual';
+    // Remover número antes do texto: texto curta + nova linha + intervalo destacado
+    final descricaoCurta =
+        '${conteudoMomento.descricaoCurta}\n\n$intervaloAtual';
 
-    // Modal com períodos exatos
+    // Modal: todos os momentos decisivos com subtítulos destacados
     final buffer = StringBuffer();
 
-    buffer.writeln('**Primeiro Momento Decisivo $p1Reg**');
-    buffer.writeln('*$p1Periodo*\n');
-    final cont1 = _getMomentoDecisivoContent(p1Reg);
+    // Primeiro Momento Decisivo
+    buffer.writeln('**Primeiro Momento Decisivo $p1**');
+    buffer.writeln('*nascimento até 36 anos*\n');
+    final cont1 = _getMomentoDecisivoContent(p1);
     buffer.writeln(cont1.descricaoCompleta);
     buffer.writeln('');
 
-    buffer.writeln('**Segundo Momento Decisivo $p2Reg**');
-    buffer.writeln('*$p2Periodo*\n');
-    final cont2 = _getMomentoDecisivoContent(p2Reg);
+    // Segundo Momento Decisivo
+    buffer.writeln('**Segundo Momento Decisivo $p2**');
+    buffer.writeln('*37 a 45 anos*\n');
+    final cont2 = _getMomentoDecisivoContent(p2);
     buffer.writeln(cont2.descricaoCompleta);
     buffer.writeln('');
 
-    buffer.writeln('**Terceiro Momento Decisivo $p3Reg**');
-    buffer.writeln('*$p3Periodo*\n');
-    final cont3 = _getMomentoDecisivoContent(p3Reg);
+    // Terceiro Momento Decisivo
+    buffer.writeln('**Terceiro Momento Decisivo $p3**');
+    buffer.writeln('*46 a 54 anos*\n');
+    final cont3 = _getMomentoDecisivoContent(p3);
     buffer.writeln(cont3.descricaoCompleta);
     buffer.writeln('');
 
-    buffer.writeln('**Quarto Momento Decisivo $p4Reg**');
-    buffer.writeln('*$p4Periodo*\n');
-    final cont4 = _getMomentoDecisivoContent(p4Reg);
+    // Quarto Momento Decisivo
+    buffer.writeln('**Quarto Momento Decisivo $p4**');
+    buffer.writeln('*a partir de 55 anos*\n');
+    final cont4 = _getMomentoDecisivoContent(p4);
     buffer.writeln(cont4.descricaoCompleta);
 
     return VibrationContent(
@@ -2034,6 +2038,13 @@ class _DashboardScreenState extends State<DashboardScreen>
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
                 builder: (_) => AssistantPanel(userData: _userData!),
+              );
+            },
+            onMic: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Entrada por voz chegará em breve.'),
+                ),
               );
             },
           );
