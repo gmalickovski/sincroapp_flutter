@@ -605,6 +605,8 @@ class _AssistantPanelState extends State<AssistantPanel>
         return 'Criar tarefa: ${a.title ?? ''}'.trim();
       case AssistantActionType.create_goal:
         return 'Criar meta: ${a.title ?? ''}'.trim();
+      case AssistantActionType.analyze_harmony:
+        return 'Analisar harmonia com ${a.title ?? 'parceiro(a)'}';
     }
   }
 
@@ -652,37 +654,80 @@ class _AssistantPanelState extends State<AssistantPanel>
         chipColor = const Color(0xFFFB923C);
         chipIcon = Icons.check_circle_outline;
         break;
+      case AssistantActionType.analyze_harmony:
+        chipColor = const Color(0xFFEC4899);
+        chipIcon = Icons.favorite_border;
+        break;
     }
 
-    return InkWell(
-      onTap: () => _executeAction(context, action, messageIndex: messageIndex),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: chipColor.withValues(alpha: 0.15),
+    // Define aparência baseada no estado
+    final isDisabled = action.isExecuting || action.isExecuted;
+    final effectiveColor = isDisabled 
+        ? AppColors.secondaryText 
+        : chipColor;
+    final opacity = isDisabled ? 0.6 : 1.0;
+
+    return AnimatedOpacity(
+      opacity: opacity,
+      duration: const Duration(milliseconds: 300),
+      child: AnimatedScale(
+        scale: action.isExecuting ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+        child: InkWell(
+          onTap: isDisabled 
+              ? null 
+              : () => _executeAction(context, action, messageIndex: messageIndex),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: chipColor.withValues(alpha: 0.4),
-            width: 1,
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(chipIcon, color: chipColor, size: 16),
-            const SizedBox(width: 6),
-            Flexible(
-              child: Text(
-                _labelFor(action),
-                style: TextStyle(
-                  color: chipColor,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: action.isExecuted
+                  ? AppColors.primaryAccent.withValues(alpha: 0.1)
+                  : effectiveColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: action.isExecuted
+                    ? AppColors.primaryAccent.withValues(alpha: 0.4)
+                    : effectiveColor.withValues(alpha: 0.4),
+                width: action.isExecuted ? 2 : 1,
               ),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (action.isExecuting)
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondaryText),
+                    ),
+                  )
+                else if (action.isExecuted)
+                  const Icon(Icons.check_circle, color: AppColors.primaryAccent, size: 16)
+                else
+                  Icon(chipIcon, color: effectiveColor, size: 16),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    _labelFor(action),
+                    style: TextStyle(
+                      color: action.isExecuted 
+                          ? AppColors.primaryAccent 
+                          : effectiveColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      decoration: action.isExecuted 
+                          ? TextDecoration.lineThrough 
+                          : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -690,37 +735,69 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   Future<void> _executeAction(BuildContext context, AssistantAction a,
       {bool fromAuto = false, int? messageIndex}) async {
-    await _handleAction(context, a);
-
-    if (messageIndex != null &&
-        messageIndex >= 0 &&
-        messageIndex < _messages.length) {
+    
+    // Marca como "executando"
+    if (messageIndex != null && messageIndex >= 0 && messageIndex < _messages.length) {
       final msg = _messages[messageIndex];
       if (msg.role == 'assistant' && msg.actions.isNotEmpty) {
-        final filtered = msg.actions.where((x) => x != a).toList();
-        final newMsg = AssistantMessage(
-          role: msg.role,
-          content: msg.content,
-          time: msg.time,
-          actions: filtered,
-        );
+        final updatedActions = msg.actions.map((action) {
+          if (action == a) {
+            return action.copyWith(isExecuting: true);
+          }
+          return action;
+        }).toList();
+        
         setState(() {
-          _messages[messageIndex] = newMsg;
+          _messages[messageIndex] = AssistantMessage(
+            role: msg.role,
+            content: msg.content,
+            time: msg.time,
+            actions: updatedActions,
+          );
         });
       }
     }
+
+    // Executa a ação
+    await _handleAction(context, a);
+
+    // Marca como "executado"
+    if (messageIndex != null && messageIndex >= 0 && messageIndex < _messages.length) {
+      final msg = _messages[messageIndex];
+      if (msg.role == 'assistant' && msg.actions.isNotEmpty) {
+        final updatedActions = msg.actions.map((action) {
+          if (action == a) {
+            return action.copyWith(isExecuting: false, isExecuted: true);
+          }
+          return action;
+        }).toList();
+        
+        setState(() {
+          _messages[messageIndex] = AssistantMessage(
+            role: msg.role,
+            content: msg.content,
+            time: msg.time,
+            actions: updatedActions,
+          );
+        });
+      }
+    }
+
     if (!mounted) return;
+    
+    // Adiciona mensagem de confirmação com emoji
     final confirmation = AssistantMessage(
       role: 'assistant',
       content: fromAuto
-          ? 'Confirmado: ${_labelFor(a)}'
-          : 'Ação executada: ${_labelFor(a)}',
+          ? '✅ Confirmado: ${_labelFor(a)}'
+          : '✅ Ação executada: ${_labelFor(a)}',
       time: DateTime.now(),
     );
     setState(() {
       _messages.add(confirmation);
     });
     _firestore.addAssistantMessage(widget.userData.uid, confirmation);
+    await _scrollToBottom();
   }
 
   Future<void> _handleAction(BuildContext context, AssistantAction a) async {
@@ -777,6 +854,76 @@ class _AssistantPanelState extends State<AssistantPanel>
       messenger.showSnackBar(SnackBar(
           content: Text('Meta criada com sucesso!'),
           backgroundColor: Colors.green));
+    } else if (a.type == AssistantActionType.analyze_harmony) {
+      if (a.title == null || a.title!.isEmpty || a.date == null) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Dados incompletos para análise de harmonia.'),
+          backgroundColor: Colors.orange,
+        ));
+        return;
+      }
+
+      // Calcula harmonia do parceiro
+      final partnerName = a.title!;
+      final partnerBirthDate = DateFormat('dd/MM/yyyy').format(a.date!);
+      
+      final partnerEngine = NumerologyEngine(
+        nomeCompleto: partnerName,
+        dataNascimento: partnerBirthDate,
+      );
+      final partnerResult = partnerEngine.calcular();
+      
+      if (partnerResult == null) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Não foi possível calcular a numerologia do parceiro.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
+      // Pega harmonia do usuário
+      final userEngine = NumerologyEngine(
+        nomeCompleto: user.nomeAnalise,
+        dataNascimento: user.dataNasc,
+      );
+      final userResult = userEngine.calcular();
+      
+      if (userResult == null) {
+        messenger.showSnackBar(const SnackBar(
+          content: Text('Não foi possível calcular sua numerologia.'),
+          backgroundColor: Colors.red,
+        ));
+        return;
+      }
+
+      // Compara harmonias
+      final userHarmony = userResult.estruturas['harmoniaConjugal'] as Map<String, dynamic>;
+      final partnerHarmony = partnerResult.estruturas['harmoniaConjugal'] as Map<String, dynamic>;
+      
+      final userMissao = userResult.numeros['missao'] ?? 0;
+      final partnerMissao = partnerResult.numeros['missao'] ?? 0;
+
+      // Monta análise
+      final analysis = _buildHarmonyAnalysis(
+        userMissao, 
+        partnerMissao, 
+        userHarmony, 
+        partnerHarmony,
+        partnerName,
+      );
+
+      // Adiciona resposta com análise
+      if (!mounted) return;
+      final response = AssistantMessage(
+        role: 'assistant',
+        content: analysis,
+        time: DateTime.now(),
+      );
+      setState(() {
+        _messages.add(response);
+      });
+      _firestore.addAssistantMessage(user.uid, response);
+      await _scrollToBottom();
     }
   }
 
@@ -964,5 +1111,63 @@ class _AssistantPanelState extends State<AssistantPanel>
     final hh = time.hour.toString().padLeft(2, '0');
     final mm = time.minute.toString().padLeft(2, '0');
     return '$title – $hh:$mm';
+  }
+
+  String _buildHarmonyAnalysis(
+    int userMissao,
+    int partnerMissao,
+    Map<String, dynamic> userHarmony,
+    Map<String, dynamic> partnerHarmony,
+    String partnerName,
+  ) {
+    final vibra = userHarmony['vibra'] as List? ?? [];
+    final atrai = userHarmony['atrai'] as List? ?? [];
+    final oposto = userHarmony['oposto'] as List? ?? [];
+    final passivo = userHarmony['passivo'] as List? ?? [];
+
+    String compatibilityLevel;
+    String emoji;
+    String explanation;
+
+    if (vibra.contains(partnerMissao)) {
+      compatibilityLevel = "Vibração Perfeita";
+      emoji = "💖";
+      explanation = "Vocês possuem uma **vibração perfeita**! Há uma sintonia natural e profunda entre vocês.";
+    } else if (atrai.contains(partnerMissao)) {
+      compatibilityLevel = "Alta Atração";
+      emoji = "✨";
+      explanation = "Existe uma **forte atração** entre vocês. A relação tende a ser harmoniosa e complementar.";
+    } else if (oposto.contains(partnerMissao)) {
+      compatibilityLevel = "Energias Opostas";
+      emoji = "⚡";
+      explanation = "Vocês possuem **energias opostas**. Isso pode gerar desafios, mas também crescimento mútuo se houver compreensão.";
+    } else if (passivo.contains(partnerMissao)) {
+      compatibilityLevel = "Relação Passiva";
+      emoji = "🌙";
+      explanation = "A relação tende a ser **passiva e tranquila**. Pode faltar intensidade, mas há estabilidade.";
+    } else {
+      compatibilityLevel = "Neutro";
+      emoji = "🔄";
+      explanation = "A relação é **neutra** do ponto de vista numerológico. O sucesso dependerá de outros fatores.";
+    }
+
+    return '''
+## $emoji Análise de Harmonia Conjugal
+
+**Sua Missão**: $userMissao  
+**Missão de $partnerName**: $partnerMissao  
+
+**Compatibilidade**: $compatibilityLevel
+
+$explanation
+
+### Detalhes da sua Harmonia Conjugal:
+- **Vibra com**: ${vibra.join(', ')}
+- **Atrai**: ${atrai.join(', ')}
+- **Oposto**: ${oposto.join(', ')}
+- **Passivo**: ${passivo.join(', ')}
+
+Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qualquer relacionamento depende de amor, respeito, comunicação e esforço mútuo! 💕
+''';
   }
 }

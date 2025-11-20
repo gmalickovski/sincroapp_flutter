@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-enum AssistantActionType { schedule, create_goal, create_task }
+enum AssistantActionType { schedule, create_goal, create_task, analyze_harmony }
 
 class AssistantAction {
   final AssistantActionType type;
@@ -11,6 +11,8 @@ class AssistantAction {
   final DateTime? startDate; // For ranges
   final DateTime? endDate;
   final List<String> subtasks;
+  final bool isExecuting; // Novo: indica se está sendo executado
+  final bool isExecuted; // Novo: indica se já foi executado
 
   AssistantAction({
     required this.type,
@@ -20,7 +22,34 @@ class AssistantAction {
     this.startDate,
     this.endDate,
     this.subtasks = const [],
+    this.isExecuting = false,
+    this.isExecuted = false,
   });
+
+  // Método copyWith para atualizar estado
+  AssistantAction copyWith({
+    AssistantActionType? type,
+    String? title,
+    String? description,
+    DateTime? date,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? subtasks,
+    bool? isExecuting,
+    bool? isExecuted,
+  }) {
+    return AssistantAction(
+      type: type ?? this.type,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      date: date ?? this.date,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      subtasks: subtasks ?? this.subtasks,
+      isExecuting: isExecuting ?? this.isExecuting,
+      isExecuted: isExecuted ?? this.isExecuted,
+    );
+  }
 
   factory AssistantAction.fromJson(Map<String, dynamic> json) {
     final typeStr = (json['type'] ?? '').toString();
@@ -28,6 +57,7 @@ class AssistantAction {
     if (typeStr == 'schedule') t = AssistantActionType.schedule;
     if (typeStr == 'create_goal') t = AssistantActionType.create_goal;
     if (typeStr == 'create_task') t = AssistantActionType.create_task;
+    if (typeStr == 'analyze_harmony') t = AssistantActionType.analyze_harmony;
     DateTime? parseDate(dynamic v) {
       if (v == null) return null;
       final s = v.toString();

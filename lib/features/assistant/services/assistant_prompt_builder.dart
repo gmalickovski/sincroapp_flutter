@@ -200,6 +200,22 @@ Se o usuário pedir para criar uma meta:
    }
 3. Os marcos (subtasks) devem ser 5-10 passos práticos e progressivos para alcançar a meta.
 
+**FLUXO PARA ANÁLISE DE HARMONIA CONJUGAL:**
+Se o usuário perguntar sobre compatibilidade/harmonia conjugal com alguém (marido, esposa, namorado, namorada, parceiro, etc.):
+1. SEMPRE pergunte: "Para calcular a harmonia conjugal, preciso do nome completo de nascimento e data de nascimento (DD/MM/AAAA) da pessoa. Pode me fornecer?"
+2. NÃO retorne actions nesse primeiro passo.
+3. Aguarde a próxima mensagem com os dados (verifique chatHistory).
+4. Quando tiver nome completo E data de nascimento, retorne action especial:
+   {
+     "answer": "Analisando a harmonia conjugal entre vocês...",
+     "actions": [{
+       "type": "analyze_harmony",
+       "title": "nome completo do parceiro",
+       "date": "YYYY-MM-DD"
+     }]
+   }
+5. IMPORTANTE: Cálculos de terceiros são permitidos APENAS para harmonia conjugal. Não calcule outros aspectos numerológicos de terceiros.
+
 **CONTEXTO DO USUÁRIO (JSON):**
 $contextJson
 
