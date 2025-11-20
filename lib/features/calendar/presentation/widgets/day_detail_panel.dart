@@ -71,88 +71,97 @@ class DayDetailPanel extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // --- INÍCIO DA MUDANÇA: Adiciona o "Drag Handle" com área maior ---
-          // Este é o traço visual que indica que o painel é arrastável.
-          // Envolvemos em um GestureDetector para aumentar a área de toque.
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 12.0),
-              child: Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          // --- FIM DA MUDANÇA ---
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-                16, 0, 16, 0), // Padding superior removido
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      // --- INÍCIO DA MUDANÇA: CustomScrollView para permitir arrastar pelo cabeçalho ---
+      // Usamos CustomScrollView para que o cabeçalho faça parte da área rolável,
+      // permitindo que o DraggableScrollableSheet responda ao arrasto no cabeçalho.
+      child: CustomScrollView(
+        controller: scrollController,
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  // Garante que a data não estoure
-                  child: Text(
-                    formattedDate, // Removido '!' desnecessário
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
-                    overflow:
-                        TextOverflow.ellipsis, // Evita quebra se muito longo
+                // --- INÍCIO DA MUDANÇA: Adiciona o "Drag Handle" com área maior ---
+                // Este é o traço visual que indica que o painel é arrastável.
+                // Envolvemos em um GestureDetector para aumentar a área de toque.
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 12.0),
+                    child: Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.border.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                if (personalDayNumber != null && personalDayNumber! > 0)
-                  Padding(
-                    // Adiciona padding para não colar no botão add
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: VibrationPill(vibrationNumber: personalDayNumber!),
+                // --- FIM DA MUDANÇA ---
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      16, 0, 16, 0), // Padding superior removido
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        // Garante que a data não estoure
+                        child: Text(
+                          formattedDate, // Removido '!' desnecessário
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold),
+                          overflow: TextOverflow
+                              .ellipsis, // Evita quebra se muito longo
+                        ),
+                      ),
+                      if (personalDayNumber != null && personalDayNumber! > 0)
+                        Padding(
+                          // Adiciona padding para não colar no botão add
+                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                          child: VibrationPill(
+                              vibrationNumber: personalDayNumber!),
+                        ),
+                    ],
                   ),
+                ),
+                const Divider(height: 32, color: AppColors.border),
               ],
             ),
           ),
-          const Divider(height: 32, color: AppColors.border),
-          Expanded(
-            child: events.isEmpty
-                ? _buildEmptyStateMobile()
-                : ListView.separated(
-                    controller: scrollController, // Usa o controller passado
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                    shrinkWrap: true,
-                    itemCount: events.length,
-                    separatorBuilder: (_, __) => const SizedBox(
-                        height: 0), // TaskItem controla o padding
-                    itemBuilder: (context, index) {
-                      final event = events[index];
-                      if (event is TaskModel) {
-                        return TaskItem(
-                          key: ValueKey('task_${event.id}'),
-                          task: event,
-                          onToggle: (isCompleted) =>
-                              onToggleTask(event, isCompleted),
-                          onTap: () =>
-                              onTaskTap(event), // Chama o callback principal
-                          showGoalIconFlag: true,
-                          showTagsIconFlag: true,
-                          showVibrationPillFlag: true,
-                          verticalPaddingOverride: 4.0,
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-          ),
+          if (events.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: _buildEmptyStateMobile(),
+            )
+          else
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final event = events[index];
+                  if (event is TaskModel) {
+                    return TaskItem(
+                      key: ValueKey('task_${event.id}'),
+                      task: event,
+                      onToggle: (isCompleted) =>
+                          onToggleTask(event, isCompleted),
+                      onTap: () =>
+                          onTaskTap(event), // Chama o callback principal
+                      showGoalIconFlag: true,
+                      showTagsIconFlag: true,
+                      showVibrationPillFlag: true,
+                      verticalPaddingOverride: 4.0,
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+                childCount: events.length,
+              ),
+            ),
         ],
       ),
     );
