@@ -544,14 +544,19 @@ class NumerologyEngine {
   int _calcularNumeroDestino() {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return 0;
-    return _reduzirNumero(dataNasc.day + dataNasc.month + dataNasc.year,
-        mestre: true);
+    // Reduz cada componente separadamente
+    final diaR = _reduzirNumero(dataNasc.day);
+    final mesR = _reduzirNumero(dataNasc.month);
+    final anoR = _reduzirNumero(dataNasc.year);
+    // Soma e reduz mantendo mestres
+    return _reduzirNumero(diaR + mesR + anoR, mestre: true);
   }
 
   Map<String, dynamic> _calcularCiclosDeVida(int numeroDestino) {
     final dataNasc = _parseDate(dataNascimento);
     if (dataNasc == null) return {};
     final formatador = DateFormat('dd/MM/yyyy');
+    // Duração do primeiro ciclo é 37 - destino (SEM reduzir mestres 11/22)
     final idadeFimCiclo1 = 37 - numeroDestino;
     final dataFim1 = DateTime(
         dataNasc.year + idadeFimCiclo1, dataNasc.month, dataNasc.day - 1);
@@ -660,22 +665,23 @@ class NumerologyEngine {
     return _reduzirNumero(dataNasc.day);
   }
 
-  // Desafio Principal (0–8): |mês reduzido - dia reduzido|
-  // Desafios: desafio1=|mes-dia|, desafio2=|ano-dia|, principal=|d1-d2|
+  // Desafios: desafio1=|mes-dia|, desafio2=|ano-dia|, desafio3(principal)=|d1-d2|
+  // Os períodos coincidem com os Ciclos de Vida
   Map<String, dynamic> _calcularDesafios(DateTime dataNasc, int numeroDestino) {
     final diaR = _reduzirNumero(dataNasc.day);
     final mesR = _reduzirNumero(dataNasc.month);
     final anoR = _reduzirNumero(dataNasc.year);
 
-    final d1 = (mesR - diaR).abs();
-    final d2 = (anoR - diaR).abs();
-    final principal = (d1 - d2).abs();
+    // Desafios: resultados devem ser reduzidos (não mestre)
+    final d1 = _reduzirNumero((mesR - diaR).abs(), mestre: false);
+    final d2 = _reduzirNumero((anoR - diaR).abs(), mestre: false);
+    final d3Principal = _reduzirNumero((d1 - d2).abs(), mestre: false);
 
-    // Períodos baseados nos Ciclos de Vida
+    // Períodos baseados nos Ciclos de Vida (37 - Destino SEM reduzir mestres)
     final idadeFimDesafio1 = 37 - numeroDestino;
-    final idadeInicioDesafioPrincipal = idadeFimDesafio1;
-    final idadeFimDesafioPrincipal = idadeInicioDesafioPrincipal + 9;
-    final idadeInicioDesafio2 = idadeFimDesafioPrincipal;
+    final idadeInicioDesafio2 = idadeFimDesafio1;
+    final idadeFimDesafio2 = idadeInicioDesafio2 + 27; // 2º Ciclo dura 27 anos
+    final idadeInicioDesafio3 = idadeFimDesafio2;
 
     return {
       'desafio1': {
@@ -685,20 +691,19 @@ class NumerologyEngine {
         'idadeFim': idadeFimDesafio1,
         'periodoIdade': 'nascimento até $idadeFimDesafio1 anos',
       },
-      'desafioPrincipal': {
-        'nome': 'Desafio Principal',
-        'regente': principal,
-        'idadeInicio': idadeInicioDesafioPrincipal,
-        'idadeFim': idadeFimDesafioPrincipal,
-        'periodoIdade':
-            '$idadeInicioDesafioPrincipal a $idadeFimDesafioPrincipal anos',
-      },
       'desafio2': {
-        'nome': 'Terceiro Desafio',
+        'nome': 'Segundo Desafio',
         'regente': d2,
         'idadeInicio': idadeInicioDesafio2,
+        'idadeFim': idadeFimDesafio2,
+        'periodoIdade': '$idadeInicioDesafio2 a $idadeFimDesafio2 anos',
+      },
+      'desafioPrincipal': {
+        'nome': 'Terceiro Desafio (Principal)',
+        'regente': d3Principal,
+        'idadeInicio': idadeInicioDesafio3,
         'idadeFim': 200, // Resto da vida
-        'periodoIdade': 'a partir de $idadeInicioDesafio2 anos',
+        'periodoIdade': 'a partir de $idadeInicioDesafio3 anos',
       },
     };
   }
@@ -718,9 +723,8 @@ class NumerologyEngine {
     final p3Reg = _reduzirNumero(p1Reg + p2Reg, mestre: true);
     final p4Reg = _reduzirNumero(mesR + anoR, mestre: true);
 
-    // Duração do primeiro ciclo é 37 - destino (reduzido a 1 dígito)
-    final destinoReduzido = _reduzirNumero(numeroDestino);
-    final anosP1 = 37 - destinoReduzido;
+    // Duração do primeiro ciclo é 37 - destino (SEM reduzir mestres 11/22)
+    final anosP1 = 37 - numeroDestino;
 
     final anoNasc = dataNasc.year;
     final p1Inicio = anoNasc;
