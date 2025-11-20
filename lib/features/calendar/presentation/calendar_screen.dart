@@ -805,24 +805,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
             ),
           ),
         ),
-        const VerticalDivider(width: 1, thickness: 1, color: AppColors.border),
         Expanded(
           flex: 1,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 24, 24),
-            // --- INÍCIO DA CORREÇÃO (Para erro de tipo) ---
-            // _selectedDay agora é um 'DateTime' não-nulo,
-            // então podemos passá-lo diretamente.
-            child: DayDetailPanel(
-              selectedDay: _selectedDay,
-              personalDayNumber: _personalDayNumber,
-              events: _getRawEventsForDay(_selectedDay),
-              isDesktop: true,
-              onAddTask: _openAddTaskModal,
-              onToggleTask: _onToggleTask,
-              onTaskTap: _handleTaskTap,
+            padding: const EdgeInsets.all(24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: DayDetailPanel(
+                selectedDay: _selectedDay,
+                personalDayNumber: _personalDayNumber,
+                events: _getRawEventsForDay(_selectedDay),
+                isDesktop: true,
+                onAddTask: _openAddTaskModal,
+                onToggleTask: _onToggleTask,
+                onTaskTap: _handleTaskTap,
+              ),
             ),
-            // --- FIM DA CORREÇÃO ---
           ),
         ),
       ],

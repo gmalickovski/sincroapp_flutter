@@ -60,17 +60,19 @@ class DayDetailPanel extends StatelessWidget {
     // Envolvemos o conteúdo em um Container para dar a ele uma aparência
     // de "gaveta" com cantos arredondados no topo.
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black38,
-            blurRadius: 10,
-            offset: Offset(0, -5),
-          ),
-        ],
-      ),
+      decoration: isDesktop
+          ? null // Decoração aplicada no parent (calendar_screen)
+          : const BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black38,
+                  blurRadius: 10,
+                  offset: Offset(0, -5),
+                ),
+              ],
+            ),
       // --- INÍCIO DA MUDANÇA: CustomScrollView para permitir arrastar pelo cabeçalho ---
       // Usamos CustomScrollView para que o cabeçalho faça parte da área rolável,
       // permitindo que o DraggableScrollableSheet responda ao arrasto no cabeçalho.
@@ -81,29 +83,27 @@ class DayDetailPanel extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // --- INÍCIO DA MUDANÇA: Adiciona o "Drag Handle" com área maior ---
-                // Este é o traço visual que indica que o painel é arrastável.
-                // Envolvemos em um GestureDetector para aumentar a área de toque.
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.border.withValues(alpha: 0.5),
-                          borderRadius: BorderRadius.circular(2),
+                // Drag handle - apenas no mobile
+                if (!isDesktop)
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      child: Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: AppColors.border.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                // --- FIM DA MUDANÇA ---
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                      16, 0, 16, 0), // Padding superior removido
+                  padding: EdgeInsets.fromLTRB(
+                      16, isDesktop ? 16 : 0, 16, 0), // Padding superior no desktop
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
