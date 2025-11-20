@@ -139,27 +139,30 @@ class DayDetailPanel extends StatelessWidget {
               child: _buildEmptyStateMobile(),
             )
           else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final event = events[index];
-                  if (event is TaskModel) {
-                    return TaskItem(
-                      key: ValueKey('task_${event.id}'),
-                      task: event,
-                      onToggle: (isCompleted) =>
-                          onToggleTask(event, isCompleted),
-                      onTap: () =>
-                          onTaskTap(event), // Chama o callback principal
-                      showGoalIconFlag: true,
-                      showTagsIconFlag: true,
-                      showVibrationPillFlag: true,
-                      verticalPaddingOverride: 4.0,
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-                childCount: events.length,
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final event = events[index];
+                    if (event is TaskModel) {
+                      return TaskItem(
+                        key: ValueKey('task_${event.id}'),
+                        task: event,
+                        onToggle: (isCompleted) =>
+                            onToggleTask(event, isCompleted),
+                        onTap: () =>
+                            onTaskTap(event), // Chama o callback principal
+                        showGoalIconFlag: true,
+                        showTagsIconFlag: true,
+                        showVibrationPillFlag: true,
+                        verticalPaddingOverride: 4.0,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  childCount: events.length,
+                ),
               ),
             ),
         ],
