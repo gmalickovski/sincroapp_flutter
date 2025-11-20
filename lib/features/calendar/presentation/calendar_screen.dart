@@ -54,9 +54,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   bool _isScreenLoading = true;
   bool _isChangingMonth = false;
 
-  // --- INÍCIO DA MUDANÇA: Estado para controlar o layout da gaveta ---
-  bool _isPanelDragging = false;
-  // --- FIM DA MUDANÇA ---
+
 
   StreamSubscription? _tasksDueDateSubscription;
   StreamSubscription? _tasksCreatedAtSubscription;
@@ -573,9 +571,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final orientation = MediaQuery.of(context).orientation;
 
     void handleTodayTap() {
-      // --- INÍCIO DA MUDANÇA: Reseta o estado da gaveta ---
-      if (_isPanelDragging) setState(() => _isPanelDragging = false);
-      // --- FIM DA MUDANÇA ---
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -660,100 +655,89 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       );
     } else {
-      // Layout Retrato
-      // --- INÍCIO DA MUDANÇA: Layout dinâmico com base no estado _isPanelDragging ---
-      final calendarWidget = Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Column(
-              children: [
-                CalendarHeader(
-                  focusedDay: _focusedDay,
-                  onTodayButtonTap: handleTodayTap,
-                  onLeftArrowTap: () => _onPageChanged(
-                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                  onRightArrowTap: () => _onPageChanged(
-                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
-                ),
-                const SizedBox(height: 8),
-                Stack(
-                  alignment: Alignment.topCenter,
-                  children: [
-                    CustomCalendar(
-                      focusedDay: _focusedDay,
-                      selectedDay: _selectedDay,
-                      onDaySelected: _onDaySelected,
-                      onPageChanged: _onPageChanged,
-                      isDesktop: false,
-                      events: eventsMapUtc,
-                      personalDayNumber: _personalDayNumber,
-                    ),
-                    if (_isChangingMonth)
-                      Positioned.fill(
-                        child: Container(
-                          color: AppColors.background.withValues(alpha: 0.5),
-                          child: const Center(child: CustomLoadingSpinner()),
+      // Layout Retrato - Stack com painel arrastável
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenHeight = constraints.maxHeight;
+          
+          // Estima altura do calendário (varia entre ~380-450px dependendo do mês)
+          // Usamos um valor conservador para garantir que não sobreponha inicialmente
+          final estimatedCalendarHeight = 450.0;
+          final availableHeight = screenHeight - estimatedCalendarHeight;
+          
+          // Calcula o tamanho inicial como fração da tela
+          // Limitamos entre 0.25 (25%) e 0.45 (45%) da tela
+          final initialSize = (availableHeight / screenHeight).clamp(0.25, 0.45);
+          
+          return Stack(
+            children: [
+              // Calendário fixo no topo
+              Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Column(
+                      children: [
+                        CalendarHeader(
+                          focusedDay: _focusedDay,
+                          onTodayButtonTap: handleTodayTap,
+                          onLeftArrowTap: () => _onPageChanged(
+                              DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                          onRightArrowTap: () => _onPageChanged(
+                              DateTime(_focusedDay.year, _focusedDay.month + 1)),
                         ),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8.0),
-              ],
-            ),
-          ),
-        ],
-      );
-
-      final panelWidget = NotificationListener<DraggableScrollableNotification>(
-        onNotification: (notification) {
-          // Quando o usuário começa a arrastar para cima, mudamos para o layout de Stack
-          if (notification.extent > notification.minExtent &&
-              !_isPanelDragging) {
-            setState(() {
-              _isPanelDragging = true;
-            });
-          }
-          // Quando ele volta para o estado inicial, voltamos para o layout de Column
-          else if (notification.extent <= notification.minExtent &&
-              _isPanelDragging) {
-            setState(() {
-              _isPanelDragging = false;
-            });
-          }
-          return true;
+                        const SizedBox(height: 8),
+                        Stack(
+                          alignment: Alignment.topCenter,
+                          children: [
+                            CustomCalendar(
+                              focusedDay: _focusedDay,
+                              selectedDay: _selectedDay,
+                              onDaySelected: _onDaySelected,
+                              onPageChanged: _onPageChanged,
+                              isDesktop: false,
+                              events: eventsMapUtc,
+                              personalDayNumber: _personalDayNumber,
+                            ),
+                            if (_isChangingMonth)
+                              Positioned.fill(
+                                child: Container(
+                                  color: AppColors.background.withValues(alpha: 0.5),
+                                  child: const Center(child: CustomLoadingSpinner()),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              
+              // Painel arrastável
+              DraggableScrollableSheet(
+                initialChildSize: initialSize,
+                minChildSize: initialSize,
+                maxChildSize: 0.95,
+                snap: true,
+                snapSizes: [initialSize, 0.7, 0.95],
+                builder: (context, scrollController) {
+                  return DayDetailPanel(
+                    scrollController: scrollController,
+                    selectedDay: _selectedDay,
+                    personalDayNumber: _personalDayNumber,
+                    events: _getRawEventsForDay(_selectedDay),
+                    isDesktop: false,
+                    onAddTask: _openAddTaskModal,
+                    onToggleTask: _onToggleTask,
+                    onTaskTap: _handleTaskTap,
+                  );
+                },
+              ),
+            ],
+          );
         },
-        child: DraggableScrollableSheet(
-          // O tamanho inicial é calculado para ocupar o espaço restante
-          initialChildSize: 0.4, // Altura inicial menor
-          minChildSize: 0.4, // Altura mínima igual à inicial
-          maxChildSize: 0.9, // Expande até quase o topo
-          builder: (context, scrollController) {
-            return DayDetailPanel(
-              scrollController: scrollController,
-              selectedDay: _selectedDay,
-              personalDayNumber: _personalDayNumber,
-              events: _getRawEventsForDay(_selectedDay),
-              isDesktop: false,
-              onAddTask: _openAddTaskModal,
-              onToggleTask: _onToggleTask,
-              onTaskTap: _handleTaskTap,
-            );
-          },
-        ),
       );
-
-      // Retorna o layout apropriado com base no estado de arrasto
-      if (_isPanelDragging) {
-        return Stack(
-          children: [calendarWidget, panelWidget],
-        );
-      } else {
-        return Column(
-          children: [calendarWidget, Expanded(child: panelWidget)],
-        );
-      }
-      // --- FIM DA MUDANÇA ---
     }
   }
 
