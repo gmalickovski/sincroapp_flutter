@@ -33,6 +33,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   // Controle visual e estado da voz
   bool _isListening = false;
   bool _isInputEmpty = true;
+  bool _isFullscreen = false; // Controla modo tela cheia (apenas desktop)
 
   // Variável chave para corrigir o ECO
   String _textBeforeListening = '';
@@ -334,19 +335,34 @@ class _AssistantPanelState extends State<AssistantPanel>
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final hasKeyboard = bottomInset > 0;
+    final isDesktop = MediaQuery.of(context).size.width >= 768;
+
+    // Se fullscreen no desktop, forçar 100%
+    final initialSize = _isFullscreen && isDesktop 
+        ? 1.0 
+        : (hasKeyboard ? 0.95 : 0.6);
+    final minSize = _isFullscreen && isDesktop 
+        ? 1.0 
+        : (hasKeyboard ? 0.95 : 0.5);
+    final maxSize = 1.0; // Permite expansão total
+    final snapSizesList = _isFullscreen && isDesktop
+        ? const [1.0]
+        : (hasKeyboard ? const [0.95] : const [0.6, 0.95, 1.0]);
 
     return DraggableScrollableSheet(
-      initialChildSize: hasKeyboard ? 0.95 : 0.6,
-      minChildSize: hasKeyboard ? 0.95 : 0.5,
-      maxChildSize: 0.95,
+      initialChildSize: initialSize,
+      minChildSize: minSize,
+      maxChildSize: maxSize,
       expand: false,
       snap: true,
-      snapSizes: hasKeyboard ? const [0.95] : const [0.6, 0.95],
+      snapSizes: snapSizesList,
       builder: (context, controller) {
         return Container(
           decoration: BoxDecoration(
             color: AppColors.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: _isFullscreen && isDesktop
+                ? BorderRadius.zero // Sem bordas em fullscreen
+                : const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -356,41 +372,62 @@ class _AssistantPanelState extends State<AssistantPanel>
           ),
           child: Column(
             children: [
-              // Handle
-              Container(
-                height: 44,
-                alignment: Alignment.center,
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
+              // Handle - ocultar em fullscreen desktop
+              if (!(_isFullscreen && isDesktop))
+                Container(
+                  height: 44,
+                  alignment: Alignment.center,
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
               // Header
-              const Padding(
-                padding:
-                    EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Icon(
-                      Icons.smart_toy_outlined,
-                      color: AppColors.primary,
-                      size: 24,
+                    const Row(
+                      children: [
+                        Icon(
+                          Icons.smart_toy_outlined,
+                          color: AppColors.primary,
+                          size: 24,
+                        ),
+                        SizedBox(width: 10),
+                        Text(
+                          'Sincro IA',
+                          style: TextStyle(
+                            color: AppColors.primaryText,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ],
                     ),
-                    SizedBox(width: 10),
-                    Text(
-                      'Sincro IA', // Ajustado conforme pedido
-                      style: TextStyle(
-                        color: AppColors.primaryText,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
+                    // Botão fullscreen apenas no desktop
+                    if (isDesktop)
+                      IconButton(
+                        icon: Icon(
+                          _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                          color: AppColors.secondaryText,
+                          size: 20,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isFullscreen = !_isFullscreen;
+                          });
+                        },
+                        tooltip: _isFullscreen ? 'Sair da tela cheia' : 'Tela cheia',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                    ),
                   ],
                 ),
               ),
