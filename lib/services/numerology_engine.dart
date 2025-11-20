@@ -935,10 +935,10 @@ class NumerologyEngine {
     Map<String, dynamic> desafioAtual;
     if (idade < (desafios['desafio1']?['idadeFim'] ?? 0)) {
       desafioAtual = desafios['desafio1'];
-    } else if (idade < (desafios['desafioPrincipal']?['idadeFim'] ?? 0)) {
-      desafioAtual = desafios['desafioPrincipal'];
-    } else {
+    } else if (idade < (desafios['desafio2']?['idadeFim'] ?? 0)) {
       desafioAtual = desafios['desafio2'];
+    } else {
+      desafioAtual = desafios['desafioPrincipal'];
     }
 
     // Arcanos descontinuados: removidos do cálculo.

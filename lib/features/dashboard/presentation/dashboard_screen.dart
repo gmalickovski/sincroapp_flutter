@@ -1722,7 +1722,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       Map<String, dynamic> desafios, int idadeAtual) {
     // Identifica desafio atual
     Map<String, dynamic>? desafioAtual;
-    for (final key in ['desafio1', 'desafioPrincipal', 'desafio2']) {
+    for (final key in ['desafio1', 'desafio2', 'desafioPrincipal']) {
       final desafio = desafios[key];
       if (desafio == null) continue;
       final idadeInicio = desafio['idadeInicio'] ?? 0;
@@ -1747,7 +1747,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     // Modal: todos os desafios com subtítulos destacados
     final buffer = StringBuffer();
-    for (final key in ['desafio1', 'desafioPrincipal', 'desafio2']) {
+    for (final key in ['desafio1', 'desafio2', 'desafioPrincipal']) {
       final desafio = desafios[key];
       if (desafio == null) continue;
       final reg = desafio['regente'] ?? 0;
