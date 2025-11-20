@@ -11,10 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== NAVEGAÇÃO =====
   setupNavigation();
-  
+
   // ===== FAQ =====
   setupFAQ();
-  
+
   // ===== MENU MOBILE =====
   setupMobileMenu();
 });
@@ -27,19 +27,46 @@ document.addEventListener('DOMContentLoaded', () => {
  * Abre modal de login ou redireciona para app
  */
 async function handleLogin() {
-  // Mostra overlay de loading e navega na próxima frame
-  try { showLoading(true); } catch (_) {}
-  // Usa timeout 0 para garantir pintura do overlay antes da navegação
-  setTimeout(() => { window.location.href = '/app/#/login'; }, 0);
+  // Mostra overlay de loading
+  try { showLoading(true); } catch (_) { }
+
+  // Aguarda dois frames para garantir pintura do overlay
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => requestAnimationFrame(resolve));
+
+  // Pré-carrega recursos críticos
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = '/app/';
+  document.head.appendChild(link);
+
+  // Pequeno delay para suavidade visual (300ms)
+  setTimeout(() => {
+    window.location.href = '/app/#/login';
+  }, 300);
 }
 
 /**
  * Registra novo usuário
  */
 async function handleRegister() {
-  // Mostra overlay de loading e navega na próxima frame
-  try { showLoading(true); } catch (_) {}
-  setTimeout(() => { window.location.href = '/app/#/register'; }, 0);
+  // Mostra overlay de loading
+  try { showLoading(true); } catch (_) { }
+
+  // Aguarda dois frames para garantir pintura do overlay
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  await new Promise(resolve => requestAnimationFrame(resolve));
+
+  // Pré-carrega recursos críticos
+  const link = document.createElement('link');
+  link.rel = 'prefetch';
+  link.href = '/app/';
+  document.head.appendChild(link);
+
+  // Pequeno delay para suavidade visual (300ms)
+  setTimeout(() => {
+    window.location.href = '/app/#/register';
+  }, 300);
 }
 
 /**
@@ -49,7 +76,7 @@ async function createUserDocument(user) {
   const displayNameParts = (user.displayName || '').split(' ');
   const primeiroNome = displayNameParts[0] || '';
   const sobrenome = displayNameParts.slice(1).join(' ') || '';
-  
+
   const userData = {
     uid: user.uid,
     email: user.email || '',
@@ -78,7 +105,7 @@ async function createUserDocument(user) {
     createdAt: firebase.firestore.Timestamp.now(),
     updatedAt: firebase.firestore.Timestamp.now()
   };
-  
+
   await db.collection('users').doc(user.uid).set(userData);
   console.log('✅ Documento do usuário criado');
 }
@@ -92,35 +119,35 @@ async function createUserDocument(user) {
  */
 async function handleSelectPlan(planId) {
   console.log('Plano selecionado:', planId);
-  
+
   // Verifica se usuário está autenticado
   const user = auth.currentUser;
-  
+
   if (!user) {
     // Não está logado: registra primeiro
     console.log('Usuário não autenticado, redirecionando para registro...');
     await handleRegister();
     return;
   }
-  
+
   // Plano gratuito: apenas redireciona
   if (planId === 'free') {
     window.location.href = '/app/';
     return;
   }
-  
+
   // Planos pagos: valida reCAPTCHA e inicia checkout
   showLoading(true);
-  
+
   try {
     // Executa reCAPTCHA v3 para a ação 'checkout'
     const token = await grecaptcha.enterprise.execute(
       '6LeC__ArAAAAAJUbYkba086MP-cCJBolbjLcm_uU',
       { action: 'checkout' }
     );
-    
+
     console.log('✅ Token reCAPTCHA gerado para checkout');
-    
+
     // Valida no backend (isso gera a pontuação que o Firebase precisa!)
     const validateResponse = await fetch('https://us-central1-sincroapp-529cc.cloudfunctions.net/validateRecaptcha', {
       method: 'POST',
@@ -132,32 +159,32 @@ async function handleSelectPlan(planId) {
         action: 'checkout'
       })
     });
-    
+
     const validation = await validateResponse.json();
-    
+
     if (!validation.success) {
       console.warn('⚠️ Verificação reCAPTCHA falhou:', validation);
       showError('Verificação de segurança falhou. Tente novamente.');
       return;
     }
-    
+
     console.log('✅ reCAPTCHA validado. Score:', validation.score);
-    
+
     // Chama função do PaymentService via Cloud Function
     const startCheckout = firebase.functions().httpsCallable('startWebCheckout');
-    const result = await startCheckout({ 
+    const result = await startCheckout({
       userId: user.uid,
       plan: planId, // 'plus' ou 'premium'
       recaptchaToken: token
     });
-    
+
     if (result.data.checkoutUrl) {
       // Redireciona para página de pagamento do PagBank
       window.location.href = result.data.checkoutUrl;
     } else {
       throw new Error('URL de checkout não recebida');
     }
-    
+
   } catch (error) {
     console.error('❌ Erro ao iniciar checkout:', error);
     showError('Erro ao processar pagamento. Tente novamente.');
@@ -200,32 +227,32 @@ function showError(message) {
  */
 function setupNavigation() {
   // Scroll suave para seções
-  window.scrollToSection = function(sectionId) {
+  window.scrollToSection = function (sectionId) {
     const element = document.getElementById(sectionId);
     if (element) {
-      element.scrollIntoView({ 
+      element.scrollIntoView({
         behavior: 'smooth',
         block: 'start'
       });
-      
+
       // Fecha menu mobile se aberto
       const mobileMenu = document.getElementById('mobile-menu');
       if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
         toggleMobileMenu();
       }
-      
+
       // Atualiza nav ativa
       updateActiveNav(sectionId);
     }
   };
-  
+
   // Observa seções para atualizar nav
   const sections = document.querySelectorAll('section[id]');
   const observerOptions = {
     threshold: 0.3,
     rootMargin: '-50px'
   };
-  
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -233,7 +260,7 @@ function setupNavigation() {
       }
     });
   }, observerOptions);
-  
+
   sections.forEach(section => observer.observe(section));
 }
 
@@ -245,7 +272,7 @@ function updateActiveNav(sectionId) {
   document.querySelectorAll('.nav-button').forEach(btn => {
     btn.style.color = 'var(--text-secondary)';
   });
-  
+
   // Ativa o correto
   const navBtn = document.getElementById(`nav-${sectionId}`);
   if (navBtn) {
@@ -262,14 +289,14 @@ function updateActiveNav(sectionId) {
  */
 function setupFAQ() {
   const faqQuestions = document.querySelectorAll('.faq-question');
-  
+
   faqQuestions.forEach(question => {
     question.addEventListener('click', () => {
       const isActive = question.classList.contains('active');
-      
+
       // Fecha todas
       faqQuestions.forEach(q => q.classList.remove('active'));
-      
+
       // Abre a clicada se não estava ativa
       if (!isActive) {
         question.classList.add('active');
@@ -287,7 +314,7 @@ function setupFAQ() {
  */
 function setupMobileMenu() {
   const menuToggle = document.getElementById('menu-toggle');
-  
+
   if (menuToggle) {
     menuToggle.addEventListener('click', toggleMobileMenu);
   }
@@ -300,10 +327,10 @@ function toggleMobileMenu() {
   const mobileMenu = document.getElementById('mobile-menu');
   const iconOpen = document.getElementById('menu-icon-open');
   const iconClose = document.getElementById('menu-icon-close');
-  
+
   if (mobileMenu) {
     const isHidden = mobileMenu.classList.contains('hidden');
-    
+
     if (isHidden) {
       mobileMenu.classList.remove('hidden');
       iconOpen.classList.add('hidden');
