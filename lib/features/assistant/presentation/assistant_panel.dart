@@ -86,6 +86,195 @@ class _AssistantPanelState extends State<AssistantPanel>
     super.dispose();
   }
 
+  // --- Fullscreen Toggle ---
+
+  void _toggleFullscreen() {
+    if (_isFullscreen) {
+      // Fechar fullscreen
+      Navigator.of(context).pop();
+      setState(() {
+        _isFullscreen = false;
+      });
+    } else {
+      // Abrir fullscreen
+      setState(() {
+        _isFullscreen = true;
+      });
+      
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        barrierColor: Colors.black.withValues(alpha: 0.5),
+        builder: (dialogContext) => Dialog.fullscreen(
+          backgroundColor: Colors.transparent,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 20,
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Header com botão fechar
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 24),
+                                SizedBox(width: 10),
+                                Text(
+                                  'Sincro IA',
+                                  style: TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: -0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.fullscreen_exit, color: AppColors.secondaryText, size: 20),
+                              onPressed: () {
+                                Navigator.of(dialogContext).pop();
+                                setState(() {
+                                  _isFullscreen = false;
+                                });
+                              },
+                              tooltip: 'Sair da tela cheia',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1, color: AppColors.border),
+                      // Lista de mensagens
+                      Expanded(
+                        child: ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: _messages.length,
+                          itemBuilder: (_, i) {
+                            final m = _messages[i];
+                            final isUser = m.role == 'user';
+                            return Align(
+                              alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.all(12),
+                                constraints: const BoxConstraints(maxWidth: 560),
+                                decoration: BoxDecoration(
+                                  color: isUser
+                                      ? AppColors.primaryAccent.withValues(alpha: 0.15)
+                                      : AppColors.cardBackground,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _buildMarkdownMessage(m.content, isUser: isUser),
+                                    if (!isUser && m.actions.isNotEmpty) ...[\n                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: [
+                                          for (final a in m.actions) _buildActionChip(a, i),
+                                        ],
+                                      ),
+                                    ]
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      // Input
+                      SafeArea(
+                        top: false,
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  focusNode: _inputFocusNode,
+                                  controller: _controller,
+                                  onSubmitted: (_) => _send(),
+                                  maxLines: 4,
+                                  minLines: 1,
+                                  textInputAction: TextInputAction.newline,
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontSize: 15,
+                                    height: 1.45,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: _isListening ? 'Fale agora...' : 'Pergunte o que quiser...',
+                                    hintStyle: TextStyle(
+                                      color: _isListening ? AppColors.primary : AppColors.tertiaryText,
+                                      fontSize: 14,
+                                      fontWeight: _isListening ? FontWeight.bold : FontWeight.normal,
+                                    ),
+                                    filled: true,
+                                    fillColor: AppColors.cardBackground,
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                      borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                      borderSide: BorderSide(
+                                        color: _isListening ? AppColors.primary : AppColors.border.withValues(alpha: 0.5),
+                                        width: _isListening ? 2 : 1,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildDynamicButton(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ).then((_) {
+        if (mounted) {
+          setState(() {
+            _isFullscreen = false;
+          });
+        }
+      });
+    }
+  }
+
   // --- Lógica de Envio ---
 
   Future<void> _send() async {
@@ -338,17 +527,11 @@ class _AssistantPanelState extends State<AssistantPanel>
     final hasKeyboard = bottomInset > 0;
     final isDesktop = MediaQuery.of(context).size.width >= 768;
 
-    // Se fullscreen no desktop, forçar 100%
-    final initialSize = _isFullscreen && isDesktop 
-        ? 1.0 
-        : (hasKeyboard ? 0.95 : 0.6);
-    final minSize = _isFullscreen && isDesktop 
-        ? 1.0 
-        : (hasKeyboard ? 0.95 : 0.5);
+    // Configuração do DraggableScrollableSheet (não mais afetado por fullscreen)
+    final initialSize = hasKeyboard ? 0.95 : 0.6;
+    final minSize = hasKeyboard ? 0.95 : 0.5;
     final maxSize = 1.0; // Permite expansão total
-    final snapSizesList = _isFullscreen && isDesktop
-        ? const [1.0]
-        : (hasKeyboard ? const [0.95] : const [0.6, 0.95, 1.0]);
+    final snapSizesList = hasKeyboard ? const [0.95] : const [0.6, 0.95, 1.0];
 
     return DraggableScrollableSheet(
       initialChildSize: initialSize,
@@ -361,9 +544,7 @@ class _AssistantPanelState extends State<AssistantPanel>
         return Container(
           decoration: BoxDecoration(
             color: AppColors.background,
-            borderRadius: _isFullscreen && isDesktop
-                ? BorderRadius.zero // Sem bordas em fullscreen
-                : const BorderRadius.vertical(top: Radius.circular(16)),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [
               BoxShadow(
                   color: Colors.black.withValues(alpha: 0.2),
@@ -373,20 +554,19 @@ class _AssistantPanelState extends State<AssistantPanel>
           ),
           child: Column(
             children: [
-              // Handle - ocultar em fullscreen desktop
-              if (!(_isFullscreen && isDesktop))
-                Container(
-                  height: 44,
-                  alignment: Alignment.center,
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
+              // Handle - sempre visível (fullscreen usa dialog separado)
+              Container(
+                height: 44,
+                alignment: Alignment.center,
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
+              ),
               // Header
               Padding(
                 padding: const EdgeInsets.only(bottom: 12, top: 4, left: 20, right: 20),
@@ -420,11 +600,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                           color: AppColors.secondaryText,
                           size: 20,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _isFullscreen = !_isFullscreen;
-                          });
-                        },
+                        onPressed: _toggleFullscreen,
                         tooltip: _isFullscreen ? 'Sair da tela cheia' : 'Tela cheia',
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -437,7 +613,7 @@ class _AssistantPanelState extends State<AssistantPanel>
               // Lista
               Expanded(
                 child: ListView.builder(
-                  controller: _scrollController,
+                  controller: controller, // CORREÇÃO: passa controller para habilitar drag
                   padding: const EdgeInsets.all(16),
                   itemCount: _messages.length,
                   itemBuilder: (_, i) {
@@ -778,21 +954,21 @@ class _AssistantPanelState extends State<AssistantPanel>
     if (messageIndex != null && messageIndex >= 0 && messageIndex < _messages.length) {
       final msg = _messages[messageIndex];
       if (msg.role == 'assistant' && msg.actions.isNotEmpty) {
-        final updatedActions = msg.actions.map((action) {
-          if (action == a) {
-            return action.copyWith(isExecuting: true);
-          }
-          return action;
-        }).toList();
-        
-        setState(() {
-          _messages[messageIndex] = AssistantMessage(
-            role: msg.role,
-            content: msg.content,
-            time: msg.time,
-            actions: updatedActions,
-          );
-        });
+        // CORREÇÃO: Usa índice em vez de comparação de objetos
+        final actionIndex = msg.actions.indexOf(a);
+        if (actionIndex != -1) {
+          final updatedActions = List<AssistantAction>.from(msg.actions);
+          updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(isExecuting: true);
+          
+          setState(() {
+            _messages[messageIndex] = AssistantMessage(
+              role: msg.role,
+              content: msg.content,
+              time: msg.time,
+              actions: updatedActions,
+            );
+          });
+        }
       }
     }
 
@@ -803,21 +979,29 @@ class _AssistantPanelState extends State<AssistantPanel>
     if (messageIndex != null && messageIndex >= 0 && messageIndex < _messages.length) {
       final msg = _messages[messageIndex];
       if (msg.role == 'assistant' && msg.actions.isNotEmpty) {
-        final updatedActions = msg.actions.map((action) {
-          if (action == a) {
-            return action.copyWith(isExecuting: false, isExecuted: true);
-          }
-          return action;
-        }).toList();
+        // CORREÇÃO: Usa índice em vez de comparação de objetos
+        final actionIndex = msg.actions.indexWhere((action) => 
+          action.type == a.type && 
+          action.title == a.title && 
+          action.date == a.date
+        );
         
-        setState(() {
-          _messages[messageIndex] = AssistantMessage(
-            role: msg.role,
-            content: msg.content,
-            time: msg.time,
-            actions: updatedActions,
+        if (actionIndex != -1) {
+          final updatedActions = List<AssistantAction>.from(msg.actions);
+          updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(
+            isExecuting: false, 
+            isExecuted: true
           );
-        });
+          
+          setState(() {
+            _messages[messageIndex] = AssistantMessage(
+              role: msg.role,
+              content: msg.content,
+              time: msg.time,
+              actions: updatedActions,
+            );
+          });
+        }
       }
     }
 
