@@ -449,7 +449,7 @@ class _AssistantPanelState extends State<AssistantPanel>
 
 **Detalhes do erro:**
 - Nome do parceiro: "$partnerName" (${partnerName.trim().isEmpty ? 'VAZIO' : 'OK'})
-- Data do parceiro: "$formattedDob" (${partnerNumerology == null ? 'FALHOU' : 'OK'})
+- Data do parceiro: "$formattedDobForEngine" (${partnerNumerology == null ? 'FALHOU' : 'OK'})
 - Seus dados: "${widget.userData.nomeAnalise}" / "${widget.userData.dataNasc}" (${userNumerology == null ? 'FALHOU' : 'OK'})
 
 Por favor, verifique se o nome completo e a data de nascimento estão corretos.
