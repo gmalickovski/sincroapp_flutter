@@ -294,14 +294,13 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   Future<void> _executeAction(
       BuildContext context, AssistantAction action,
-      {bool fromAuto = false, int messageIndex = -1}) async {
+      {bool fromAuto = false, int messageIndex = -1, int actionIndex = -1}) async {
     
     // Mark as executing
-    if (messageIndex != -1 && messageIndex < _messages.length) {
+    if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
       setState(() {
         final msg = _messages[messageIndex];
-        final actionIndex = msg.actions.indexOf(action);
-        if (actionIndex != -1) {
+        if (actionIndex < msg.actions.length) {
           final updatedActions = List<AssistantAction>.from(msg.actions);
           updatedActions[actionIndex] = action.copyWith(isExecuting: true);
           _messages[messageIndex] = msg.copyWith(actions: updatedActions);
@@ -343,13 +342,10 @@ class _AssistantPanelState extends State<AssistantPanel>
       }
 
       // Mark as executed
-      if (messageIndex != -1 && messageIndex < _messages.length) {
+      if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
         setState(() {
           final msg = _messages[messageIndex];
-          final actionIndex = msg.actions.indexWhere((a) => 
-            a.type == action.type && a.title == action.title); // Better matching
-            
-          if (actionIndex != -1) {
+          if (actionIndex < msg.actions.length) {
             final updatedActions = List<AssistantAction>.from(msg.actions);
             updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(
               isExecuting: false,
@@ -371,11 +367,10 @@ class _AssistantPanelState extends State<AssistantPanel>
       }
     } catch (e) {
       // Handle error, reset executing state
-       if (messageIndex != -1 && messageIndex < _messages.length) {
+       if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
         setState(() {
           final msg = _messages[messageIndex];
-          final actionIndex = msg.actions.indexOf(action);
-          if (actionIndex != -1) {
+          if (actionIndex < msg.actions.length) {
             final updatedActions = List<AssistantAction>.from(msg.actions);
             updatedActions[actionIndex] = action.copyWith(isExecuting: false); // Reset
             _messages[messageIndex] = msg.copyWith(actions: updatedActions);
@@ -504,9 +499,13 @@ class _AssistantPanelState extends State<AssistantPanel>
     );
   }
 
-  Widget _buildActionChip(AssistantAction action, int messageIndex) {
+  Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
     final isExecuted = action.isExecuted;
     final isExecuting = action.isExecuting;
+    
+    // Disable if THIS action is executed/executing OR if ANY other sibling is executed/executing
+    // (Single choice logic: once you pick one, others are disabled)
+    final isDisabled = isExecuted || isExecuting || anyActionExecuted;
 
     String label = action.title ?? 'Ação';
     if (action.date != null) {
@@ -520,44 +519,36 @@ class _AssistantPanelState extends State<AssistantPanel>
       } else {
         dateStr = DateFormat('dd/MM', 'pt_BR').format(action.date!);
       }
-      
-      // Check if title already contains time (simple heuristic)
-      // If not, and we want to show time, we'd need time in the action model.
-      // Currently, the prompt instruction says to put time in the title.
-      // So we just append the date.
       label = '$label - $dateStr';
     }
 
     return GestureDetector(
-      onTap: (isExecuted || isExecuting)
+      onTap: isDisabled
           ? null
-          : () => _executeAction(context, action, messageIndex: messageIndex),
+          : () => _executeAction(context, action, messageIndex: messageIndex, actionIndex: actionIndex),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
           color: isExecuted
               ? AppColors.success.withValues(alpha: 0.1)
-              : AppColors.primary.withValues(alpha: 0.1),
+              : isDisabled 
+                  ? AppColors.border.withValues(alpha: 0.3) // Disabled look
+                  : AppColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isExecuted
                 ? AppColors.success
-                : AppColors.primary.withValues(alpha: 0.5),
+                : isDisabled
+                    ? Colors.transparent
+                    : AppColors.primary.withValues(alpha: 0.5),
           ),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (isExecuting)
-              const Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: SizedBox(
-                  width: 12, height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              )
-            else if (isExecuted)
+            // Removed Loading Spinner as requested
+            if (isExecuted)
               const Padding(
                 padding: EdgeInsets.only(right: 8.0),
                 child: Icon(Icons.check, size: 16, color: AppColors.success),
@@ -565,7 +556,11 @@ class _AssistantPanelState extends State<AssistantPanel>
             Text(
               label,
               style: TextStyle(
-                color: isExecuted ? AppColors.success : AppColors.primary,
+                color: isExecuted 
+                    ? AppColors.success 
+                    : isDisabled 
+                        ? AppColors.secondaryText 
+                        : AppColors.primary,
                 fontWeight: FontWeight.w500,
                 fontSize: 13,
                 decoration: isExecuted ? TextDecoration.lineThrough : null,
@@ -579,6 +574,9 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   Widget _buildMessageItem(AssistantMessage m, int index) {
     final isUser = m.role == 'user';
+    // Check if any action in this message is already executed or executing
+    final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
       child: Column(
@@ -634,7 +632,11 @@ class _AssistantPanelState extends State<AssistantPanel>
               padding: const EdgeInsets.only(left: 44, top: 12),
               child: Wrap(
                 spacing: 8, runSpacing: 8,
-                children: m.actions.map((a) => _buildActionChip(a, index)).toList(),
+                children: m.actions.asMap().entries.map((entry) {
+                  final actionIndex = entry.key;
+                  final action = entry.value;
+                  return _buildActionChip(action, index, actionIndex, anyActionExecuted);
+                }).toList(),
               ),
             ),
         ],
@@ -652,77 +654,80 @@ class _AssistantPanelState extends State<AssistantPanel>
         
         // Mobile Layout (DraggableScrollableSheet)
         if (!isDesktop) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.6,
-            minChildSize: 0.5,
-            maxChildSize: 1.0,
-            snap: true,
-            builder: (context, sheetScrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    // Drag Handle & Header (Driven by sheetScrollController)
-                    SizedBox(
-                      height: 70, // Fixed height for the header area
-                      child: ListView(
-                        controller: sheetScrollController,
-                        padding: EdgeInsets.zero,
-                        physics: const ClampingScrollPhysics(),
-                        children: [
-                          // Drag Handle
-                          Center(
-                            child: Container(
-                              margin: const EdgeInsets.only(top: 12, bottom: 8),
-                              width: 40, height: 4,
-                              decoration: BoxDecoration(
-                                color: AppColors.border,
-                                borderRadius: BorderRadius.circular(2),
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), // Keyboard handling
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              minChildSize: 0.5,
+              maxChildSize: 1.0,
+              snap: true,
+              builder: (context, sheetScrollController) {
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      // Drag Handle & Header (Driven by sheetScrollController)
+                      SizedBox(
+                        height: 70, // Fixed height for the header area
+                        child: ListView(
+                          controller: sheetScrollController,
+                          padding: EdgeInsets.zero,
+                          physics: const ClampingScrollPhysics(),
+                          children: [
+                            // Drag Handle
+                            Center(
+                              child: Container(
+                                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                                width: 40, height: 4,
+                                decoration: BoxDecoration(
+                                  color: AppColors.border,
+                                  borderRadius: BorderRadius.circular(2),
+                                ),
                               ),
                             ),
-                          ),
-                          // Header Content
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                                const SizedBox(width: 8),
-                                const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                const Spacer(),
-                              ],
+                            // Header Content
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                                  const SizedBox(width: 8),
+                                  const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                  const Spacer(),
+                                ],
+                              ),
                             ),
-                          ),
-                          const Divider(height: 1),
-                        ],
+                            const Divider(height: 1),
+                          ],
+                        ),
                       ),
-                    ),
-                    
-                    // Chat Area (Driven by internal _scrollController)
-                    Expanded(
-                      child: ListView.builder(
-                        controller: _scrollController, // Use internal controller for messages
-                        padding: const EdgeInsets.all(20),
-                        reverse: true, 
-                        itemCount: _messages.length,
-                        itemBuilder: (ctx, i) {
-                          final index = _messages.length - 1 - i;
-                          return _buildMessageItem(_messages[index], index);
-                        },
+                      
+                      // Chat Area (Driven by internal _scrollController)
+                      Expanded(
+                        child: ListView.builder(
+                          controller: _scrollController, // Use internal controller for messages
+                          padding: const EdgeInsets.all(20),
+                          reverse: true, 
+                          itemCount: _messages.length,
+                          itemBuilder: (ctx, i) {
+                            final index = _messages.length - 1 - i;
+                            return _buildMessageItem(_messages[index], index);
+                          },
+                        ),
                       ),
-                    ),
-                    // Input Area
-                    _buildInputArea(isMobile: true),
-                  ],
-                ),
-              );
-            },
+                      // Input Area
+                      _buildInputArea(isMobile: true),
+                    ],
+                  ),
+                );
+              },
+            ),
           );
         }
 
@@ -733,79 +738,107 @@ class _AssistantPanelState extends State<AssistantPanel>
   }
 
   Widget _buildDesktopLayout() {
-    // If fullscreen, show dialog (handled by _toggleFullscreen logic, but here we render the "minimized" floating panel)
-    // Actually, the user wants a "mode de visualização expandido".
-    // I will render a Floating Panel that can expand.
-    
+    // Expanded Mode: Centered Dialog-like container
+    if (_isFullscreen) {
+      return Stack(
+        children: [
+          // Backdrop
+          GestureDetector(
+            onTap: () => setState(() => _isFullscreen = false),
+            child: Container(color: Colors.black54),
+          ),
+          Center(
+            child: Container(
+              width: 900, // Larger width for expanded mode
+              height: MediaQuery.of(context).size.height * 0.85, // 85% height
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 32, offset: const Offset(0, 12))
+                ],
+              ),
+              child: _buildPanelContent(isExpanded: true),
+            ),
+          ),
+        ],
+      );
+    }
+
+    // Minimized Mode: Floating Panel
     return Align(
       alignment: Alignment.bottomRight,
       child: Container(
-        width: _isFullscreen ? MediaQuery.of(context).size.width : 450,
-        height: _isFullscreen ? MediaQuery.of(context).size.height : 600,
-        margin: _isFullscreen ? EdgeInsets.zero : const EdgeInsets.only(right: 20, bottom: 20),
+        width: 450,
+        height: 600,
+        margin: const EdgeInsets.only(right: 20, bottom: 20),
         decoration: BoxDecoration(
           color: AppColors.background,
-          borderRadius: BorderRadius.circular(_isFullscreen ? 0 : 16),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 24, offset: const Offset(0, 8))
           ],
-          border: _isFullscreen ? null : Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
         ),
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
+        child: _buildPanelContent(isExpanded: false),
+      ),
+    );
+  }
+
+  Widget _buildPanelContent({required bool isExpanded}) {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('Assistente Virtual', style: TextStyle(fontSize: 12, color: AppColors.secondaryText)),
-                    ],
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: Icon(_isFullscreen ? Icons.close_fullscreen : Icons.open_in_full),
-                    onPressed: () {
-                      setState(() {
-                        _isFullscreen = !_isFullscreen;
-                      });
-                    },
-                    tooltip: _isFullscreen ? 'Minimizar' : 'Expandir',
-                  ),
+                  Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  Text('Assistente Virtual', style: TextStyle(fontSize: 12, color: AppColors.secondaryText)),
                 ],
               ),
-            ),
-            const Divider(height: 1),
-            // Messages
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController, // We control this on desktop!
-                padding: const EdgeInsets.all(24),
-                reverse: true, // Invertido também no desktop
-                itemCount: _messages.length,
-                itemBuilder: (ctx, i) {
-                  final index = _messages.length - 1 - i;
-                  return _buildMessageItem(_messages[index], index);
+              const Spacer(),
+              IconButton(
+                icon: Icon(isExpanded ? Icons.close_fullscreen : Icons.open_in_full),
+                onPressed: () {
+                  setState(() {
+                    _isFullscreen = !_isFullscreen;
+                  });
                 },
+                tooltip: isExpanded ? 'Minimizar' : 'Expandir',
               ),
-            ),
-            // Input
-            _buildInputArea(isMobile: false),
-          ],
+            ],
+          ),
         ),
-      ),
+        const Divider(height: 1),
+        // Messages
+        Expanded(
+          child: ListView.builder(
+            controller: _scrollController,
+            padding: const EdgeInsets.all(24),
+            reverse: true,
+            itemCount: _messages.length,
+            itemBuilder: (ctx, i) {
+              final index = _messages.length - 1 - i;
+              return _buildMessageItem(_messages[index], index);
+            },
+          ),
+        ),
+        // Input
+        _buildInputArea(isMobile: false),
+      ],
     );
   }
 
@@ -831,16 +864,16 @@ class _AssistantPanelState extends State<AssistantPanel>
                 child: TextField(
                   controller: _controller,
                   focusNode: _inputFocusNode,
-                  maxLines: 5,
                   minLines: 1,
-                  onSubmitted: (_) => _send(),
-                  style: const TextStyle(fontSize: 15, height: 1.5),
-                  decoration: InputDecoration(
-                    hintText: _isListening ? 'Ouvindo...' : 'Como posso ajudar?',
-                    hintStyle: TextStyle(color: _isListening ? AppColors.primary : AppColors.tertiaryText),
+                  maxLines: 5,
+                  style: const TextStyle(fontSize: 15),
+                  decoration: const InputDecoration(
+                    hintText: 'Como posso ajudar?',
+                    hintStyle: TextStyle(color: AppColors.secondaryText),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   ),
+                  onSubmitted: (_) => _send(),
                 ),
               ),
             ),
