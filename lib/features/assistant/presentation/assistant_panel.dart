@@ -187,7 +187,8 @@ class _AssistantPanelState extends State<AssistantPanel>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     _buildMarkdownMessage(m.content, isUser: isUser),
-                                    if (!isUser && m.actions.isNotEmpty) ...[\n                                      const SizedBox(height: 12),
+                                    if (!isUser && m.actions.isNotEmpty) ...[
+                                      const SizedBox(height: 12),
                                       Wrap(
                                         spacing: 8,
                                         runSpacing: 8,
