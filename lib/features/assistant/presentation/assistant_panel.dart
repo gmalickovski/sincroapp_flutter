@@ -314,17 +314,15 @@ class _AssistantPanelState extends State<AssistantPanel>
         final data = action.data;
         final newTask = TaskModel(
           id: '',
-          userId: widget.userData.uid,
-          title: data['title'] ?? 'Nova Tarefa',
-          description: data['description'] ?? '',
-          date: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
-          isCompleted: false,
-          priority: TaskPriority.values.firstWhere(
-            (e) => e.toString().split('.').last == (data['priority'] ?? 'medium'),
-            orElse: () => TaskPriority.medium,
-          ),
+          // userId removed as it is not in TaskModel
+          text: data['title'] ?? 'Nova Tarefa', // Changed title to text to match TaskModel
+          // description removed as it is not in TaskModel (maybe put in text or ignore)
+          createdAt: DateTime.now(),
+          dueDate: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
+          completed: false,
+          // priority removed as it is not in TaskModel
         );
-        await _firestore.addTask(newTask);
+        await _firestore.addTask(widget.userData.uid, newTask);
       } else if (action.type == AssistantActionType.analyze_harmony) {
         // Harmony Logic
         final data = action.data;
@@ -418,11 +416,11 @@ class _AssistantPanelState extends State<AssistantPanel>
         dataNascimento: widget.userData.dataNasc,
       ).calcular();
 
-      // FIXED: Access 'numeros' map instead of 'mapa'
-      final userExp = userNumerology.numeros['expressao'] ?? 0;
-      final partnerExp = partnerNumerology.numeros['expressao'] ?? 0;
-      final userDest = userNumerology.numeros['destino'] ?? 0;
-      final partnerDest = partnerNumerology.numeros['destino'] ?? 0;
+      // FIXED: Access 'numeros' map with null check
+      final userExp = userNumerology?.numeros['expressao'] ?? 0;
+      final partnerExp = partnerNumerology?.numeros['expressao'] ?? 0;
+      final userDest = userNumerology?.numeros['destino'] ?? 0;
+      final partnerDest = partnerNumerology?.numeros['destino'] ?? 0;
 
       // FIXED: Use 'primeiroNome' instead of 'nome'
       return "Compreendido, ${widget.userData.primeiroNome}! Analisando as vibrações energéticas de vocês dois:\n\n"
@@ -545,7 +543,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                 child: Icon(Icons.check, size: 16, color: AppColors.success),
               ),
             Text(
-              action.title,
+              action.title ?? 'Ação',
               style: TextStyle(
                 color: isExecuted ? AppColors.success : AppColors.primary,
                 fontWeight: FontWeight.w500,

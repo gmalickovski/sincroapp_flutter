@@ -19,6 +19,7 @@ class AppColors {
   static const Color taskMarker = Color(0xFF3B82F6); // blue-500
   static const Color goalTaskMarker = Color(0xFFEC4899); // pink-500
   static const Color journalMarker = Color(0xFF14B8A6); // teal-500
+  static const Color success = Color(0xFF10B981); // green-500
 }
 
 // Compat: Flutter < 3.27 não possui Color.withValues. Este extension

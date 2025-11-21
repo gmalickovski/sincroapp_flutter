@@ -13,6 +13,7 @@ class AssistantAction {
   final List<String> subtasks;
   final bool isExecuting; // Novo: indica se está sendo executado
   final bool isExecuted; // Novo: indica se já foi executado
+  final Map<String, dynamic> data; // Novo: dados extras
 
   AssistantAction({
     required this.type,
@@ -24,6 +25,7 @@ class AssistantAction {
     this.subtasks = const [],
     this.isExecuting = false,
     this.isExecuted = false,
+    this.data = const {},
   });
 
   // Método copyWith para atualizar estado
@@ -37,6 +39,7 @@ class AssistantAction {
     List<String>? subtasks,
     bool? isExecuting,
     bool? isExecuted,
+    Map<String, dynamic>? data,
   }) {
     return AssistantAction(
       type: type ?? this.type,
@@ -48,6 +51,7 @@ class AssistantAction {
       subtasks: subtasks ?? this.subtasks,
       isExecuting: isExecuting ?? this.isExecuting,
       isExecuted: isExecuted ?? this.isExecuted,
+      data: data ?? this.data,
     );
   }
 
@@ -69,6 +73,10 @@ class AssistantAction {
 
     // Support both "date" and "targetDate" keys
     final parsedDate = parseDate(json['date']) ?? parseDate(json['targetDate']);
+    
+    // Capture extra data
+    final extraData = Map<String, dynamic>.from(json);
+
     return AssistantAction(
       type: t ?? AssistantActionType.create_task,
       title: (json['title'] ?? '').toString().trim().isEmpty
@@ -83,6 +91,7 @@ class AssistantAction {
       subtasks: (json['subtasks'] is List)
           ? List<String>.from(json['subtasks'].map((e) => e.toString()))
           : const <String>[],
+      data: extraData,
     );
   }
 }
@@ -117,4 +126,18 @@ class AssistantMessage {
     required this.time,
     this.actions = const [],
   });
+
+  AssistantMessage copyWith({
+    String? role,
+    String? content,
+    DateTime? time,
+    List<AssistantAction>? actions,
+  }) {
+    return AssistantMessage(
+      role: role ?? this.role,
+      content: content ?? this.content,
+      time: time ?? this.time,
+      actions: actions ?? this.actions,
+    );
+  }
 }
