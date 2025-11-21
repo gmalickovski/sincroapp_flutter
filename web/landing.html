@@ -122,6 +122,11 @@
             animation-delay: 2s;
         }
 
+        .animate-float-slow {
+            animation: float 10s ease-in-out infinite;
+            animation-delay: 1s;
+        }
+
         @keyframes pulse-glow {
 
             0%,
@@ -136,24 +141,6 @@
 
         .glow-effect {
             animation: pulse-glow 4s infinite;
-        }
-
-        /* Estilização da Tabela de Comparação */
-        .comparison-table th,
-        .comparison-table td {
-            border-bottom: 1px solid var(--border);
-            padding: 1rem;
-            text-align: center;
-        }
-
-        .comparison-table th:first-child,
-        .comparison-table td:first-child {
-            text-align: left;
-            padding-left: 0;
-        }
-
-        .comparison-table tr:last-child td {
-            border-bottom: none;
         }
 
         /* Estilos para o FAQ */
@@ -178,6 +165,32 @@
         .faq-question.active .arrow {
             transform: rotate(180deg);
         }
+
+        /* Sticky Scroll Feature Styles */
+        .feature-text-item {
+            opacity: 0.3;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+            transform: translateX(-20px);
+        }
+
+        .feature-text-item.active {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* Device Toggle Styles */
+        .device-toggle-btn {
+            @apply p-2 rounded-lg transition-all duration-300;
+        }
+
+        .device-toggle-btn.active {
+            background-color: var(--accent-primary);
+            color: white;
+        }
+
+        .device-toggle-btn:not(.active) {
+            @apply text-gray-400 hover:text-white hover:bg-white/5;
+        }
     </style>
 </head>
 
@@ -186,10 +199,10 @@
     <!-- --- NAVBAR --- -->
     <header class="sticky top-0 z-50 border-b border-gray-800 glass">
         <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <!-- Logo (Sem Texto, Maior) -->
-                <div class="flex-shrink-0 cursor-pointer flex items-center gap-3" onclick="scrollToSection('home')">
-                    <img src="logo.svg" alt="SincroApp Logo" class="h-12 w-auto">
+            <div class="flex items-center justify-between h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 cursor-pointer flex items-center py-2" onclick="scrollToSection('home')">
+                    <img src="logo.svg" alt="SincroApp Logo" class="h-9 w-auto">
                 </div>
 
                 <!-- Navegação Desktop -->
@@ -326,7 +339,7 @@
                             </button>
                         </div>
 
-                        <!-- Social Proof / Trust -->
+                        <!-- Social Proof -->
                         <div class="flex items-center justify-center lg:justify-start gap-4 text-sm"
                             style="color: var(--text-tertiary);">
                             <div class="flex -space-x-2">
@@ -339,14 +352,42 @@
                     </div>
 
                     <!-- App Preview / Visual Hero -->
-                    <div class="relative mt-12 lg:mt-0" data-aos="fade-left" data-aos-delay="200">
-                        <!-- Floating Elements (Visible on Mobile now) -->
-                        <div class="absolute -top-10 -left-10 z-20 animate-float block">
-                            <div class="glass p-4 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md">
-                                <div class="flex items-center gap-3">
+                    <div class="relative mt-12 lg:mt-0 flex flex-col items-center" data-aos="fade-left"
+                        data-aos-delay="200">
+
+                        <!-- Device Toggle Controls -->
+                        <div
+                            class="flex items-center gap-4 mb-8 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                            <button onclick="toggleHeroDevice('mobile')" id="hero-btn-mobile"
+                                class="device-toggle-btn active">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                                </svg>
+                            </button>
+                            <button onclick="toggleHeroDevice('desktop')" id="hero-btn-desktop"
+                                class="device-toggle-btn">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                    <line x1="8" y1="21" x2="16" y2="21" />
+                                    <line x1="12" y1="17" x2="12" y2="21" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <div class="relative w-full flex justify-center min-h-[500px] items-center">
+
+                            <!-- Floating Elements (Shared) -->
+                            <div class="absolute -top-6 -left-4 lg:-left-10 z-20 animate-float block">
+                                <div
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
                                     <div
-                                        class="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        class="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round">
                                             <circle cx="12" cy="12" r="10" />
@@ -354,45 +395,93 @@
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-xs text-gray-400">Foco do Dia</p>
-                                        <p class="font-bold text-white">Produtividade</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Foco do Dia</p>
+                                        <p class="font-bold text-white text-sm">Produtividade</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <div class="absolute bottom-20 -right-5 z-20 animate-float-delayed block">
-                            <div class="glass p-4 rounded-2xl border border-white/10 shadow-xl backdrop-blur-md">
-                                <div class="flex items-center gap-3">
+                            <div class="absolute bottom-12 -right-4 lg:-right-5 z-20 animate-float-delayed block">
+                                <div
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
                                     <div
-                                        class="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                        class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-xs text-gray-400">Sincronia da Essência</p>
-                                        <p class="font-bold text-white">Insight Gerado</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Sincronia</p>
+                                        <p class="font-bold text-white text-sm">Insight Gerado</p>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- Main Image Container -->
-                        <div class="relative mx-auto max-w-[300px] md:max-w-sm lg:max-w-md z-10">
-                            <div
-                                class="aspect-[9/19] w-full bg-gray-900 rounded-[2.5rem] border-[8px] border-gray-800 shadow-2xl overflow-hidden relative glow-effect">
-                                <!-- Random Image from Picsum -->
-                                <img src="https://picsum.photos/450/950?random=2" alt="SincroApp Interface"
-                                    class="w-full h-full object-cover opacity-80">
-
-                                <!-- Overlay Gradient -->
+                            <div class="absolute top-20 -right-8 z-20 animate-float-slow block">
                                 <div
-                                    class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent">
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Meta</p>
+                                        <p class="font-bold text-white text-sm">Concluída</p>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="absolute bottom-32 -left-8 z-20 animate-float block"
+                                style="animation-delay: 1.5s;">
+                                <div
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <circle cx="12" cy="12" r="5" />
+                                            <path
+                                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Energia</p>
+                                        <p class="font-bold text-white text-sm">Alta</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mobile Mockup -->
+                            <div id="hero-mockup-mobile"
+                                class="relative w-[240px] md:w-[260px] lg:w-[280px] z-10 transition-all duration-500">
+                                <div
+                                    class="aspect-[9/19] w-full bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden relative glow-effect">
+                                    <img src="https://picsum.photos/450/950?random=2" alt="SincroApp Mobile"
+                                        class="w-full h-full object-cover opacity-80">
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Desktop Mockup (Hidden by default) -->
+                            <div id="hero-mockup-desktop"
+                                class="relative w-[500px] md:w-[600px] z-10 hidden transition-all duration-500">
+                                <div
+                                    class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 border-b-0 shadow-2xl overflow-hidden relative glow-effect">
+                                    <img src="https://picsum.photos/1200/800?random=3" alt="SincroApp Desktop"
+                                        class="w-full h-full object-cover opacity-80">
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent">
+                                    </div>
+                                </div>
+                                <div class="h-4 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -405,123 +494,140 @@
         <section id="features" class="relative bg-gray-900 py-24">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div class="text-center mb-20" data-aos="fade-up">
-                    <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-6">Evolução da Sua Jornada</h2>
-                    <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-                        Conheça como o SincroApp evolui com você, do essencial ao extraordinário.
+                    <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-6">Funcionalidades</h2>
+                    <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
+                        Explore as ferramentas que transformam sua rotina.
                     </p>
+
+                    <!-- Features Device Toggle -->
+                    <div
+                        class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile"
+                            class="device-toggle-btn active flex items-center gap-2 px-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                <line x1="12" y1="18" x2="12.01" y2="18" />
+                            </svg>
+                            <span>Mobile</span>
+                        </button>
+                        <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop"
+                            class="device-toggle-btn flex items-center gap-2 px-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                <line x1="8" y1="21" x2="16" y2="21" />
+                                <line x1="12" y1="17" x2="12" y2="21" />
+                            </svg>
+                            <span>Desktop</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="flex flex-col md:flex-row gap-12 relative">
-                    <!-- Left Column: Scrollable Text -->
-                    <div class="w-full md:w-1/2 space-y-32 py-12">
+                    <!-- Left Column: Scrollable Text Only -->
+                    <div class="w-full md:w-1/2 py-12">
 
-                        <!-- Feature Block 1: Essencial -->
-                        <div class="feature-block group" data-image="https://picsum.photos/seed/essencial/350/800">
-                            <div
-                                class="p-8 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-500 hover:border-teal-500/50 hover:bg-white/10">
-                                <div
-                                    class="w-12 h-12 rounded-2xl bg-teal-500/20 flex items-center justify-center text-teal-400 mb-6">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                    </svg>
-                                </div>
-                                <h3 class="font-outfit text-3xl font-bold mb-4 text-white">Sincro Essencial</h3>
-                                <p class="text-gray-400 mb-6 text-lg">O ponto de partida para sua organização
-                                    consciente.</p>
-                                <ul class="space-y-3 text-gray-300">
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-teal-500"></span>Sincronia da Essência Diária
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-teal-500"></span>Painel de Controle do
-                                        Destino</li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-teal-500"></span>Agenda de Poder Pessoal</li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-teal-500"></span>1 Meta de Longo Prazo</li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        <!-- Feature Block 2: Despertar -->
-                        <div class="feature-block group" data-image="https://picsum.photos/seed/despertar/350/800">
-                            <div
-                                class="p-8 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-500 hover:border-purple-500/50 hover:bg-white/10">
-                                <div
-                                    class="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center text-purple-400 mb-6">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                </div>
-                                <h3 class="font-outfit text-3xl font-bold mb-4 text-white">Sincro Despertar</h3>
-                                <p class="text-gray-400 mb-6 text-lg">Inteligência e profundidade para seus objetivos.
+                        <!-- Feature 1 -->
+                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
+                            data-image-mobile="https://picsum.photos/seed/sincronia/350/800"
+                            data-image-desktop="https://picsum.photos/seed/sincronia/1200/800">
+                            <div class="feature-text-item transition-all duration-500">
+                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Sincronia Diária</h3>
+                                <p class="text-gray-400 text-xl leading-relaxed">
+                                    Alinhe suas ações com a energia do dia. Receba orientações precisas baseadas na sua
+                                    numerologia pessoal.
                                 </p>
-                                <ul class="space-y-3 text-gray-300">
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-purple-500"></span>Fluxo de Hábito Otimizado
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-purple-500"></span>Insights Pessoais com IA
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-purple-500"></span>Mapa Numerológico Completo
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-purple-500"></span>Até 5 Metas Otimizadas
-                                    </li>
-                                </ul>
                             </div>
                         </div>
 
-                        <!-- Feature Block 3: Sinergia -->
-                        <div class="feature-block group" data-image="https://picsum.photos/seed/sinergia/350/800">
-                            <div
-                                class="p-8 rounded-3xl border border-white/10 bg-white/5 backdrop-blur-sm transition-all duration-500 hover:border-pink-500/50 hover:bg-white/10">
-                                <div
-                                    class="w-12 h-12 rounded-2xl bg-pink-500/20 flex items-center justify-center text-pink-400 mb-6">
-                                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                    </svg>
-                                </div>
-                                <h3 class="font-outfit text-3xl font-bold mb-4 text-white">Sincro Sinergia</h3>
-                                <p class="text-gray-400 mb-6 text-lg">O máximo potencial com Assistente Pessoal IA.</p>
-                                <ul class="space-y-3 text-gray-300">
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-pink-500"></span>SincroIA: Assistente Pessoal
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-pink-500"></span>Comando de Voz Inteligente
-                                    </li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-pink-500"></span>Metas Ilimitadas</li>
-                                    <li class="flex items-center gap-3"><span
-                                            class="w-2 h-2 rounded-full bg-pink-500"></span>Inteligência de Trajetória
-                                        Ilimitada</li>
-                                </ul>
+                        <!-- Feature 2 -->
+                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
+                            data-image-mobile="https://picsum.photos/seed/painel/350/800"
+                            data-image-desktop="https://picsum.photos/seed/painel/1200/800">
+                            <div class="feature-text-item transition-all duration-500">
+                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Painel do Destino</h3>
+                                <p class="text-gray-400 text-xl leading-relaxed">
+                                    Visualize sua trajetória de vida com clareza. Entenda seus ciclos, desafios e
+                                    oportunidades.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Feature 3 -->
+                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
+                            data-image-mobile="https://picsum.photos/seed/metas/350/800"
+                            data-image-desktop="https://picsum.photos/seed/metas/1200/800">
+                            <div class="feature-text-item transition-all duration-500">
+                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Gestão de Metas</h3>
+                                <p class="text-gray-400 text-xl leading-relaxed">
+                                    Transforme sonhos em conquistas estruturadas. Defina objetivos claros e acompanhe
+                                    seu progresso.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Feature 4 -->
+                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
+                            data-image-mobile="https://picsum.photos/seed/ia/350/800"
+                            data-image-desktop="https://picsum.photos/seed/ia/1200/800">
+                            <div class="feature-text-item transition-all duration-500">
+                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">SincroIA</h3>
+                                <p class="text-gray-400 text-xl leading-relaxed">
+                                    Seu assistente pessoal de produtividade e sabedoria. Converse com uma IA treinada
+                                    para oferecer insights profundos.
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Feature 5 -->
+                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
+                            data-image-mobile="https://picsum.photos/seed/mapa/350/800"
+                            data-image-desktop="https://picsum.photos/seed/mapa/1200/800">
+                            <div class="feature-text-item transition-all duration-500">
+                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Mapa Numerológico</h3>
+                                <p class="text-gray-400 text-xl leading-relaxed">
+                                    Mergulhe no autoconhecimento com um mapa completo. Descubra os números que regem sua
+                                    essência.
+                                </p>
                             </div>
                         </div>
 
                     </div>
 
-                    <!-- Right Column: Sticky Phone -->
+                    <!-- Right Column: Sticky Mockups -->
                     <div class="hidden md:block w-1/2 relative">
-                        <div class="sticky top-24 h-[800px] flex items-center justify-center">
-                            <!-- Phone Frame -->
-                            <div
-                                class="relative w-[320px] aspect-[9/19] bg-black rounded-[3rem] border-[8px] border-gray-900 shadow-2xl overflow-hidden transition-transform duration-500">
-                                <!-- Screen Content -->
+                        <div class="sticky top-32 h-[600px] flex items-start justify-center">
+
+                            <!-- Mobile Mockup -->
+                            <div id="feat-mockup-mobile"
+                                class="relative w-[260px] aspect-[9/19] bg-black rounded-[2.5rem] border-[6px] border-gray-900 shadow-2xl overflow-hidden transition-all duration-500">
                                 <div class="absolute inset-0 bg-gray-900">
-                                    <img id="feature-phone-img" src="https://picsum.photos/seed/essencial/350/800"
-                                        alt="App Feature"
+                                    <img id="feat-img-mobile" src="https://picsum.photos/seed/sincronia/350/800"
+                                        alt="Feature Mobile"
                                         class="w-full h-full object-cover transition-opacity duration-500">
                                     <div
                                         class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Desktop Mockup (Hidden) -->
+                            <div id="feat-mockup-desktop" class="relative w-[500px] hidden transition-all duration-500">
+                                <div
+                                    class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 border-b-0 shadow-2xl overflow-hidden relative">
+                                    <img id="feat-img-desktop" src="https://picsum.photos/seed/sincronia/1200/800"
+                                        alt="Feature Desktop"
+                                        class="w-full h-full object-cover transition-opacity duration-500">
+                                    <div
+                                        class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                                    </div>
+                                </div>
+                                <div class="h-4 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -848,6 +954,45 @@
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
     <script>
+        // Device Toggle Logic
+        function toggleHeroDevice(device) {
+            const mobileMockup = document.getElementById('hero-mockup-mobile');
+            const desktopMockup = document.getElementById('hero-mockup-desktop');
+            const btnMobile = document.getElementById('hero-btn-mobile');
+            const btnDesktop = document.getElementById('hero-btn-desktop');
+
+            if (device === 'mobile') {
+                mobileMockup.classList.remove('hidden');
+                desktopMockup.classList.add('hidden');
+                btnMobile.classList.add('active');
+                btnDesktop.classList.remove('active');
+            } else {
+                mobileMockup.classList.add('hidden');
+                desktopMockup.classList.remove('hidden');
+                btnMobile.classList.remove('active');
+                btnDesktop.classList.add('active');
+            }
+        }
+
+        function toggleFeaturesDevice(device) {
+            const mobileMockup = document.getElementById('feat-mockup-mobile');
+            const desktopMockup = document.getElementById('feat-mockup-desktop');
+            const btnMobile = document.getElementById('feat-btn-mobile');
+            const btnDesktop = document.getElementById('feat-btn-desktop');
+
+            if (device === 'mobile') {
+                mobileMockup.classList.remove('hidden');
+                desktopMockup.classList.add('hidden');
+                btnMobile.classList.add('active');
+                btnDesktop.classList.remove('active');
+            } else {
+                mobileMockup.classList.add('hidden');
+                desktopMockup.classList.remove('hidden');
+                btnMobile.classList.remove('active');
+                btnDesktop.classList.add('active');
+            }
+        }
+
         // Sticky Scroll Logic
         document.addEventListener('DOMContentLoaded', () => {
             // Inicializa AOS
@@ -859,24 +1004,46 @@
 
             // Sticky Scroll Observer
             const blocks = document.querySelectorAll('.feature-block');
-            const phoneImg = document.getElementById('feature-phone-img');
+            const phoneImg = document.getElementById('feat-img-mobile');
+            const desktopImg = document.getElementById('feat-img-desktop');
 
-            if (blocks.length > 0 && phoneImg) {
+            if (blocks.length > 0) {
                 const observer = new IntersectionObserver((entries) => {
                     entries.forEach(entry => {
+                        const textItem = entry.target.querySelector('.feature-text-item');
+
                         if (entry.isIntersecting) {
-                            const newSrc = entry.target.getAttribute('data-image');
-                            if (phoneImg.src !== newSrc) {
+                            // Highlight text
+                            if (textItem) textItem.classList.add('active');
+
+                            // Change Images (Mobile & Desktop)
+                            const newSrcMobile = entry.target.getAttribute('data-image-mobile');
+                            const newSrcDesktop = entry.target.getAttribute('data-image-desktop');
+
+                            if (phoneImg && phoneImg.src !== newSrcMobile) {
                                 phoneImg.style.opacity = '0';
                                 setTimeout(() => {
-                                    phoneImg.src = newSrc;
+                                    phoneImg.src = newSrcMobile;
                                     phoneImg.style.opacity = '1';
                                 }, 200);
                             }
+
+                            if (desktopImg && desktopImg.src !== newSrcDesktop) {
+                                desktopImg.style.opacity = '0';
+                                setTimeout(() => {
+                                    desktopImg.src = newSrcDesktop;
+                                    desktopImg.style.opacity = '1';
+                                }, 200);
+                            }
+
+                        } else {
+                            // Remove highlight
+                            if (textItem) textItem.classList.remove('active');
                         }
                     });
                 }, {
-                    threshold: 0.5 // Trigger when 50% of the block is visible
+                    threshold: 0.5, // Trigger when 50% of the block is visible
+                    rootMargin: "-20% 0px -20% 0px" // Adjust trigger zone
                 });
 
                 blocks.forEach(block => observer.observe(block));
