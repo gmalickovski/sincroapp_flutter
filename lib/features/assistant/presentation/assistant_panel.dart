@@ -392,20 +392,46 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   String _buildHarmonyAnalysis(String partnerName, String partnerDob) {
     try {
+      // Debug: Log inputs
+      print('🔍 Harmony Analysis Debug:');
+      print('Partner Name: "$partnerName"');
+      print('Partner DOB (raw): "$partnerDob"');
+      
       DateTime? dob;
+      
+      // Try multiple date formats
       if (partnerDob.contains('/')) {
         try {
           dob = DateFormat('dd/MM/yyyy').parse(partnerDob);
-        } catch (_) {}
-      } else {
+          print('✅ Parsed as dd/MM/yyyy: $dob');
+        } catch (e) {
+          print('❌ Failed dd/MM/yyyy: $e');
+          // Try d/M/yyyy
+          try {
+            dob = DateFormat('d/M/yyyy').parse(partnerDob);
+            print('✅ Parsed as d/M/yyyy: $dob');
+          } catch (e2) {
+            print('❌ Failed d/M/yyyy: $e2');
+          }
+        }
+      } else if (partnerDob.contains('-')) {
         dob = DateTime.tryParse(partnerDob);
+        print('✅ Parsed as ISO: $dob');
       }
       
-      if (dob == null) return "Data de nascimento inválida para análise.";
+      if (dob == null) {
+        print('❌ All date parsing failed');
+        return "❌ Data de nascimento inválida para análise. Por favor, forneça no formato DD/MM/AAAA (ex: 31/05/1991).";
+      }
+
+      final formattedDob = DateFormat('yyyy-MM-dd').format(dob);
+      print('Partner DOB (formatted): $formattedDob');
+      print('User Name: "${widget.userData.nomeAnalise}"');
+      print('User DOB: "${widget.userData.dataNasc}"');
 
       final partnerNumerology = NumerologyEngine(
-        nomeCompleto: partnerName,
-        dataNascimento: DateFormat('yyyy-MM-dd').format(dob),
+        nomeCompleto: partnerName.trim(),
+        dataNascimento: formattedDob,
       ).calcular();
 
       final userNumerology = NumerologyEngine(
@@ -413,23 +439,38 @@ class _AssistantPanelState extends State<AssistantPanel>
         dataNascimento: widget.userData.dataNasc,
       ).calcular();
 
+      print('Partner Numerology: ${partnerNumerology != null ? "✅ Success" : "❌ Null"}');
+      print('User Numerology: ${userNumerology != null ? "✅ Success" : "❌ Null"}');
+
       if (userNumerology == null || partnerNumerology == null) {
-        return "Não foi possível calcular a numerologia para a análise.";
+        return """
+❌ Não foi possível calcular a numerologia para a análise.
+
+**Detalhes do erro:**
+- Nome do parceiro: "$partnerName" (${partnerName.trim().isEmpty ? 'VAZIO' : 'OK'})
+- Data do parceiro: "$formattedDob" (${partnerNumerology == null ? 'FALHOU' : 'OK'})
+- Seus dados: "${widget.userData.nomeAnalise}" / "${widget.userData.dataNasc}" (${userNumerology == null ? 'FALHOU' : 'OK'})
+
+Por favor, verifique se o nome completo e a data de nascimento estão corretos.
+""";
       }
 
       // Extract Mission Numbers (Missão)
       final userMissao = userNumerology.numeros['missao'] as int? ?? 0;
       final partnerMissao = partnerNumerology.numeros['missao'] as int? ?? 0;
 
+      print('User Missão: $userMissao');
+      print('Partner Missão: $partnerMissao');
+
       // Extract Harmony Structures
       final userHarmony = userNumerology.estruturas['harmoniaConjugal'] as Map<String, dynamic>? ?? {};
-      // We don't strictly need partner's harmony map for this specific check (checking if partner fits user's harmony),
-      // but we could check vice-versa too. For now, we follow the logic of "Does Partner fit User's Harmony?".
       
       final vibra = userHarmony['vibra'] as List? ?? [];
       final atrai = userHarmony['atrai'] as List? ?? [];
       final oposto = userHarmony['oposto'] as List? ?? [];
       final passivo = userHarmony['passivo'] as List? ?? [];
+
+      print('Harmony Lists - Vibra: $vibra, Atrai: $atrai, Oposto: $oposto, Passivo: $passivo');
 
       String compatibilityLevel;
       String emoji;
@@ -457,6 +498,8 @@ class _AssistantPanelState extends State<AssistantPanel>
         explanation = "A relação é **neutra** do ponto de vista numerológico. O sucesso dependerá de outros fatores.";
       }
 
+      print('✅ Analysis complete: $compatibilityLevel');
+
       return '''
 ## $emoji Análise de Harmonia Conjugal
 
@@ -476,8 +519,10 @@ $explanation
 Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qualquer relacionamento depende de amor, respeito, comunicação e esforço mútuo! 💕
 ''';
 
-    } catch (e) {
-      return "Erro ao calcular harmonia: $e";
+    } catch (e, stackTrace) {
+      print('❌ Exception in _buildHarmonyAnalysis: $e');
+      print('Stack trace: $stackTrace');
+      return "Erro ao calcular harmonia: $e\n\nPor favor, tente novamente ou entre em contato com o suporte.";
     }
   }
 
@@ -849,8 +894,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           ),
           Center(
             child: Container(
-              width: 1100, // Larger width for expanded mode
-              height: MediaQuery.of(context).size.height * 0.90, // 90% height
+              width: 1100,
+              height: MediaQuery.of(context).size.height * 0.90,
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(16),
@@ -865,13 +910,12 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       );
     }
 
-    // Minimized Mode: Floating Panel
+    // Minimized Mode: Bottom-aligned sheet (like mobile)
     return Align(
       alignment: Alignment.bottomRight,
       child: Container(
         width: 450,
         height: 600,
-        // Increased bottom margin to sit above the FAB (approx 80px)
         margin: const EdgeInsets.only(right: 20, bottom: 80),
         decoration: BoxDecoration(
           color: AppColors.background,
