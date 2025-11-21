@@ -672,27 +672,19 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 768;
-    final isMobileFullScreen = !isDesktop && widget.isFullScreen;
-
-    // If it's mobile modal (default), we use DraggableScrollableSheet internally
-    // BUT, if the parent already wraps this in a DraggableScrollableSheet (which is common in showModalBottomSheet),
-    // we should just return the content.
-    // However, to support "Unified", we need to know how it's being used.
-    // Assuming the caller handles the DraggableScrollableSheet for Mobile Modal,
-    // OR we handle it here.
-    // Given the user wants a "Unified" panel, let's build the CONTENT here,
-    // and let the caller wrap it in DraggableScrollableSheet if needed, OR we provide a static method to show it.
-    // But wait, the existing code returned a DraggableScrollableSheet for mobile.
-    // Let's stick to that pattern for mobile-modal to ensure compatibility.
 
     if (!isDesktop && !widget.isFullScreen) {
       // Mobile Modal Mode
       return DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        minChildSize: 0.4,
+        initialChildSize: 0.5,
+        minChildSize: 0.0, // Allow closing
         maxChildSize: 0.95,
+        snap: true, // Snap to sizes
+        // Snap targets: Closed (0.0), Initial/Collapsed (0.5), Expanded (0.95)
+        // Note: snapSizes must be strictly between min and max.
+        snapSizes: const [0.5], 
         builder: (context, scrollController) {
-          return _buildPanelContent(context, scrollController: scrollController, isModal: true);
+          return _buildPanelContent(context, sheetScrollController: scrollController, isModal: true);
         },
       );
     }
@@ -701,9 +693,12 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     return _buildPanelContent(context, isModal: !widget.isFullScreen);
   }
 
-  Widget _buildPanelContent(BuildContext context, {ScrollController? scrollController, required bool isModal}) {
+  Widget _buildPanelContent(BuildContext context, {ScrollController? sheetScrollController, required bool isModal}) {
     final isDesktop = MediaQuery.of(context).size.width > 768;
-    final effectiveScrollController = scrollController ?? _scrollController;
+    
+    // If we are in a modal (DraggableScrollableSheet), we want the HEADER to be the drag handle.
+    // We do this by giving the 'sheetScrollController' to the Header's scrollable.
+    // The body uses the internal '_scrollController'.
 
     return Container(
       decoration: BoxDecoration(
@@ -724,12 +719,26 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       child: Column(
         children: [
           // Header
-          _buildHeader(isModal, isDesktop),
+          // If modal, wrap header in a ListView with the sheet controller to enable dragging
+          if (isModal && sheetScrollController != null)
+            SizedBox(
+              height: 70, // Fixed height for header area
+              child: ListView(
+                controller: sheetScrollController,
+                padding: EdgeInsets.zero,
+                physics: const ClampingScrollPhysics(), // Prevent overscroll glow
+                children: [
+                  _buildHeader(isModal, isDesktop),
+                ],
+              ),
+            )
+          else
+            _buildHeader(isModal, isDesktop),
           
           // Chat Area
           Expanded(
             child: ListView.builder(
-              controller: effectiveScrollController,
+              controller: _scrollController, // Always use internal controller for chat
               reverse: true,
               padding: const EdgeInsets.all(20),
               itemCount: _messages.length + (_isSending ? 1 : 0),
@@ -738,9 +747,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   return _buildTypingIndicator();
                 }
                 final msgIndex = _isSending ? index - 1 : index;
-                // Reverse index for display
                 final actualMsg = _messages[_messages.length - 1 - msgIndex];
-                // We need the original index for actions
                 final originalIndex = _messages.length - 1 - msgIndex;
                 return _buildMessageItem(actualMsg, originalIndex);
               },
@@ -760,43 +767,51 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       decoration: BoxDecoration(
         border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Drag Handle (Visual only, the whole header is draggable via ListView wrapper)
           if (isModal && !isDesktop)
-            Container(
-              width: 40, height: 4,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                margin: const EdgeInsets.only(bottom: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          const Icon(Icons.auto_awesome, color: AppColors.primary),
-          const SizedBox(width: 12),
-          const Expanded(
-            child: Text(
-              'Sincro Assistant',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primaryText,
+          Row(
+            children: [
+              const Icon(Icons.auto_awesome, color: AppColors.primary),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Sincro Assistant',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryText,
+                  ),
+                ),
               ),
-            ),
+              if (widget.onToggleFullScreen != null)
+                IconButton(
+                  icon: Icon(
+                    widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
+                    color: AppColors.secondaryText,
+                  ),
+                  onPressed: widget.onToggleFullScreen,
+                  tooltip: widget.isFullScreen ? 'Modo Normal' : 'Tela Cheia',
+                ),
+              if (widget.onClose != null)
+                 IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
+                  onPressed: widget.onClose,
+                ),
+            ],
           ),
-          if (widget.onToggleFullScreen != null)
-            IconButton(
-              icon: Icon(
-                widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
-                color: AppColors.secondaryText,
-              ),
-              onPressed: widget.onToggleFullScreen,
-              tooltip: widget.isFullScreen ? 'Modo Normal' : 'Tela Cheia',
-            ),
-          if (widget.onClose != null)
-             IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-              onPressed: widget.onClose,
-            ),
         ],
       ),
     );
@@ -810,10 +825,11 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end, // Align bottom for multiline
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Added vertical padding
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(24),
@@ -822,12 +838,16 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               child: TextField(
                 controller: _controller,
                 focusNode: _inputFocusNode,
+                maxLines: 5, // Allow up to 5 lines
+                minLines: 1,
+                keyboardType: TextInputType.multiline,
                 decoration: const InputDecoration(
                   hintText: 'Como posso ajudar hoje?',
                   border: InputBorder.none,
+                  isDense: true, // Compact layout
                   hintStyle: TextStyle(color: AppColors.secondaryText),
                 ),
-                onSubmitted: (_) => _send(),
+                onSubmitted: (_) => _send(), // Note: onSubmitted might not trigger with multiline + enter
               ),
             ),
           ),
