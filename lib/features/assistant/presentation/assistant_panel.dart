@@ -424,14 +424,15 @@ class _AssistantPanelState extends State<AssistantPanel>
         return "❌ Data de nascimento inválida para análise. Por favor, forneça no formato DD/MM/AAAA (ex: 31/05/1991).";
       }
 
-      final formattedDob = DateFormat('yyyy-MM-dd').format(dob);
-      print('Partner DOB (formatted): $formattedDob');
+      // CRITICAL: NumerologyEngine ONLY accepts dd/MM/yyyy format
+      final formattedDobForEngine = DateFormat('dd/MM/yyyy').format(dob);
+      print('Partner DOB (for engine): $formattedDobForEngine');
       print('User Name: "${widget.userData.nomeAnalise}"');
       print('User DOB: "${widget.userData.dataNasc}"');
 
       final partnerNumerology = NumerologyEngine(
         nomeCompleto: partnerName.trim(),
-        dataNascimento: formattedDob,
+        dataNascimento: formattedDobForEngine, // Use dd/MM/yyyy format
       ).calcular();
 
       final userNumerology = NumerologyEngine(
@@ -883,7 +884,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
   }
 
   Widget _buildDesktopLayout() {
-    // Expanded Mode: Centered Dialog-like container
+    // Expanded Mode: Large centered dialog
     if (_isFullscreen) {
       return Stack(
         children: [
@@ -894,13 +895,17 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           ),
           Center(
             child: Container(
-              width: 1100,
-              height: MediaQuery.of(context).size.height * 0.90,
+              width: MediaQuery.of(context).size.width * 0.85, // 85% of screen width
+              height: MediaQuery.of(context).size.height * 0.90, // 90% of screen height
               decoration: BoxDecoration(
                 color: AppColors.background,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 32, offset: const Offset(0, 12))
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.4),
+                    blurRadius: 40,
+                    offset: const Offset(0, 16),
+                  )
                 ],
               ),
               child: _buildPanelContent(isExpanded: true),
@@ -910,20 +915,27 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       );
     }
 
-    // Minimized Mode: Bottom-aligned sheet (like mobile)
+    // Minimized Mode: Bottom-right sheet (mobile-like)
     return Align(
       alignment: Alignment.bottomRight,
       child: Container(
-        width: 450,
-        height: 600,
-        margin: const EdgeInsets.only(right: 20, bottom: 80),
+        width: 480,
+        height: 650,
+        margin: const EdgeInsets.only(right: 24, bottom: 90),
         decoration: BoxDecoration(
           color: AppColors.background,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 24, offset: const Offset(0, 8))
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.25),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            )
           ],
-          border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+          border: Border.all(
+            color: AppColors.border.withValues(alpha: 0.3),
+            width: 1,
+          ),
         ),
         child: _buildPanelContent(isExpanded: false),
       ),
