@@ -12,8 +12,17 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
+  final bool isFullScreen;
+  final VoidCallback? onToggleFullScreen;
+  final VoidCallback? onClose;
 
-  const AssistantPanel({super.key, required this.userData});
+  const AssistantPanel({
+    super.key,
+    required this.userData,
+    this.isFullScreen = false,
+    this.onToggleFullScreen,
+    this.onClose,
+  });
 
   @override
   State<AssistantPanel> createState() => _AssistantPanelState();
@@ -30,10 +39,9 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   // --- State Variables ---
   final List<AssistantMessage> _messages = [];
-  bool _isSending = false;
+  bool _isSending = false; // Controls the "Typing..." indicator
   bool _isListening = false;
   bool _isInputEmpty = true;
-  bool _isFullscreen = false;
   String _textBeforeListening = '';
 
   // --- Animation ---
@@ -83,13 +91,12 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Auto Scroll ---
 
   Future<void> _scrollToBottom() async {
-    // Com lista invertida (reverse: true), o "bottom" é o offset 0
     await Future.delayed(const Duration(milliseconds: 100));
     if (!mounted) return;
-    
+
     if (_scrollController.hasClients) {
       await _scrollController.animateTo(
-        0.0, // Topo da lista invertida = Fim do chat
+        0.0, // Reverse list: 0.0 is the bottom
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeOutCubic,
       );
@@ -107,14 +114,14 @@ class _AssistantPanelState extends State<AssistantPanel>
     setState(() {
       _messages.add(
           AssistantMessage(role: 'user', content: q, time: DateTime.now()));
-      _isSending = true;
+      _isSending = true; // Start typing animation
     });
 
     _firestore.addAssistantMessage(widget.userData.uid,
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
     _inputFocusNode.unfocus();
-    
+
     await _scrollToBottom();
 
     // Check for affirmative response to pending actions
@@ -180,7 +187,7 @@ class _AssistantPanelState extends State<AssistantPanel>
               content: ans.answer,
               time: DateTime.now(),
               actions: alignedActions));
-      
+
       await _scrollToBottom();
     } catch (e) {
       if (mounted) {
@@ -194,7 +201,7 @@ class _AssistantPanelState extends State<AssistantPanel>
         await _scrollToBottom();
       }
     } finally {
-      if (mounted) setState(() => _isSending = false);
+      if (mounted) setState(() => _isSending = false); // Stop typing animation
       await _scrollToBottom();
     }
   }
@@ -253,7 +260,6 @@ class _AssistantPanelState extends State<AssistantPanel>
   List<AssistantAction> _lastAssistantActions() {
     for (var i = _messages.length - 1; i >= 0; i--) {
       if (_messages[i].role == 'assistant' && _messages[i].actions.isNotEmpty) {
-        // Filter only pending actions
         return _messages[i].actions.where((a) => !a.isExecuted).toList();
       }
     }
@@ -282,21 +288,18 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   AssistantAction _chooseActionForAffirmative(
       String text, List<AssistantAction> actions) {
-    // Simple logic: return the first one. Can be improved.
     return actions.first;
   }
 
   List<AssistantAction> _alignActionsWithAnswer(
       List<AssistantAction> actions, String answer) {
-    // Logic to attach actions to the answer
     return actions;
   }
 
   Future<void> _executeAction(
       BuildContext context, AssistantAction action,
       {bool fromAuto = false, int messageIndex = -1, int actionIndex = -1}) async {
-    
-    // Mark as executing
+
     if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
       setState(() {
         final msg = _messages[messageIndex];
@@ -313,22 +316,17 @@ class _AssistantPanelState extends State<AssistantPanel>
         final data = action.data;
         final newTask = TaskModel(
           id: '',
-          // userId removed as it is not in TaskModel
-          text: data['title'] ?? 'Nova Tarefa', // Changed title to text to match TaskModel
-          // description removed as it is not in TaskModel (maybe put in text or ignore)
+          text: data['title'] ?? 'Nova Tarefa',
           createdAt: DateTime.now(),
           dueDate: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
           completed: false,
-          // priority removed as it is not in TaskModel
         );
         await _firestore.addTask(widget.userData.uid, newTask);
       } else if (action.type == AssistantActionType.analyze_harmony) {
-        // Harmony Logic
         final data = action.data;
-        // Fallback to title/date if specific keys are missing (backward compatibility or hallucination)
-        final partnerName = data['partner_name'] ?? action.title ?? ''; 
+        final partnerName = data['partner_name'] ?? action.title ?? '';
         final partnerDob = data['partner_dob'] ?? data['date'] ?? '';
-        
+
         if (partnerName.isNotEmpty && partnerDob.isNotEmpty) {
            final analysis = _buildHarmonyAnalysis(partnerName, partnerDob);
            setState(() {
@@ -342,7 +340,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         }
       }
 
-      // Mark as executed
       if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
         setState(() {
           final msg = _messages[messageIndex];
@@ -357,7 +354,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         });
       }
 
-      // Show "Feito!" only for non-harmony actions (as harmony shows its own result)
       if (!fromAuto && action.type != AssistantActionType.analyze_harmony) {
         setState(() {
           _messages.add(AssistantMessage(
@@ -368,18 +364,17 @@ class _AssistantPanelState extends State<AssistantPanel>
         await _scrollToBottom();
       }
     } catch (e) {
-      // Handle error, reset executing state
        if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
         setState(() {
           final msg = _messages[messageIndex];
           if (actionIndex < msg.actions.length) {
             final updatedActions = List<AssistantAction>.from(msg.actions);
-            updatedActions[actionIndex] = action.copyWith(isExecuting: false); // Reset
+            updatedActions[actionIndex] = action.copyWith(isExecuting: false);
             _messages[messageIndex] = msg.copyWith(actions: updatedActions);
           }
         });
       }
-      
+
       setState(() {
         _messages.add(AssistantMessage(
             role: 'assistant',
@@ -392,47 +387,30 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   String _buildHarmonyAnalysis(String partnerName, String partnerDob) {
     try {
-      // Debug: Log inputs
-      print('🔍 Harmony Analysis Debug:');
-      print('Partner Name: "$partnerName"');
-      print('Partner DOB (raw): "$partnerDob"');
-      
       DateTime? dob;
-      
-      // Try multiple date formats
       if (partnerDob.contains('/')) {
         try {
           dob = DateFormat('dd/MM/yyyy').parse(partnerDob);
-          print('✅ Parsed as dd/MM/yyyy: $dob');
         } catch (e) {
-          print('❌ Failed dd/MM/yyyy: $e');
-          // Try d/M/yyyy
           try {
             dob = DateFormat('d/M/yyyy').parse(partnerDob);
-            print('✅ Parsed as d/M/yyyy: $dob');
           } catch (e2) {
-            print('❌ Failed d/M/yyyy: $e2');
+            // ignore
           }
         }
       } else if (partnerDob.contains('-')) {
         dob = DateTime.tryParse(partnerDob);
-        print('✅ Parsed as ISO: $dob');
       }
-      
+
       if (dob == null) {
-        print('❌ All date parsing failed');
         return "❌ Data de nascimento inválida para análise. Por favor, forneça no formato DD/MM/AAAA (ex: 31/05/1991).";
       }
 
-      // CRITICAL: NumerologyEngine ONLY accepts dd/MM/yyyy format
       final formattedDobForEngine = DateFormat('dd/MM/yyyy').format(dob);
-      print('Partner DOB (for engine): $formattedDobForEngine');
-      print('User Name: "${widget.userData.nomeAnalise}"');
-      print('User DOB: "${widget.userData.dataNasc}"');
 
       final partnerNumerology = NumerologyEngine(
         nomeCompleto: partnerName.trim(),
-        dataNascimento: formattedDobForEngine, // Use dd/MM/yyyy format
+        dataNascimento: formattedDobForEngine,
       ).calcular();
 
       final userNumerology = NumerologyEngine(
@@ -440,38 +418,19 @@ class _AssistantPanelState extends State<AssistantPanel>
         dataNascimento: widget.userData.dataNasc,
       ).calcular();
 
-      print('Partner Numerology: ${partnerNumerology != null ? "✅ Success" : "❌ Null"}');
-      print('User Numerology: ${userNumerology != null ? "✅ Success" : "❌ Null"}');
-
       if (userNumerology == null || partnerNumerology == null) {
-        return """
-❌ Não foi possível calcular a numerologia para a análise.
-
-**Detalhes do erro:**
-- Nome do parceiro: "$partnerName" (${partnerName.trim().isEmpty ? 'VAZIO' : 'OK'})
-- Data do parceiro: "$formattedDobForEngine" (${partnerNumerology == null ? 'FALHOU' : 'OK'})
-- Seus dados: "${widget.userData.nomeAnalise}" / "${widget.userData.dataNasc}" (${userNumerology == null ? 'FALHOU' : 'OK'})
-
-Por favor, verifique se o nome completo e a data de nascimento estão corretos.
-""";
+        return "❌ Não foi possível calcular a numerologia para a análise. Verifique os dados.";
       }
 
-      // Extract Mission Numbers (Missão)
       final userMissao = userNumerology.numeros['missao'] as int? ?? 0;
       final partnerMissao = partnerNumerology.numeros['missao'] as int? ?? 0;
 
-      print('User Missão: $userMissao');
-      print('Partner Missão: $partnerMissao');
-
-      // Extract Harmony Structures
       final userHarmony = userNumerology.estruturas['harmoniaConjugal'] as Map<String, dynamic>? ?? {};
-      
+
       final vibra = userHarmony['vibra'] as List? ?? [];
       final atrai = userHarmony['atrai'] as List? ?? [];
       final oposto = userHarmony['oposto'] as List? ?? [];
       final passivo = userHarmony['passivo'] as List? ?? [];
-
-      print('Harmony Lists - Vibra: $vibra, Atrai: $atrai, Oposto: $oposto, Passivo: $passivo');
 
       String compatibilityLevel;
       String emoji;
@@ -499,8 +458,6 @@ Por favor, verifique se o nome completo e a data de nascimento estão corretos.
         explanation = "A relação é **neutra** do ponto de vista numerológico. O sucesso dependerá de outros fatores.";
       }
 
-      print('✅ Analysis complete: $compatibilityLevel');
-
       return '''
 ## $emoji Análise de Harmonia Conjugal
 
@@ -520,14 +477,366 @@ $explanation
 Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qualquer relacionamento depende de amor, respeito, comunicação e esforço mútuo! 💕
 ''';
 
-    } catch (e, stackTrace) {
-      print('❌ Exception in _buildHarmonyAnalysis: $e');
-      print('Stack trace: $stackTrace');
-      return "Erro ao calcular harmonia: $e\n\nPor favor, tente novamente ou entre em contato com o suporte.";
+    } catch (e) {
+      return "Erro ao calcular harmonia: $e";
     }
   }
 
   // --- UI Components ---
+
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(4),
+                bottomRight: Radius.circular(16),
+              ),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Dot(delay: 0),
+                const SizedBox(width: 4),
+                _Dot(delay: 200),
+                const SizedBox(width: 4),
+                _Dot(delay: 400),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
+    final isExecuted = action.isExecuted;
+    final isExecuting = action.isExecuting;
+    final isDisabled = isExecuted || isExecuting || anyActionExecuted;
+
+    String label = action.title ?? 'Ação';
+    if (action.date != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final actionDate = DateTime(action.date!.year, action.date!.month, action.date!.day);
+      String dateStr = actionDate.isAtSameMomentAs(today)
+          ? 'Hoje'
+          : DateFormat('dd/MM', 'pt_BR').format(action.date!);
+      label = '$label - $dateStr';
+    }
+
+    return GestureDetector(
+      onTap: isDisabled
+          ? null
+          : () => _executeAction(context, action, messageIndex: messageIndex, actionIndex: actionIndex),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isExecuted
+              ? AppColors.success.withValues(alpha: 0.1)
+              : isDisabled
+                  ? AppColors.border.withValues(alpha: 0.3)
+                  : AppColors.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isExecuted
+                ? AppColors.success
+                : isDisabled
+                    ? Colors.transparent
+                    : AppColors.primary.withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isExecuted)
+              const Padding(
+                padding: EdgeInsets.only(right: 8.0),
+                child: Icon(Icons.check, size: 16, color: AppColors.success),
+              ),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isExecuted
+                      ? AppColors.success
+                      : isDisabled
+                          ? AppColors.secondaryText
+                          : AppColors.primary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  decoration: isExecuted ? TextDecoration.lineThrough : null,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageItem(AssistantMessage m, int index) {
+    final isUser = m.role == 'user';
+    final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!isUser) ...[
+                Container(
+                  width: 32, height: 32,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(isUser ? 16 : 4),
+                      bottomRight: Radius.circular(isUser ? 4 : 16),
+                    ),
+                    border: Border.all(
+                      color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
+                    ),
+                  ),
+                  child: MarkdownBody(
+                    data: m.content,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                      p: TextStyle(
+                        fontSize: 15,
+                        height: 1.5,
+                        color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (!isUser && m.actions.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(left: 44, top: 12),
+              child: Wrap(
+                spacing: 8, runSpacing: 8,
+                children: m.actions.asMap().entries.map((entry) {
+                  return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
+                }).toList(),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --- Main Layout ---
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+    final isMobileFullScreen = !isDesktop && widget.isFullScreen;
+
+    // If it's mobile modal (default), we use DraggableScrollableSheet internally
+    // BUT, if the parent already wraps this in a DraggableScrollableSheet (which is common in showModalBottomSheet),
+    // we should just return the content.
+    // However, to support "Unified", we need to know how it's being used.
+    // Assuming the caller handles the DraggableScrollableSheet for Mobile Modal,
+    // OR we handle it here.
+    // Given the user wants a "Unified" panel, let's build the CONTENT here,
+    // and let the caller wrap it in DraggableScrollableSheet if needed, OR we provide a static method to show it.
+    // But wait, the existing code returned a DraggableScrollableSheet for mobile.
+    // Let's stick to that pattern for mobile-modal to ensure compatibility.
+
+    if (!isDesktop && !widget.isFullScreen) {
+      // Mobile Modal Mode
+      return DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return _buildPanelContent(context, scrollController: scrollController, isModal: true);
+        },
+      );
+    }
+
+    // Desktop Modal / FullScreen / Mobile FullScreen
+    return _buildPanelContent(context, isModal: !widget.isFullScreen);
+  }
+
+  Widget _buildPanelContent(BuildContext context, {ScrollController? scrollController, required bool isModal}) {
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+    final effectiveScrollController = scrollController ?? _scrollController;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: isModal
+            ? const BorderRadius.vertical(top: Radius.circular(24))
+            : BorderRadius.circular(isDesktop ? 16 : 0),
+        boxShadow: isModal || isDesktop
+            ? [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                )
+              ]
+            : null,
+      ),
+      child: Column(
+        children: [
+          // Header
+          _buildHeader(isModal, isDesktop),
+          
+          // Chat Area
+          Expanded(
+            child: ListView.builder(
+              controller: effectiveScrollController,
+              reverse: true,
+              padding: const EdgeInsets.all(20),
+              itemCount: _messages.length + (_isSending ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (_isSending && index == 0) {
+                  return _buildTypingIndicator();
+                }
+                final msgIndex = _isSending ? index - 1 : index;
+                // Reverse index for display
+                final actualMsg = _messages[_messages.length - 1 - msgIndex];
+                // We need the original index for actions
+                final originalIndex = _messages.length - 1 - msgIndex;
+                return _buildMessageItem(actualMsg, originalIndex);
+              },
+            ),
+          ),
+
+          // Input Area
+          _buildInputArea(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(bool isModal, bool isDesktop) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+      ),
+      child: Row(
+        children: [
+          if (isModal && !isDesktop)
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(right: 16),
+              decoration: BoxDecoration(
+                color: AppColors.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          const Icon(Icons.auto_awesome, color: AppColors.primary),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Sincro Assistant',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primaryText,
+              ),
+            ),
+          ),
+          if (widget.onToggleFullScreen != null)
+            IconButton(
+              icon: Icon(
+                widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
+                color: AppColors.secondaryText,
+              ),
+              onPressed: widget.onToggleFullScreen,
+              tooltip: widget.isFullScreen ? 'Modo Normal' : 'Tela Cheia',
+            ),
+          if (widget.onClose != null)
+             IconButton(
+              icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
+              onPressed: widget.onClose,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: TextField(
+                controller: _controller,
+                focusNode: _inputFocusNode,
+                decoration: const InputDecoration(
+                  hintText: 'Como posso ajudar hoje?',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: AppColors.secondaryText),
+                ),
+                onSubmitted: (_) => _send(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          _buildDynamicButton(),
+        ],
+      ),
+    );
+  }
 
   Widget _buildDynamicButton() {
     return AnimatedSwitcher(
@@ -589,465 +898,6 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                 ),
     );
   }
-
-  Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
-    final isExecuted = action.isExecuted;
-    final isExecuting = action.isExecuting;
-    
-    // Disable if THIS action is executed/executing OR if ANY other sibling is executed/executing
-    // (Single choice logic: once you pick one, others are disabled)
-    final isDisabled = isExecuted || isExecuting || anyActionExecuted;
-
-    String label = action.title ?? 'Ação';
-    if (action.date != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final actionDate = DateTime(action.date!.year, action.date!.month, action.date!.day);
-
-      String dateStr;
-      if (actionDate.isAtSameMomentAs(today)) {
-        dateStr = 'Hoje';
-      } else {
-        dateStr = DateFormat('dd/MM', 'pt_BR').format(action.date!);
-      }
-      label = '$label - $dateStr';
-    }
-
-    return GestureDetector(
-      onTap: isDisabled
-          ? null
-          : () => _executeAction(context, action, messageIndex: messageIndex, actionIndex: actionIndex),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isExecuted
-              ? AppColors.success.withValues(alpha: 0.1)
-              : isDisabled 
-                  ? AppColors.border.withValues(alpha: 0.3) // Disabled look
-                  : AppColors.primary.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isExecuted
-                ? AppColors.success
-                : isDisabled
-                    ? Colors.transparent
-                    : AppColors.primary.withValues(alpha: 0.5),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Removed Loading Spinner as requested
-            if (isExecuted)
-              const Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: Icon(Icons.check, size: 16, color: AppColors.success),
-              ),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isExecuted 
-                      ? AppColors.success 
-                      : isDisabled 
-                          ? AppColors.secondaryText 
-                          : AppColors.primary,
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                  decoration: isExecuted ? TextDecoration.lineThrough : null,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMessageItem(AssistantMessage m, int index) {
-    final isUser = m.role == 'user';
-    // Check if any action in this message is already executed or executing
-    final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!isUser) ...[
-                Container(
-                  width: 32, height: 32,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Flexible(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isUser ? 16 : 4),
-                      bottomRight: Radius.circular(isUser ? 4 : 16),
-                    ),
-                    border: Border.all(
-                      color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  child: MarkdownBody(
-                    data: m.content,
-                    selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                      p: TextStyle(
-                        fontSize: 15,
-                        height: 1.5,
-                        color: isUser ? AppColors.primaryText : AppColors.secondaryText,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          if (!isUser && m.actions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 44, top: 12),
-              child: Wrap(
-                spacing: 8, runSpacing: 8,
-                children: m.actions.asMap().entries.map((entry) {
-                  final actionIndex = entry.key;
-                  final action = entry.value;
-                  return _buildActionChip(action, index, actionIndex, anyActionExecuted);
-                }).toList(),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32, height: 32,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(16),
-              ),
-              border: Border.all(
-                color: AppColors.border.withValues(alpha: 0.5),
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _Dot(delay: 0),
-                const SizedBox(width: 4),
-                _Dot(delay: 200),
-                const SizedBox(width: 4),
-                _Dot(delay: 400),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // --- Main Build ---
-
-  @override
-  Widget build(BuildContext context) {
-    // Use MediaQuery for screen-based layout decision instead of parent constraints
-    final isDesktop = MediaQuery.of(context).size.width > 768;
-
-    // Mobile Layout (DraggableScrollableSheet)
-    if (!isDesktop) {
-      // Wrap the sheet in Padding to push it up when keyboard opens
-      return Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          minChildSize: 0.5,
-          maxChildSize: 1.0,
-          snap: true,
-          builder: (context, sheetScrollController) {
-            return Container(
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
-                ],
-              ),
-              child: Column(
-                children: [
-                  // Drag Handle & Header (Driven by sheetScrollController)
-                  SizedBox(
-                    height: 70, // Fixed height for the header area
-                    child: ListView(
-                      controller: sheetScrollController,
-                      padding: EdgeInsets.zero,
-                      physics: const ClampingScrollPhysics(),
-                      children: [
-                        // Drag Handle
-                        Center(
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 12, bottom: 8),
-                            width: 40, height: 4,
-                            decoration: BoxDecoration(
-                              color: AppColors.border,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                        ),
-                        // Header Content
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                              const SizedBox(width: 8),
-                              const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              const Spacer(),
-                            ],
-                          ),
-                        ),
-                        const Divider(height: 1),
-                      ],
-                    ),
-                  ),
-                  
-                  // Chat Area (Driven by internal _scrollController)
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController, // Use internal controller for messages
-                      padding: const EdgeInsets.all(20),
-                      reverse: true, 
-                      // Add 1 to count if sending (for typing indicator)
-                      itemCount: _messages.length + (_isSending ? 1 : 0),
-                      itemBuilder: (ctx, i) {
-                        // If sending, the first item (index 0 in reverse) is the typing indicator
-                        if (_isSending && i == 0) {
-                          return _buildTypingIndicator();
-                        }
-                        
-                        // Adjust index: if sending, shift message index by 1
-                        final adjustedIndex = _isSending ? i - 1 : i;
-                        final index = _messages.length - 1 - adjustedIndex;
-                        return _buildMessageItem(_messages[index], index);
-                      },
-                    ),
-                  ),
-                  // Input Area
-                  _buildInputArea(isMobile: true),
-                ],
-              ),
-            );
-          },
-        ),
-      );
-    }
-
-    // Desktop Layout
-    return _buildDesktopLayout();
-  }
-
-  Widget _buildDesktopLayout() {
-    // Expanded Mode: Large centered dialog
-    if (_isFullscreen) {
-      return Stack(
-        children: [
-          // Backdrop
-          GestureDetector(
-            onTap: () => setState(() => _isFullscreen = false),
-            child: Container(color: Colors.black54),
-          ),
-          Center(
-            child: Container(
-              width: MediaQuery.of(context).size.width * 0.85, // 85% of screen width
-              height: MediaQuery.of(context).size.height * 0.90, // 90% of screen height
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.4),
-                    blurRadius: 40,
-                    offset: const Offset(0, 16),
-                  )
-                ],
-              ),
-              child: _buildPanelContent(isExpanded: true),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Minimized Mode: Bottom-right sheet (mobile-like)
-    return Align(
-      alignment: Alignment.bottomRight,
-      child: Container(
-        width: 480,
-        height: 650,
-        margin: const EdgeInsets.only(right: 24, bottom: 90),
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            )
-          ],
-          border: Border.all(
-            color: AppColors.border.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-        child: _buildPanelContent(isExpanded: false),
-      ),
-    );
-  }
-
-  Widget _buildPanelContent({required bool isExpanded}) {
-    return Column(
-      children: [
-        // Header
-        Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-              ),
-              const SizedBox(width: 12),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('Assistente Virtual', style: TextStyle(fontSize: 12, color: AppColors.secondaryText)),
-                ],
-              ),
-              const Spacer(),
-              IconButton(
-                icon: Icon(
-                  isExpanded ? Icons.close_fullscreen : Icons.open_in_full,
-                  color: AppColors.secondaryText,
-                ),
-                onPressed: () {
-                  setState(() {
-                    _isFullscreen = !_isFullscreen;
-                  });
-                },
-                tooltip: isExpanded ? 'Minimizar' : 'Expandir',
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1),
-        // Messages
-        Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(24),
-            reverse: true,
-            itemCount: _messages.length + (_isSending ? 1 : 0),
-            itemBuilder: (ctx, i) {
-              if (_isSending && i == 0) {
-                return _buildTypingIndicator();
-              }
-              final adjustedIndex = _isSending ? i - 1 : i;
-              final index = _messages.length - 1 - adjustedIndex;
-              return _buildMessageItem(_messages[index], index);
-            },
-          ),
-        ),
-        // Input
-        _buildInputArea(isMobile: false),
-      ],
-    );
-  }
-
-  Widget _buildInputArea({required bool isMobile}) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-                ),
-                child: TextField(
-                  controller: _controller,
-                  focusNode: _inputFocusNode,
-                  minLines: 1,
-                  maxLines: 5,
-                  style: const TextStyle(fontSize: 15),
-                  decoration: const InputDecoration(
-                    hintText: 'Como posso ajudar?',
-                    hintStyle: TextStyle(color: AppColors.secondaryText),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  ),
-                  onSubmitted: (_) => _send(),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _buildDynamicButton(),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _Dot extends StatefulWidget {
@@ -1068,6 +918,7 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
       vsync: this,
       duration: const Duration(milliseconds: 600),
     )..repeat(reverse: true);
+    
     Future.delayed(Duration(milliseconds: widget.delay), () {
       if (mounted) _controller.forward();
     });
@@ -1082,11 +933,11 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     return FadeTransition(
-      opacity: _controller,
+      opacity: Tween(begin: 0.4, end: 1.0).animate(_controller),
       child: Container(
         width: 8, height: 8,
         decoration: const BoxDecoration(
-          color: AppColors.secondaryText,
+          color: AppColors.primary,
           shape: BoxShape.circle,
         ),
       ),
