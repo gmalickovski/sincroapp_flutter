@@ -391,17 +391,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     }
   }
 
-  Future<void> _scrollToBottom() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (_scrollController.hasClients) {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
-    }
-  }
-
   // --- Lógica de Reconhecimento de Voz (CORREÇÃO DO ECO) ---
 
   Future<void> _onMicPressed() async {
