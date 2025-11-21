@@ -411,29 +411,72 @@ class _AssistantPanelState extends State<AssistantPanel>
         dataNascimento: widget.userData.dataNasc,
       ).calcular();
 
-      // FIXED: Access 'numeros' map with null check
-      final userExp = userNumerology?.numeros['expressao'] ?? 0;
-      final partnerExp = partnerNumerology?.numeros['expressao'] ?? 0;
-      final userDest = userNumerology?.numeros['destino'] ?? 0;
-      final partnerDest = partnerNumerology?.numeros['destino'] ?? 0;
+      if (userNumerology == null || partnerNumerology == null) {
+        return "Não foi possível calcular a numerologia para a análise.";
+      }
 
-      // FIXED: Use 'primeiroNome' instead of 'nome'
-      return "Compreendido, ${widget.userData.primeiroNome}! Analisando as vibrações energéticas de vocês dois:\n\n"
-          "**${widget.userData.nomeAnalise}** (Expressão $userExp, Destino $userDest)\n"
-          "**$partnerName** (Expressão $partnerExp, Destino $partnerDest)\n\n"
-          "A dinâmica entre um número **$userExp** e um número **$partnerExp** na Expressão sugere uma troca interessante. "
-          "${_getCompatibilityText(userExp, partnerExp)}\n\n"
-          "No Caminho do Destino ($userDest e $partnerDest), vocês buscam objetivos que podem se complementar. "
-          "É importante manter o diálogo aberto e respeitar as diferenças individuais para construir uma harmonia duradoura.";
+      // Extract Mission Numbers (Missão)
+      final userMissao = userNumerology.numeros['missao'] as int? ?? 0;
+      final partnerMissao = partnerNumerology.numeros['missao'] as int? ?? 0;
+
+      // Extract Harmony Structures
+      final userHarmony = userNumerology.estruturas['harmoniaConjugal'] as Map<String, dynamic>? ?? {};
+      // We don't strictly need partner's harmony map for this specific check (checking if partner fits user's harmony),
+      // but we could check vice-versa too. For now, we follow the logic of "Does Partner fit User's Harmony?".
+      
+      final vibra = userHarmony['vibra'] as List? ?? [];
+      final atrai = userHarmony['atrai'] as List? ?? [];
+      final oposto = userHarmony['oposto'] as List? ?? [];
+      final passivo = userHarmony['passivo'] as List? ?? [];
+
+      String compatibilityLevel;
+      String emoji;
+      String explanation;
+
+      if (vibra.contains(partnerMissao)) {
+        compatibilityLevel = "Vibração Perfeita";
+        emoji = "💖";
+        explanation = "Vocês possuem uma **vibração perfeita**! Há uma sintonia natural e profunda entre vocês.";
+      } else if (atrai.contains(partnerMissao)) {
+        compatibilityLevel = "Alta Atração";
+        emoji = "✨";
+        explanation = "Existe uma **forte atração** entre vocês. A relação tende a ser harmoniosa e complementar.";
+      } else if (oposto.contains(partnerMissao)) {
+        compatibilityLevel = "Energias Opostas";
+        emoji = "⚡";
+        explanation = "Vocês possuem **energias opostas**. Isso pode gerar desafios, mas também crescimento mútuo se houver compreensão.";
+      } else if (passivo.contains(partnerMissao)) {
+        compatibilityLevel = "Relação Passiva";
+        emoji = "🌙";
+        explanation = "A relação tende a ser **passiva e tranquila**. Pode faltar intensidade, mas há estabilidade.";
+      } else {
+        compatibilityLevel = "Neutro";
+        emoji = "🔄";
+        explanation = "A relação é **neutra** do ponto de vista numerológico. O sucesso dependerá de outros fatores.";
+      }
+
+      return '''
+## $emoji Análise de Harmonia Conjugal
+
+**Sua Missão**: $userMissao
+**Missão de $partnerName**: $partnerMissao
+
+**Compatibilidade**: $compatibilityLevel
+
+$explanation
+
+### Detalhes da sua Harmonia Conjugal:
+- **Vibra com**: ${vibra.join(', ')}
+- **Atrai**: ${atrai.join(', ')}
+- **Oposto**: ${oposto.join(', ')}
+- **Passivo**: ${passivo.join(', ')}
+
+Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qualquer relacionamento depende de amor, respeito, comunicação e esforço mútuo! 💕
+''';
+
     } catch (e) {
       return "Erro ao calcular harmonia: $e";
     }
-  }
-
-  String _getCompatibilityText(int n1, int n2) {
-    if (n1 == n2) return "Vocês compartilham vibrações semelhantes, o que facilita a compreensão mútua.";
-    if ((n1 + n2) % 3 == 0) return "Há uma fluidez natural na comunicação e na forma como expressam sentimentos.";
-    return "Vocês possuem qualidades distintas que, quando unidas, podem criar uma parceria poderosa e equilibrada.";
   }
 
   // --- UI Components ---
@@ -697,102 +740,99 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 768;
-        
-        // Mobile Layout (DraggableScrollableSheet)
-        if (!isDesktop) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.6,
-            minChildSize: 0.5,
-            maxChildSize: 1.0,
-            snap: true,
-            builder: (context, sheetScrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: AppColors.background,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
-                  ],
-                ),
-                // Wrap content in a column that respects viewInsets (keyboard)
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-                  child: Column(
-                    children: [
-                      // Drag Handle & Header (Driven by sheetScrollController)
-                      SizedBox(
-                        height: 70, // Fixed height for the header area
-                        child: ListView(
-                          controller: sheetScrollController,
-                          padding: EdgeInsets.zero,
-                          physics: const ClampingScrollPhysics(),
-                          children: [
-                            // Drag Handle
-                            Center(
-                              child: Container(
-                                margin: const EdgeInsets.only(top: 12, bottom: 8),
-                                width: 40, height: 4,
-                                decoration: BoxDecoration(
-                                  color: AppColors.border,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            ),
-                            // Header Content
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                                  const SizedBox(width: 8),
-                                  const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                                  const Spacer(),
-                                ],
-                              ),
-                            ),
-                            const Divider(height: 1),
-                          ],
-                        ),
-                      ),
-                      
-                      // Chat Area (Driven by internal _scrollController)
-                      Expanded(
-                        child: ListView.builder(
-                          controller: _scrollController, // Use internal controller for messages
-                          padding: const EdgeInsets.all(20),
-                          reverse: true, 
-                          // Add 1 to count if sending (for typing indicator)
-                          itemCount: _messages.length + (_isSending ? 1 : 0),
-                          itemBuilder: (ctx, i) {
-                            // If sending, the first item (index 0 in reverse) is the typing indicator
-                            if (_isSending && i == 0) {
-                              return _buildTypingIndicator();
-                            }
-                            
-                            // Adjust index: if sending, shift message index by 1
-                            final adjustedIndex = _isSending ? i - 1 : i;
-                            final index = _messages.length - 1 - adjustedIndex;
-                            return _buildMessageItem(_messages[index], index);
-                          },
-                        ),
-                      ),
-                      // Input Area
-                      _buildInputArea(isMobile: true),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        }
+    // Use MediaQuery for screen-based layout decision instead of parent constraints
+    final isDesktop = MediaQuery.of(context).size.width > 768;
 
-        // Desktop Layout
-        return _buildDesktopLayout();
-      },
-    );
+    // Mobile Layout (DraggableScrollableSheet)
+    if (!isDesktop) {
+      // Wrap the sheet in Padding to push it up when keyboard opens
+      return Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          minChildSize: 0.5,
+          maxChildSize: 1.0,
+          snap: true,
+          builder: (context, sheetScrollController) {
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Drag Handle & Header (Driven by sheetScrollController)
+                  SizedBox(
+                    height: 70, // Fixed height for the header area
+                    child: ListView(
+                      controller: sheetScrollController,
+                      padding: EdgeInsets.zero,
+                      physics: const ClampingScrollPhysics(),
+                      children: [
+                        // Drag Handle
+                        Center(
+                          child: Container(
+                            margin: const EdgeInsets.only(top: 12, bottom: 8),
+                            width: 40, height: 4,
+                            decoration: BoxDecoration(
+                              color: AppColors.border,
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        // Header Content
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                              const SizedBox(width: 8),
+                              const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                              const Spacer(),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                      ],
+                    ),
+                  ),
+                  
+                  // Chat Area (Driven by internal _scrollController)
+                  Expanded(
+                    child: ListView.builder(
+                      controller: _scrollController, // Use internal controller for messages
+                      padding: const EdgeInsets.all(20),
+                      reverse: true, 
+                      // Add 1 to count if sending (for typing indicator)
+                      itemCount: _messages.length + (_isSending ? 1 : 0),
+                      itemBuilder: (ctx, i) {
+                        // If sending, the first item (index 0 in reverse) is the typing indicator
+                        if (_isSending && i == 0) {
+                          return _buildTypingIndicator();
+                        }
+                        
+                        // Adjust index: if sending, shift message index by 1
+                        final adjustedIndex = _isSending ? i - 1 : i;
+                        final index = _messages.length - 1 - adjustedIndex;
+                        return _buildMessageItem(_messages[index], index);
+                      },
+                    ),
+                  ),
+                  // Input Area
+                  _buildInputArea(isMobile: true),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    // Desktop Layout
+    return _buildDesktopLayout();
   }
 
   Widget _buildDesktopLayout() {
