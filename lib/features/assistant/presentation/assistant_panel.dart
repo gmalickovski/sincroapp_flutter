@@ -508,6 +508,26 @@ class _AssistantPanelState extends State<AssistantPanel>
     final isExecuted = action.isExecuted;
     final isExecuting = action.isExecuting;
 
+    String label = action.title ?? 'Ação';
+    if (action.date != null) {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final actionDate = DateTime(action.date!.year, action.date!.month, action.date!.day);
+
+      String dateStr;
+      if (actionDate.isAtSameMomentAs(today)) {
+        dateStr = 'Hoje';
+      } else {
+        dateStr = DateFormat('dd/MM', 'pt_BR').format(action.date!);
+      }
+      
+      // Check if title already contains time (simple heuristic)
+      // If not, and we want to show time, we'd need time in the action model.
+      // Currently, the prompt instruction says to put time in the title.
+      // So we just append the date.
+      label = '$label - $dateStr';
+    }
+
     return GestureDetector(
       onTap: (isExecuted || isExecuting)
           ? null
@@ -543,7 +563,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                 child: Icon(Icons.check, size: 16, color: AppColors.success),
               ),
             Text(
-              action.title ?? 'Ação',
+              label,
               style: TextStyle(
                 color: isExecuted ? AppColors.success : AppColors.primary,
                 fontWeight: FontWeight.w500,
@@ -637,7 +657,7 @@ class _AssistantPanelState extends State<AssistantPanel>
             minChildSize: 0.5,
             maxChildSize: 1.0,
             snap: true,
-            builder: (context, scrollController) {
+            builder: (context, sheetScrollController) {
               return Container(
                 decoration: BoxDecoration(
                   color: AppColors.background,
@@ -648,39 +668,50 @@ class _AssistantPanelState extends State<AssistantPanel>
                 ),
                 child: Column(
                   children: [
-                    // Drag Handle
-                    Center(
-                      child: Container(
-                        margin: const EdgeInsets.only(top: 12, bottom: 8),
-                        width: 40, height: 4,
-                        decoration: BoxDecoration(
-                          color: AppColors.border,
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                    ),
-                    // Header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                      child: Row(
+                    // Drag Handle & Header (Driven by sheetScrollController)
+                    SizedBox(
+                      height: 70, // Fixed height for the header area
+                      child: ListView(
+                        controller: sheetScrollController,
+                        padding: EdgeInsets.zero,
+                        physics: const ClampingScrollPhysics(),
                         children: [
-                          const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
-                          const SizedBox(width: 8),
-                          const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                          const Spacer(),
+                          // Drag Handle
+                          Center(
+                            child: Container(
+                              margin: const EdgeInsets.only(top: 12, bottom: 8),
+                              width: 40, height: 4,
+                              decoration: BoxDecoration(
+                                color: AppColors.border,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          // Header Content
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                                const SizedBox(width: 8),
+                                const Text('Sincro IA', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                const Spacer(),
+                              ],
+                            ),
+                          ),
+                          const Divider(height: 1),
                         ],
                       ),
                     ),
-                    const Divider(height: 1),
-                    // Chat Area
+                    
+                    // Chat Area (Driven by internal _scrollController)
                     Expanded(
                       child: ListView.builder(
-                        controller: scrollController, // Essential for drag
+                        controller: _scrollController, // Use internal controller for messages
                         padding: const EdgeInsets.all(20),
-                        reverse: true, // Invertido para auto-scroll funcionar nativamente
+                        reverse: true, 
                         itemCount: _messages.length,
                         itemBuilder: (ctx, i) {
-                          // Ajuste do índice para lista invertida
                           final index = _messages.length - 1 - i;
                           return _buildMessageItem(_messages[index], index);
                         },
