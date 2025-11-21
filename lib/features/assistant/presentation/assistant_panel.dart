@@ -553,17 +553,21 @@ class _AssistantPanelState extends State<AssistantPanel>
                 padding: EdgeInsets.only(right: 8.0),
                 child: Icon(Icons.check, size: 16, color: AppColors.success),
               ),
-            Text(
-              label,
-              style: TextStyle(
-                color: isExecuted 
-                    ? AppColors.success 
-                    : isDisabled 
-                        ? AppColors.secondaryText 
-                        : AppColors.primary,
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                decoration: isExecuted ? TextDecoration.lineThrough : null,
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: isExecuted 
+                      ? AppColors.success 
+                      : isDisabled 
+                          ? AppColors.secondaryText 
+                          : AppColors.primary,
+                  fontWeight: FontWeight.w500,
+                  fontSize: 13,
+                  decoration: isExecuted ? TextDecoration.lineThrough : null,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
@@ -644,6 +648,51 @@ class _AssistantPanelState extends State<AssistantPanel>
     );
   }
 
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 32, height: 32,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+                bottomLeft: Radius.circular(4),
+                bottomRight: Radius.circular(16),
+              ),
+              border: Border.all(
+                color: AppColors.border.withValues(alpha: 0.5),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Dot(delay: 0),
+                const SizedBox(width: 4),
+                _Dot(delay: 200),
+                const SizedBox(width: 4),
+                _Dot(delay: 400),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Main Build ---
 
   @override
@@ -654,22 +703,23 @@ class _AssistantPanelState extends State<AssistantPanel>
         
         // Mobile Layout (DraggableScrollableSheet)
         if (!isDesktop) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom), // Keyboard handling
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.6,
-              minChildSize: 0.5,
-              maxChildSize: 1.0,
-              snap: true,
-              builder: (context, sheetScrollController) {
-                return Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
-                    ],
-                  ),
+          return DraggableScrollableSheet(
+            initialChildSize: 0.6,
+            minChildSize: 0.5,
+            maxChildSize: 1.0,
+            snap: true,
+            builder: (context, sheetScrollController) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20)
+                  ],
+                ),
+                // Wrap content in a column that respects viewInsets (keyboard)
+                child: Padding(
+                  padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
                     children: [
                       // Drag Handle & Header (Driven by sheetScrollController)
@@ -714,9 +764,17 @@ class _AssistantPanelState extends State<AssistantPanel>
                           controller: _scrollController, // Use internal controller for messages
                           padding: const EdgeInsets.all(20),
                           reverse: true, 
-                          itemCount: _messages.length,
+                          // Add 1 to count if sending (for typing indicator)
+                          itemCount: _messages.length + (_isSending ? 1 : 0),
                           itemBuilder: (ctx, i) {
-                            final index = _messages.length - 1 - i;
+                            // If sending, the first item (index 0 in reverse) is the typing indicator
+                            if (_isSending && i == 0) {
+                              return _buildTypingIndicator();
+                            }
+                            
+                            // Adjust index: if sending, shift message index by 1
+                            final adjustedIndex = _isSending ? i - 1 : i;
+                            final index = _messages.length - 1 - adjustedIndex;
                             return _buildMessageItem(_messages[index], index);
                           },
                         ),
@@ -725,9 +783,9 @@ class _AssistantPanelState extends State<AssistantPanel>
                       _buildInputArea(isMobile: true),
                     ],
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
           );
         }
 
@@ -811,7 +869,10 @@ class _AssistantPanelState extends State<AssistantPanel>
               ),
               const Spacer(),
               IconButton(
-                icon: Icon(isExpanded ? Icons.close_fullscreen : Icons.open_in_full),
+                icon: Icon(
+                  isExpanded ? Icons.close_fullscreen : Icons.open_in_full,
+                  color: AppColors.secondaryText,
+                ),
                 onPressed: () {
                   setState(() {
                     _isFullscreen = !_isFullscreen;
@@ -829,9 +890,13 @@ class _AssistantPanelState extends State<AssistantPanel>
             controller: _scrollController,
             padding: const EdgeInsets.all(24),
             reverse: true,
-            itemCount: _messages.length,
+            itemCount: _messages.length + (_isSending ? 1 : 0),
             itemBuilder: (ctx, i) {
-              final index = _messages.length - 1 - i;
+              if (_isSending && i == 0) {
+                return _buildTypingIndicator();
+              }
+              final adjustedIndex = _isSending ? i - 1 : i;
+              final index = _messages.length - 1 - adjustedIndex;
               return _buildMessageItem(_messages[index], index);
             },
           ),
@@ -880,6 +945,50 @@ class _AssistantPanelState extends State<AssistantPanel>
             const SizedBox(width: 12),
             _buildDynamicButton(),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Dot extends StatefulWidget {
+  final int delay;
+  const _Dot({required this.delay});
+
+  @override
+  State<_Dot> createState() => _DotState();
+}
+
+class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    )..repeat(reverse: true);
+    Future.delayed(Duration(milliseconds: widget.delay), () {
+      if (mounted) _controller.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: _controller,
+      child: Container(
+        width: 8, height: 8,
+        decoration: const BoxDecoration(
+          color: AppColors.secondaryText,
+          shape: BoxShape.circle,
         ),
       ),
     );
