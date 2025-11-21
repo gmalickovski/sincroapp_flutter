@@ -105,165 +105,163 @@ class _AssistantPanelState extends State<AssistantPanel>
         context: context,
         barrierDismissible: false,
         barrierColor: Colors.black.withValues(alpha: 0.5),
-        builder: (dialogContext) => Dialog.fullscreen(
+        builder: (dialogContext) => Dialog(
           backgroundColor: Colors.transparent,
-          child: Scaffold(
-            backgroundColor: Colors.transparent,
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 20,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      // Header com botão fechar
-                      Padding(
-                        padding: const EdgeInsets.all(20),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 24),
-                                SizedBox(width: 10),
-                                Text(
-                                  'Sincro IA',
-                                  style: TextStyle(
-                                    color: AppColors.primaryText,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.fullscreen_exit, color: AppColors.secondaryText, size: 20),
-                              onPressed: () {
-                                Navigator.of(dialogContext).pop();
-                                setState(() {
-                                  _isFullscreen = false;
-                                });
-                              },
-                              tooltip: 'Sair da tela cheia',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1, color: AppColors.border),
-                      // Lista de mensagens
-                      Expanded(
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: _messages.length,
-                          itemBuilder: (_, i) {
-                            final m = _messages[i];
-                            final isUser = m.role == 'user';
-                            return Align(
-                              alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                              child: Container(
-                                margin: const EdgeInsets.symmetric(vertical: 8),
-                                padding: const EdgeInsets.all(12),
-                                constraints: const BoxConstraints(maxWidth: 560),
-                                decoration: BoxDecoration(
-                                  color: isUser
-                                      ? AppColors.primaryAccent.withValues(alpha: 0.15)
-                                      : AppColors.cardBackground,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _buildMarkdownMessage(m.content, isUser: isUser),
-                                    if (!isUser && m.actions.isNotEmpty) ...[
-                                      const SizedBox(height: 12),
-                                      Wrap(
-                                        spacing: 8,
-                                        runSpacing: 8,
-                                        children: [
-                                          for (final a in m.actions) _buildActionChip(a, i),
-                                        ],
-                                      ),
-                                    ]
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      // Input
-                      SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
+          insetPadding: const EdgeInsets.all(16), // Respeita SafeArea e deixa espaço
+          child: StatefulBuilder(
+            builder: (context, setDialogState) {
+              return Container(
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Header com botão fechar
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Row(
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  focusNode: _inputFocusNode,
-                                  controller: _controller,
-                                  onSubmitted: (_) => _send(),
-                                  maxLines: 4,
-                                  minLines: 1,
-                                  textInputAction: TextInputAction.newline,
-                                  style: const TextStyle(
-                                    color: AppColors.primaryText,
-                                    fontSize: 15,
-                                    height: 1.45,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: _isListening ? 'Fale agora...' : 'Pergunte o que quiser...',
-                                    hintStyle: TextStyle(
-                                      color: _isListening ? AppColors.primary : AppColors.tertiaryText,
-                                      fontSize: 14,
-                                      fontWeight: _isListening ? FontWeight.bold : FontWeight.normal,
-                                    ),
-                                    filled: true,
-                                    fillColor: AppColors.cardBackground,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                      borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                      borderSide: BorderSide(
-                                        color: _isListening ? AppColors.primary : AppColors.border.withValues(alpha: 0.5),
-                                        width: _isListening ? 2 : 1,
-                                      ),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12.0),
-                                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
-                                    ),
-                                  ),
+                              Icon(Icons.smart_toy_outlined, color: AppColors.primary, size: 24),
+                              SizedBox(width: 10),
+                              Text(
+                                'Sincro IA',
+                                style: TextStyle(
+                                  color: AppColors.primaryText,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -0.5,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              _buildDynamicButton(),
                             ],
                           ),
-                        ),
+                          IconButton(
+                            icon: const Icon(Icons.fullscreen_exit, color: AppColors.secondaryText, size: 20),
+                            onPressed: () {
+                              Navigator.of(dialogContext).pop();
+                              setState(() {
+                                _isFullscreen = false;
+                              });
+                            },
+                            tooltip: 'Sair da tela cheia',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const Divider(height: 1, color: AppColors.border),
+                    // Lista de mensagens
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: _messages.length,
+                        itemBuilder: (_, i) {
+                          final m = _messages[i];
+                          final isUser = m.role == 'user';
+                          return Align(
+                            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              padding: const EdgeInsets.all(12),
+                              constraints: null, // SEM LIMITE em fullscreen
+                              decoration: BoxDecoration(
+                                color: isUser
+                                    ? AppColors.primaryAccent.withValues(alpha: 0.15)
+                                    : AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _buildMarkdownMessage(m.content, isUser: isUser),
+                                  if (!isUser && m.actions.isNotEmpty) ...[
+                                    const SizedBox(height: 12),
+                                    Wrap(
+                                      spacing: 8,
+                                      runSpacing: 8,
+                                      children: [
+                                        for (final a in m.actions) _buildActionChip(a, i),
+                                      ],
+                                    ),
+                                  ]
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    // Input
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              focusNode: _inputFocusNode,
+                              controller: _controller,
+                              onSubmitted: (_) => _send(),
+                              onChanged: (_) {
+                                setDialogState(() {}); // Atualiza UI do dialog
+                                setState(() {}); // Atualiza UI principal
+                              },
+                              maxLines: 4,
+                              minLines: 1,
+                              textInputAction: TextInputAction.newline,
+                              style: const TextStyle(
+                                color: AppColors.primaryText,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: _isListening ? 'Fale agora...' : 'Pergunte o que quiser...',
+                                hintStyle: TextStyle(
+                                  color: _isListening ? AppColors.primary : AppColors.tertiaryText,
+                                  fontSize: 14,
+                                  fontWeight: _isListening ? FontWeight.bold : FontWeight.normal,
+                                ),
+                                filled: true,
+                                fillColor: AppColors.cardBackground,
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  borderSide: BorderSide(color: AppColors.border.withValues(alpha: 0.5)),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  borderSide: BorderSide(
+                                    color: _isListening ? AppColors.primary : AppColors.border.withValues(alpha: 0.5),
+                                    width: _isListening ? 2 : 1,
+                                  ),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          _buildDynamicButton(),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-            ),
+              );
+            },
           ),
         ),
       ).then((_) {
@@ -273,6 +271,24 @@ class _AssistantPanelState extends State<AssistantPanel>
           });
         }
       });
+    }
+  }
+
+  // --- Scroll Automático ---
+
+  Future<void> _scrollToBottom() async {
+    // Aguarda um frame para garantir que a mensagem foi renderizada
+    await Future.delayed(const Duration(milliseconds: 100));
+    
+    if (!mounted) return;
+    
+    // Scroll no ListView (usa _scrollController que é o mesmo do DraggableScrollableSheet)
+    if (_scrollController.hasClients) {
+      await _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOut,
+      );
     }
   }
 
@@ -294,6 +310,9 @@ class _AssistantPanelState extends State<AssistantPanel>
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
     _inputFocusNode.unfocus();
+    
+    // Scroll para mostrar mensagem do usuário
+    await _scrollToBottom();
 
     final pendingActions = _lastAssistantActions();
     if (_isAffirmative(q) && pendingActions.isNotEmpty) {
@@ -354,6 +373,9 @@ class _AssistantPanelState extends State<AssistantPanel>
               content: ans.answer,
               time: DateTime.now(),
               actions: alignedActions));
+      
+      // Scroll para mostrar resposta do assistente
+      await _scrollToBottom();
     } catch (e) {
       setState(() {
         _messages.add(AssistantMessage(
@@ -362,6 +384,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                 'Não consegui processar sua solicitação agora. Tente novamente.\n\n$e',
             time: DateTime.now()));
       });
+      await _scrollToBottom();
     } finally {
       if (mounted) setState(() => _isSending = false);
       await _scrollToBottom();
@@ -559,12 +582,14 @@ class _AssistantPanelState extends State<AssistantPanel>
               Container(
                 height: 44,
                 alignment: Alignment.center,
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.border,
-                    borderRadius: BorderRadius.circular(2),
+                child: IgnorePointer(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
               ),
