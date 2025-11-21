@@ -325,8 +325,9 @@ class _AssistantPanelState extends State<AssistantPanel>
       } else if (action.type == AssistantActionType.analyze_harmony) {
         // Harmony Logic
         final data = action.data;
-        final partnerName = data['partner_name'] ?? '';
-        final partnerDob = data['partner_dob'] ?? '';
+        // Fallback to title/date if specific keys are missing (backward compatibility or hallucination)
+        final partnerName = data['partner_name'] ?? action.title ?? ''; 
+        final partnerDob = data['partner_dob'] ?? data['date'] ?? '';
         
         if (partnerName.isNotEmpty && partnerDob.isNotEmpty) {
            final analysis = _buildHarmonyAnalysis(partnerName, partnerDob);
@@ -356,7 +357,8 @@ class _AssistantPanelState extends State<AssistantPanel>
         });
       }
 
-      if (!fromAuto) {
+      // Show "Feito!" only for non-harmony actions (as harmony shows its own result)
+      if (!fromAuto && action.type != AssistantActionType.analyze_harmony) {
         setState(() {
           _messages.add(AssistantMessage(
               role: 'assistant',
@@ -847,8 +849,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           ),
           Center(
             child: Container(
-              width: 900, // Larger width for expanded mode
-              height: MediaQuery.of(context).size.height * 0.85, // 85% height
+              width: 1100, // Larger width for expanded mode
+              height: MediaQuery.of(context).size.height * 0.90, // 90% height
               decoration: BoxDecoration(
                 color: AppColors.background,
                 borderRadius: BorderRadius.circular(16),
@@ -869,7 +871,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       child: Container(
         width: 450,
         height: 600,
-        margin: const EdgeInsets.only(right: 20, bottom: 20),
+        // Increased bottom margin to sit above the FAB (approx 80px)
+        margin: const EdgeInsets.only(right: 20, bottom: 80),
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(16),
