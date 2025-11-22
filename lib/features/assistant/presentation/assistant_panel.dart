@@ -43,6 +43,10 @@ class _AssistantPanelState extends State<AssistantPanel>
   bool _isListening = false;
   bool _isInputEmpty = true;
   String _textBeforeListening = '';
+  
+  // Mobile Sheet Controller
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
+  bool _isSheetExpanded = false;
 
   // --- Animation ---
   late AnimationController _animController;
@@ -58,6 +62,8 @@ class _AssistantPanelState extends State<AssistantPanel>
       }
     });
 
+    _sheetController.addListener(_onSheetChanged);
+
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 200),
@@ -66,6 +72,18 @@ class _AssistantPanelState extends State<AssistantPanel>
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
+  }
+
+  void _onSheetChanged() {
+    if (!_sheetController.isAttached) return;
+    final size = _sheetController.size;
+    // Consider expanded if > 0.9
+    final isExpanded = size > 0.9;
+    if (_isSheetExpanded != isExpanded) {
+      setState(() {
+        _isSheetExpanded = isExpanded;
+      });
+    }
   }
 
   void _updateInputState() {
@@ -82,6 +100,8 @@ class _AssistantPanelState extends State<AssistantPanel>
     _speechService.stop();
     _controller.removeListener(_updateInputState);
     _inputFocusNode.dispose();
+    _sheetController.removeListener(_onSheetChanged);
+    _sheetController.dispose();
     _animController.dispose();
     _controller.dispose();
     _scrollController.dispose();
@@ -675,17 +695,19 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
 
     if (!isDesktop && !widget.isFullScreen) {
       // Mobile Modal Mode
-      return DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        minChildSize: 0.0, // Allow closing
-        maxChildSize: 0.95,
-        snap: true, // Snap to sizes
-        // Snap targets: Closed (0.0), Initial/Collapsed (0.5), Expanded (0.95)
-        // Note: snapSizes must be strictly between min and max.
-        snapSizes: const [0.5], 
-        builder: (context, scrollController) {
-          return _buildPanelContent(context, sheetScrollController: scrollController, isModal: true);
-        },
+      return Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: DraggableScrollableSheet(
+          controller: _sheetController,
+          initialChildSize: 0.5,
+          minChildSize: 0.0, // Allow closing
+          maxChildSize: 1.0, // Allow full screen
+          snap: true,
+          snapSizes: const [0.5, 1.0], 
+          builder: (context, scrollController) {
+            return _buildPanelContent(context, sheetScrollController: scrollController, isModal: true);
+          },
+        ),
       );
     }
 
@@ -703,9 +725,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     return Container(
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: isModal
+        borderRadius: isModal && !_isSheetExpanded
             ? const BorderRadius.vertical(top: Radius.circular(24))
-            : BorderRadius.circular(isDesktop ? 16 : 0),
+            : BorderRadius.circular(isDesktop && isModal ? 16 : 0), // No radius if full screen mobile
         boxShadow: isModal || isDesktop
             ? [
                 BoxShadow(
@@ -771,7 +793,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         mainAxisSize: MainAxisSize.min,
         children: [
           // Drag Handle (Visual only, the whole header is draggable via ListView wrapper)
-          if (isModal && !isDesktop)
+          if (isModal && !isDesktop && !_isSheetExpanded)
             Center(
               child: Container(
                 width: 40, height: 4,
@@ -796,7 +818,40 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   ),
                 ),
               ),
-              if (widget.onToggleFullScreen != null)
+              // Mobile Toggle Button (Minimize/Close)
+              if (!isDesktop && isModal)
+                IconButton(
+                  icon: Icon(
+                    _isSheetExpanded ? Icons.close_fullscreen_rounded : Icons.close_rounded,
+                    color: AppColors.secondaryText,
+                  ),
+                  onPressed: () {
+                    if (_isSheetExpanded) {
+                      // Minimize to initial size
+                      _sheetController.animateTo(
+                        0.5,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    } else {
+                      // Close
+                      if (widget.onClose != null) {
+                        widget.onClose!();
+                      } else {
+                        // If no callback, try to collapse to 0
+                        _sheetController.animateTo(
+                          0.0,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                    }
+                  },
+                  tooltip: _isSheetExpanded ? 'Minimizar' : 'Fechar',
+                ),
+
+              // Desktop Toggle Button
+              if (isDesktop && widget.onToggleFullScreen != null)
                 IconButton(
                   icon: Icon(
                     widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
@@ -805,7 +860,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   onPressed: widget.onToggleFullScreen,
                   tooltip: widget.isFullScreen ? 'Modo Normal' : 'Tela Cheia',
                 ),
-              if (widget.onClose != null)
+              
+              // Desktop Close Button
+              if (isDesktop && widget.onClose != null)
                  IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                   onPressed: widget.onClose,
