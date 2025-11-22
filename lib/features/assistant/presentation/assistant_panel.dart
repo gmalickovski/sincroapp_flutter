@@ -717,8 +717,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               if (isUser) ...[
                 const SizedBox(width: 12),
                 UserAvatar(
-                  firstName: widget.userData.firstName,
-                  lastName: widget.userData.lastName,
+                  firstName: widget.userData.primeiroNome,
+                  lastName: widget.userData.sobrenome,
                   photoUrl: widget.userData.photoUrl,
                   radius: 20, // Tamanho 40x40 (radius 20)
                 ),
