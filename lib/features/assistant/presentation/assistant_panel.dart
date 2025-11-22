@@ -832,10 +832,17 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           height: screenSize.height,
           width: screenSize.width,
           color: Colors.transparent,
-          alignment: Alignment.center,
-          child: GestureDetector(
-            onTap: () {}, // Consume clicks on the panel itself
-            child: panelContent,
+          child: AnimatedAlign(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: _isWindowMode ? Alignment.center : Alignment.bottomCenter,
+            child: Padding(
+              padding: EdgeInsets.only(bottom: _isWindowMode ? 0 : 20),
+              child: GestureDetector(
+                onTap: () {}, // Consume clicks on the panel itself
+                child: panelContent,
+              ),
+            ),
           ),
         ),
       );
