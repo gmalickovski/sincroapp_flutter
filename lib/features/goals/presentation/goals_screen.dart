@@ -267,6 +267,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     },
   ),
 ),
+      ), // This closes ScreenInteractionListener
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
         child: (widget.userData.subscription.isActive &&

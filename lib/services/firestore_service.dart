@@ -341,6 +341,33 @@ class FirestoreService {
     });
   }
 
+  Stream<List<TaskModel>> getTasksStreamForRange(
+      String userId, DateTime start, DateTime end) {
+    final startTimestamp = Timestamp.fromDate(start);
+    final endTimestamp = Timestamp.fromDate(end);
+
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('tasks')
+        .where('dueDate', isGreaterThanOrEqualTo: startTimestamp)
+        .where('dueDate', isLessThan: endTimestamp)
+        .snapshots()
+        .map((snapshot) {
+      try {
+        return snapshot.docs
+            .map((doc) => TaskModel.fromFirestore(doc))
+            .toList();
+      } catch (e, st) {
+        debugPrint("Parse Error in Tasks Stream Range: $e\n$st");
+        return <TaskModel>[];
+      }
+    }).handleError((error, stackTrace) {
+      debugPrint("Erro no stream de Tasks Range: $error\n$stackTrace");
+      return <TaskModel>[];
+    });
+  }
+
   Stream<List<TaskModel>> getTasksForGoalStream(String userId, String goalId) {
     return _db
         .collection('users')

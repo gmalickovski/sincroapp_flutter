@@ -13,11 +13,13 @@ class CalendarEvent {
   final String title;
   final EventType type;
   final DateTime date;
+  final bool isCompleted;
 
   CalendarEvent({
     required this.title,
     required this.type,
     required this.date,
+    this.isCompleted = false,
   });
 
   @override
