@@ -800,21 +800,50 @@ class FirestoreService {
           .collection('users')
           .doc(userId)
           .collection('goals')
-          // .where('status', isEqualTo: 'active') // Mantido comentado como original
+          .where('isCompleted', isEqualTo: false)
           .orderBy('createdAt', descending: true)
           .get();
-      List<Goal> goals = []; // <-- Mantido Goal
-      for (var doc in querySnapshot.docs) {
-        try {
-          goals.add(Goal.fromFirestore(doc)); // <-- Mantido Goal
-        } catch (e) {
-          debugPrint("Erro ao converter Goal (Active) ID ${doc.id}: $e");
-        }
-      }
-      return goals;
+
+      return querySnapshot.docs.map((doc) => Goal.fromFirestore(doc)).toList();
     } catch (e) {
-      debugPrint("Erro ao buscar as jornadas ativas: $e");
+      debugPrint("Erro ao buscar metas ativas: $e");
       return [];
+    }
+  }
+
+  // --- MÉTODOS DE CONFIGURAÇÃO DO SITE (ADMIN) ---
+
+  /// Obtém o stream das configurações do site (status, senha, etc)
+  Stream<Map<String, dynamic>> getSiteSettingsStream() {
+    return _db
+        .collection('config')
+        .doc('site_settings')
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists && snapshot.data() != null) {
+        return snapshot.data()!;
+      }
+      return {
+        'status': 'active', // active, maintenance, construction
+        'bypassPassword': '',
+      };
+    });
+  }
+
+  /// Atualiza as configurações do site
+  Future<void> updateSiteSettings({
+    required String status,
+    required String bypassPassword,
+  }) async {
+    try {
+      await _db.collection('config').doc('site_settings').set({
+        'status': status,
+        'bypassPassword': bypassPassword,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Erro ao atualizar configurações do site: $e");
+      rethrow;
     }
   }
 

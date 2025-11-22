@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SincroApp - Em Manutenção</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --accent-primary: #f59e0b;
+            /* Amber for maintenance */
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+        }
+
+        .font-outfit {
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+
+    <!-- Background Glow -->
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] opacity-20 blur-[100px] pointer-events-none"
+        style="background: radial-gradient(circle, var(--accent-primary) 0%, rgba(0,0,0,0) 70%);"></div>
+
+    <div class="max-w-2xl w-full text-center relative z-10">
+        <div class="mb-8 animate-bounce">
+            <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 24 24" fill="none"
+                stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mx-auto">
+                <path
+                    d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" />
+            </svg>
+        </div>
+
+        <h1 class="font-outfit text-4xl md:text-6xl font-bold mb-6">
+            Estamos em <span class="text-amber-500">Manutenção</span>
+        </h1>
+
+        <p class="text-lg md:text-xl text-gray-400 mb-12 max-w-lg mx-auto">
+            Estamos fazendo melhorias importantes no SincroApp para tornar sua experiência ainda melhor. Voltaremos em
+            breve!
+        </p>
+
+        <!-- Password Bypass -->
+        <div class="glass p-6 rounded-2xl max-w-md mx-auto">
+            <p class="text-sm text-gray-400 mb-4">Acesso Restrito (Equipe)</p>
+            <div class="flex gap-2">
+                <input type="password" id="bypass-password" placeholder="Senha de acesso"
+                    class="flex-1 bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-amber-500 transition-colors">
+                <button onclick="checkPassword()"
+                    class="bg-amber-500 hover:bg-amber-600 text-white font-bold px-6 py-3 rounded-lg transition-colors">
+                    Entrar
+                </button>
+            </div>
+            <p id="error-msg" class="text-red-400 text-sm mt-3 hidden">Senha incorreta</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+    <script>
+        // Initialize Firebase (Same config as construction_check.js)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLfDEbGCqBbWKlqfVvCRnGfBBZKJxWZnw",
+            authDomain: "sincroapp-529cc.firebaseapp.com",
+            projectId: "sincroapp-529cc",
+            storageBucket: "sincroapp-529cc.firebasestorage.app",
+            messagingSenderId: "1026698348026",
+            appId: "1:1026698348026:web:0e7a7d3e4c9a0e0e8e0e0e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        async function checkPassword() {
+            const password = document.getElementById('bypass-password').value;
+            const btn = document.querySelector('button');
+            const errorMsg = document.getElementById('error-msg');
+
+            if (!password) return;
+
+            btn.disabled = true;
+            btn.classList.add('opacity-50');
+            errorMsg.classList.add('hidden');
+
+            try {
+                const doc = await db.collection('config').doc('site_settings').get();
+                if (doc.exists) {
+                    const correctPassword = doc.data().bypassPassword;
+
+                    if (password === correctPassword) {
+                        // Success! Set session token
+                        const expiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+                        sessionStorage.setItem('sincro_bypass_token', 'true');
+                        sessionStorage.setItem('sincro_bypass_expiry', expiry.toString());
+
+                        // Redirect to landing page
+                        window.location.href = '/';
+                    } else {
+                        errorMsg.textContent = 'Senha incorreta';
+                        errorMsg.classList.remove('hidden');
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+                errorMsg.textContent = 'Erro ao verificar senha';
+                errorMsg.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+            }
+        }
+
+        // Allow Enter key
+        document.getElementById('bypass-password').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                checkPassword();
+            }
+        });
+    </script>
+</body>
+
+</html>

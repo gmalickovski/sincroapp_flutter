@@ -1,30 +1,33 @@
 // construction_check.js
-// Checks if site is in construction mode and redirects if necessary
+// Checks if site is in construction/maintenance mode and redirects if necessary
 
 (async function () {
-    // Skip check if we're already on the construction page
-    if (window.location.pathname.includes('under_construction.html')) {
-        return;
+    const currentPath = window.location.pathname;
+    const isMaintenancePage = currentPath.includes('maintenance.html');
+    const isConstructionPage = currentPath.includes('under_construction.html');
+
+    // 1. Check for bypass token
+    const bypassToken = sessionStorage.getItem('sincro_bypass_token');
+    const bypassExpiry = sessionStorage.getItem('sincro_bypass_expiry');
+
+    if (bypassToken && bypassExpiry) {
+        const now = Date.now();
+        if (now < parseInt(bypassExpiry)) {
+            // Bypass is valid
+            console.log('✅ Bypass token valid - allowing access');
+            // If we are on a restricted page but have access, go to home
+            if (isMaintenancePage || isConstructionPage) {
+                window.location.href = '/';
+            }
+            return;
+        } else {
+            // Bypass expired
+            sessionStorage.removeItem('sincro_bypass_token');
+            sessionStorage.removeItem('sincro_bypass_expiry');
+        }
     }
 
     try {
-        // Check for bypass token
-        const bypassToken = sessionStorage.getItem('sincro_bypass_token');
-        const bypassExpiry = sessionStorage.getItem('sincro_bypass_expiry');
-
-        if (bypassToken && bypassExpiry) {
-            const now = Date.now();
-            if (now < parseInt(bypassExpiry)) {
-                // Bypass is still valid
-                console.log('✅ Bypass token valid - showing landing page');
-                return;
-            } else {
-                // Bypass expired
-                sessionStorage.removeItem('sincro_bypass_token');
-                sessionStorage.removeItem('sincro_bypass_expiry');
-            }
-        }
-
         // Initialize Firebase if not already initialized
         if (!firebase.apps.length) {
             const firebaseConfig = {
@@ -45,20 +48,36 @@
 
         if (doc.exists) {
             const data = doc.data();
-            const isUnderConstruction = data.underConstructionEnabled || false;
+            const status = data.status || 'active'; // active, maintenance, construction
 
-            if (isUnderConstruction) {
-                console.log('🚧 Site is under construction - redirecting...');
-                window.location.href = '/under_construction.html';
+            console.log(`🔍 Site Status: ${status}`);
+
+            if (status === 'maintenance') {
+                if (!isMaintenancePage) {
+                    console.log('🛠️ Maintenance mode - redirecting...');
+                    window.location.href = '/maintenance.html';
+                }
+            } else if (status === 'construction') {
+                if (!isConstructionPage) {
+                    console.log('🚧 Construction mode - redirecting...');
+                    window.location.href = '/under_construction.html';
+                }
             } else {
-                console.log('✅ Site is live - showing landing page');
+                // Status is active
+                if (isMaintenancePage || isConstructionPage) {
+                    console.log('✅ Site is live - redirecting to home...');
+                    window.location.href = '/';
+                }
             }
         } else {
-            // Document doesn't exist - assume site is live
-            console.log('⚠️ Site settings not found - showing landing page');
+            // Default to active if no settings found
+            if (isMaintenancePage || isConstructionPage) {
+                window.location.href = '/';
+            }
         }
     } catch (error) {
-        console.error('❌ Error checking construction status:', error);
-        // On error, show landing page (fail-safe)
+        console.error('❌ Error checking site status:', error);
+        // Fail-safe: If error, stay where we are (or go home if on restricted page?)
+        // Better to do nothing to avoid loops in case of network error
     }
 })();

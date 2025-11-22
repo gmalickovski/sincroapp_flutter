@@ -106,6 +106,36 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 expiredSubscriptions: stats['expiredSubscriptions'] ?? 0,
                 isDesktop: isDesktop,
               ),
+              const SizedBox(height: 24),
+
+              // Controle do Site (Novo)
+              StreamBuilder<Map<String, dynamic>>(
+                stream: _firestoreService.getSiteSettingsStream(),
+                builder: (context, siteSnapshot) {
+                  if (!siteSnapshot.hasData) {
+                    return const SizedBox.shrink();
+                  }
+                  final siteData = siteSnapshot.data!;
+                  return _SiteControlCard(
+                    currentStatus: siteData['status'] ?? 'active',
+                    currentPassword: siteData['bypassPassword'] ?? '',
+                    onSave: (status, password) async {
+                      await _firestoreService.updateSiteSettings(
+                        status: status,
+                        bypassPassword: password,
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Configurações do site atualizadas!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    },
+                  );
+                },
+              ),
             ],
           ),
         );
@@ -464,6 +494,271 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               fontSize: 14,
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SiteControlCard extends StatefulWidget {
+  final String currentStatus;
+  final String currentPassword;
+  final Function(String, String) onSave;
+
+  const _SiteControlCard({
+    required this.currentStatus,
+    required this.currentPassword,
+    required this.onSave,
+  });
+
+  @override
+  State<_SiteControlCard> createState() => _SiteControlCardState();
+}
+
+class _SiteControlCardState extends State<_SiteControlCard> {
+  late String _selectedStatus;
+  late TextEditingController _passwordController;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedStatus = widget.currentStatus;
+    _passwordController = TextEditingController(text: widget.currentPassword);
+  }
+
+  @override
+  void didUpdateWidget(covariant _SiteControlCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentStatus != widget.currentStatus) {
+      _selectedStatus = widget.currentStatus;
+    }
+    if (oldWidget.currentPassword != widget.currentPassword) {
+      _passwordController.text = widget.currentPassword;
+    }
+  }
+
+  @override
+  void dispose() {
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border, width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.settings_ethernet, color: AppColors.primary),
+              SizedBox(width: 12),
+              Text(
+                'Controle de Acesso do Site',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Status do Site',
+                      style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.background,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedStatus,
+                          isExpanded: true,
+                          dropdownColor: AppColors.cardBackground,
+                          style: const TextStyle(color: AppColors.primaryText),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'active',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.check_circle,
+                                      color: Colors.green, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Ativo (Landing Page)'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'maintenance',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.build,
+                                      color: Colors.orange, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Manutenção'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'construction',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.construction,
+                                      color: Colors.red, size: 16),
+                                  SizedBox(width: 8),
+                                  Text('Em Construção'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _selectedStatus = value);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Senha de Acesso (Bypass)',
+                      style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _passwordController,
+                      style: const TextStyle(color: AppColors.primaryText),
+                      decoration: InputDecoration(
+                        hintText: 'Senha para ver o site...',
+                        hintStyle:
+                            const TextStyle(color: AppColors.secondaryText),
+                        filled: true,
+                        fillColor: AppColors.background,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide:
+                              const BorderSide(color: AppColors.primary),
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: [
+                    const SizedBox(height: 28),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _isLoading
+                            ? null
+                            : () async {
+                                setState(() => _isLoading = true);
+                                await widget.onSave(
+                                  _selectedStatus,
+                                  _passwordController.text,
+                                );
+                                setState(() => _isLoading = false);
+                              },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Salvar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          if (_selectedStatus != 'active') ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                    color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline,
+                      color: Colors.orange.shade400, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'O site está em modo restrito. Visitantes serão redirecionados. Use a senha definida para acessar a versão normal.',
+                      style: TextStyle(
+                          color: Colors.orange.shade400, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
