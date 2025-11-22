@@ -241,7 +241,7 @@ AI: {
     "type": "create_goal",
     "title": "Aprender a andar de bicicleta",
     "description": "Ter mais independência e mobilidade",
-    "date": "2025-06-22", // hoje + 6 meses
+    "date": "2025-06-22",
     "subtasks": ["Comprar/alugar bicicleta", "Praticar equilíbrio", "Pedalar com apoio", "Pedalar sozinho", "Fazer trajetos curtos"],
     "needsUserInput": true
   }]
@@ -266,6 +266,8 @@ AI: {
     "needsUserInput": true
   }]
 }
+
+**IMPORTANTE**: NÃO inclua comentários (como // texto) dentro do JSON. O JSON deve ser válido e sem comentários.
 
 **FLUXO PARA ANÁLISE DE HARMONIA CONJUGAL:**
 Se o usuário perguntar sobre compatibilidade/harmonia conjugal com alguém (marido, esposa, namorado, namorada, parceiro, etc.):
