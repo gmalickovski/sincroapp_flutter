@@ -267,12 +267,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
               onOpenAssistant: () {
                 AssistantPanel.show(context, widget.userData);
               },
-              onMic: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Entrada por voz chegará em breve.'),
-                  ),
-                );
               },
             )
           : FloatingActionButton(

@@ -671,12 +671,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   widget.userData!.subscription.plan ==
                       SubscriptionPlan.premium)
               ? ExpandingAssistantFab(
-                  onPrimary: _openAddTaskModal,
+                  onPrimary: _showTaskInputModal,
                   primaryIcon: Icons.add_task,
-                  primaryTooltip: 'Adicionar Tarefa',
-                  onOpenAssistant: () {
-                    AssistantPanel.show(context, widget.userData!);
-                  },
+                  primaryTooltip: 'Nova Tarefa',
+                  onOpenAssistant: () =>
+                      AssistantPanel.show(context, widget.userData),
                 )
               : FloatingActionButton(
                   onPressed: _openAddTaskModal,

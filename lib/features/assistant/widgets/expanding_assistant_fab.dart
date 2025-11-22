@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class ExpandingAssistantFab extends StatefulWidget {
@@ -7,7 +9,6 @@ class ExpandingAssistantFab extends StatefulWidget {
   final IconData? primaryIcon; // ícone da ação principal - opcional
   final String primaryTooltip; // dica da ação principal
   final VoidCallback onOpenAssistant; // abrir chat da IA
-  final VoidCallback? onMic; // entrada por voz (agora opcional)
 
   const ExpandingAssistantFab({
     super.key,
@@ -15,7 +16,6 @@ class ExpandingAssistantFab extends StatefulWidget {
     this.primaryIcon,
     this.primaryTooltip = 'Ação',
     required this.onOpenAssistant,
-    this.onMic,
   });
 
   @override
@@ -45,12 +45,11 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 
     // --- INÍCIO DA MUDANÇA: Lógica para botão simples ---
     // Se apenas onOpenAssistant for fornecido, ele se torna um botão simples.
-    _isSimpleButton = widget.onPrimary == null && widget.onMic == null;
+    _isSimpleButton = widget.onPrimary == null;
 
     // Calcula largura expandida baseada na quantidade de ações
     final int actionsCount = 1 + // chat
-        (widget.onMic != null ? 1 : 0) +
-        (widget.onPrimary != null ? 1 : 0); // mic?, [primary]
+        (widget.onPrimary != null ? 1 : 0); // [primary]
     _expandedWidth = _kFabHeight + // espaço do toggle (+/x)
         _kOuterPad + // padding esquerdo
         (actionsCount * _kIconSlot) +
@@ -71,12 +70,10 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   void didUpdateWidget(covariant ExpandingAssistantFab oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Recalcula se o botão é simples ou não quando o widget é atualizado
-    _isSimpleButton = widget.onPrimary == null && widget.onMic == null;
+    _isSimpleButton = widget.onPrimary == null;
 
-    if (oldWidget.onPrimary != widget.onPrimary ||
-        oldWidget.onMic != widget.onMic) {
+    if (oldWidget.onPrimary != widget.onPrimary) {
       final int actionsCount = 1 +
-          (widget.onMic != null ? 1 : 0) +
           (widget.onPrimary != null ? 1 : 0);
       _expandedWidth = _kFabHeight +
           _kOuterPad +
@@ -135,9 +132,10 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
           tooltip: 'Abrir Sincro IA',
           heroTag:
               'simple_assistant_fab', // Tag única para evitar conflitos de Hero
-          child: const Icon(
-            Icons.smart_toy_outlined, // Ícone de robô/IA
-            size: 28,
+          child: SvgPicture.asset(
+            'assets/images/icon-ia-sincroapp-branco-v1.svg',
+            width: 28,
+            height: 28,
           ),
         ),
       );
@@ -158,7 +156,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       builder: (context, child) {
         // Cálculo de disponibilidade de largura para evitar overflow do Row durante a animação
         final int actionsCount = 1 +
-            (widget.onMic != null ? 1 : 0) +
             (widget.onPrimary != null ? 1 : 0);
         final double actionsWidth = actionsCount > 0
             ? (actionsCount * _kIconSlot) + ((actionsCount - 1) * _kGap)
@@ -218,23 +215,16 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                           _AnimatedActionSlot(
                             controller: _controller,
                             tooltip: 'Assistente IA',
-                            icon: Icons.chat_bubble_outline,
+                            iconWidget: SvgPicture.asset(
+                              'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                              width: 24,
+                              height: 24,
+                            ),
                             onPressed: () {
                               _toggle();
                               widget.onOpenAssistant();
                             },
                           ),
-                          const SizedBox(width: _kGap),
-                          if (widget.onMic != null)
-                            _AnimatedActionSlot(
-                              controller: _controller,
-                              tooltip: 'Entrada por voz',
-                              icon: Icons.mic_none,
-                              onPressed: () {
-                                _toggle();
-                                widget.onMic!();
-                              },
-                            ),
                         ],
                       ],
                     ),
@@ -277,7 +267,8 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 class _AnimatedActionSlot extends StatelessWidget {
   final AnimationController controller;
   final String tooltip;
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final VoidCallback onPressed;
 
   static const double _slotWidth = _ExpandingAssistantFabState._kIconSlot;
@@ -286,7 +277,8 @@ class _AnimatedActionSlot extends StatelessWidget {
   const _AnimatedActionSlot({
     required this.controller,
     required this.tooltip,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.onPressed,
   });
 
@@ -311,7 +303,7 @@ class _AnimatedActionSlot extends StatelessWidget {
               width: _slotWidth,
               height: _slotHeight,
             ),
-            icon: Icon(icon, color: Colors.white, size: 24),
+            icon: iconWidget ?? Icon(icon, color: Colors.white, size: 24),
           ),
         ),
       ),

@@ -289,12 +289,10 @@ class _JournalScreenState extends State<JournalScreen> {
       floatingActionButton: (widget.userData.subscription.isActive &&
               widget.userData.subscription.plan == SubscriptionPlan.premium)
           ? ExpandingAssistantFab(
-              onPrimary: () => _openJournalEditor(),
-              primaryIcon: Icons.book_outlined, // Ícone de diário
-              primaryTooltip: 'Nova anotação',
-              onOpenAssistant: () {
-                AssistantPanel.show(context, widget.userData);
-              },
+              onPrimary: _handleNewEntry,
+              primaryIcon: Icons.edit_note,
+              primaryTooltip: 'Nova Anotação',
+              onOpenAssistant: () => AssistantPanel.show(context, widget.userData),
             )
           : FloatingActionButton(
               onPressed: () => _openJournalEditor(),
