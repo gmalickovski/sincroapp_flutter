@@ -840,54 +840,28 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                 ),
               ),
               
-              // --- Expand/Collapse Button ---
+              // --- Desktop Buttons ---
               
-              // Mobile: Control Sheet
-              if (!isDesktop && isModal)
-                IconButton(
-                  icon: Icon(
-                    _isSheetExpanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
-                    color: AppColors.secondaryText,
-                  ),
-                  onPressed: () {
-                    if (_isSheetExpanded) {
-                      _sheetController.animateTo(
-                        0.5,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    } else {
-                      _sheetController.animateTo(
-                        1.0,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  },
-                  tooltip: _isSheetExpanded ? 'Restaurar' : 'Expandir',
-                ),
-
-              // Desktop: Control Widget State (via Callback)
+              // Window Mode Toggle (Desktop Only)
               if (isDesktop && widget.onToggleFullScreen != null)
                 IconButton(
                   icon: Icon(
-                    widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
+                    widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_new_rounded,
                     color: AppColors.secondaryText,
                   ),
                   onPressed: widget.onToggleFullScreen,
-                  tooltip: widget.isFullScreen ? 'Modo Normal' : 'Modo Expandido',
+                  tooltip: widget.isFullScreen ? 'Restaurar Tamanho' : 'Modo Janela',
                 ),
               
-              // --- Close Button (Always Visible) ---
-              
-              // Mobile: Control Sheet (Close) OR Callback
-              if (!isDesktop && isModal)
+              // Close Button (Always Visible on Desktop, or Mobile Modal)
+              if (widget.onClose != null || (!isDesktop && isModal))
                  IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                   onPressed: () {
                      if (widget.onClose != null) {
                         widget.onClose!();
-                      } else {
+                      } else if (!isDesktop && isModal) {
+                        // Mobile internal close logic
                         _sheetController.animateTo(
                           0.0,
                           duration: const Duration(milliseconds: 300),
@@ -895,14 +869,6 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                         );
                       }
                   },
-                  tooltip: 'Fechar',
-                ),
-
-              // Desktop: Callback
-              if (isDesktop && widget.onClose != null)
-                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-                  onPressed: widget.onClose,
                   tooltip: 'Fechar',
                 ),
             ],
