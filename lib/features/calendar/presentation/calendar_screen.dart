@@ -95,7 +95,126 @@ class _CalendarScreenState extends State<CalendarScreen> {
     super.dispose();
   }
 
-  // ... (rest of the methods) ...
+  void _initializeStreams(DateTime month, {bool isInitialLoad = false}) {
+    _tasksDueDateSubscription?.cancel();
+    _tasksCreatedAtSubscription?.cancel();
+
+    final startOfMonth = DateTime(month.year, month.month, 1);
+    final endOfMonth = DateTime(month.year, month.month + 1, 0);
+
+    // Stream de tarefas por data de vencimento (para o mês atual)
+    _tasksDueDateSubscription = _firestoreService
+        .getTasksStream(_userId, start: startOfMonth, end: endOfMonth)
+        .listen((tasks) {
+      _currentTasksDueDate = tasks;
+      _processEvents();
+    });
+
+    // Stream de tarefas por data de criação (para mostrar no dia que foi criada, se quiser)
+    // Ou apenas mantemos o dueDate. Por simplificação, vamos focar no dueDate.
+    // Mas se o app usa createdAt para algo, podemos manter.
+    // Vou manter simplificado para dueDate por enquanto, mas inicializar a lista.
+    _currentTasksCreatedAt = []; 
+    _processEvents();
+    
+    if (isInitialLoad) {
+      setState(() {
+        _isScreenLoading = false;
+      });
+    }
+  }
+
+  void _processEvents() {
+    final newEvents = <DateTime, List<CalendarEvent>>{};
+    final newRawEvents = <DateTime, List<dynamic>>{};
+
+    // Processar tarefas
+    for (var task in _currentTasksDueDate) {
+      if (task.dueDate != null) {
+        final date = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        
+        // Adicionar ao map de eventos do calendário (para bolinhas)
+        if (newEvents[date] == null) newEvents[date] = [];
+        newEvents[date]!.add(CalendarEvent(
+          title: task.title,
+          date: task.dueDate!,
+          type: CalendarEventType.task,
+          isCompleted: task.isCompleted,
+        ));
+
+        // Adicionar ao map de raw events (para lista de detalhes)
+        if (newRawEvents[date] == null) newRawEvents[date] = [];
+        newRawEvents[date]!.add(task);
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _events = newEvents;
+        _rawEvents = newRawEvents;
+      });
+    }
+  }
+
+  List<dynamic> _getRawEventsForDay(DateTime day) {
+    final normalizedDay = DateTime(day.year, day.month, day.day);
+    return _rawEvents[normalizedDay] ?? [];
+  }
+
+  void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
+    if (!isSameDay(_selectedDay, selectedDay)) {
+      setState(() {
+        _selectedDay = selectedDay;
+        _focusedDay = focusedDay;
+      });
+    }
+  }
+
+  void _onPageChanged(DateTime focusedDay) {
+    _focusedDay = focusedDay;
+    _initializeStreams(focusedDay);
+    setState(() {}); // Atualiza UI
+  }
+
+  bool _isSameMonth(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month;
+  }
+
+  void _openAddTaskModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => TaskInputModal(
+        userId: _userId,
+        initialDate: _selectedDay,
+      ),
+    );
+  }
+
+  Future<void> _onToggleTask(TaskModel task) async {
+    try {
+      await _firestoreService.updateTask(
+        _userId,
+        task.id,
+        {'isCompleted': !task.isCompleted},
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao atualizar tarefa: $e')),
+      );
+    }
+  }
+
+  void _handleTaskTap(TaskModel task) {
+    showDialog(
+      context: context,
+      builder: (context) => TaskDetailModal(
+        task: task,
+        userId: _userId,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {

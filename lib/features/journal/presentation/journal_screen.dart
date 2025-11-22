@@ -57,7 +57,88 @@ class _JournalScreenState extends State<JournalScreen> {
     );
   }
 
-  // ... (rest of methods) ...
+  void _openFilterUI() {
+    final RenderBox? renderBox =
+        _filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final offset = renderBox != null
+        ? renderBox.localToGlobal(Offset.zero)
+        : const Offset(0, 0);
+    final size = renderBox?.size ?? const Size(0, 0);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: offset.dy + size.height + 8,
+            right: MediaQuery.of(context).size.width - (offset.dx + size.width),
+            child: JournalFilterPanel(
+              initialDate: _dateFilter,
+              initialVibration: _vibrationFilter,
+              initialMood: _moodFilter,
+              onApply: (date, vibration, mood) {
+                setState(() {
+                  _dateFilter = date;
+                  _vibrationFilter = vibration;
+                  _moodFilter = mood;
+                });
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDelete(JournalEntry entry) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir anotação?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir esta anotação? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await _firestoreService.deleteJournalEntry(
+            widget.userData.uid, entry.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Anotação excluída com sucesso.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

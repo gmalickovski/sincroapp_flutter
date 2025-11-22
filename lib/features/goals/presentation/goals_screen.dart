@@ -14,6 +14,7 @@ import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 class GoalsScreen extends StatefulWidget {
   final UserModel userData;
@@ -26,6 +27,7 @@ class GoalsScreen extends StatefulWidget {
 class _GoalsScreenState extends State<GoalsScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   final String _userId = AuthRepository().getCurrentUser()?.uid ?? '';
+  final FabOpacityController _fabOpacityController = FabOpacityController();
 
   static const double kDesktopBreakpoint = 768.0;
 
@@ -35,6 +37,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
     if (_userId.isEmpty) {
       debugPrint("GoalsScreen: Erro crítico - UID do usuário não encontrado!");
     }
+  }
+
+  @override
+  void dispose() {
+    _fabOpacityController.dispose();
+    super.dispose();
   }
 
   // *** MÉTODO ATUALIZADO PARA LIDAR COM DESKTOP/MOBILE ***
@@ -168,7 +176,9 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
+      body: ScreenInteractionListener(
+        controller: _fabOpacityController,
+        child: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
@@ -184,99 +194,79 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     child: StreamBuilder<List<Goal>>(
                       stream: _firestoreService.getGoalsStream(_userId),
                       builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-      body: ScreenInteractionListener(
-        controller: _fabOpacityController,
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
-              final double horizontalPadding = isDesktop ? 24.0 : 12.0;
+                  if (snapshot.connectionState ==
+                          ConnectionState.waiting &&
+                      !snapshot.hasData) {
+                    return const Center(child: CustomLoadingSpinner());
+                  }
+                  if (snapshot.hasError) {
+                    debugPrint(
+                        "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
+                    return Center(
+                        child: Text(
+                            'Erro ao carregar jornadas: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red)));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return _buildEmptyState();
+                  }
 
-              return Padding(
-                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildHeader(),
-                    Expanded(
-                      child: StreamBuilder<List<Goal>>(
-                        stream: _firestoreService.getGoalsStream(_userId),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                                  ConnectionState.waiting &&
-                              !snapshot.hasData) {
-                            return const Center(child: CustomLoadingSpinner());
-                          }
-                          if (snapshot.hasError) {
-                            debugPrint(
-                                "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
-                            return Center(
-                                child: Text(
-                                    'Erro ao carregar jornadas: ${snapshot.error}',
-                                    style: const TextStyle(color: Colors.red)));
-                          }
-                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return _buildEmptyState();
-                          }
+                  final goals = snapshot.data!;
 
-                          final goals = snapshot.data!;
-
-                          // Desktop: Masonry grid no estilo do Diário e Dashboard
-                          if (isDesktop) {
-                            // 2 colunas para 900-1400px, 3 para telas maiores
-                            final int columns =
-                                constraints.maxWidth >= 1200 ? 3 : 2;
-                            return MasonryGridView.count(
-                              padding: const EdgeInsets.only(top: 8, bottom: 100),
-                              crossAxisCount: columns,
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              itemCount: goals.length,
-                              itemBuilder: (context, index) {
-                                final goal = goals[index];
-                                return GoalCard(
-                                  goal: goal,
-                                  userId: _userId,
-                                  onTap: () => _navigateToGoalDetail(goal),
-                                  onDelete: () =>
-                                      _handleDeleteGoal(context, goal),
-                                  onEdit: () => _navigateToCreateGoal(goal),
-                                );
-                              },
-                            );
-                          }
-                          // Mobile: lista vertical simples
-                          else {
-                            return ListView.builder(
-                              padding: const EdgeInsets.only(top: 8, bottom: 100),
-                              itemCount: goals.length,
-                              itemBuilder: (context, index) {
-                                final goal = goals[index];
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 12.0),
-                                  child: GoalCard(
-                                    goal: goal,
-                                    userId: _userId,
-                                    onTap: () => _navigateToGoalDetail(goal),
-                                    onDelete: () =>
-                                        _handleDeleteGoal(context, goal),
-                                    onEdit: () => _navigateToCreateGoal(goal),
-                                  ),
-                                );
-                              },
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  // Desktop: Masonry grid no estilo do Diário e Dashboard
+                  if (isDesktop) {
+                    // 2 colunas para 900-1400px, 3 para telas maiores
+                    final int columns =
+                        constraints.maxWidth >= 1200 ? 3 : 2;
+                    return MasonryGridView.count(
+                      padding: const EdgeInsets.only(top: 8, bottom: 100),
+                      crossAxisCount: columns,
+                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 16,
+                      itemCount: goals.length,
+                      itemBuilder: (context, index) {
+                        final goal = goals[index];
+                        return GoalCard(
+                          goal: goal,
+                          userId: _userId,
+                          onTap: () => _navigateToGoalDetail(goal),
+                          onDelete: () =>
+                              _handleDeleteGoal(context, goal),
+                          onEdit: () => _navigateToCreateGoal(goal),
+                        );
+                      },
+                    );
+                  }
+                  // Mobile: lista vertical simples
+                  else {
+                    return ListView.builder(
+                      padding: const EdgeInsets.only(top: 8, bottom: 100),
+                      itemCount: goals.length,
+                      itemBuilder: (context, index) {
+                        final goal = goals[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: GoalCard(
+                            goal: goal,
+                            userId: _userId,
+                            onTap: () => _navigateToGoalDetail(goal),
+                            onDelete: () =>
+                                _handleDeleteGoal(context, goal),
+                            onEdit: () => _navigateToCreateGoal(goal),
+                          ),
+                        );
+                      },
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
         ),
-      ),
+      );
+    },
+  ),
+),
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
         child: (widget.userData.subscription.isActive &&
