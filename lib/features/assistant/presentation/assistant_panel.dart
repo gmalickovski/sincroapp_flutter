@@ -738,13 +738,13 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     
     if (isDesktop) {
       if (_isWindowMode) {
-        // "Large Floating Modal"
-        width = 800;
+        // "Large Floating Modal" - Window Mode
+        width = 900;
         height = 800;
       } else {
         // "Normal Floating Modal"
-        width = 500;
-        height = 700;
+        width = 600;
+        height = 550;
       }
       
       // Clamp to screen size
@@ -752,7 +752,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       if (height > screenSize.height - 40) height = screenSize.height - 40;
     }
 
-    return AnimatedContainer(
+    final panelContent = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       width: width,
@@ -815,6 +815,33 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         ],
       ),
     );
+
+    if (isDesktop) {
+      // Center the panel on Desktop and handle outside clicks
+      return GestureDetector(
+        onTap: () {
+          // Close on outside click
+          if (widget.onClose != null) {
+            widget.onClose!();
+          } else {
+             Navigator.of(context).pop();
+          }
+        },
+        behavior: HitTestBehavior.opaque, // Catch all clicks
+        child: Container(
+          height: screenSize.height,
+          width: screenSize.width,
+          color: Colors.transparent,
+          alignment: Alignment.center,
+          child: GestureDetector(
+            onTap: () {}, // Consume clicks on the panel itself
+            child: panelContent,
+          ),
+        ),
+      );
+    }
+
+    return panelContent;
   }
 
   Widget _buildHeader(bool isModal, bool isDesktop) {
