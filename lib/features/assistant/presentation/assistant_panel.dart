@@ -739,7 +739,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     if (isDesktop) {
       if (_isWindowMode) {
         // "Large Floating Modal" - Window Mode (Widescreen)
-        width = 1000;
+        width = 1200;
         height = 600;
       } else {
         // "Normal Floating Modal"
