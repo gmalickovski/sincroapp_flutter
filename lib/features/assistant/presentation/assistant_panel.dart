@@ -45,8 +45,11 @@ class _AssistantPanelState extends State<AssistantPanel>
   String _textBeforeListening = '';
   
   // Mobile Sheet Controller
-  final DraggableScrollableController _sheetController = DraggableScrollableController();
+  late DraggableScrollableController _sheetController;
   bool _isSheetExpanded = false;
+  
+  // Desktop Window Mode
+  late bool _isWindowMode;
 
   // --- Animation ---
   late AnimationController _animController;
@@ -55,14 +58,16 @@ class _AssistantPanelState extends State<AssistantPanel>
   @override
   void initState() {
     super.initState();
+    _isWindowMode = widget.isFullScreen;
+    _sheetController = DraggableScrollableController();
+    _sheetController.addListener(_onSheetChanged);
+
     _controller.addListener(_updateInputState);
     _inputFocusNode.addListener(() {
       if (_inputFocusNode.hasFocus && _isListening) {
         _stopListening();
       }
     });
-
-    _sheetController.addListener(_onSheetChanged);
 
     _animController = AnimationController(
       vsync: this,
@@ -92,6 +97,14 @@ class _AssistantPanelState extends State<AssistantPanel>
       setState(() {
         _isInputEmpty = isEmpty;
       });
+    }
+  }
+
+  @override
+  void didUpdateWidget(AssistantPanel oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isFullScreen != widget.isFullScreen) {
+      _isWindowMode = widget.isFullScreen;
     }
   }
 
