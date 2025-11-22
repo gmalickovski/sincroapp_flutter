@@ -274,19 +274,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           key: ValueKey('step3'),
           children: [
             CustomLoadingSpinner(),
-            SizedBox(height: 24),
-            Text('Calculando sua rota...',
-                style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.secondaryAccent)),
-            SizedBox(height: 12),
-            Text('Estamos alinhando os números para você.',
-                style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.tertiaryText,
-                    height: 1.5)),
           ],
         );
     }

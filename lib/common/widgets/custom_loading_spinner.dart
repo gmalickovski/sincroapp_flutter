@@ -23,6 +23,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
   late Animation<double> _scaleAnimation;
   late Animation<double> _dashAnimation;
   late Animation<double> _strokeWidthAnimation;
+  late Animation<double> _offsetAnimation;
 
   @override
   void initState() {
@@ -78,7 +79,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
       ),
     ]).animate(_controller);
 
-    // Dash da linha (0.0 → 1.0 → 0.0)
+    // Dash da linha (Length) (0.0 → 1.0 → 0.0)
     _dashAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 0.0, end: 1.0)
@@ -91,6 +92,15 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
         weight: 50,
       ),
     ]).animate(_controller);
+
+    // Offset da linha (0.0 → 1.0) - Simula o movimento "dash-elastic"
+    _offsetAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeInOut,
+    ));
 
     // Espessura da linha (10 → 22 → 10)
     _strokeWidthAnimation = TweenSequence<double>([
@@ -114,18 +124,18 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
   }
 
   double get _defaultSize {
-    // Tamanhos responsivos por plataforma
-    if (kIsWeb) return 64.0;
+    // Tamanhos responsivos por plataforma (Aumentados conforme solicitado)
+    if (kIsWeb) return 80.0;
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.android:
-        return 48.0;
+        return 60.0;
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
-        return 72.0;
+        return 90.0;
       default:
-        return 48.0;
+        return 60.0;
     }
   }
 
@@ -145,6 +155,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
               fillOpacity: _fillAnimation.value,
               scale: _scaleAnimation.value,
               dashProgress: _dashAnimation.value,
+              offsetProgress: _offsetAnimation.value,
               strokeWidth: _strokeWidthAnimation.value,
               color: AppColors.primaryAccent,
             ),
@@ -160,6 +171,7 @@ class StarCometPainter extends CustomPainter {
   final double fillOpacity;
   final double scale;
   final double dashProgress;
+  final double offsetProgress;
   final double strokeWidth;
   final Color color;
 
@@ -168,6 +180,7 @@ class StarCometPainter extends CustomPainter {
     required this.fillOpacity,
     required this.scale,
     required this.dashProgress,
+    required this.offsetProgress,
     required this.strokeWidth,
     required this.color,
   });
@@ -196,25 +209,54 @@ class StarCometPainter extends CustomPainter {
 
     // Calcular dash offset e array
     final circumference = 2 * math.pi * tailRadius;
-    final dashLength = circumference * dashProgress * 0.4; // 40% max
-    final gapLength = circumference - dashLength;
+    
+    // HTML: dasharray 1, 300 -> 120, 300. (120/300 = 0.4)
+    final dashLength = circumference * (0.01 + dashProgress * 0.39); 
+    
+    // HTML: dashoffset 0 -> -260. (260/300 = 0.86)
+    // Offset negativo move "para frente" no sentido horário (ou anti dependendo da implementação)
+    // Aqui simulamos movendo o ponto de início.
+    final currentOffset = circumference * offsetProgress * 0.86;
 
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth * (radius / 100) // Escala baseada no tamanho
-      ..strokeCap = dashProgress < 0.15 || dashProgress > 0.85
+      ..strokeCap = dashProgress < 0.15 
           ? StrokeCap.round
           : StrokeCap.butt;
 
-    // Desenhar arco com dash
-    final path = Path()
-      ..addArc(rect, -math.pi / 2, 2 * math.pi);
+    // Caminho base: Círculo completo começando do topo (-pi/2)
+    final path = Path()..addArc(rect, -math.pi / 2, 2 * math.pi);
+    
+    // Extrair o sub-caminho baseado no offset e length
+    // Como é um círculo fechado, precisamos lidar com o wrap-around
+    final metrics = path.computeMetrics().first;
+    
+    final start = currentOffset;
+    final end = start + dashLength;
+    
+    final extractedPath = Path();
+    
+    if (end <= metrics.length) {
+      // Caso simples: não dá a volta
+      extractedPath.addPath(
+        metrics.extractPath(start, end),
+        Offset.zero,
+      );
+    } else {
+      // Caso wrap-around: desenha do start até o fim, e do 0 até o restante
+      extractedPath.addPath(
+        metrics.extractPath(start, metrics.length),
+        Offset.zero,
+      );
+      extractedPath.addPath(
+        metrics.extractPath(0, end - metrics.length),
+        Offset.zero,
+      );
+    }
 
-    canvas.drawPath(
-      _createDashedPath(path, dashLength, gapLength),
-      paint,
-    );
+    canvas.drawPath(extractedPath, paint);
   }
 
   void _drawStar(Canvas canvas, double radius) {
@@ -249,7 +291,7 @@ class StarCometPainter extends CustomPainter {
 
   Path _createStarPath(double radius) {
     final path = Path();
-    const points = 12; // Estrela de 12 pontas
+    const points = 6; // Estrela de 6 pontas (HTML tem 12 vértices = 6 pontas)
     final angleStep = (2 * math.pi) / points;
     final innerRadius = radius * 0.5;
 
@@ -270,34 +312,13 @@ class StarCometPainter extends CustomPainter {
     return path;
   }
 
-  Path _createDashedPath(Path source, double dashLength, double gapLength) {
-    final dashedPath = Path();
-    final metricsIterator = source.computeMetrics().iterator;
-
-    while (metricsIterator.moveNext()) {
-      final metric = metricsIterator.current;
-      double distance = 0.0;
-
-      while (distance < metric.length) {
-        final nextDistance = distance + dashLength;
-        final extractPath = metric.extractPath(
-          distance,
-          nextDistance > metric.length ? metric.length : nextDistance,
-        );
-        dashedPath.addPath(extractPath, Offset.zero);
-        distance = nextDistance + gapLength;
-      }
-    }
-
-    return dashedPath;
-  }
-
   @override
   bool shouldRepaint(StarCometPainter oldDelegate) {
     return oldDelegate.rotation != rotation ||
         oldDelegate.fillOpacity != fillOpacity ||
         oldDelegate.scale != scale ||
         oldDelegate.dashProgress != dashProgress ||
+        oldDelegate.offsetProgress != offsetProgress ||
         oldDelegate.strokeWidth != strokeWidth;
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:collection/collection.dart'; // Para DeepCollectionEquality
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
@@ -695,8 +696,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 // --- REMOVIDO: CompositedTransformTarget ---
                 _buildDetailRow(
                   icon: Icons.flag_outlined,
+                  valueWidget: _isLoadingGoal
+                      ? const Align(
+                          alignment: Alignment.centerLeft,
+                          child: CustomLoadingSpinner(size: 20))
+                      : null,
                   value: _isLoadingGoal
-                      ? 'Carregando...'
+                      ? null
                       : (_selectedGoal?.title ?? 'Adicionar à jornada'),
                   onTap: _selectGoal, // --- ATUALIZADO ---
                   valueColor: _selectedGoal != null
@@ -733,8 +739,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           if (_isLoading)
             Container(
               color: Colors.black.withValues(alpha: 0.5),
-              child: const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary)),
+              child: const Center(child: CustomLoadingSpinner()),
             ),
         ],
       ),
@@ -829,8 +834,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
+                        child: CustomLoadingSpinner(size: 20))
                     : const Text('Salvar',
                         style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 14)),

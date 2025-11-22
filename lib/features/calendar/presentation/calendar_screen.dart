@@ -610,16 +610,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               events: eventsMapUtc,
                               personalDayNumber: _personalDayNumber,
                             ),
-                            if (_isChangingMonth)
-                              Positioned.fill(
-                                child: Container(
-                                  color: AppColors.background
-                                      .withValues(alpha: 0.5),
-                                  child: const Center(
-                                    child: CustomLoadingSpinner(),
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                       ],
@@ -694,13 +684,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               events: eventsMapUtc,
                               personalDayNumber: _personalDayNumber,
                             ),
-                            if (_isChangingMonth)
-                              Positioned.fill(
-                                child: Container(
-                                  color: AppColors.background.withValues(alpha: 0.5),
-                                  child: const Center(child: CustomLoadingSpinner()),
-                                ),
-                              ),
                           ],
                         ),
                       ],
@@ -782,16 +765,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           events: eventsMapUtc,
                           personalDayNumber: _personalDayNumber,
                         ),
-                        if (_isChangingMonth)
-                          Positioned.fill(
-                            child: Container(
-                              color:
-                                  AppColors.background.withValues(alpha: 0.5),
-                              child: const Center(
-                                child: CustomLoadingSpinner(),
-                              ),
-                            ),
-                          ),
                       ],
                     );
                   },

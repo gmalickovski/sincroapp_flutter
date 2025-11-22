@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_button.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/register/register_screen.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/forgot_password_screen.dart';
@@ -169,8 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ? const SizedBox(
                                 height: 24,
                                 width: 24,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
+                                child: CustomLoadingSpinner(size: 24))
                             : const Text('Entrar',
                                 style: TextStyle(
                                     fontSize: 16, fontWeight: FontWeight.bold)),

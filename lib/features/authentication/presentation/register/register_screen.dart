@@ -310,7 +310,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   borderRadius: BorderRadius.circular(8.0)),
             ),
             child: _isLoading
-                ? const CustomLoadingSpinner()
+                ? const CustomLoadingSpinner(size: 24)
                 : const Text('Criar Conta',
                     style:
                         TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
