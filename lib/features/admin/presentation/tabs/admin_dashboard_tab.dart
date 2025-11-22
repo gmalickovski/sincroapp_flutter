@@ -571,167 +571,38 @@ class _SiteControlCardState extends State<_SiteControlCard> {
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 2,
-                child: Column(
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // Responsive layout: Column on mobile, Row on desktop
+              if (constraints.maxWidth < 800) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Status do Site',
-                      style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedStatus,
-                          isExpanded: true,
-                          dropdownColor: AppColors.cardBackground,
-                          style: const TextStyle(color: AppColors.primaryText),
-                          items: const [
-                            DropdownMenuItem(
-                              value: 'active',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.check_circle,
-                                      color: Colors.green, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Ativo (Landing Page)'),
-                                ],
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'maintenance',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.build,
-                                      color: Colors.orange, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Manutenção'),
-                                ],
-                              ),
-                            ),
-                            DropdownMenuItem(
-                              value: 'construction',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.construction,
-                                      color: Colors.red, size: 16),
-                                  SizedBox(width: 8),
-                                  Text('Em Construção'),
-                                ],
-                              ),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _selectedStatus = value);
-                            }
-                          },
-                        ),
-                      ),
-                    ),
+                    _buildStatusDropdown(),
+                    const SizedBox(height: 16),
+                    _buildPasswordInput(),
+                    const SizedBox(height: 24),
+                    _buildSaveButton(),
                   ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 2,
-                child: Column(
+                );
+              } else {
+                return Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Senha de Acesso (Bypass)',
-                      style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _passwordController,
-                      style: const TextStyle(color: AppColors.primaryText),
-                      decoration: InputDecoration(
-                        hintText: 'Senha para ver o site...',
-                        hintStyle:
-                            const TextStyle(color: AppColors.secondaryText),
-                        filled: true,
-                        fillColor: AppColors.background,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: AppColors.border),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide:
-                              const BorderSide(color: AppColors.primary),
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 12),
-                      ),
-                    ),
+                    Expanded(flex: 2, child: _buildStatusDropdown()),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 2, child: _buildPasswordInput()),
+                    const SizedBox(width: 16),
+                    Expanded(flex: 1, child: Column(
+                      children: [
+                        const SizedBox(height: 28),
+                        _buildSaveButton(),
+                      ],
+                    )),
                   ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                    const SizedBox(height: 28),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _isLoading
-                            ? null
-                            : () async {
-                                setState(() => _isLoading = true);
-                                await widget.onSave(
-                                  _selectedStatus,
-                                  _passwordController.text,
-                                );
-                                setState(() => _isLoading = false);
-                              },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Text('Salvar'),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+                );
+              }
+            },
           ),
           if (_selectedStatus != 'active') ...[
             const SizedBox(height: 16),
@@ -760,6 +631,156 @@ class _SiteControlCardState extends State<_SiteControlCard> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Status do Site',
+          style: TextStyle(
+            color: AppColors.secondaryText,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedStatus,
+              isExpanded: true,
+              dropdownColor: AppColors.cardBackground,
+              style: const TextStyle(color: AppColors.primaryText),
+              items: const [
+                DropdownMenuItem(
+                  value: 'active',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle,
+                          color: Colors.green, size: 16),
+                      SizedBox(width: 8),
+                      Text('Ativo (Landing Page)'),
+                    ],
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'maintenance',
+                  child: Row(
+                    children: [
+                      Icon(Icons.build,
+                          color: Colors.orange, size: 16),
+                      SizedBox(width: 8),
+                      Text('Manutenção'),
+                    ],
+                  ),
+                ),
+                DropdownMenuItem(
+                  value: 'construction',
+                  child: Row(
+                    children: [
+                      Icon(Icons.construction,
+                          color: Colors.red, size: 16),
+                      SizedBox(width: 8),
+                      Text('Em Construção'),
+                    ],
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() => _selectedStatus = value);
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Senha de Acesso (Bypass)',
+          style: TextStyle(
+            color: AppColors.secondaryText,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _passwordController,
+          style: const TextStyle(color: AppColors.primaryText),
+          decoration: InputDecoration(
+            hintText: 'Senha para ver o site...',
+            hintStyle:
+                const TextStyle(color: AppColors.secondaryText),
+            filled: true,
+            fillColor: AppColors.background,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide:
+                  const BorderSide(color: AppColors.primary),
+            ),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 48,
+      child: ElevatedButton(
+        onPressed: _isLoading
+            ? null
+            : () async {
+                setState(() => _isLoading = true);
+                await widget.onSave(
+                  _selectedStatus,
+                  _passwordController.text,
+                );
+                setState(() => _isLoading = false);
+              },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              )
+            : const Text('Salvar'),
       ),
     );
   }
