@@ -724,14 +724,14 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     double? height;
     
     if (isDesktop) {
-      if (widget.isFullScreen) {
+      if (_isWindowMode) {
         // "Large Floating Modal"
-        width = 700;
+        width = 800;
         height = 800;
       } else {
         // "Normal Floating Modal"
-        width = 400;
-        height = 600;
+        width = 500;
+        height = 700;
       }
       
       // Clamp to screen size
@@ -843,18 +843,25 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               // --- Desktop Buttons ---
               
               // Window Mode Toggle (Desktop Only)
-              if (isDesktop && widget.onToggleFullScreen != null)
+              if (isDesktop)
                 IconButton(
                   icon: Icon(
-                    widget.isFullScreen ? Icons.close_fullscreen_rounded : Icons.open_in_new_rounded,
+                    _isWindowMode ? Icons.close_fullscreen_rounded : Icons.open_in_new_rounded,
                     color: AppColors.secondaryText,
                   ),
-                  onPressed: widget.onToggleFullScreen,
-                  tooltip: widget.isFullScreen ? 'Restaurar Tamanho' : 'Modo Janela',
+                  onPressed: () {
+                    setState(() {
+                      _isWindowMode = !_isWindowMode;
+                    });
+                    if (widget.onToggleFullScreen != null) {
+                      widget.onToggleFullScreen!();
+                    }
+                  },
+                  tooltip: _isWindowMode ? 'Restaurar Tamanho' : 'Modo Janela',
                 ),
               
               // Close Button (Always Visible on Desktop, or Mobile Modal)
-              if (widget.onClose != null || (!isDesktop && isModal))
+              if (isDesktop || isModal)
                  IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                   onPressed: () {
@@ -867,6 +874,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
                         );
+                      } else {
+                        // Desktop default close
+                        Navigator.of(context).pop();
                       }
                   },
                   tooltip: 'Fechar',
