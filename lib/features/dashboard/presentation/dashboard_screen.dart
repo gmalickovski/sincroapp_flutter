@@ -35,6 +35,8 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_inpu
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reorder_dashboard_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/numerology_detail_modal.dart';
 
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
   @override
@@ -72,6 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<TaskModel> _currentTodayTasks = [];
   StreamSubscription<List<Goal>>?
       _goalsSubscription; // Stream de metas em tempo real
+  final FabOpacityController _fabOpacityController = FabOpacityController();
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -98,6 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Cancela streams e controllers de forma segura
     _cancelSubscriptions();
     _menuAnimationController.dispose();
+    _fabOpacityController.dispose();
     super.dispose();
   }
 
@@ -2029,8 +2033,15 @@ class _DashboardScreenState extends State<DashboardScreen>
           });
         },
       ),
-      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
-      floatingActionButton: fab,
+      body: ScreenInteractionListener(
+        controller: _fabOpacityController,
+        child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      ),
+      floatingActionButton: TransparentFabWrapper(
+        controller: _fabOpacityController,
+        child: fab ?? const SizedBox.shrink(),
+      ),
+      floatingActionButtonAnimator: NoScalingAnimation(),
     );
   }
 

@@ -124,18 +124,18 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
   }
 
   double get _defaultSize {
-    // Tamanhos responsivos por plataforma (Aumentados conforme solicitado)
-    if (kIsWeb) return 80.0;
+    // Tamanhos responsivos por plataforma (Reduzidos conforme solicitado)
+    if (kIsWeb) return 50.0;
     switch (defaultTargetPlatform) {
       case TargetPlatform.iOS:
       case TargetPlatform.android:
-        return 60.0;
+        return 40.0;
       case TargetPlatform.macOS:
       case TargetPlatform.windows:
       case TargetPlatform.linux:
-        return 90.0;
-      default:
         return 60.0;
+      default:
+        return 40.0;
     }
   }
 
