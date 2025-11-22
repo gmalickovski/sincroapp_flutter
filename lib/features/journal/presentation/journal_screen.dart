@@ -83,7 +83,16 @@ class _JournalScreenState extends State<JournalScreen> {
                   _vibrationFilter = vibration;
                   _moodFilter = mood;
                 });
+                Navigator.pop(context);
               },
+              onClearInPanel: () {
+                setState(() {
+                  _dateFilter = null;
+                  _vibrationFilter = null;
+                  _moodFilter = null;
+                });
+              },
+              userData: widget.userData,
             ),
           ),
         ],

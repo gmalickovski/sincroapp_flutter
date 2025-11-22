@@ -104,7 +104,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     // Stream de tarefas por data de vencimento (para o mês atual)
     _tasksDueDateSubscription = _firestoreService
-        .getTasksStream(_userId, start: startOfMonth, end: endOfMonth)
+        .getTasksStreamForRange(_userId, startOfMonth, endOfMonth)
         .listen((tasks) {
       _currentTasksDueDate = tasks;
       _processEvents();
@@ -136,10 +136,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // Adicionar ao map de eventos do calendário (para bolinhas)
         if (newEvents[date] == null) newEvents[date] = [];
         newEvents[date]!.add(CalendarEvent(
-          title: task.title,
+          title: task.text,
           date: task.dueDate!,
-          type: CalendarEventType.task,
-          isCompleted: task.isCompleted,
+          type: EventType.task,
+          isCompleted: task.completed,
         ));
 
         // Adicionar ao map de raw events (para lista de detalhes)
@@ -187,17 +187,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => TaskInputModal(
         userId: _userId,
-        initialDate: _selectedDay,
+        userData: widget.userData,
+        initialDueDate: _selectedDay,
+        onAddTask: (parsedTask) {
+          // Handle task addition if needed
+        },
       ),
     );
   }
 
-  Future<void> _onToggleTask(TaskModel task) async {
+  Future<void> _onToggleTask(TaskModel task, bool newValue) async {
     try {
-      await _firestoreService.updateTask(
+      await _firestoreService.updateTaskCompletion(
         _userId,
         task.id,
-        {'isCompleted': !task.isCompleted},
+        completed: newValue,
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -211,7 +215,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       context: context,
       builder: (context) => TaskDetailModal(
         task: task,
-        userId: _userId,
+        userData: widget.userData,
       ),
     );
   }
