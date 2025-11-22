@@ -77,9 +77,9 @@
 
     /* Star Comet Loader Animation */
     .logo-loader-container {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 16px;
+      width: 120px;
+      height: 120px;
+      margin-bottom: 0;
     }
 
     .comet-assembly {
@@ -174,12 +174,6 @@
         stroke-linecap: round;
       }
     }
-
-    #app-loader .label {
-      margin-top: 12px;
-      font-size: 14px;
-      opacity: .9;
-    }
   </style>
 </head>
 
@@ -189,17 +183,27 @@
     <div class="logo-loader-container">
       <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
         <g class="comet-assembly">
-          <!-- Linha dinâmica (cauda) -->
+          <!-- 1. LINHA DINÂMICA -->
           <circle class="tail-path" cx="100" cy="100" r="42" transform="rotate(-90 100 100)" />
-          <!-- Estrela de 12 pontas -->
+
+          <!-- 2. ESTRELA AFIADA (10px Stroke) -->
           <g transform="translate(100, 58)">
-            <polygon class="star-dynamic"
-              points="0,-32 9,-16 28,-16 18,0 28,16 9,16 0,32 -9,16 -28,16 -18,0 -28,-16 -9,-16" />
+            <polygon class="star-dynamic" points="0,-32 
+                             9,-16 
+                             28,-16 
+                             18,0 
+                             28,16 
+                             9,16 
+                             0,32 
+                             -9,16 
+                             -28,16 
+                             -18,0 
+                             -28,-16 
+                             -9,-16" />
           </g>
         </g>
       </svg>
     </div>
-    <div class="label">Carregando...</div>
   </div>
 
   <script>

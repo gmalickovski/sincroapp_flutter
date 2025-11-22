@@ -12,6 +12,7 @@ import 'package:sincro_app_flutter/firebase_options.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/user_details/user_details_screen.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
@@ -314,7 +315,7 @@ class _AuthCheckState extends State<AuthCheck> {
             key: const ValueKey('loading-user'),
             backgroundColor: AppColors.background,
             body: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CustomLoadingSpinner(),
             ),
           );
         }
@@ -326,7 +327,7 @@ class _AuthCheckState extends State<AuthCheck> {
             key: const ValueKey('navigating'),
             backgroundColor: AppColors.background,
             body: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CustomLoadingSpinner(),
             ),
           );
         }
@@ -342,7 +343,7 @@ class _AuthCheckState extends State<AuthCheck> {
             key: const ValueKey('navigating'),
             backgroundColor: AppColors.background,
             body: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CustomLoadingSpinner(),
             ),
           );
         }
@@ -366,7 +367,7 @@ class _AuthCheckState extends State<AuthCheck> {
             key: const ValueKey('navigating'),
             backgroundColor: AppColors.background,
             body: const Center(
-              child: CircularProgressIndicator(color: AppColors.primary),
+              child: CustomLoadingSpinner(),
             ),
           );
         }
@@ -380,7 +381,7 @@ class _AuthCheckState extends State<AuthCheck> {
           key: const ValueKey('navigating'),
           backgroundColor: AppColors.background,
           body: const Center(
-            child: CircularProgressIndicator(color: AppColors.primary),
+            child: CustomLoadingSpinner(),
           ),
         );
       },
