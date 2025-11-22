@@ -10,6 +10,7 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -548,7 +549,10 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+            child: ScaleTransition(
+              scale: _scaleAnimation,
+              child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+            ),
           ),
           const SizedBox(width: 12),
           Container(
@@ -636,7 +640,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                       ? AppColors.success
                       : isDisabled
                           ? AppColors.secondaryText
-                          : AppColors.primary,
+                          : Colors.white.withOpacity(0.9), // Texto mais claro e com contraste
                   fontWeight: FontWeight.w500,
                   fontSize: 13,
                   decoration: isExecuted ? TextDecoration.lineThrough : TextDecoration.none, // Garante sem sublinhado
@@ -674,14 +678,16 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   padding: const EdgeInsets.all(8), // Padding interno para o SVG
                   child: SvgPicture.asset(
                     'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                    colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                    // colorFilter removido para usar a cor original (branco)
                   ),
                 ),
                 const SizedBox(width: 12),
               ],
               Flexible(
                 child: Container(
-                  margin: isUser ? null : const EdgeInsets.only(right: 40.0), // Margem direita para mensagens da IA
+                  margin: isUser
+                      ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
+                      : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null), // Margem condicional > 700px
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
@@ -708,6 +714,15 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   ),
                 ),
               ),
+              if (isUser) ...[
+                const SizedBox(width: 12),
+                UserAvatar(
+                  firstName: widget.userData.firstName,
+                  lastName: widget.userData.lastName,
+                  photoUrl: widget.userData.photoUrl,
+                  radius: 20, // Tamanho 40x40 (radius 20)
+                ),
+              ],
             ],
           ),
           if (!isUser && m.actions.isNotEmpty)
