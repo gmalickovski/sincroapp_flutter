@@ -267,7 +267,6 @@ class _GoalsScreenState extends State<GoalsScreen> {
               onOpenAssistant: () {
                 AssistantPanel.show(context, widget.userData);
               },
-              },
             )
           : FloatingActionButton(
               onPressed: _navigateToCreateGoal,
