@@ -609,14 +609,15 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               ? AppColors.success.withValues(alpha: 0.1)
               : isDisabled
                   ? AppColors.border.withValues(alpha: 0.3)
-                  : AppColors.primary.withValues(alpha: 0.1),
+                  : AppColors.cardBackground, // Fundo mais sutil (card background)
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isExecuted
                 ? AppColors.success
                 : isDisabled
                     ? Colors.transparent
-                    : AppColors.primary.withValues(alpha: 0.5),
+                    : AppColors.primary, // Borda mais visível (cor primária sólida)
+            width: 1.5, // Borda um pouco mais espessa
           ),
         ),
         child: Row(
@@ -638,7 +639,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                           : AppColors.primary,
                   fontWeight: FontWeight.w500,
                   fontSize: 13,
-                  decoration: isExecuted ? TextDecoration.lineThrough : null,
+                  decoration: isExecuted ? TextDecoration.lineThrough : TextDecoration.none, // Garante sem sublinhado
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -661,21 +662,26 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         children: [
           Row(
             mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
             children: [
               if (!isUser) ...[
                 Container(
-                  width: 32, height: 32,
+                  width: 40, height: 40, // Aumentado de 32 para 40
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+                  padding: const EdgeInsets.all(8), // Padding interno para o SVG
+                  child: SvgPicture.asset(
+                    'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                    colorFilter: const ColorFilter.mode(AppColors.primary, BlendMode.srcIn),
+                  ),
                 ),
                 const SizedBox(width: 12),
               ],
               Flexible(
                 child: Container(
+                  margin: isUser ? null : const EdgeInsets.only(right: 40.0), // Margem direita para mensagens da IA
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
