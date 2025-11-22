@@ -675,15 +675,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   primaryIcon: Icons.add_task,
                   primaryTooltip: 'Adicionar Tarefa',
                   onOpenAssistant: () {
-                    if (widget.userData == null) return;
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      backgroundColor: Colors.transparent,
-                      builder: (_) => AssistantPanel(
-                        userData: widget.userData!,
-                      ),
-                    );
+                    AssistantPanel.show(context, widget.userData!);
                   },
                 )
               : FloatingActionButton(

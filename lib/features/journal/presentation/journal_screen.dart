@@ -293,12 +293,7 @@ class _JournalScreenState extends State<JournalScreen> {
               primaryIcon: Icons.book_outlined, // Ícone de diário
               primaryTooltip: 'Nova anotação',
               onOpenAssistant: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => AssistantPanel(userData: widget.userData),
-                );
+                AssistantPanel.show(context, widget.userData);
               },
             )
           : FloatingActionButton(

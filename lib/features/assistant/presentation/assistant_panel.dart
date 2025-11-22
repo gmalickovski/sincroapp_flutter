@@ -24,6 +24,24 @@ class AssistantPanel extends StatefulWidget {
     this.onClose,
   });
 
+  static Future<void> show(BuildContext context, UserModel userData) async {
+    final isDesktop = MediaQuery.of(context).size.width > 768;
+    if (isDesktop) {
+      await showDialog(
+        context: context,
+        barrierColor: Colors.transparent,
+        builder: (_) => AssistantPanel(userData: userData),
+      );
+    } else {
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => AssistantPanel(userData: userData),
+      );
+    }
+  }
+
   @override
   State<AssistantPanel> createState() => _AssistantPanelState();
 }

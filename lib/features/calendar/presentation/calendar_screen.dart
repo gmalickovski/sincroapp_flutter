@@ -548,12 +548,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               primaryIcon: Icons.add_task,
               primaryTooltip: 'Nova Tarefa',
               onOpenAssistant: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => AssistantPanel(userData: widget.userData),
-                );
+                AssistantPanel.show(context, widget.userData);
               },
             )
           : FloatingActionButton(

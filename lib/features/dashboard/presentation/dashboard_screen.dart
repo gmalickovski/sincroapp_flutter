@@ -1983,12 +1983,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           fab = ExpandingAssistantFab(
             onOpenAssistant: () {
               if (_userData == null) return;
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => AssistantPanel(userData: _userData!),
-              );
+              AssistantPanel.show(context, _userData!);
             },
           );
           break;

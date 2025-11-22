@@ -265,12 +265,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
               primaryIcon: Icons.flag_outlined, // Ícone de meta
               primaryTooltip: 'Nova Jornada',
               onOpenAssistant: () {
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (_) => AssistantPanel(userData: widget.userData),
-                );
+                AssistantPanel.show(context, widget.userData);
               },
               onMic: () {
                 ScaffoldMessenger.of(context).showSnackBar(
