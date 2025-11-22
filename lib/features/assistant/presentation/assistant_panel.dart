@@ -777,7 +777,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
                 children: [
                   // AI Avatar
                   Container(
@@ -1011,8 +1011,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
             children: [
               SvgPicture.asset(
                 'assets/images/icon-ia-sincroapp-v1.svg',
-                width: 24,
-                height: 24,
+                width: 32,
+                height: 32,
               ),
               const SizedBox(width: 12),
               const Expanded(
