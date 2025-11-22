@@ -941,127 +941,113 @@
         </div>
     </footer>
 
-    <!-- --- FIREBASE SDK --- -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    function toggleHeroDevice(device) {
+    const mobileMockup = document.getElementById('hero-mockup-mobile');
+    const desktopMockup = document.getElementById('hero-mockup-desktop');
+    const btnMobile = document.getElementById('hero-btn-mobile');
+    const btnDesktop = document.getElementById('hero-btn-desktop');
 
-    <!-- --- FIREBASE CONFIG & INIT --- -->
-    <script src="firebase-config.js?v=20251121-1"></script>
-    <script src="landing.js?v=20251121-1"></script>
+    if (device === 'mobile') {
+    mobileMockup.classList.remove('hidden');
+    desktopMockup.classList.add('hidden');
+    btnMobile.classList.add('active');
+    btnDesktop.classList.remove('active');
+    } else {
+    mobileMockup.classList.add('hidden');
+    desktopMockup.classList.remove('hidden');
+    btnMobile.classList.remove('active');
+    btnDesktop.classList.add('active');
+    }
+    }
 
-    <!-- --- SCRIPTS ADICIONAIS --- -->
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    function toggleFeaturesDevice(device) {
+    const mobileMockup = document.getElementById('feat-mockup-mobile');
+    const desktopMockup = document.getElementById('feat-mockup-desktop');
+    const btnMobile = document.getElementById('feat-btn-mobile');
+    const btnDesktop = document.getElementById('feat-btn-desktop');
 
-    <script>
-        // Device Toggle Logic
-        function toggleHeroDevice(device) {
-            const mobileMockup = document.getElementById('hero-mockup-mobile');
-            const desktopMockup = document.getElementById('hero-mockup-desktop');
-            const btnMobile = document.getElementById('hero-btn-mobile');
-            const btnDesktop = document.getElementById('hero-btn-desktop');
+    if (device === 'mobile') {
+    mobileMockup.classList.remove('hidden');
+    desktopMockup.classList.add('hidden');
+    btnMobile.classList.add('active');
+    btnDesktop.classList.remove('active');
+    } else {
+    mobileMockup.classList.add('hidden');
+    desktopMockup.classList.remove('hidden');
+    btnMobile.classList.remove('active');
+    btnDesktop.classList.add('active');
+    }
+    }
 
-            if (device === 'mobile') {
-                mobileMockup.classList.remove('hidden');
-                desktopMockup.classList.add('hidden');
-                btnMobile.classList.add('active');
-                btnDesktop.classList.remove('active');
-            } else {
-                mobileMockup.classList.add('hidden');
-                desktopMockup.classList.remove('hidden');
-                btnMobile.classList.remove('active');
-                btnDesktop.classList.add('active');
-            }
-        }
+    // Sticky Scroll Logic
+    document.addEventListener('DOMContentLoaded', () => {
+    // Inicializa AOS
+    AOS.init({
+    duration: 800,
+    once: true,
+    offset: 50,
+    });
 
-        function toggleFeaturesDevice(device) {
-            const mobileMockup = document.getElementById('feat-mockup-mobile');
-            const desktopMockup = document.getElementById('feat-mockup-desktop');
-            const btnMobile = document.getElementById('feat-btn-mobile');
-            const btnDesktop = document.getElementById('feat-btn-desktop');
+    // Sticky Scroll Observer
+    const blocks = document.querySelectorAll('.feature-block');
+    const phoneImg = document.getElementById('feat-img-mobile');
+    const desktopImg = document.getElementById('feat-img-desktop');
 
-            if (device === 'mobile') {
-                mobileMockup.classList.remove('hidden');
-                desktopMockup.classList.add('hidden');
-                btnMobile.classList.add('active');
-                btnDesktop.classList.remove('active');
-            } else {
-                mobileMockup.classList.add('hidden');
-                desktopMockup.classList.remove('hidden');
-                btnMobile.classList.remove('active');
-                btnDesktop.classList.add('active');
-            }
-        }
+    if (blocks.length > 0) {
+    const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+    const textItem = entry.target.querySelector('.feature-text-item');
 
-        // Sticky Scroll Logic
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicializa AOS
-            AOS.init({
-                duration: 800,
-                once: true,
-                offset: 50,
-            });
+    if (entry.isIntersecting) {
+    // Highlight text
+    if (textItem) textItem.classList.add('active');
 
-            // Sticky Scroll Observer
-            const blocks = document.querySelectorAll('.feature-block');
-            const phoneImg = document.getElementById('feat-img-mobile');
-            const desktopImg = document.getElementById('feat-img-desktop');
+    // Change Images (Mobile & Desktop)
+    const newSrcMobile = entry.target.getAttribute('data-image-mobile');
+    const newSrcDesktop = entry.target.getAttribute('data-image-desktop');
 
-            if (blocks.length > 0) {
-                const observer = new IntersectionObserver((entries) => {
-                    entries.forEach(entry => {
-                        const textItem = entry.target.querySelector('.feature-text-item');
+    if (phoneImg && phoneImg.src !== newSrcMobile) {
+    phoneImg.style.opacity = '0';
+    setTimeout(() => {
+    phoneImg.src = newSrcMobile;
+    phoneImg.style.opacity = '1';
+    }, 200);
+    }
 
-                        if (entry.isIntersecting) {
-                            // Highlight text
-                            if (textItem) textItem.classList.add('active');
+    if (desktopImg && desktopImg.src !== newSrcDesktop) {
+    desktopImg.style.opacity = '0';
+    setTimeout(() => {
+    desktopImg.src = newSrcDesktop;
+    desktopImg.style.opacity = '1';
+    }, 200);
+    }
 
-                            // Change Images (Mobile & Desktop)
-                            const newSrcMobile = entry.target.getAttribute('data-image-mobile');
-                            const newSrcDesktop = entry.target.getAttribute('data-image-desktop');
+    } else {
+    // Remove highlight
+    if (textItem) textItem.classList.remove('active');
+    }
+    });
+    }, {
+    threshold: 0.5, // Trigger when 50% of the block is visible
+    rootMargin: "-20% 0px -20% 0px" // Adjust trigger zone
+    });
 
-                            if (phoneImg && phoneImg.src !== newSrcMobile) {
-                                phoneImg.style.opacity = '0';
-                                setTimeout(() => {
-                                    phoneImg.src = newSrcMobile;
-                                    phoneImg.style.opacity = '1';
-                                }, 200);
-                            }
+    blocks.forEach(block => observer.observe(block));
+    }
 
-                            if (desktopImg && desktopImg.src !== newSrcDesktop) {
-                                desktopImg.style.opacity = '0';
-                                setTimeout(() => {
-                                    desktopImg.src = newSrcDesktop;
-                                    desktopImg.style.opacity = '1';
-                                }, 200);
-                            }
-
-                        } else {
-                            // Remove highlight
-                            if (textItem) textItem.classList.remove('active');
-                        }
-                    });
-                }, {
-                    threshold: 0.5, // Trigger when 50% of the block is visible
-                    rootMargin: "-20% 0px -20% 0px" // Adjust trigger zone
-                });
-
-                blocks.forEach(block => observer.observe(block));
-            }
-
-            // Desregistra o service worker do Flutter ao abrir a landing
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                    for (let registration of registrations) {
-                        if (registration.scriptURL && registration.scriptURL.indexOf('flutter_service_worker') !== -1) {
-                            registration.unregister().then(function () {
-                                console.log('🧹 Service worker do Flutter desregistrado para a landing');
-                            });
-                        }
-                    }
-                });
-            }
-        });
+    // Desregistra o service worker do Flutter ao abrir a landing
+    if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then(function (registrations) {
+    for (let registration of registrations) {
+    if (registration.scriptURL && registration.scriptURL.indexOf('flutter_service_worker') !== -1) {
+    registration.unregister().then(function () {
+    console.log('🧹 Service worker do Flutter desregistrado para a landing');
+    });
+    }
+    }
+    });
+    }
+    });
     </script>
 </body>
 

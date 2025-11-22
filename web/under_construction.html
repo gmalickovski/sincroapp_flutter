@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SincroApp - Em Breve</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --border: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-tertiary: #94a3b8;
+            --accent-primary: #8b5cf6;
+            --accent-secondary: #a78bfa;
+            --accent-glow: rgba(139, 92, 246, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Background Glow */
+        .bg-glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--accent-primary) 0%, rgba(0, 0, 0, 0) 70%);
+            opacity: 0.15;
+            filter: blur(120px);
+            pointer-events: none;
+            animation: pulse 8s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.15;
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                opacity: 0.25;
+                transform: translate(-50%, -50%) scale(1.1);
+            }
+        }
+
+        .container {
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            position: relative;
+            z-index: 10;
+            padding: 2rem;
+        }
+
+        .logo {
+            width: 120px;
+            height: auto;
+            margin-bottom: 3rem;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        @media (max-width: 640px) {
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .message {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin-bottom: 2.5rem;
+        }
+
+        .message p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .message p:last-child {
+            margin-bottom: 0;
+        }
+
+        .highlight {
+            color: var(--accent-secondary);
+            font-weight: 600;
+        }
+
+        /* Password Form */
+        .password-section {
+            margin-top: 3rem;
+            padding-top: 2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .password-label {
+            font-size: 0.875rem;
+            color: var(--text-tertiary);
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .password-form {
+            display: flex;
+            gap: 0.75rem;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .password-input {
+            flex: 1;
+            padding: 0.875rem 1rem;
+            background: rgba(30, 41, 59, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 0.5rem;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: 'Poppins', sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            background: rgba(30, 41, 59, 0.8);
+        }
+
+        .password-input::placeholder {
+            color: var(--text-tertiary);
+        }
+
+        .submit-btn {
+            padding: 0.875rem 1.5rem;
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .submit-btn:hover {
+            background: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: #ef4444;
+            font-size: 0.875rem;
+            margin-top: 0.75rem;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .submit-btn.loading .spinner {
+            display: inline-block;
+        }
+
+        .submit-btn.loading .btn-text {
+            display: none;
+        }
+
+        /* Construction Icon */
+        .construction-icon {
+            font-size: 4rem;
+            margin-bottom: 2rem;
+            animation: swing 2s ease-in-out infinite;
+        }
+
+        @keyframes swing {
+
+            0%,
+            100% {
+                transform: rotate(-5deg);
+            }
+
+            50% {
+                transform: rotate(5deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-glow"></div>
+
+    <div class="container">
+        <img src="logo.svg" alt="SincroApp" class="logo">
+
+        <div class="construction-icon">🚧</div>
+
+        <h1>Estamos Preparando Algo Incrível!</h1>
+
+        <p class="subtitle">
+            O SincroApp está em manutenção para trazer novidades que vão transformar sua jornada.
+        </p>
+
+        <div class="message">
+            <p>
+                Estamos trabalhando duro para criar uma experiência ainda mais <span
+                    class="highlight">sincronizada</span> com suas necessidades.
+            </p>
+            <p>
+                Em breve, você terá acesso a ferramentas poderosas que unem <span
+                    class="highlight">produtividade</span>, <span class="highlight">autoconhecimento</span> e <span
+                    class="highlight">inteligência artificial</span>.
+            </p>
+            <p>
+                <strong>Vale a pena esperar! ✨</strong>
+            </p>
+        </div>
+
+        <div class="password-section">
+            <label class="password-label">Tem acesso antecipado? Digite a senha:</label>
+            <form class="password-form" id="passwordForm">
+                <input type="password" class="password-input" id="passwordInput" placeholder="Digite a senha"
+                    autocomplete="off">
+                <button type="submit" class="submit-btn" id="submitBtn">
+                    <span class="btn-text">Acessar</span>
+                    <span class="spinner"></span>
+                </button>
+            </form>
+            <p class="error-message" id="errorMessage">Senha incorreta. Tente novamente.</p>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBLfDEbGCqBbWKlqfVvCRnGfBBZKJxWZnw",
+            authDomain: "sincroapp-529cc.firebaseapp.com",
+            projectId: "sincroapp-529cc",
+            storageBucket: "sincroapp-529cc.firebasestorage.app",
+            messagingSenderId: "1026698348026",
+            appId: "1:1026698348026:web:0e7a7d3e4c9a0e0e8e0e0e",
+            measurementId: "G-XXXXXXXXXX"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Form handling
+        const form = document.getElementById('passwordForm');
+        const input = document.getElementById('passwordInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const errorMessage = document.getElementById('errorMessage');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const password = input.value.trim();
+            if (!password) return;
+
+            // Show loading
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            errorMessage.classList.remove('show');
+
+            try {
+                // Fetch site settings from Firestore
+                const doc = await db.collection('config').doc('site_settings').get();
+
+                if (doc.exists) {
+                    const data = doc.data();
+                    const correctPassword = data.bypassPassword || '';
+
+                    if (password === correctPassword) {
+                        // Password correct - set bypass token and redirect
+                        const token = btoa(password + ':' + Date.now());
+                        sessionStorage.setItem('sincro_bypass_token', token);
+                        sessionStorage.setItem('sincro_bypass_expiry', Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+
+                        window.location.href = '/landing.html';
+                    } else {
+                        // Wrong password
+                        errorMessage.classList.add('show');
+                        input.value = '';
+                        input.focus();
+                    }
+                } else {
+                    console.error('Site settings not found');
+                    errorMessage.textContent = 'Erro ao verificar senha. Tente novamente.';
+                    errorMessage.classList.add('show');
+                }
+            } catch (error) {
+                console.error('Error checking password:', error);
+                errorMessage.textContent = 'Erro ao verificar senha. Tente novamente.';
+                errorMessage.classList.add('show');
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>
