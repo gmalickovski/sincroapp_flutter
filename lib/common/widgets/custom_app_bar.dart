@@ -54,7 +54,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
       ),
       title: SvgPicture.asset(
         'assets/images/sincroapp_logo.svg',
-        height: 32,
+        height: isDesktop ? 32 : 24, // Menor no mobile
         fit: BoxFit.contain,
       ),
       centerTitle: true,

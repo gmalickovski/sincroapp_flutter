@@ -58,8 +58,15 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     });
 
     try {
-      final displayName = widget.firebaseUser.displayName ?? '';
-      final nameParts = displayName.split(' ');
+      final displayName = widget.firebaseUser.displayName?.trim() ?? '';
+      
+      // Lógica de Fallback: Se o displayName vier vazio (erro no cadastro),
+      // usamos o nome de nascimento inserido pelo usuário.
+      final nameSource = displayName.isNotEmpty 
+          ? displayName 
+          : _nomeAnaliseController.text.trim();
+
+      final nameParts = nameSource.split(' ');
       final primeiroNome = nameParts.isNotEmpty ? nameParts.first : '';
       final sobrenome =
           nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';

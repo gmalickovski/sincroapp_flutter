@@ -45,11 +45,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         displayName: displayName,
       );
 
-      final newUser = FirebaseAuth.instance.currentUser;
-      if (mounted && newUser != null) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      await currentUser?.reload();
+      final freshUser = FirebaseAuth.instance.currentUser;
+
+      if (mounted && freshUser != null) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-              builder: (context) => UserDetailsScreen(firebaseUser: newUser)),
+              builder: (context) => UserDetailsScreen(firebaseUser: freshUser)),
           (route) => false,
         );
       }
