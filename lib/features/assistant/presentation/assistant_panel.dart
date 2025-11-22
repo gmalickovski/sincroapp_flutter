@@ -12,6 +12,7 @@ import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
+import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
