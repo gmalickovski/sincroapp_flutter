@@ -544,14 +544,15 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 32, height: 32,
+            width: 40, height: 40,
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: ScaleTransition(
-              scale: _scaleAnimation,
-              child: const Icon(Icons.smart_toy_outlined, size: 18, color: AppColors.primary),
+            padding: const EdgeInsets.all(8),
+            child: SvgPicture.asset(
+              'assets/images/icon-ia-sincroapp-branco-v1.svg',
+              // Sem colorFilter para usar a cor branca original
             ),
           ),
           const SizedBox(width: 12),
@@ -1128,8 +1129,14 @@ class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: Tween(begin: 0.4, end: 1.0).animate(_controller),
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset.zero,
+        end: const Offset(0, -0.3), // Move para cima
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut,
+      )),
       child: Container(
         width: 8, height: 8,
         decoration: const BoxDecoration(
