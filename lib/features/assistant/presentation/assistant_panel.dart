@@ -717,17 +717,38 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
 
   Widget _buildPanelContent(BuildContext context, {ScrollController? sheetScrollController, required bool isModal}) {
     final isDesktop = MediaQuery.of(context).size.width > 768;
+    final screenSize = MediaQuery.of(context).size;
     
-    // If we are in a modal (DraggableScrollableSheet), we want the HEADER to be the drag handle.
-    // We do this by giving the 'sheetScrollController' to the Header's scrollable.
-    // The body uses the internal '_scrollController'.
+    // Desktop Sizing Logic
+    double? width;
+    double? height;
+    
+    if (isDesktop) {
+      if (widget.isFullScreen) {
+        // "Large Floating Modal"
+        width = 700;
+        height = 800;
+      } else {
+        // "Normal Floating Modal"
+        width = 400;
+        height = 600;
+      }
+      
+      // Clamp to screen size
+      if (width > screenSize.width - 40) width = screenSize.width - 40;
+      if (height > screenSize.height - 40) height = screenSize.height - 40;
+    }
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      width: width,
+      height: height,
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: isModal && !_isSheetExpanded
             ? const BorderRadius.vertical(top: Radius.circular(24))
-            : BorderRadius.circular(isDesktop && isModal ? 16 : 0), // No radius if full screen mobile
+            : BorderRadius.circular(isDesktop ? 16 : 0), // Radius on desktop (both modes)
         boxShadow: isModal || isDesktop
             ? [
                 BoxShadow(
@@ -792,7 +813,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle (Visual only, the whole header is draggable via ListView wrapper)
+          // Drag Handle (Mobile Only)
           if (isModal && !isDesktop && !_isSheetExpanded)
             Center(
               child: Container(
@@ -818,39 +839,35 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   ),
                 ),
               ),
-              // Mobile Toggle Button (Minimize/Close)
+              
+              // --- Expand/Collapse Button ---
+              
+              // Mobile: Control Sheet
               if (!isDesktop && isModal)
                 IconButton(
                   icon: Icon(
-                    _isSheetExpanded ? Icons.close_fullscreen_rounded : Icons.close_rounded,
+                    _isSheetExpanded ? Icons.close_fullscreen_rounded : Icons.open_in_full_rounded,
                     color: AppColors.secondaryText,
                   ),
                   onPressed: () {
                     if (_isSheetExpanded) {
-                      // Minimize to initial size
                       _sheetController.animateTo(
                         0.5,
                         duration: const Duration(milliseconds: 300),
                         curve: Curves.easeInOut,
                       );
                     } else {
-                      // Close
-                      if (widget.onClose != null) {
-                        widget.onClose!();
-                      } else {
-                        // If no callback, try to collapse to 0
-                        _sheetController.animateTo(
-                          0.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      }
+                      _sheetController.animateTo(
+                        1.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
                     }
                   },
-                  tooltip: _isSheetExpanded ? 'Minimizar' : 'Fechar',
+                  tooltip: _isSheetExpanded ? 'Restaurar' : 'Expandir',
                 ),
 
-              // Desktop Toggle Button
+              // Desktop: Control Widget State (via Callback)
               if (isDesktop && widget.onToggleFullScreen != null)
                 IconButton(
                   icon: Icon(
@@ -858,14 +875,35 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                     color: AppColors.secondaryText,
                   ),
                   onPressed: widget.onToggleFullScreen,
-                  tooltip: widget.isFullScreen ? 'Modo Normal' : 'Tela Cheia',
+                  tooltip: widget.isFullScreen ? 'Modo Normal' : 'Modo Expandido',
                 ),
               
-              // Desktop Close Button
+              // --- Close Button (Always Visible) ---
+              
+              // Mobile: Control Sheet (Close) OR Callback
+              if (!isDesktop && isModal)
+                 IconButton(
+                  icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
+                  onPressed: () {
+                     if (widget.onClose != null) {
+                        widget.onClose!();
+                      } else {
+                        _sheetController.animateTo(
+                          0.0,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
+                  },
+                  tooltip: 'Fechar',
+                ),
+
+              // Desktop: Callback
               if (isDesktop && widget.onClose != null)
                  IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                   onPressed: widget.onClose,
+                  tooltip: 'Fechar',
                 ),
             ],
           ),
