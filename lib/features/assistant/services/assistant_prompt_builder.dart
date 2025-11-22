@@ -194,10 +194,12 @@ Se o usuário pedir para criar uma meta:
        "title": "título da meta",
        "description": "resumo compilado da motivação do usuário",
        "date": "YYYY-MM-DD",
-       "subtasks": ["marco 1", "marco 2", ..., "marco 5-10"]
+       "subtasks": ["marco 1", "marco 2", ..., "marco 5-10"],
+       "needsUserInput": true
      }]
    }
 3. Os marcos (subtasks) devem ser 5-10 passos práticos e progressivos para alcançar a meta.
+4. **IMPORTANTE**: Sempre defina "needsUserInput": true para que o formulário seja exibido ao usuário.
 
 **FLUXO PARA ANÁLISE DE HARMONIA CONJUGAL:**
 Se o usuário perguntar sobre compatibilidade/harmonia conjugal com alguém (marido, esposa, namorado, namorada, parceiro, etc.):

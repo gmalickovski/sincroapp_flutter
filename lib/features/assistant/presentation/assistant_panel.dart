@@ -11,6 +11,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -535,6 +536,50 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     }
   }
 
+  // --- Goal Form Handling ---
+
+  Future<void> _handleGoalFormSubmit(Goal goal, int messageIndex) async {
+    try {
+      // Save the goal to Firestore
+      await _firestore.addGoal(widget.userData.uid, goal.toFirestore());
+
+      // Update the message to mark the action as executed
+      if (messageIndex < _messages.length) {
+        setState(() {
+          final msg = _messages[messageIndex];
+          final updatedActions = msg.actions.map((action) {
+            if (action.type == AssistantActionType.create_goal && action.needsUserInput) {
+              return action.copyWith(
+                isExecuted: true,
+                needsUserInput: false,
+              );
+            }
+            return action;
+          }).toList();
+          _messages[messageIndex] = msg.copyWith(actions: updatedActions);
+
+          // Add confirmation message
+          _messages.add(AssistantMessage(
+            role: 'assistant',
+            content: '✅ **Jornada criada com sucesso!**\n\n🎯 **${goal.title}**\nData alvo: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(goal.targetDate!)}\n\nVamos juntos nessa jornada! 🚀',
+            time: DateTime.now(),
+          ));
+        });
+
+        await _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade400,
+            content: Text('Erro ao criar a jornada: $e'),
+          ),
+        );
+      }
+    }
+  }
+
   // --- UI Components ---
 
   Widget _buildTypingIndicator() {
@@ -726,7 +771,21 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               ],
             ],
           ),
-          if (!isUser && m.actions.isNotEmpty)
+          // Check if there's a create_goal action that needs user input (show form)
+          if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
+            Padding(
+              padding: const EdgeInsets.only(left: 44, top: 12),
+              child: InlineGoalForm(
+                userData: widget.userData,
+                prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
+                prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
+                prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
+                prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
+                onSave: (goal) => _handleGoalFormSubmit(goal, index),
+              ),
+            )
+          // Otherwise show action chips
+          else if (!isUser && m.actions.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(left: 44, top: 12),
               child: Wrap(

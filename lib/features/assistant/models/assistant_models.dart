@@ -13,6 +13,7 @@ class AssistantAction {
   final List<String> subtasks;
   final bool isExecuting; // Novo: indica se está sendo executado
   final bool isExecuted; // Novo: indica se já foi executado
+  final bool needsUserInput; // Novo: indica se precisa de input do usuário (formulário)
   final Map<String, dynamic> data; // Novo: dados extras
 
   AssistantAction({
@@ -25,6 +26,7 @@ class AssistantAction {
     this.subtasks = const [],
     this.isExecuting = false,
     this.isExecuted = false,
+    this.needsUserInput = false,
     this.data = const {},
   });
 
@@ -39,6 +41,7 @@ class AssistantAction {
     List<String>? subtasks,
     bool? isExecuting,
     bool? isExecuted,
+    bool? needsUserInput,
     Map<String, dynamic>? data,
   }) {
     return AssistantAction(
@@ -51,6 +54,7 @@ class AssistantAction {
       subtasks: subtasks ?? this.subtasks,
       isExecuting: isExecuting ?? this.isExecuting,
       isExecuted: isExecuted ?? this.isExecuted,
+      needsUserInput: needsUserInput ?? this.needsUserInput,
       data: data ?? this.data,
     );
   }
@@ -91,6 +95,7 @@ class AssistantAction {
       subtasks: (json['subtasks'] is List)
           ? List<String>.from(json['subtasks'].map((e) => e.toString()))
           : const <String>[],
+      needsUserInput: json['needsUserInput'] == true, // Parse needsUserInput flag
       data: extraData,
     );
   }
