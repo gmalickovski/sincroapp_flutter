@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
@@ -905,7 +906,11 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
             ),
           Row(
             children: [
-              const Icon(Icons.auto_awesome, color: AppColors.primary),
+              SvgPicture.asset(
+                'assets/images/icon-ia-sincroapp-v1.svg',
+                width: 24,
+                height: 24,
+              ),
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
@@ -914,6 +919,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     color: AppColors.primaryText,
+                    decoration: TextDecoration.none,
                   ),
                 ),
               ),
