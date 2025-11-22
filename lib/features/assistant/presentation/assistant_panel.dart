@@ -738,9 +738,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     
     if (isDesktop) {
       if (_isWindowMode) {
-        // "Large Floating Modal" - Window Mode
-        width = 900;
-        height = 800;
+        // "Large Floating Modal" - Window Mode (Widescreen)
+        width = 1000;
+        height = 600;
       } else {
         // "Normal Floating Modal"
         width = 600;
@@ -774,6 +774,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       curve: Curves.easeInOut,
       width: width,
       height: height,
+      clipBehavior: Clip.hardEdge, // Ensure children don't overflow rounded corners
       decoration: BoxDecoration(
         color: AppColors.background,
         borderRadius: borderRadius,
