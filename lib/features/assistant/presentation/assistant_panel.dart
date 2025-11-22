@@ -752,6 +752,23 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       if (height > screenSize.height - 40) height = screenSize.height - 40;
     }
 
+    // Border Radius Logic
+    BorderRadiusGeometry borderRadius;
+    if (isDesktop) {
+      if (_isWindowMode) {
+        borderRadius = BorderRadius.circular(24); // All rounded for Window Mode
+      } else {
+        borderRadius = const BorderRadius.vertical(top: Radius.circular(24)); // Top rounded for Normal Mode
+      }
+    } else {
+      // Mobile
+      if (_isSheetExpanded) {
+        borderRadius = BorderRadius.zero;
+      } else {
+        borderRadius = const BorderRadius.vertical(top: Radius.circular(24));
+      }
+    }
+
     final panelContent = AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -759,9 +776,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       height: height,
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: isModal && !_isSheetExpanded
-            ? const BorderRadius.vertical(top: Radius.circular(24))
-            : BorderRadius.circular(isDesktop ? 16 : 0), // Radius on desktop (both modes)
+        borderRadius: borderRadius,
         boxShadow: isModal || isDesktop
             ? [
                 BoxShadow(
@@ -836,12 +851,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
             alignment: _isWindowMode ? Alignment.center : Alignment.bottomCenter,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: _isWindowMode ? 0 : 20),
-              child: GestureDetector(
-                onTap: () {}, // Consume clicks on the panel itself
-                child: panelContent,
-              ),
+            child: GestureDetector(
+              onTap: () {}, // Consume clicks on the panel itself
+              child: panelContent,
             ),
           ),
         ),
