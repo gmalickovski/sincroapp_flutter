@@ -775,14 +775,35 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
             Padding(
-              padding: const EdgeInsets.only(left: 44, top: 12),
-              child: InlineGoalForm(
-                userData: widget.userData,
-                prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
-                prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
-                prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
-                prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
-                onSave: (goal) => _handleGoalFormSubmit(goal, index),
+              padding: const EdgeInsets.only(top: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // AI Avatar
+                  Container(
+                    width: 40, height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: SvgPicture.asset(
+                      'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Goal Form
+                  Expanded(
+                    child: InlineGoalForm(
+                      userData: widget.userData,
+                      prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
+                      prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
+                      prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
+                      prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
+                      onSave: (goal) => _handleGoalFormSubmit(goal, index),
+                    ),
+                  ),
+                ],
               ),
             )
           // Otherwise show action chips
