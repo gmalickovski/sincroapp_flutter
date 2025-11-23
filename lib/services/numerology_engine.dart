@@ -1027,7 +1027,7 @@ class NumerologyEngine {
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
-        'harmoniaConjugal': harmoniaConjugal,
+        'harmoniaConjugal': _tabelaHarmonia[harmoniaConjugal] ?? {},
         'desafios': desafios,
         'desafioAtual': desafioAtual,
         'momentosDecisivos': momentosDecisivos,
