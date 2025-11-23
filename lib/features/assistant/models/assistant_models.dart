@@ -1,6 +1,6 @@
 // ignore_for_file: constant_identifier_names
 
-enum AssistantActionType { schedule, create_goal, create_task, analyze_harmony }
+enum AssistantActionType { schedule, create_goal, create_task, analyze_harmony, analyze_compatibility }
 
 class AssistantAction {
   final AssistantActionType type;
@@ -66,6 +66,7 @@ class AssistantAction {
     if (typeStr == 'create_goal') t = AssistantActionType.create_goal;
     if (typeStr == 'create_task') t = AssistantActionType.create_task;
     if (typeStr == 'analyze_harmony') t = AssistantActionType.analyze_harmony;
+    if (typeStr == 'analyze_compatibility') t = AssistantActionType.analyze_compatibility;
     DateTime? parseDate(dynamic v) {
       if (v == null) return null;
       final s = v.toString();

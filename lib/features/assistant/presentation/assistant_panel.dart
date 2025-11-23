@@ -14,6 +14,7 @@ import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_compatibility_form.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -582,6 +583,127 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     }
   }
 
+  Future<void> _handleCompatibilityFormSubmit(String partnerName, DateTime partnerDob, int messageIndex) async {
+    // 1. Mark action as executed
+    setState(() {
+      // Note: messageIndex passed from _buildMessageItem is the index in the ListView, 
+      // which is reversed relative to _messages list if ListView.builder uses reversed order.
+      // But looking at _buildMessageItem usage:
+      // itemCount: _messages.length
+      // final m = _messages[_messages.length - 1 - index];
+      // So 'index' passed to _buildMessageItem is the UI index (0 is bottom).
+      // But wait, let's check how I passed it in _buildMessageItem.
+      // onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
+      // Here 'index' is the UI index.
+      // To get the message from _messages list:
+      // final msg = _messages[_messages.length - 1 - messageIndex];
+      
+      final realMsgIndex = _messages.length - 1 - messageIndex;
+      if (realMsgIndex >= 0 && realMsgIndex < _messages.length) {
+        final msg = _messages[realMsgIndex];
+        final actionIndex = msg.actions.indexWhere((a) => a.type == AssistantActionType.analyze_compatibility);
+        if (actionIndex != -1) {
+          final updatedActions = List<AssistantAction>.from(msg.actions);
+          updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(isExecuted: true);
+          _messages[realMsgIndex] = msg.copyWith(actions: updatedActions);
+        }
+      }
+      _isSending = true; // Start typing animation
+    });
+
+    try {
+      // 2. Calculate Partner's Numerology
+      final partnerEngine = NumerologyEngine(
+        nomeCompleto: partnerName,
+        dataNascimento: DateFormat('dd/MM/yyyy').format(partnerDob),
+      );
+      final partnerProfile = partnerEngine.calculateProfile();
+
+      // 3. Get User's Numerology
+      final user = widget.userData;
+      NumerologyResult? userNumerology;
+      if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
+        userNumerology = NumerologyEngine(
+                nomeCompleto: user.nomeAnalise, dataNascimento: user.dataNasc)
+            .calculateProfile();
+      }
+      userNumerology ??= NumerologyEngine(
+              nomeCompleto: 'Indefinido', dataNascimento: '1900-01-01')
+          .calculateProfile();
+
+      // 4. Construct Prompt
+      final prompt = '''
+Realize uma ANÁLISE DE COMPATIBILIDADE AMOROSA/AFINIDADE detalhada entre:
+
+USUÁRIO: ${user.primeiroNome}
+- Destino: ${userNumerology.numeros['destino']}
+- Expressão: ${userNumerology.numeros['expressao']}
+- Motivação: ${userNumerology.numeros['motivacao']}
+- Dia Pessoal: ${userNumerology.numeros['diaPessoal']}
+
+PARCEIRO(A): $partnerName (Nasc: ${DateFormat('dd/MM/yyyy').format(partnerDob)})
+- Destino: ${partnerProfile.numeros['destino']}
+- Expressão: ${partnerProfile.numeros['expressao']}
+- Motivação: ${partnerProfile.numeros['motivacao']}
+- Dia Pessoal: ${partnerProfile.numeros['diaPessoal']}
+
+Analise a harmonia conjugal, pontos fortes e desafios da relação com base nesses números. Seja empático, construtivo e use emojis.
+''';
+
+      // 5. Fetch Context
+      final tasks = await _firestore.getRecentTasks(user.uid, limit: 30);
+      final goals = await _firestore.getActiveGoals(user.uid);
+      final recentJournal = await _firestore.getJournalEntriesForMonth(user.uid, DateTime.now());
+
+      // 6. Ask AI
+      final ans = await AssistantService.ask(
+        question: prompt,
+        user: user,
+        numerology: userNumerology,
+        tasks: tasks,
+        goals: goals,
+        recentJournal: recentJournal,
+        chatHistory: _messages,
+      );
+
+      final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
+
+      if (mounted) {
+        setState(() {
+          _messages.add(AssistantMessage(
+            role: 'assistant',
+            content: ans.answer,
+            time: DateTime.now(),
+            actions: alignedActions,
+          ));
+        });
+      }
+
+      _firestore.addAssistantMessage(
+          widget.userData.uid,
+          AssistantMessage(
+              role: 'assistant',
+              content: ans.answer,
+              time: DateTime.now(),
+              actions: alignedActions));
+
+      await _scrollToBottom();
+
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _messages.add(AssistantMessage(
+              role: 'assistant',
+              content: 'Desculpe, não consegui realizar a análise agora. Tente novamente mais tarde.\\n\\n$e',
+              time: DateTime.now()));
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+      await _scrollToBottom();
+    }
+  }
+
   // --- UI Components ---
 
   Widget _buildTypingIndicator() {
@@ -757,6 +879,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           ),
           
           // 2. Actions (Form or Chips) - Enters with delay
+          // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
             AnimatedMessageBubble(
               delay: const Duration(milliseconds: 400),
@@ -780,6 +903,27 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                 ),
               ),
             )
+          // Check if there's a compatibility analysis action (show form)
+          else if (!isUser && m.actions.any((a) => a.type == AssistantActionType.analyze_compatibility && !a.isExecuted))
+             AnimatedMessageBubble(
+              delay: const Duration(milliseconds: 400),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const SizedBox(width: 40 + 12), 
+                    Expanded(
+                      child: InlineCompatibilityForm(
+                        userData: widget.userData,
+                        onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          // Otherwise show action chips
           else if (!isUser && m.actions.isNotEmpty)
             AnimatedMessageBubble(
               delay: const Duration(milliseconds: 400),

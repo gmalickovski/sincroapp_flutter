@@ -461,6 +461,47 @@ class NumerologyEngine {
     return listaOrdenada;
   }
 
+  /// Calcula o perfil numerológico completo
+  NumerologyResult calculateProfile() {
+    final destino = _calcularNumeroDestino();
+    final expressao = _calcularNumeroExpressao();
+    final motivacao = _calcularNumeroMotivacao();
+    final impressao = _calcularNumeroImpressao();
+    final missao = destino + expressao; // Simplificação comum
+    final talentoOculto = _calcularTalentoOculto(motivacao, expressao);
+    final dataNasc = _parseDate(dataNascimento);
+    final psiquico = dataNasc != null ? _calcularNumeroPsiquico(dataNasc) : 0;
+    
+    // Harmonia Conjugal (Destino + Expressão) - Exemplo simplificado
+    // Na verdade, a harmonia conjugal é a comparação. Aqui retornamos os números base.
+    
+    return NumerologyResult(
+      idade: _calcularIdade(),
+      numeros: {
+        'destino': destino,
+        'expressao': expressao,
+        'motivacao': motivacao,
+        'impressao': impressao,
+        'missao': missao,
+        'talentoOculto': talentoOculto,
+        'psiquico': psiquico,
+        // Adicione outros se necessário
+      },
+      estruturas: {
+        'ciclosDeVida': _calcularCiclosDeVida(destino),
+        'desafios': dataNasc != null ? _calcularDesafios(dataNasc, destino) : {},
+        'momentosDecisivos': dataNasc != null ? _calcularMomentosDecisivos(dataNasc, destino) : {},
+      },
+      listas: {
+        'licoesCarmicas': _calcularLicoesCarmicas(),
+        'debitosCarmicos': _calcularDebitosCarmicos(destino, motivacao, expressao),
+        'tendenciasOcultas': _calcularTendenciasOcultas(),
+      },
+    );
+  }
+
+
+
   final String nomeCompleto;
   final String dataNascimento;
 
