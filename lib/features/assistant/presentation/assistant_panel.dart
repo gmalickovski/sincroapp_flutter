@@ -901,7 +901,7 @@ INSTRUÇÕES:
           // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
             AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
@@ -925,13 +925,25 @@ INSTRUÇÕES:
           // Check if there's a compatibility analysis action (show form)
           else if (!isUser && m.actions.any((a) => a.type == AssistantActionType.analyze_compatibility && !a.isExecuted))
              AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const SizedBox(width: 40 + 12), 
+                    // AI Avatar for compatibility form
+                    Container(
+                      width: 40, height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: SvgPicture.asset(
+                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                      ),
+                    ),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: InlineCompatibilityForm(
                         userData: widget.userData,
@@ -945,7 +957,7 @@ INSTRUÇÕES:
           // Otherwise show action chips
           else if (!isUser && m.actions.isNotEmpty)
             AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 400),
+              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
               child: Padding(
                 padding: const EdgeInsets.only(left: 44, top: 12),
                 child: Wrap(
@@ -1188,7 +1200,7 @@ INSTRUÇÕES:
               const SizedBox(width: 12),
               const Expanded(
                 child: Text(
-                  'Sincro Assistant',
+                  'Sincro IA',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
