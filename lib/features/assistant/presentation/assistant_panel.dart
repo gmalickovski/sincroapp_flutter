@@ -956,18 +956,30 @@ INSTRUÇÕES:
             )
           // Otherwise show action chips
           else if (!isUser && m.actions.isNotEmpty)
-            AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
-              child: Padding(
-                padding: const EdgeInsets.only(left: 44, top: 12),
-                child: Wrap(
-                  spacing: 8, runSpacing: 8,
-                  children: m.actions.asMap().entries.map((entry) {
-                    return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
-                  }).toList(),
-                ),
-              ),
-            ),
+            // Only animate if there are non-executed actions
+            // If all actions are executed (chips are confirmation/summary), show without animation
+            anyActionExecuted
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 44, top: 12),
+                    child: Wrap(
+                      spacing: 8, runSpacing: 8,
+                      children: m.actions.asMap().entries.map((entry) {
+                        return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
+                      }).toList(),
+                    ),
+                  )
+                : AnimatedMessageBubble(
+                    delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 44, top: 12),
+                      child: Wrap(
+                        spacing: 8, runSpacing: 8,
+                        children: m.actions.asMap().entries.map((entry) {
+                          return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
+                        }).toList(),
+                      ),
+                    ),
+                  ),
         ],
       ),
     );
