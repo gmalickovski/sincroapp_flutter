@@ -13,6 +13,7 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -586,48 +587,45 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
   Widget _buildTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            padding: const EdgeInsets.all(8),
-            child: SvgPicture.asset(
-              'assets/images/icon-ia-sincroapp-branco-v1.svg',
-              // Sem colorFilter para usar a cor branca original
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(4),
-                bottomRight: Radius.circular(16),
-              ),
-              border: Border.all(
-                color: AppColors.border.withValues(alpha: 0.5),
+      child: AnimatedMessageBubble(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AnimatedAvatar(
+              child: Container(
+                width: 40, height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(8),
+                child: SvgPicture.asset(
+                  'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                ),
               ),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _Dot(delay: 0),
-                const SizedBox(width: 4),
-                _Dot(delay: 200),
-                const SizedBox(width: 4),
-                _Dot(delay: 400),
-              ],
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(4),
+                  bottomRight: Radius.circular(16),
+                ),
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.5),
+                ),
+              ),
+              child: const TypingIndicator(
+                color: AppColors.primary,
+                dotSize: 8,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -706,118 +704,127 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     final isUser = m.role == 'user';
     final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
-            children: [
-              if (!isUser) ...[
-                Container(
-                  width: 40, height: 40, // Aumentado de 32 para 40
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(8), // Padding interno para o SVG
-                  child: SvgPicture.asset(
-                    'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                    // colorFilter removido para usar a cor original (branco)
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
-              Flexible(
-                child: Container(
-                  margin: isUser
-                      ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
-                      : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null), // Margem condicional > 700px
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isUser ? 16 : 4),
-                      bottomRight: Radius.circular(isUser ? 4 : 16),
-                    ),
-                    border: Border.all(
-                      color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
+    return AnimatedMessageBubble(
+      key: ValueKey(m.time.toString()), // Helps preserve state
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Column(
+          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
+              children: [
+                if (!isUser) ...[
+                  AnimatedAvatar(
+                    child: Container(
+                      width: 40, height: 40, // Aumentado de 32 para 40
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(8), // Padding interno para o SVG
+                      child: SvgPicture.asset(
+                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                        // colorFilter removido para usar a cor original (branco)
+                      ),
                     ),
                   ),
-                  child: MarkdownBody(
-                    data: m.content,
-                    selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                      p: TextStyle(
-                        fontSize: 15,
-                        height: 1.5,
-                        color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+                  const SizedBox(width: 12),
+                ],
+                Flexible(
+                  child: Container(
+                    margin: isUser
+                        ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
+                        : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null), // Margem condicional > 700px
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isUser ? 16 : 4),
+                        bottomRight: Radius.circular(isUser ? 4 : 16),
+                      ),
+                      border: Border.all(
+                        color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
+                      ),
+                    ),
+                    child: MarkdownBody(
+                      data: m.content,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                        p: TextStyle(
+                          fontSize: 15,
+                          height: 1.5,
+                          color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              if (isUser) ...[
-                const SizedBox(width: 12),
-                UserAvatar(
-                  firstName: widget.userData.primeiroNome,
-                  lastName: widget.userData.sobrenome,
-                  photoUrl: widget.userData.photoUrl,
-                  radius: 20, // Tamanho 40x40 (radius 20)
-                ),
-              ],
-            ],
-          ),
-          // Check if there's a create_goal action that needs user input (show form)
-          if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
-                children: [
-                  // AI Avatar
-                  Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: SvgPicture.asset(
-                      'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                    ),
-                  ),
+                if (isUser) ...[
                   const SizedBox(width: 12),
-                  // Goal Form
-                  Expanded(
-                    child: InlineGoalForm(
-                      userData: widget.userData,
-                      prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
-                      prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
-                      prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
-                      prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
-                      onSave: (goal) => _handleGoalFormSubmit(goal, index),
+                  AnimatedAvatar(
+                    child: UserAvatar(
+                      firstName: widget.userData.primeiroNome,
+                      lastName: widget.userData.sobrenome,
+                      photoUrl: widget.userData.photoUrl,
+                      radius: 20, // Tamanho 40x40 (radius 20)
                     ),
                   ),
                 ],
-              ),
-            )
-          // Otherwise show action chips
-          else if (!isUser && m.actions.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(left: 44, top: 12),
-              child: Wrap(
-                spacing: 8, runSpacing: 8,
-                children: m.actions.asMap().entries.map((entry) {
-                  return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
-                }).toList(),
-              ),
+              ],
             ),
-        ],
+            // Check if there's a create_goal action that needs user input (show form)
+            if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
+                  children: [
+                    // AI Avatar
+                    AnimatedAvatar(
+                      child: Container(
+                        width: 40, height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        padding: const EdgeInsets.all(8),
+                        child: SvgPicture.asset(
+                          'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Goal Form
+                    Expanded(
+                      child: InlineGoalForm(
+                        userData: widget.userData,
+                        prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
+                        prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
+                        prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
+                        prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
+                        onSave: (goal) => _handleGoalFormSubmit(goal, index),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            // Otherwise show action chips
+            else if (!isUser && m.actions.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(left: 44, top: 12),
+                child: Wrap(
+                  spacing: 8, runSpacing: 8,
+                  children: m.actions.asMap().entries.map((entry) {
+                    return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
+                  }).toList(),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1178,53 +1185,4 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
   }
 }
 
-class _Dot extends StatefulWidget {
-  final int delay;
-  const _Dot({required this.delay});
 
-  @override
-  State<_Dot> createState() => _DotState();
-}
-
-class _DotState extends State<_Dot> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
-    
-    Future.delayed(Duration(milliseconds: widget.delay), () {
-      if (mounted) _controller.forward();
-    });
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: Offset.zero,
-        end: const Offset(0, -0.3), // Move para cima
-      ).animate(CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      )),
-      child: Container(
-        width: 8, height: 8,
-        decoration: const BoxDecoration(
-          color: AppColors.primary,
-          shape: BoxShape.circle,
-        ),
-      ),
-    );
-  }
-}
