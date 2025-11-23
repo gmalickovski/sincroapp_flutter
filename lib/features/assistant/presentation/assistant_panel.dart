@@ -711,88 +711,60 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // 1. Main Content (Avatar + Text) - Enters first
-          AnimatedMessageBubble(
-            duration: const Duration(milliseconds: 400),
-            child: Row(
-              mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
-              children: [
-                if (!isUser) ...[
-                  AnimatedAvatar(
-                    child: Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: SvgPicture.asset(
-                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                      ),
-                    ),
+          // 1. Main Content (Avatar + Text)
+          Row(
+            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
+            children: [
+              if (!isUser) ...[
+                // AI Avatar - Static (no animation) because it was already there during typing
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
                   ),
-                  const SizedBox(width: 12),
-                ],
-                Flexible(
-                  child: Container(
-                    margin: isUser
-                        ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
-                        : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isUser ? 16 : 4),
-                        bottomRight: Radius.circular(isUser ? 4 : 16),
-                      ),
-                      border: Border.all(
-                        color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    child: MarkdownBody(
-                      data: m.content,
-                      selectable: true,
-                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                        p: TextStyle(
-                          fontSize: 15,
-                          height: 1.5,
-                          color: isUser ? AppColors.primaryText : AppColors.secondaryText,
-                        ),
-                      ),
-                    ),
+                  padding: const EdgeInsets.all(8),
+                  child: SvgPicture.asset(
+                    'assets/images/icon-ia-sincroapp-branco-v1.svg',
                   ),
                 ),
-                if (isUser) ...[
-                  const SizedBox(width: 12),
-                  AnimatedAvatar(
-                    child: UserAvatar(
-                      firstName: widget.userData.primeiroNome,
-                      lastName: widget.userData.sobrenome,
-                      photoUrl: widget.userData.photoUrl,
-                      radius: 20,
-                    ),
-                  ),
-                ],
+                const SizedBox(width: 12),
               ],
-            ),
+              Flexible(
+                child: isUser
+                    ? AnimatedMessageBubble( // User message still slides in
+                        duration: const Duration(milliseconds: 400),
+                        child: _buildMessageBubbleContent(m, isUser),
+                      )
+                    : MorphingMessageBubble( // AI message morphs from typing size
+                        child: _buildMessageBubbleContent(m, isUser),
+                      ),
+              ),
+              if (isUser) ...[
+                const SizedBox(width: 12),
+                AnimatedAvatar(
+                  child: UserAvatar(
+                    firstName: widget.userData.primeiroNome,
+                    lastName: widget.userData.sobrenome,
+                    photoUrl: widget.userData.photoUrl,
+                    radius: 20,
+                  ),
+                ),
+              ],
+            ],
           ),
           
           // 2. Actions (Form or Chips) - Enters with delay
-          // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
             AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 400), // Staggered entry
+              delay: const Duration(milliseconds: 400),
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // AI Avatar Placeholder (invisible to keep alignment)
                     const SizedBox(width: 40 + 12), 
-                    // Goal Form
                     Expanded(
                       child: InlineGoalForm(
                         userData: widget.userData,
@@ -807,10 +779,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                 ),
               ),
             )
-          // Otherwise show action chips
           else if (!isUser && m.actions.isNotEmpty)
             AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 400), // Staggered entry
+              delay: const Duration(milliseconds: 400),
               child: Padding(
                 padding: const EdgeInsets.only(left: 44, top: 12),
                 child: Wrap(
@@ -822,6 +793,38 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubbleContent(AssistantMessage m, bool isUser) {
+    return Container(
+      margin: isUser
+          ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
+          : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
+        borderRadius: BorderRadius.only(
+          topLeft: const Radius.circular(16),
+          topRight: const Radius.circular(16),
+          bottomLeft: Radius.circular(isUser ? 16 : 4),
+          bottomRight: Radius.circular(isUser ? 4 : 16),
+        ),
+        border: Border.all(
+          color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
+        ),
+      ),
+      child: MarkdownBody(
+        data: m.content,
+        selectable: true,
+        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+          p: TextStyle(
+            fontSize: 15,
+            height: 1.5,
+            color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+          ),
+        ),
       ),
     );
   }
