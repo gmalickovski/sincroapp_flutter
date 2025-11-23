@@ -704,29 +704,31 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
     final isUser = m.role == 'user';
     final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
 
-    return AnimatedMessageBubble(
-      key: ValueKey(m.time.toString()), // Helps preserve state
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        child: Column(
-          crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Row(
+    // Use a unique key based on time to preserve state and animations
+    return Padding(
+      key: ValueKey(m.time.toString()),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Column(
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          // 1. Main Content (Avatar + Text) - Enters first
+          AnimatedMessageBubble(
+            duration: const Duration(milliseconds: 400),
+            child: Row(
               mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
               children: [
                 if (!isUser) ...[
                   AnimatedAvatar(
                     child: Container(
-                      width: 40, height: 40, // Aumentado de 32 para 40
+                      width: 40, height: 40,
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      padding: const EdgeInsets.all(8), // Padding interno para o SVG
+                      padding: const EdgeInsets.all(8),
                       child: SvgPicture.asset(
                         'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                        // colorFilter removido para usar a cor original (branco)
                       ),
                     ),
                   ),
@@ -736,7 +738,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   child: Container(
                     margin: isUser
                         ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
-                        : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null), // Margem condicional > 700px
+                        : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
                       color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
@@ -770,34 +772,26 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                       firstName: widget.userData.primeiroNome,
                       lastName: widget.userData.sobrenome,
                       photoUrl: widget.userData.photoUrl,
-                      radius: 20, // Tamanho 40x40 (radius 20)
+                      radius: 20,
                     ),
                   ),
                 ],
               ],
             ),
-            // Check if there's a create_goal action that needs user input (show form)
-            if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
-              Padding(
+          ),
+          
+          // 2. Actions (Form or Chips) - Enters with delay
+          // Check if there's a create_goal action that needs user input (show form)
+          if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
+            AnimatedMessageBubble(
+              delay: const Duration(milliseconds: 400), // Staggered entry
+              child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    // AI Avatar
-                    AnimatedAvatar(
-                      child: Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        padding: const EdgeInsets.all(8),
-                        child: SvgPicture.asset(
-                          'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    // AI Avatar Placeholder (invisible to keep alignment)
+                    const SizedBox(width: 40 + 12), 
                     // Goal Form
                     Expanded(
                       child: InlineGoalForm(
@@ -811,10 +805,13 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                     ),
                   ],
                 ),
-              )
-            // Otherwise show action chips
-            else if (!isUser && m.actions.isNotEmpty)
-              Padding(
+              ),
+            )
+          // Otherwise show action chips
+          else if (!isUser && m.actions.isNotEmpty)
+            AnimatedMessageBubble(
+              delay: const Duration(milliseconds: 400), // Staggered entry
+              child: Padding(
                 padding: const EdgeInsets.only(left: 44, top: 12),
                 child: Wrap(
                   spacing: 8, runSpacing: 8,
@@ -823,8 +820,8 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                   }).toList(),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

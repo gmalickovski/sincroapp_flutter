@@ -8,11 +8,14 @@ class AnimatedMessageBubble extends StatefulWidget {
   final Duration duration;
   final Curve curve;
 
+  final Duration delay;
+
   const AnimatedMessageBubble({
     super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 400),
     this.curve = Curves.easeOutQuad,
+    this.delay = Duration.zero,
   });
 
   @override
@@ -38,7 +41,13 @@ class _AnimatedMessageBubbleState extends State<AnimatedMessageBubble>
       CurvedAnimation(parent: _controller, curve: widget.curve),
     );
 
-    _controller.forward();
+    if (widget.delay == Duration.zero) {
+      _controller.forward();
+    } else {
+      Future.delayed(widget.delay, () {
+        if (mounted) _controller.forward();
+      });
+    }
   }
 
   @override
