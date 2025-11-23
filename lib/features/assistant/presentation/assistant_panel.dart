@@ -584,42 +584,15 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
   }
 
   Future<void> _handleCompatibilityFormSubmit(String partnerName, DateTime partnerDob, int messageIndex) async {
-    // 1. Mark action as executed
-    setState(() {
-      // Note: messageIndex passed from _buildMessageItem is the index in the ListView, 
-      // which is reversed relative to _messages list if ListView.builder uses reversed order.
-      // But looking at _buildMessageItem usage:
-      // itemCount: _messages.length
-      // final m = _messages[_messages.length - 1 - index];
-      // So 'index' passed to _buildMessageItem is the UI index (0 is bottom).
-      // But wait, let's check how I passed it in _buildMessageItem.
-      // onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
-      // Here 'index' is the UI index.
-      // To get the message from _messages list:
-      // final msg = _messages[_messages.length - 1 - messageIndex];
-      
-      final realMsgIndex = _messages.length - 1 - messageIndex;
-      if (realMsgIndex >= 0 && realMsgIndex < _messages.length) {
-        final msg = _messages[realMsgIndex];
-        final actionIndex = msg.actions.indexWhere((a) => a.type == AssistantActionType.analyze_compatibility);
-        if (actionIndex != -1) {
-          final updatedActions = List<AssistantAction>.from(msg.actions);
-          updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(isExecuted: true);
-          _messages[realMsgIndex] = msg.copyWith(actions: updatedActions);
-        }
-      }
-      _isSending = true; // Start typing animation
-    });
-
     try {
-      // 2. Calculate Partner's Numerology
+      // 1. Calculate Partner's Numerology
       final partnerEngine = NumerologyEngine(
         nomeCompleto: partnerName,
         dataNascimento: DateFormat('dd/MM/yyyy').format(partnerDob),
       );
       final partnerProfile = partnerEngine.calculateProfile();
 
-      // 3. Get User's Numerology
+      // 2. Get User's Numerology
       final user = widget.userData;
       NumerologyResult? userNumerology;
       if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
@@ -631,31 +604,77 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
               nomeCompleto: 'Indefinido', dataNascimento: '1900-01-01')
           .calculateProfile();
 
-      // 4. Construct Prompt
+      // 3. Check Compatibility
+      final userHarmonia = userNumerology.numeros['harmoniaConjugal'] ?? 0;
+      final partnerHarmonia = partnerProfile.numeros['harmoniaConjugal'] ?? 0;
+      final compatibility = NumerologyEngine.checkCompatibility(userHarmonia, partnerHarmonia);
+
+      // 4. Update message to mark action as executed and add confirmation
+      if (messageIndex < _messages.length) {
+        setState(() {
+          final msg = _messages[messageIndex];
+          final updatedActions = msg.actions.map((action) {
+            if (action.type == AssistantActionType.analyze_compatibility) {
+              return action.copyWith(
+                isExecuted: true,
+                needsUserInput: false,
+              );
+            }
+            return action;
+          }).toList();
+          _messages[messageIndex] = msg.copyWith(actions: updatedActions);
+
+          // Add confirmation message
+          _messages.add(AssistantMessage(
+            role: 'assistant',
+            content: '💘 **Análise de Compatibilidade Iniciada!**\n\n🔮 Analisando a harmonia entre você e **$partnerName**...\n\n📊 Status: **${compatibility['status']}**\n\nAguarde a análise completa!',
+            time: DateTime.now(),
+          ));
+        });
+
+        await _scrollToBottom();
+      }
+
+      // 5. Start typing animation for full analysis
+      setState(() => _isSending = true);
+
+      // 6. Construct Prompt
       final prompt = '''
 Realize uma ANÁLISE DE COMPATIBILIDADE AMOROSA/AFINIDADE detalhada entre:
 
 USUÁRIO: ${user.primeiroNome}
+- Harmonia Conjugal: $userHarmonia
 - Destino: ${userNumerology.numeros['destino']}
 - Expressão: ${userNumerology.numeros['expressao']}
 - Motivação: ${userNumerology.numeros['motivacao']}
 - Dia Pessoal: ${userNumerology.numeros['diaPessoal']}
 
 PARCEIRO(A): $partnerName (Nasc: ${DateFormat('dd/MM/yyyy').format(partnerDob)})
+- Harmonia Conjugal: $partnerHarmonia
 - Destino: ${partnerProfile.numeros['destino']}
 - Expressão: ${partnerProfile.numeros['expressao']}
 - Motivação: ${partnerProfile.numeros['motivacao']}
 - Dia Pessoal: ${partnerProfile.numeros['diaPessoal']}
 
-Analise a harmonia conjugal, pontos fortes e desafios da relação com base nesses números. Seja empático, construtivo e use emojis.
+RESULTADO DA HARMONIA CONJUGAL:
+- Status: ${compatibility['status']}
+- Descrição Técnica: ${compatibility['descricao']}
+
+INSTRUÇÕES:
+1. Explique o que significa a Harmonia Conjugal de cada um.
+2. Analise a compatibilidade baseada no Status acima (Vibram Juntos, Atração, Opostos, etc.).
+3. Se forem OPOSTOS, explique que podem dar certo com sabedoria.
+4. Se forem IGUAIS, alerte sobre a monotonia (exceto 5).
+5. Use também os outros números (Destino, Expressão) para complementar a análise.
+6. Seja empático, construtivo e use emojis.
 ''';
 
-      // 5. Fetch Context
+      // 7. Fetch Context
       final tasks = await _firestore.getRecentTasks(user.uid, limit: 30);
       final goals = await _firestore.getActiveGoals(user.uid);
       final recentJournal = await _firestore.getJournalEntriesForMonth(user.uid, DateTime.now());
 
-      // 6. Ask AI
+      // 8. Ask AI
       final ans = await AssistantService.ask(
         question: prompt,
         user: user,
@@ -694,7 +713,7 @@ Analise a harmonia conjugal, pontos fortes e desafios da relação com base ness
         setState(() {
           _messages.add(AssistantMessage(
               role: 'assistant',
-              content: 'Desculpe, não consegui realizar a análise agora. Tente novamente mais tarde.\\n\\n$e',
+              content: 'Desculpe, não consegui realizar a análise agora. Tente novamente mais tarde.\n\n$e',
               time: DateTime.now()));
         });
       }

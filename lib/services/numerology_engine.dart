@@ -472,8 +472,7 @@ class NumerologyEngine {
     final dataNasc = _parseDate(dataNascimento);
     final psiquico = dataNasc != null ? _calcularNumeroPsiquico(dataNasc) : 0;
     
-    // Harmonia Conjugal (Destino + Expressão) - Exemplo simplificado
-    // Na verdade, a harmonia conjugal é a comparação. Aqui retornamos os números base.
+    final harmoniaConjugal = _calcularHarmoniaConjugal(destino, expressao);
     
     return NumerologyResult(
       idade: _calcularIdade(),
@@ -485,7 +484,7 @@ class NumerologyEngine {
         'missao': missao,
         'talentoOculto': talentoOculto,
         'psiquico': psiquico,
-        // Adicione outros se necessário
+        'harmoniaConjugal': harmoniaConjugal,
       },
       estruturas: {
         'ciclosDeVida': _calcularCiclosDeVida(destino),
@@ -884,63 +883,50 @@ class NumerologyEngine {
     return 9 - _calcularLicoesCarmicas().length;
   }
 
-  Map<String, dynamic> _calcularHarmoniaConjugal(int missao) {
-    const harmonias = {
-      1: {
-        'vibra': [9],
-        'atrai': [4, 8],
-        'oposto': [6, 7],
-        'passivo': [2, 3, 5]
-      },
-      2: {
-        'vibra': [8],
-        'atrai': [7, 9],
-        'oposto': [5],
-        'passivo': [1, 3, 4, 6]
-      },
-      3: {
-        'vibra': [7],
-        'atrai': [5, 6, 9],
-        'oposto': [4, 8],
-        'passivo': [1, 2]
-      },
-      4: {
-        'vibra': [6],
-        'atrai': [1, 8],
-        'oposto': [3, 5],
-        'passivo': [2, 7, 9]
-      },
-      5: {
-        'vibra': [5],
-        'atrai': [3, 9],
-        'oposto': [2, 4, 6],
-        'passivo': [1, 7, 8]
-      },
-      6: {
-        'vibra': [4],
-        'atrai': [3, 7, 9],
-        'oposto': [1, 5, 8],
-        'passivo': [2]
-      },
-      7: {
-        'vibra': [3],
-        'atrai': [2, 6],
-        'oposto': [1, 9],
-        'passivo': [4, 5, 8]
-      },
-      8: {
-        'vibra': [2],
-        'atrai': [1, 4],
-        'oposto': [3, 6],
-        'passivo': [5, 7, 9]
-      },
-      9: {
-        'vibra': [1],
-        'atrai': [2, 3, 5, 6],
-        'passivo': [4, 8]
-      },
-    };
-    return harmonias[missao] ?? {};
+  // --- Harmonia Conjugal Logic ---
+
+  int _calcularHarmoniaConjugal(int destino, int expressao) {
+    // Soma Expressão + Destino e reduz a 1-9 (sem mestres)
+    return _reduzirNumero(destino + expressao, mestre: false);
+  }
+
+  static const Map<int, Map<String, List<int>>> _tabelaHarmonia = {
+    1: {'vibra': [9], 'atrai': [4, 8], 'oposto': [6, 7], 'passivo': [2, 3, 5]},
+    2: {'vibra': [8], 'atrai': [7, 9], 'oposto': [5], 'passivo': [1, 3, 4, 6]},
+    3: {'vibra': [7], 'atrai': [5, 6, 9], 'oposto': [4, 8], 'passivo': [1, 2]},
+    4: {'vibra': [6], 'atrai': [1, 8], 'oposto': [3, 5], 'passivo': [2, 7, 9]},
+    5: {'vibra': [5], 'atrai': [3, 9], 'oposto': [2, 4, 6], 'passivo': [1, 7, 8]},
+    6: {'vibra': [4], 'atrai': [3, 7, 9], 'oposto': [1, 5, 8], 'passivo': [2]},
+    7: {'vibra': [3], 'atrai': [2, 6], 'oposto': [1, 9], 'passivo': [4, 5, 8]},
+    8: {'vibra': [2], 'atrai': [1, 4], 'oposto': [3, 6], 'passivo': [5, 7, 9]},
+    9: {'vibra': [1], 'atrai': [2, 3, 5, 6], 'oposto': [7], 'passivo': [4, 8]},
+  };
+
+  static Map<String, dynamic> checkCompatibility(int harmonia1, int harmonia2) {
+    if (harmonia1 == harmonia2) {
+      if (harmonia1 == 5) {
+        return {'status': 'Compatíveis (Vibram juntos)', 'descricao': 'Vocês possuem o mesmo número (5). Um completa o outro, excelente compatibilidade!'};
+      }
+      return {'status': 'Compatíveis (Monotonia)', 'descricao': 'Vocês possuem o mesmo número ($harmonia1). São compatíveis e harmônicos, mas o relacionamento tende a tornar-se monótono com o tempo se não houver novidades.'};
+    }
+
+    final regras = _tabelaHarmonia[harmonia1];
+    if (regras == null) return {'status': 'Desconhecido', 'descricao': ''};
+
+    if ((regras['vibra'] as List).contains(harmonia2)) {
+      return {'status': 'Vibram Juntos', 'descricao': 'Excelente compatibilidade! O número $harmonia1 vibra em sintonia com o $harmonia2.'};
+    }
+    if ((regras['atrai'] as List).contains(harmonia2)) {
+      return {'status': 'Atração', 'descricao': 'Existe uma forte atração entre os números $harmonia1 e $harmonia2.'};
+    }
+    if ((regras['oposto'] as List).contains(harmonia2)) {
+      return {'status': 'Opostos', 'descricao': 'Os números $harmonia1 e $harmonia2 são opostos. Podem ter um excelente relacionamento se houver consciência e sabedoria para lidar com as diferenças.'};
+    }
+    if ((regras['passivo'] as List).contains(harmonia2)) {
+      return {'status': 'Passivo', 'descricao': 'A relação entre $harmonia1 e $harmonia2 é passiva. Exige esforço mútuo para manter a chama acesa.'};
+    }
+
+    return {'status': 'Neutro', 'descricao': 'Relação sem fortes influências numerológicas diretas.'};
   }
 
   // === FIM DOS NOVOS MÉTODOS ===
@@ -1005,7 +991,7 @@ class NumerologyEngine {
         _calcularDebitosCarmicos(destino, motivacao, expressao);
     final tendenciasOcultas = _calcularTendenciasOcultas();
     final diasFavoraveis = calcularDiasFavoraveis();
-    final harmoniaConjugal = _calcularHarmoniaConjugal(missao);
+    final harmoniaConjugal = _calcularHarmoniaConjugal(destino, expressao);
 
     // Momento Decisivo Atual
     Map<String, dynamic> momentoDecisivoAtual;
