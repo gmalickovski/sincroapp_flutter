@@ -738,6 +738,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
                         child: _buildMessageBubbleContent(m, isUser),
                       )
                     : MorphingMessageBubble( // AI message morphs from typing size
+                        duration: const Duration(milliseconds: 600),
                         child: _buildMessageBubbleContent(m, isUser),
                       ),
               ),
