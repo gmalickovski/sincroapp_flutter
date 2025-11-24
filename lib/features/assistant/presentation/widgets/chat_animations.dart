@@ -10,6 +10,7 @@ class MessageEntryAnimation extends StatefulWidget {
   final Curve curve;
   final Duration delay;
   final bool isUser;
+  final bool animate;
 
   const MessageEntryAnimation({
     super.key,
@@ -18,6 +19,7 @@ class MessageEntryAnimation extends StatefulWidget {
     this.curve = Curves.easeOutQuad,
     this.delay = Duration.zero,
     this.isUser = false,
+    this.animate = true,
   });
 
   @override
@@ -49,7 +51,9 @@ class _MessageEntryAnimationState extends State<MessageEntryAnimation>
     
     _size = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
 
-    if (widget.delay == Duration.zero) {
+    if (!widget.animate) {
+      _controller.value = 1.0;
+    } else if (widget.delay == Duration.zero) {
       _controller.forward();
     } else {
       Future.delayed(widget.delay, () {

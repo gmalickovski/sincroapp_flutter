@@ -61,6 +61,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _firestore = FirestoreService();
   final _speechService = SpeechService();
   final _inputFocusNode = FocusNode();
+  final Set<String> _animatedMessageIds = {}; // Track messages that have already animated
 
   // --- State Variables ---
   final List<AssistantMessage> _messages = [];
@@ -584,7 +585,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         );
         
         // Adicionar mensagem de sucesso estruturada com ação de navegação
-        _messages.insert(0, AssistantMessage(
+        _messages.add(AssistantMessage(
           content: '✨ **Jornada Criada com Sucesso!**\n\n🎯 **${goal.title}**\n📅 Conclusão prevista: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(goal.targetDate!)}\n\n🏆 Adicionei **$addedCount marcos** à sua lista de tarefas!',
           role: 'assistant',
           time: DateTime.now(),
@@ -903,17 +904,31 @@ INSTRUÇÕES:
                 const SizedBox(width: 12),
               ],
               Flexible(
-                child: isUser
-                    ? MessageEntryAnimation( // User message slides in
-                        isUser: true,
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildMessageBubbleContent(m, isUser),
-                      )
-                    : MessageEntryAnimation( // AI message slides in
-                        isUser: false,
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildMessageBubbleContent(m, isUser),
-                      ),
+                child: Builder(
+                  builder: (context) {
+                    final msgKey = m.time.toString();
+                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                    if (shouldAnimate) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _animatedMessageIds.add(msgKey);
+                      });
+                    }
+
+                    return isUser
+                        ? MessageEntryAnimation( // User message slides in
+                            isUser: true,
+                            animate: shouldAnimate,
+                            duration: const Duration(milliseconds: 300),
+                            child: _buildMessageBubbleContent(m, isUser),
+                          )
+                        : MessageEntryAnimation( // AI message slides in
+                            isUser: false,
+                            animate: shouldAnimate,
+                            duration: const Duration(milliseconds: 300),
+                            child: _buildMessageBubbleContent(m, isUser),
+                          );
+                  }
+                ),
               ),
               if (isUser) ...[
                 const SizedBox(width: 12),
@@ -932,62 +947,86 @@ INSTRUÇÕES:
           // 2. Actions (Form or Chips) - Enters with delay
           // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
-            MessageEntryAnimation(
-              isUser: false,
-              delay: const Duration(milliseconds: 400), // Reduced delay
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    const SizedBox(width: 40 + 12), 
-                    Expanded(
-                      child: InlineGoalForm(
-                        userData: widget.userData,
-                        prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
-                        prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
-                        prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
-                        prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
-                        onSave: (goal) => _handleGoalFormSubmit(goal, index),
-                      ),
+            Builder(
+              builder: (context) {
+                final actionKey = '${m.time}_goal_form';
+                final shouldAnimate = !_animatedMessageIds.contains(actionKey);
+                if (shouldAnimate) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _animatedMessageIds.add(actionKey);
+                  });
+                }
+                return MessageEntryAnimation(
+                  isUser: false,
+                  animate: shouldAnimate,
+                  delay: const Duration(milliseconds: 400), // Reduced delay
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        const SizedBox(width: 40 + 12), 
+                        Expanded(
+                          child: InlineGoalForm(
+                            userData: widget.userData,
+                            prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
+                            prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
+                            prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
+                            prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
+                            onSave: (goal) => _handleGoalFormSubmit(goal, index),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }
             )
           // Check if there's a compatibility analysis action (show form)
           else if (!isUser && m.actions.any((a) => a.type == AssistantActionType.analyze_compatibility && !a.isExecuted))
-             MessageEntryAnimation(
-              isUser: false,
-              delay: const Duration(milliseconds: 400),
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // AI Avatar for compatibility form
-                    Container(
-                      width: 40, height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: SvgPicture.asset(
-                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                      ),
+             Builder(
+               builder: (context) {
+                 final actionKey = '${m.time}_compat_form';
+                 final shouldAnimate = !_animatedMessageIds.contains(actionKey);
+                 if (shouldAnimate) {
+                   WidgetsBinding.instance.addPostFrameCallback((_) {
+                     _animatedMessageIds.add(actionKey);
+                   });
+                 }
+                 return MessageEntryAnimation(
+                  isUser: false,
+                  animate: shouldAnimate,
+                  delay: const Duration(milliseconds: 400),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        // AI Avatar for compatibility form
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          child: SvgPicture.asset(
+                            'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: InlineCompatibilityForm(
+                            userData: widget.userData,
+                            onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: InlineCompatibilityForm(
-                        userData: widget.userData,
-                        onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
+                  ),
+                );
+               }
+             )
           // Otherwise show action chips
           else if (!isUser && m.actions.isNotEmpty)
             // Only animate if there are non-executed actions
@@ -1002,18 +1041,30 @@ INSTRUÇÕES:
                       }).toList(),
                     ),
                   )
-                : MessageEntryAnimation(
-                    isUser: false,
-                    delay: const Duration(milliseconds: 400),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 44, top: 12),
-                      child: Wrap(
-                        spacing: 8, runSpacing: 8,
-                        children: m.actions.asMap().entries.map((entry) {
-                          return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
-                        }).toList(),
-                      ),
-                    ),
+                : Builder(
+                    builder: (context) {
+                      final actionKey = '${m.time}_chips';
+                      final shouldAnimate = !_animatedMessageIds.contains(actionKey);
+                      if (shouldAnimate) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _animatedMessageIds.add(actionKey);
+                        });
+                      }
+                      return MessageEntryAnimation(
+                        isUser: false,
+                        animate: shouldAnimate,
+                        delay: const Duration(milliseconds: 400),
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 44, top: 12),
+                          child: Wrap(
+                            spacing: 8, runSpacing: 8,
+                            children: m.actions.asMap().entries.map((entry) {
+                              return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
+                            }).toList(),
+                          ),
+                        ),
+                      );
+                    }
                   ),
         ],
       ),
