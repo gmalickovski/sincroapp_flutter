@@ -370,34 +370,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             ),
                           )
                         else ...[
-                          // Mobile Layout with Sticky Header
-                          SliverPersistentHeader(
-                            pinned: true,
-                            delegate: _StickyHeaderDelegate(
-                              child: Container(
-                                color: AppColors.background,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: horizontalPadding,
-                                          vertical: 8.0),
-                                      child: _CollapsibleGoalInfoCard(
-                                          goal: widget.initialGoal,
-                                          progress: progress),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.fromLTRB(
-                                          horizontalPadding,
-                                          16.0,
-                                          horizontalPadding,
-                                          16.0),
-                                      child: _buildMilestonesHeader(),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                          // Mobile Layout
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding, vertical: 8.0),
+                              child: _CollapsibleGoalInfoCard(
+                                  goal: widget.initialGoal, progress: progress),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(horizontalPadding,
+                                  8.0, horizontalPadding, 16.0),
+                              child: _buildMilestonesHeader(),
                             ),
                           ),
                           _buildMilestonesListSliver(
@@ -414,7 +400,54 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               // Modal de Onboarding (se não houver marcos)
               if (milestones.isEmpty && !_isLoading)
                 GoalOnboardingModal(
-                  onAddMilestone: _addMilestone,
+                  onAddMilestone: (String title, String? dateStr) {
+                    // Converte a data string para DateTime se fornecida
+                    DateTime? dueDate;
+                    if (dateStr != null) {
+                      try {
+                        final parts = dateStr.split('/');
+                        if (parts.length == 3) {
+                          dueDate = DateTime(
+                            int.parse(parts[2]), // ano
+                            int.parse(parts[1]), // mês
+                            int.parse(parts[0]), // dia
+                          ).toUtc();
+                        }
+                      } catch (e) {
+                        debugPrint('Erro ao converter data: $e');
+                      }
+                    }
+
+                    // Calcula o dia pessoal
+                    final dateForPersonalDay = dueDate ?? DateTime.now().toUtc();
+                    final int? personalDay = _calculatePersonalDay(dateForPersonalDay);
+
+                    // Cria o marco
+                    final newTask = TaskModel(
+                      id: '',
+                      text: title,
+                      createdAt: DateTime.now().toUtc(),
+                      dueDate: dueDate,
+                      journeyId: widget.initialGoal.id,
+                      journeyTitle: widget.initialGoal.title,
+                      tags: [],
+                      personalDay: personalDay,
+                    );
+
+                    // Salva no Firestore
+                    _firestoreService.addTask(widget.userData.uid, newTask).catchError((error) {
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Erro ao salvar marco: $error'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    });
+                  },
+                  onClose: () {
+                    // O modal se fecha sozinho, não precisa fazer nada
+                  },
                   // Só mostra botão de IA se o usuário tiver plano premium (Sinergia)
                   onSuggestWithAI: widget.userData.subscription.plan ==
                           SubscriptionPlan.premium
@@ -611,7 +644,7 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard>
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: EdgeInsets.symmetric(
-              vertical: _isExpanded ? 8.0 : 4.0,
+              vertical: _isExpanded ? 8.0 : 0,
               horizontal: 4.0,
             ),
             child: Row(
@@ -856,35 +889,5 @@ class _CircularGoalInfoCard extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-// Delegate for sticky header in mobile view
-class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
-  final Widget child;
-
-  _StickyHeaderDelegate({required this.child});
-
-  @override
-  double get minExtent => _calculateHeight();
-
-  @override
-  double get maxExtent => _calculateHeight();
-
-  double _calculateHeight() {
-    // Approximate height: collapsed card (~60) + padding (16) + header (~60) + padding (32)
-    // This will be dynamically calculated by Flutter
-    return 170;
-  }
-
-  @override
-  Widget build(
-      BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
-  }
-
-  @override
-  bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
-    return child != oldDelegate.child;
   }
 }
