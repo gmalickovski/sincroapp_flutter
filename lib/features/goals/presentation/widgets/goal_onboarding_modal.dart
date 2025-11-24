@@ -1,16 +1,20 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
 
 class GoalOnboardingModal extends StatefulWidget {
   final Function(String title, String? date) onAddMilestone;
   final VoidCallback? onSuggestWithAI;
   final VoidCallback onClose;
+  final UserModel userData;
 
   const GoalOnboardingModal({
     super.key,
     required this.onAddMilestone,
     required this.onClose,
+    required this.userData,
     this.onSuggestWithAI,
   });
 
@@ -68,25 +72,16 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
   }
 
   Future<void> _pickDate() async {
-    final DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showDialog<DateTime>(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.dark(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: AppColors.cardBackground,
-              onSurface: Colors.white,
-            ),
-          ),
-          child: child!,
-        );
-      },
+      builder: (context) => CustomEndDatePickerDialog(
+        initialDate: _selectedDate ?? DateTime.now(),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)),
+        userData: widget.userData,
+      ),
     );
+
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
@@ -161,6 +156,34 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 16),
+                  // Explanatory Text
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.info_outline,
+                            color: AppColors.primary, size: 20),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Text(
+                            'Marcos são pequenas vitórias que compõem sua meta maior. Quebrar grandes objetivos em passos menores é o segredo para realizá-los!',
+                            style: TextStyle(
+                              color: AppColors.tertiaryText,
+                              fontSize: 13,
+                              height: 1.4,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Lista de marcos adicionados
                   if (_addedMilestones.isNotEmpty) ...[

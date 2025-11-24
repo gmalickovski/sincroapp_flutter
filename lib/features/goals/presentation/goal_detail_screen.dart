@@ -448,6 +448,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   onClose: () {
                     // O modal se fecha sozinho, não precisa fazer nada
                   },
+                  userData: widget.userData,
                   // Só mostra botão de IA se o usuário tiver plano premium (Sinergia)
                   onSuggestWithAI: widget.userData.subscription.plan ==
                           SubscriptionPlan.premium
