@@ -758,51 +758,7 @@ INSTRUÇÕES:
 
   // --- UI Components ---
 
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: AnimatedMessageBubble(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AnimatedAvatar(
-              child: Container(
-                width: 40, height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                padding: const EdgeInsets.all(8),
-                child: SvgPicture.asset(
-                  'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(4),
-                  bottomRight: Radius.circular(16),
-                ),
-                border: Border.all(
-                  color: AppColors.border.withValues(alpha: 0.5),
-                ),
-              ),
-              child: const TypingIndicator(
-                color: AppColors.primary,
-                dotSize: 8,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
     final isExecuted = action.isExecuted;
