@@ -8,6 +8,9 @@ import 'package:sincro_app_flutter/services/numerology_interpretations.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+
 class AssistantPromptBuilder {
   // Helper para determinar saudação baseada no horário
   static String _getSaudacao(String nome, DateTime agora) {
@@ -132,6 +135,21 @@ class AssistantPromptBuilder {
       };
     });
 
+    // --- INTEGRAÇÃO SINCRO FLOW (STRATEGY MODE) ---
+    // Calcula o modo de estratégia para hoje
+    final strategyMode = StrategyEngine.calculateMode(
+      numerology.numeros['diaPessoal'] ?? 0,
+    );
+
+    // Busca conteúdo rico do modo (se disponível no ContentData,
+    // mas por enquanto vamos injetar a descrição do enum/engine)
+    final strategyContext = {
+      'mode': strategyMode.name.toUpperCase(),
+      'title': StrategyEngine.getModeTitle(strategyMode),
+      'description': StrategyEngine.getModeDescription(strategyMode),
+      'focus': _getStrategyFocus(strategyMode),
+    };
+
     final contextObj = {
       'user': {
         'nomeAnalise': user.nomeAnalise,
@@ -139,6 +157,7 @@ class AssistantPromptBuilder {
         'dataNasc': user.dataNasc,
         'idade': numerology.idade,
       },
+      'strategy': strategyContext, // NOVO: Contexto de Estratégia
       'numerologyToday': numerologySummary,
       'personalDaysNext30': personalDaysNext30,
       'tasks': tasksCompact.toList(),
@@ -407,5 +426,17 @@ $question
 
 ═══════════════════════════════════════════════════════════════════════════════
 ''';
+  }
+  static String _getStrategyFocus(StrategyMode mode) {
+    switch (mode) {
+      case StrategyMode.focus:
+        return "Execução única, prioridade máxima, sem distrações.";
+      case StrategyMode.flow:
+        return "Intuição, conexões, criatividade e flexibilidade.";
+      case StrategyMode.grounding:
+        return "Organização, limpeza de pendências, comunicação.";
+      case StrategyMode.rescue:
+        return "Autocuidado, mini-hábitos, evitar burnout.";
+    }
   }
 }

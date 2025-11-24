@@ -9,6 +9,9 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+
 class AIPromptBuilder {
   // Helper _getDesc (Mantido - é o 'getDesc' do seu Dart)
   static String _getDesc(String type, int? number) {
@@ -92,10 +95,41 @@ class AIPromptBuilder {
         : "Nenhum marco foi criado para esta meta ainda.";
     // --- FIM DA CORREÇÃO ---
 
+    // --- INTEGRAÇÃO SINCRO FLOW (STRATEGY MODE) ---
+    // Calcula o modo de estratégia para hoje (baseado no Dia Pessoal)
+    // Se não tiver Dia Pessoal (ex: erro), assume Grounding
+    final int todayPersonalDay = numerologyResult.numeros['diaPessoal'] ?? 4;
+    final strategyMode = StrategyEngine.calculateMode(todayPersonalDay);
+    
+    final strategyTitle = StrategyEngine.getModeTitle(strategyMode);
+    final strategyDesc = StrategyEngine.getModeDescription(strategyMode);
+    
+    String strategyInstruction = "";
+    switch (strategyMode) {
+      case StrategyMode.focus:
+        strategyInstruction = "MODO FOCUS DETECTADO: Sugira marcos de ALTO IMPACTO e EXECUÇÃO IMEDIATA. Priorize 'fazer' sobre 'planejar'.";
+        break;
+      case StrategyMode.flow:
+        strategyInstruction = "MODO FLOW DETECTADO: Sugira marcos que envolvam CONEXÃO, CRIATIVIDADE e INTUIÇÃO. Seja flexível nas datas.";
+        break;
+      case StrategyMode.grounding:
+        strategyInstruction = "MODO GROUNDING DETECTADO: Sugira marcos de ORGANIZAÇÃO, ESTRUTURAÇÃO e LIMPEZA de pendências.";
+        break;
+      case StrategyMode.rescue:
+        strategyInstruction = "MODO RESCUE DETECTADO: Sugira marcos PEQUENOS, FÁCEIS e de RÁPIDA VITÓRIA (Quick Wins) para evitar sobrecarga.";
+        break;
+    }
+
     // --- 2. O TEMPLATE DO PROMPT (v8 - Baseado no JS - MELHORADO) ---
     return """
 Você é um Coach de Produtividade e Estrategista Pessoal com expertise em numerologia pitagórica.
 Sua missão é criar marcos estratégicos NOVOS, ESPECÍFICOS e COMPLEMENTARES para quebrar uma meta em etapas acionáveis.
+
+═══════════════════════════════════════════════════════════════════
+🔥 ESTRATÉGIA DO DIA: ${strategyMode.name.toUpperCase()} - $strategyTitle
+═══════════════════════════════════════════════════════════════════
+$strategyDesc
+⚠️ INSTRUÇÃO ESPECIAL: $strategyInstruction
 
 ═══════════════════════════════════════════════════════════════════
 📋 DOSSIÊ COMPLETO DO USUÁRIO

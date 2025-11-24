@@ -94,26 +94,25 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
 
     // Checagem de limite de metas por plano
     if (widget.goalToEdit == null) {
-      int maxGoals = 1;
       final plan = widget.userData.subscription.plan;
-      if (plan.toString().contains('despertar')) {
-        maxGoals = 5;
-      } else if (plan.toString().contains('sinergia')) {
-        maxGoals = 99999;
-      }
-      final goalsSnapshot =
-          await FirestoreService().getActiveGoals(widget.userData.uid);
-      if (goalsSnapshot.length >= maxGoals) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(maxGoals == 99999
-                ? 'Você já atingiu o limite de metas.'
-                : 'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
-          ),
-        );
-        return;
+      final int maxGoals = PlanLimits.getGoalsLimit(plan);
+      
+      // Se maxGoals for -1, é ilimitado
+      if (maxGoals != -1) {
+        final goalsSnapshot =
+            await FirestoreService().getActiveGoals(widget.userData.uid);
+        
+        if (goalsSnapshot.length >= maxGoals) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(
+                  'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
+            ),
+          );
+          return;
+        }
       }
     }
 

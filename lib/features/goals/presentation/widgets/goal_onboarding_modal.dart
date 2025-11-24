@@ -4,10 +4,12 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class GoalOnboardingModal extends StatelessWidget {
   final VoidCallback onAddMilestone;
+  final VoidCallback? onSuggestWithAI; // Novo callback para IA
 
   const GoalOnboardingModal({
     super.key,
     required this.onAddMilestone,
+    this.onSuggestWithAI,
   });
 
   @override
@@ -67,7 +69,7 @@ class GoalOnboardingModal extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Para finalizar a criação da sua jornada, adicione pelo menos 1 marco inicial.',
+                  'Adicione marcos iniciais para dar os primeiros passos. Você pode criar quantos quiser!',
                   style: TextStyle(
                     color: AppColors.secondaryText,
                     fontSize: 16,
@@ -102,13 +104,14 @@ class GoalOnboardingModal extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
+                // Botão Principal: Adicionar Manualmente
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: onAddMilestone,
                     icon: const Icon(Icons.add_task, color: Colors.white),
                     label: const Text(
-                      'Adicionar Marco Inicial',
+                      'Adicionar Marco Manualmente',
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -126,6 +129,32 @@ class GoalOnboardingModal extends StatelessWidget {
                     ),
                   ),
                 ),
+                // Botão Secundário: Sugerir com IA (se disponível)
+                if (onSuggestWithAI != null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: onSuggestWithAI,
+                      icon: const Icon(Icons.auto_awesome, color: AppColors.primary, size: 20),
+                      label: const Text(
+                        'Sugerir com IA',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        side: const BorderSide(color: AppColors.primary, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

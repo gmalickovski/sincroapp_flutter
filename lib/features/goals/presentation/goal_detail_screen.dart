@@ -339,11 +339,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      // Left Column: Goal Info
+                                      // Left Column: Goal Info (Circular for Desktop)
                                       ConstrainedBox(
                                         constraints: const BoxConstraints(
                                             maxWidth: 350),
-                                        child: _GoalInfoCard(
+                                        child: _CircularGoalInfoCard(
                                             goal: widget.initialGoal,
                                             progress: progress),
                                       ),
@@ -400,6 +400,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               if (milestones.isEmpty && !_isLoading)
                 GoalOnboardingModal(
                   onAddMilestone: _addMilestone,
+                  // Só mostra botão de IA se o usuário tiver plano premium (Sinergia)
+                  onSuggestWithAI: widget.userData.subscription.plan ==
+                          SubscriptionPlan.premium
+                      ? _openAiSuggestions
+                      : null,
                 ),
 
               if (_isLoading)
@@ -624,7 +629,7 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
   }
 }
 
-// Widget _GoalInfoCard (Seu original)
+// Widget _GoalInfoCard (Retangular - Mobile)
 class _GoalInfoCard extends StatelessWidget {
   final Goal goal;
   final int progress;
@@ -709,6 +714,127 @@ class _GoalInfoCard extends StatelessWidget {
                 ],
               ),
             )
+        ],
+      ),
+    );
+  }
+}
+
+// Widget _CircularGoalInfoCard (Circular - Desktop)
+class _CircularGoalInfoCard extends StatelessWidget {
+  final Goal goal;
+  final int progress;
+
+  const _CircularGoalInfoCard({
+    required this.goal,
+    required this.progress,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    String formattedDate = goal.targetDate != null
+        ? DateFormat('dd MMM yyyy', 'pt_BR').format(goal.targetDate!)
+        : 'Sem prazo';
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          // Circular Progress
+          SizedBox(
+            height: 180,
+            width: 180,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                CircularProgressIndicator(
+                  value: progress / 100.0,
+                  strokeWidth: 12,
+                  backgroundColor: AppColors.background,
+                  color: AppColors.primary,
+                  strokeCap: StrokeCap.round,
+                ),
+                Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '$progress%',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 36,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      if (goal.targetDate != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.calendar_today,
+                                  size: 12, color: AppColors.primary),
+                              const SizedBox(width: 4),
+                              Text(
+                                formattedDate,
+                                style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            goal.title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (goal.description.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              goal.description,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 14,
+                height: 1.5,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
         ],
       ),
     );

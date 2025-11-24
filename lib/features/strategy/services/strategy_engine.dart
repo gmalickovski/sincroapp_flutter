@@ -152,4 +152,38 @@ class StrategyEngine {
         );
     }
   }
+
+  // Helper method to calculate mode from personal day (for AI prompts)
+  static StrategyMode calculateMode(int personalDay) {
+    final recommendation = getRecommendation(personalDay);
+    return recommendation.mode;
+  }
+
+  // Helper method to get mode title
+  static String getModeTitle(StrategyMode mode) {
+    switch (mode) {
+      case StrategyMode.focus:
+        return "Foco Máximo";
+      case StrategyMode.flow:
+        return "Fluxo Intuitivo";
+      case StrategyMode.grounding:
+        return "Aterramento";
+      case StrategyMode.rescue:
+        return "Modo Resgate";
+    }
+  }
+
+  // Helper method to get mode description
+  static String getModeDescription(StrategyMode mode) {
+    switch (mode) {
+      case StrategyMode.focus:
+        return "Energia de execução alta. Priorize UMA tarefa de alto impacto.";
+      case StrategyMode.flow:
+        return "Dia de conexões e criatividade. Siga sua intuição.";
+      case StrategyMode.grounding:
+        return "Organize, estruture e limpe pendências.";
+      case StrategyMode.rescue:
+        return "Energia baixa. Foque em mini-hábitos e autocuidado.";
+    }
+  }
 }
