@@ -370,20 +370,34 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             ),
                           )
                         else ...[
-                          // Mobile Layout
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: horizontalPadding, vertical: 8.0),
-                              child: _CollapsibleGoalInfoCard(
-                                  goal: widget.initialGoal, progress: progress),
-                            ),
-                          ),
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(horizontalPadding,
-                                  24.0, horizontalPadding, 16.0),
-                              child: _buildMilestonesHeader(),
+                          // Mobile Layout with Sticky Header
+                          SliverPersistentHeader(
+                            pinned: true,
+                            delegate: _StickyHeaderDelegate(
+                              child: Container(
+                                color: AppColors.background,
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: horizontalPadding,
+                                          vertical: 8.0),
+                                      child: _CollapsibleGoalInfoCard(
+                                          goal: widget.initialGoal,
+                                          progress: progress),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                          horizontalPadding,
+                                          16.0,
+                                          horizontalPadding,
+                                          16.0),
+                                      child: _buildMilestonesHeader(),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                           _buildMilestonesListSliver(
@@ -580,7 +594,8 @@ class _CollapsibleGoalInfoCard extends StatefulWidget {
       _CollapsibleGoalInfoCardState();
 }
 
-class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
+class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard>
+    with SingleTickerProviderStateMixin {
   bool _isExpanded = true;
 
   @override
@@ -595,7 +610,10 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
           },
           borderRadius: BorderRadius.circular(8),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            padding: EdgeInsets.symmetric(
+              vertical: _isExpanded ? 8.0 : 4.0,
+              horizontal: 4.0,
+            ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -614,16 +632,15 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
             ),
           ),
         ),
-        AnimatedCrossFade(
-          firstChild: _GoalInfoCard(
-            goal: widget.goal,
-            progress: widget.progress,
-          ),
-          secondChild: const SizedBox.shrink(),
-          crossFadeState: _isExpanded
-              ? CrossFadeState.showFirst
-              : CrossFadeState.showSecond,
+        AnimatedSize(
           duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: _isExpanded
+              ? _GoalInfoCard(
+                  goal: widget.goal,
+                  progress: widget.progress,
+                )
+              : const SizedBox.shrink(),
         ),
       ],
     );
@@ -839,5 +856,35 @@ class _CircularGoalInfoCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+// Delegate for sticky header in mobile view
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyHeaderDelegate({required this.child});
+
+  @override
+  double get minExtent => _calculateHeight();
+
+  @override
+  double get maxExtent => _calculateHeight();
+
+  double _calculateHeight() {
+    // Approximate height: collapsed card (~60) + padding (16) + header (~60) + padding (32)
+    // This will be dynamically calculated by Flutter
+    return 170;
+  }
+
+  @override
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
+    return child != oldDelegate.child;
   }
 }

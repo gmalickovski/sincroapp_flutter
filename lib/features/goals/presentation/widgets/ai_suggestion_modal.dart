@@ -517,26 +517,28 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
   }
 
   Widget _buildSuggestionsList() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16.0),
-          child: Text(
-            "Selecione os marcos que deseja adicionar:",
-            style: TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 16.0),
+            child: Text(
+              "Selecione os marcos que deseja adicionar:",
+              style: TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
-        ),
-        Expanded(
-          child: ListView.separated(
-            padding: const EdgeInsets.only(bottom: 16),
-            itemCount: _suggestions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 8),
-            itemBuilder: (context, index) {
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.only(bottom: 16),
+              itemCount: _suggestions.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
               final suggestion = _suggestions[index];
               final isSelected = _selectedSuggestions.any((s) =>
                   s['title'] == suggestion['title'] &&
@@ -648,13 +650,13 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
           ),
         ),
       ],
+      ),
     );
   }
 
   Widget _buildSuggestionsFooter() {
     return Container(
-      // Remove padding horizontal para alinhar com novo layout full width
-      padding: const EdgeInsets.symmetric(vertical: 20),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         border: Border(
