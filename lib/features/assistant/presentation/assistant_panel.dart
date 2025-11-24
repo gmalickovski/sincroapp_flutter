@@ -15,6 +15,7 @@ import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inlin
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_compatibility_form.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -584,9 +585,9 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
         
         // Adicionar mensagem de confirmação
         _messages.insert(0, AssistantMessage(
-          text: 'Jornada "${goal.title}" criada com sucesso! 🚀\nAdicionei $addedCount marcos à sua lista de tarefas.',
-          isUser: false,
-          timestamp: DateTime.now(),
+          content: 'Jornada "${goal.title}" criada com sucesso! 🚀\nAdicionei $addedCount marcos à sua lista de tarefas.',
+          role: 'assistant',
+          time: DateTime.now(),
         ));
       });
       
