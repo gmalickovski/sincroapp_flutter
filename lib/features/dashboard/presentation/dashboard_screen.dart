@@ -36,6 +36,8 @@ import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reord
 import 'package:sincro_app_flutter/common/widgets/numerology_detail_modal.dart';
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
+import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
 
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -436,6 +438,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         key: const ValueKey('assistantInsights'),
         user: _userData!,
       ),
+      if (_numerologyData != null)
+        'strategyCard': StrategyCard(
+          key: const ValueKey('strategyCard'),
+          recommendation: StrategyEngine.getRecommendation(
+              _numerologyData!.numeros['diaPessoal'] ?? 1),
+        ),
       'goalsProgress': GoalsProgressCard(
         key: const ValueKey('goalsProgress'),
         goals: _userGoals,
@@ -1058,6 +1066,14 @@ class _DashboardScreenState extends State<DashboardScreen>
         orderedCards.add(value);
       }
     });
+
+    // Força StrategyCard no topo se disponível e não oculto
+    if (allCardsMap.containsKey('strategyCard') && !hidden.contains('strategyCard')) {
+      final strategyWidget = allCardsMap['strategyCard']!;
+      orderedCards.remove(strategyWidget);
+      orderedCards.insert(0, strategyWidget);
+    }
+
     _cards = orderedCards;
   }
 

@@ -407,10 +407,13 @@ class FirestoreService {
       await docRef.update({'id': docRef.id});
 
       // --- INÍCIO DA MUDANÇA (FEATURE #3) ---
-      // Agenda a notificação se necessário
-      // Precisamos do ID que acabamos de criar, então usamos copyWith
-      final taskWithId = task.copyWith(id: docRef.id);
-      await _notificationService.scheduleTaskReminder(taskWithId);
+      // Agenda a notificação se necessário (com tratamento de erro)
+      try {
+        final taskWithId = task.copyWith(id: docRef.id);
+        await _notificationService.scheduleTaskReminder(taskWithId);
+      } catch (e) {
+        debugPrint("Erro ao agendar notificação (não bloqueante): $e");
+      }
       // --- FIM DA MUDANÇA ---
     } catch (e) {
       debugPrint("Erro ao adicionar tarefa no Firestore: $e");
@@ -429,7 +432,11 @@ class FirestoreService {
 
       // --- INÍCIO DA MUDANÇA (FEATURE #3) ---
       // Reagenda a notificação (o método cuida de cancelar/atualizar)
-      await _notificationService.scheduleTaskReminder(task);
+      try {
+        await _notificationService.scheduleTaskReminder(task);
+      } catch (e) {
+        debugPrint("Erro ao atualizar notificação (não bloqueante): $e");
+      }
       // --- FIM DA MUDANÇA ---
     } catch (e) {
       debugPrint("Erro ao atualizar tarefa completa ID ${task.id}: $e");
@@ -484,16 +491,19 @@ class FirestoreService {
 
       // --- INÍCIO DA MUDANÇA (FEATURE #3) ---
       // Se estamos atualizando campos, precisamos re-sincronizar o lembrete.
-      // Primeiro, buscamos o estado completo e atualizado da tarefa.
-      final doc = await _db
-          .collection('users')
-          .doc(userId)
-          .collection('tasks')
-          .doc(taskId)
-          .get();
-      if (doc.exists) {
-        final updatedTask = TaskModel.fromFirestore(doc);
-        await _notificationService.scheduleTaskReminder(updatedTask);
+      try {
+        final doc = await _db
+            .collection('users')
+            .doc(userId)
+            .collection('tasks')
+            .doc(taskId)
+            .get();
+        if (doc.exists) {
+          final updatedTask = TaskModel.fromFirestore(doc);
+          await _notificationService.scheduleTaskReminder(updatedTask);
+        }
+      } catch (e) {
+        debugPrint("Erro ao atualizar notificação por campos (não bloqueante): $e");
       }
       // --- FIM DA MUDANÇA ---
     } catch (e) {
@@ -520,22 +530,26 @@ class FirestoreService {
       });
 
       // --- INÍCIO DA MUDANÇA (FEATURE #3) ---
-      // Se a tarefa for marcada como concluída, cancela o lembrete
-      if (completed) {
-        await _notificationService.cancelTaskReminderByTaskId(taskId);
-      }
-      // Se for "desmarcada", o lembrete precisa ser reagendado
-      else {
-        final doc = await _db
-            .collection('users')
-            .doc(userId)
-            .collection('tasks')
-            .doc(taskId)
-            .get();
-        if (doc.exists) {
-          final updatedTask = TaskModel.fromFirestore(doc);
-          await _notificationService.scheduleTaskReminder(updatedTask);
+      try {
+        // Se a tarefa for marcada como concluída, cancela o lembrete
+        if (completed) {
+          await _notificationService.cancelTaskReminderByTaskId(taskId);
         }
+        // Se for "desmarcada", o lembrete precisa ser reagendado
+        else {
+          final doc = await _db
+              .collection('users')
+              .doc(userId)
+              .collection('tasks')
+              .doc(taskId)
+              .get();
+          if (doc.exists) {
+            final updatedTask = TaskModel.fromFirestore(doc);
+            await _notificationService.scheduleTaskReminder(updatedTask);
+          }
+        }
+      } catch (e) {
+        debugPrint("Erro ao atualizar notificação por status (não bloqueante): $e");
       }
       // --- FIM DA MUDANÇA ---
     } catch (e) {
@@ -555,7 +569,11 @@ class FirestoreService {
 
       // --- INÍCIO DA MUDANÇA (FEATURE #3) ---
       // Cancela qualquer lembrete associado
-      await _notificationService.cancelTaskReminderByTaskId(taskId);
+      try {
+        await _notificationService.cancelTaskReminderByTaskId(taskId);
+      } catch (e) {
+        debugPrint("Erro ao cancelar notificação na deleção (não bloqueante): $e");
+      }
       // --- FIM DA MUDANÇA ---
     } catch (e) {
       debugPrint("Erro ao deletar tarefa ID $taskId: $e");
@@ -827,7 +845,7 @@ class FirestoreService {
           .collection('users')
           .doc(userId)
           .collection('goals')
-          .where('isCompleted', isEqualTo: false)
+          // .where('isCompleted', isEqualTo: false) // REMOVIDO: Campo não existe no modelo atual
           .orderBy('createdAt', descending: true)
           .get();
 

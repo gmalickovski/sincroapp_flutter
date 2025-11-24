@@ -78,12 +78,19 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
   Future<void> _handleSave() async {
     FocusScope.of(context).unfocus();
     
-    if (!_formKey.currentState!.validate() || _isSaving || _targetDate == null) {
+    if (!_formKey.currentState!.validate() || _isSaving || _targetDate == null || _milestones.isEmpty) {
       if (_targetDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
             content: Text('Por favor, defina uma data alvo para sua jornada.'),
+          ),
+        );
+      } else if (_milestones.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Colors.red,
+            content: Text('Adicione pelo menos 1 marco para sua jornada.'),
           ),
         );
       }
@@ -102,11 +109,11 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
         progress: 0,
         userId: widget.userData.uid,
         createdAt: DateTime.now(),
-        subTasks: widget.prefilledSubtasks?.map((title) => SubTask(
+        subTasks: _milestones.map((title) => SubTask(
           id: DateTime.now().millisecondsSinceEpoch.toString() + title.hashCode.toString(),
           title: title,
           isCompleted: false,
-        )).toList() ?? [],
+        )).toList(),
       );
 
       widget.onSave(goal);
@@ -240,6 +247,7 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
               },
             ),
             const SizedBox(height: 12),
+            const SizedBox(height: 12),
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -273,6 +281,29 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
               ),
             ),
             const SizedBox(height: 16),
+            
+            // --- SEÇÃO DE MARCOS (MILESTONES) ---
+            const Text(
+              'Marcos da Jornada *',
+              style: TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildMilestonesInput(),
+            if (_milestones.isEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Adicione pelo menos 1 marco para sua jornada.',
+                  style: TextStyle(color: Colors.red.shade400, fontSize: 12),
+                ),
+              ),
+            const SizedBox(height: 16),
+            // -------------------------------------
+
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
@@ -309,4 +340,81 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
       ),
     );
   }
+
+  // --- Lógica e UI dos Marcos ---
+  final List<String> _milestones = [];
+  final TextEditingController _milestoneController = TextEditingController();
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Inicializa marcos apenas uma vez se a lista estiver vazia e houver preenchimento
+    if (_milestones.isEmpty && widget.prefilledSubtasks != null && widget.prefilledSubtasks!.isNotEmpty) {
+      _milestones.addAll(widget.prefilledSubtasks!);
+    }
+  }
+
+  Widget _buildMilestonesInput() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _milestoneController,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: _buildInputDecoration(
+                  labelText: 'Novo Marco',
+                  hintText: 'Ex: Ler 10 páginas',
+                ).copyWith(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                onFieldSubmitted: (_) => _addMilestone(),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: _addMilestone,
+              icon: const Icon(Icons.add_circle, color: AppColors.primary),
+              tooltip: 'Adicionar Marco',
+            ),
+          ],
+        ),
+        if (_milestones.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _milestones.asMap().entries.map((entry) {
+              final index = entry.key;
+              final milestone = entry.value;
+              return Chip(
+                label: Text(milestone, style: const TextStyle(fontSize: 12)),
+                backgroundColor: AppColors.cardBackground,
+                side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                deleteIcon: const Icon(Icons.close, size: 14, color: AppColors.secondaryText),
+                onDeleted: () {
+                  setState(() {
+                    _milestones.removeAt(index);
+                  });
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _addMilestone() {
+    final text = _milestoneController.text.trim();
+    if (text.isNotEmpty) {
+      setState(() {
+        _milestones.add(text);
+        _milestoneController.clear();
+      });
+    }
+  }
+  // -----------------------------
 }

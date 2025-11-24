@@ -543,30 +543,6 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
 
   Future<void> _handleGoalFormSubmit(Goal goal, int messageIndex) async {
     try {
-      // Save the goal to Firestore
-      await _firestore.addGoal(widget.userData.uid, goal.toFirestore());
-
-      // Update the message to mark the action as executed
-      if (messageIndex < _messages.length) {
-        setState(() {
-          final msg = _messages[messageIndex];
-          final updatedActions = msg.actions.map((action) {
-            if (action.type == AssistantActionType.create_goal && action.needsUserInput) {
-              return action.copyWith(
-                isExecuted: true,
-                needsUserInput: false,
-              );
-            }
-            return action;
-          }).toList();
-          _messages[messageIndex] = msg.copyWith(actions: updatedActions);
-
-          // Add confirmation message
-          _messages.add(AssistantMessage(
-            role: 'assistant',
-            content: '✅ **Jornada criada com sucesso!**\n\n🎯 **${goal.title}**\nData alvo: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(goal.targetDate!)}\n\nVamos juntos nessa jornada! 🚀',
-            time: DateTime.now(),
-          ));
         });
 
         await _scrollToBottom();
@@ -1370,6 +1346,72 @@ INSTRUÇÕES:
                   ),
                 ),
     );
+  }
+
+  Future<void> _handleGoalFormSubmit(Goal goal, int messageIndex) async {
+    try {
+      // 1. Gerar ID e Salvar a meta
+      final docRef = FirebaseFirestore.instance.collection('users').doc(widget.userData.uid).collection('goals').doc();
+      final goalId = docRef.id;
+      
+      // Cria a meta com o ID gerado e SEM as subtasks internas (pois serão salvas como Tasks externas)
+      // Mas mantemos subTasks no objeto local para iterar abaixo
+      final goalToSave = goal.copyWith(id: goalId, subTasks: []);
+      
+      await docRef.set(goalToSave.toFirestore());
+
+      // 2. Salvar os marcos como Tarefas
+      final firestoreService = FirestoreService();
+      int addedCount = 0;
+      for (final subTask in goal.subTasks) {
+        final newTask = TaskModel(
+          id: '', // Será gerado pelo addTask
+          text: subTask.title,
+          completed: false,
+          createdAt: DateTime.now(),
+          dueDate: goal.targetDate, // Usa a data da meta como sugestão
+          journeyId: goalId,
+          journeyTitle: goal.title,
+          goalId: goalId,
+        );
+        await firestoreService.addTask(widget.userData.uid, newTask);
+        addedCount++;
+      }
+
+      // 3. Atualizar UI
+      setState(() {
+        _messages[messageIndex] = _messages[messageIndex].copyWith(
+          actions: _messages[messageIndex].actions.map((a) {
+            if (a.type == AssistantActionType.create_goal) {
+              return a.copyWith(isExecuted: true);
+            }
+            return a;
+          }).toList(),
+        );
+        
+        // Adicionar mensagem de confirmação
+        _messages.insert(0, AssistantMessage(
+          text: 'Jornada "${goal.title}" criada com sucesso! 🚀\nAdicionei $addedCount marcos à sua lista de tarefas.',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+      
+      await _scrollToBottom();
+
+    } catch (e) {
+      debugPrint('Erro ao salvar meta: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao criar jornada: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  Future<void> _handleCompatibilityFormSubmit(String name, String dob, int messageIndex) async {
+    // Implementação placeholder se não existir
+    debugPrint('Compatibilidade: $name, $dob');
   }
 }
 

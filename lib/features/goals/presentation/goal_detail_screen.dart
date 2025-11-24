@@ -16,6 +16,7 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/ai_sugges
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -303,12 +304,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     100)
                 .round();
 
+
+
         return Scaffold(
           backgroundColor: AppColors.background,
           body: Stack(
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
+                  // ... (código existente do LayoutBuilder)
                   final bool isDesktop =
                       constraints.maxWidth >= kDesktopBreakpoint;
                   final double horizontalPadding = isDesktop ? 24.0 : 12.0;
@@ -377,20 +381,29 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   );
                 },
               ),
+              
+              // Modal de Onboarding (se não houver marcos)
+              if (milestones.isEmpty && !_isLoading)
+                GoalOnboardingModal(
+                  onAddMilestone: _addMilestone,
+                ),
+
               if (_isLoading)
                 Container(
                     color: Colors.black.withValues(alpha: 0.6),
                     child: const Center(child: CustomLoadingSpinner())),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: _addMilestone, // Chama a função atualizada
-            label: const Text('Novo Marco'),
-            icon: const Icon(Icons.add),
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            heroTag: 'fab_goal_detail',
-          ),
+          floatingActionButton: milestones.isNotEmpty 
+            ? FloatingActionButton.extended(
+                onPressed: _addMilestone,
+                label: const Text('Novo Marco'),
+                icon: const Icon(Icons.add),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                heroTag: 'fab_goal_detail',
+              )
+            : null, // Esconde o FAB se estiver no modo onboarding
         );
       },
     );

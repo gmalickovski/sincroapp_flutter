@@ -119,42 +119,39 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
 
     setState(() => _isSaving = true);
 
-    final dataToSave = {
-      'title': _titleController.text.trim(),
-      'description': _descriptionController.text.trim(),
-      'targetDate':
-          _targetDate != null ? Timestamp.fromDate(_targetDate!) : null,
-      'userId': widget.userData.uid,
-      // Preserva dados existentes ao editar
-      if (widget.goalToEdit != null) ...{
-        'progress': widget.goalToEdit!.progress,
-        'createdAt': Timestamp.fromDate(widget.goalToEdit!.createdAt),
-        'subTasks': widget.goalToEdit!.subTasks,
-      } else ...{
-        'progress': 0,
-        'createdAt': Timestamp.now(),
-        'subTasks': [],
-      },
-    };
-
-    debugPrint('CreateGoalDialog: Salvando meta com targetDate: $_targetDate');
-    debugPrint('CreateGoalDialog: dataToSave = $dataToSave');
-
     try {
+      String goalId;
+      
       if (widget.goalToEdit != null) {
+        goalId = widget.goalToEdit!.id;
         await _firestoreService.updateGoal(Goal(
-          id: widget.goalToEdit!.id,
+          id: goalId,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           targetDate: _targetDate,
           progress: widget.goalToEdit!.progress,
           userId: widget.userData.uid,
           createdAt: widget.goalToEdit!.createdAt,
-          subTasks: widget.goalToEdit!.subTasks,
+          subTasks: widget.goalToEdit!.subTasks, // Mantém subtasks antigas se existirem (legado)
         ));
       } else {
-        await _firestoreService.addGoal(widget.userData.uid, dataToSave);
+        // Gerar ID manualmente para usar nas tasks
+        final docRef = FirebaseFirestore.instance.collection('users').doc(widget.userData.uid).collection('goals').doc();
+        goalId = docRef.id;
+        
+        final dataToSave = {
+          'title': _titleController.text.trim(),
+          'description': _descriptionController.text.trim(),
+          'targetDate': _targetDate != null ? Timestamp.fromDate(_targetDate!) : null,
+          'userId': widget.userData.uid,
+          'progress': 0,
+          'createdAt': Timestamp.now(),
+          'subTasks': [], // Não salvamos subtasks internas
+        };
+        
+        await docRef.set(dataToSave);
       }
+
       // Retorna true para indicar sucesso (útil para a tela anterior)
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
@@ -296,48 +293,6 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      // Removida a cor de fundo para um visual mais limpo
-                      // A borda será adicionada pelo _buildInputDecoration "falso"
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: _pickDate,
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          // Container para simular o InputDecoration
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.calendar_today,
-                                  color: AppColors.secondaryText, size: 20),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  _targetDate == null
-                                      ? 'Definir Data Alvo *'
-                                      // Formatando a data
-                                      : 'Data Alvo: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(_targetDate!)}',
-                                  style: const TextStyle(
-                                      color: Colors.white, fontSize: 16),
-                                ),
-                              ),
-                              const Icon(Icons.chevron_right,
-                                  color: AppColors.secondaryText, size: 20),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,

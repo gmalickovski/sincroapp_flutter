@@ -77,15 +77,19 @@ class AssistantService {
 
     final response = await _getModel().generateContent([Content.text(prompt)]);
     var text = response.text ?? '';
-    // strip code fences if any
-    text = text.replaceAll('```json', '').replaceAll('```', '').trim();
+    
+    // Remove markdown code blocks if present
+    text = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
+    
+    // Find the first opening brace and the last closing brace
+    final startIndex = text.indexOf('{');
+    final endIndex = text.lastIndexOf('}');
 
-    // extract first JSON object
-    final match = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-    if (match == null) {
+    if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) {
       throw Exception('A IA não retornou um objeto JSON válido.');
     }
-    final jsonStr = match.group(0)!;
+
+    final jsonStr = text.substring(startIndex, endIndex + 1);
 
     Map<String, dynamic> data;
     try {

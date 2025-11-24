@@ -20,6 +20,7 @@ class TaskModel {
   final TimeOfDay? reminderTime; // Horário do lembrete (hora/minuto)
 
   final String? recurrenceId; // ID para agrupar tarefas recorrentes geradas
+  final String? goalId; // ID da meta vinculada (Marco)
 
   // --- INÍCIO DA MUDANÇA (Solicitação 2): Campo 'completedAt' adicionado ---
   final DateTime? completedAt;
@@ -40,6 +41,7 @@ class TaskModel {
     this.recurrenceEndDate,
     this.reminderTime,
     this.recurrenceId,
+    this.goalId,
     // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
     this.completedAt,
     // --- FIM DA MUDANÇA ---
@@ -61,6 +63,7 @@ class TaskModel {
     Object? recurrenceEndDate = const _Undefined(),
     Object? reminderTime = const _Undefined(),
     Object? recurrenceId = const _Undefined(),
+    Object? goalId = const _Undefined(),
     // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
     Object? completedAt = const _Undefined(),
     // --- FIM DA MUDANÇA ---
@@ -90,6 +93,7 @@ class TaskModel {
       recurrenceId: recurrenceId is _Undefined
           ? this.recurrenceId
           : recurrenceId as String?,
+      goalId: goalId is _Undefined ? this.goalId : goalId as String?,
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
       completedAt: completedAt is _Undefined
           ? this.completedAt
@@ -144,6 +148,7 @@ class TaskModel {
       recurrenceEndDate: (data['recurrenceEndDate'] as Timestamp?)?.toDate(),
       reminderTime: reminder,
       recurrenceId: data['recurrenceId'],
+      goalId: data['goalId'],
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       // --- FIM DA MUDANÇA ---
@@ -187,6 +192,7 @@ class TaskModel {
       'reminderHour': reminderHour,
       'reminderMinute': reminderMinute,
       'recurrenceId': recurrenceId,
+      'goalId': goalId,
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
       'completedAt':
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
