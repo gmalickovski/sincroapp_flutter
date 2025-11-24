@@ -583,11 +583,24 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           }).toList(),
         );
         
-        // Adicionar mensagem de confirmação
+        // Adicionar mensagem de sucesso estruturada com ação de navegação
         _messages.insert(0, AssistantMessage(
-          content: 'Jornada "${goal.title}" criada com sucesso! 🚀\nAdicionei $addedCount marcos à sua lista de tarefas.',
+          content: '✨ **Jornada Criada com Sucesso!**\n\n🎯 **${goal.title}**\n📅 Conclusão prevista: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(goal.targetDate!)}\n\n🏆 Adicionei **$addedCount marcos** à sua lista de tarefas!',
           role: 'assistant',
           time: DateTime.now(),
+          actions: [
+            AssistantAction(
+              type: AssistantActionType.create_task, // Using create_task as a placeholder for navigation
+              title: 'Ver Jornada',
+              isExecuted: false,
+              needsUserInput: false,
+              data: {
+                'action': 'navigate_to_goal',
+                'goalId': goal.id,
+                'goalTitle': goal.title,
+              },
+            ),
+          ],
         ));
       });
       
