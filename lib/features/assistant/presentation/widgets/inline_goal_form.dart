@@ -78,19 +78,12 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
   Future<void> _handleSave() async {
     FocusScope.of(context).unfocus();
     
-    if (!_formKey.currentState!.validate() || _isSaving || _targetDate == null || _milestones.isEmpty) {
+    if (!_formKey.currentState!.validate() || _isSaving || _targetDate == null) {
       if (_targetDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             backgroundColor: Colors.red,
             content: Text('Por favor, defina uma data alvo para sua jornada.'),
-          ),
-        );
-      } else if (_milestones.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            backgroundColor: Colors.red,
-            content: Text('Adicione pelo menos 1 marco para sua jornada.'),
           ),
         );
       }
@@ -109,11 +102,13 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
         progress: 0,
         userId: widget.userData.uid,
         createdAt: DateTime.now(),
-        subTasks: _milestones.map((title) => SubTask(
-          id: DateTime.now().millisecondsSinceEpoch.toString() + title.hashCode.toString(),
-          title: title,
-          isCompleted: false,
-        )).toList(),
+        subTasks: widget.prefilledSubtasks != null && widget.prefilledSubtasks!.isNotEmpty
+            ? widget.prefilledSubtasks!.map((title) => SubTask(
+                id: DateTime.now().millisecondsSinceEpoch.toString() + title.hashCode.toString(),
+                title: title,
+                isCompleted: false,
+              )).toList()
+            : [],
       );
 
       widget.onSave(goal);
@@ -187,6 +182,7 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
                     color: AppColors.primaryText,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.none,
                   ),
                 ),
                 const Spacer(),
@@ -247,7 +243,6 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
               },
             ),
             const SizedBox(height: 12),
-            const SizedBox(height: 12),
             Material(
               color: Colors.transparent,
               child: InkWell(
@@ -281,28 +276,6 @@ class _InlineGoalFormState extends State<InlineGoalForm> {
               ),
             ),
             const SizedBox(height: 16),
-            
-            // --- SEÇÃO DE MARCOS (MILESTONES) ---
-            const Text(
-              'Marcos da Jornada *',
-              style: TextStyle(
-                color: AppColors.secondaryText,
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
-            _buildMilestonesInput(),
-            if (_milestones.isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  'Adicione pelo menos 1 marco para sua jornada.',
-                  style: TextStyle(color: Colors.red.shade400, fontSize: 12),
-                ),
-              ),
-            const SizedBox(height: 16),
-            // -------------------------------------
 
             SizedBox(
               width: double.infinity,
