@@ -4,6 +4,8 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/services/numerology_interpretations.dart';
+import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 
 class AssistantPromptBuilder {
@@ -56,29 +58,60 @@ class AssistantPromptBuilder {
           'text': j.content,
         });
 
-    // Numerologia COMPLETA (incluindo novos cálculos)
+    // Helper function to enrich number with metadata AND VibrationContent
+    Map<String, dynamic> enrichNumber(int? number, {String? vibrationKey}) {
+      if (number == null) return {'numero': null};
+      
+      final baseEnrichment = {
+        'numero': number,
+        'significado': NumerologyInterpretations.getMeaning(number),
+        'palavrasChave': NumerologyInterpretations.getKeywords(number),
+        'desafio': NumerologyInterpretations.getChallenge(number),
+      };
+
+      // Add VibrationContent if available (for diaPessoal, mesPessoal, anoPessoal)
+      if (vibrationKey != null) {
+        final vibrationContent = ContentData.vibracoes[vibrationKey]?[number];
+        if (vibrationContent != null) {
+          return {
+            ...baseEnrichment,
+            'conteudo': {
+              'titulo': vibrationContent.titulo,
+              'descricao': vibrationContent.descricaoCompleta,
+              'inspiracao': vibrationContent.inspiracao,
+              'tags': vibrationContent.tags,
+            }
+          };
+        }
+      }
+
+      return baseEnrichment;
+    }
+
+    // Numerologia COMPLETA com metadados interpretativos E conteúdo rico
     final numerologySummary = {
-      'diaPessoal': numerology.numeros['diaPessoal'],
-      'mesPessoal': numerology.numeros['mesPessoal'],
-      'anoPessoal': numerology.numeros['anoPessoal'],
-      'destino': numerology.numeros['destino'],
-      'expressao': numerology.numeros['expressao'],
-      'motivacao': numerology.numeros['motivacao'],
-      'impressao': numerology.numeros['impressao'],
-      'missao': numerology.numeros['missao'],
-      'talentoOculto': numerology.numeros['talentoOculto'],
+      'diaPessoal': enrichNumber(numerology.numeros['diaPessoal'], vibrationKey: 'diaPessoal'),
+      'mesPessoal': enrichNumber(numerology.numeros['mesPessoal'], vibrationKey: 'mesPessoal'),
+      'anoPessoal': {
+        ...enrichNumber(numerology.numeros['anoPessoal'], vibrationKey: 'anoPessoal'),
+        'tema': NumerologyInterpretations.personalYearThemes[numerology.numeros['anoPessoal']]?['tema'],
+        'foco': NumerologyInterpretations.personalYearThemes[numerology.numeros['anoPessoal']]?['foco'],
+      },
+      'destino': enrichNumber(numerology.numeros['destino']),
+      'expressao': enrichNumber(numerology.numeros['expressao']),
+      'motivacao': enrichNumber(numerology.numeros['motivacao']),
+      'impressao': enrichNumber(numerology.numeros['impressao']),
+      'missao': enrichNumber(numerology.numeros['missao']),
+      'talentoOculto': enrichNumber(numerology.numeros['talentoOculto']),
       'respostaSubconsciente': numerology.numeros['respostaSubconsciente'],
       'cicloDeVidaAtual': numerology.estruturas['cicloDeVidaAtual'],
       'licoesCarmicas': numerology.listas['licoesCarmicas'],
       'debitosCarmicos': numerology.listas['debitosCarmicos'],
       'tendenciasOcultas': numerology.listas['tendenciasOcultas'],
       'harmoniaConjugal': numerology.estruturas['harmoniaConjugal'],
-      // Aptidões Profissionais: utilizamos o número de Expressão como base
       'aptidoesProfissionais': numerology.numeros['aptidoesProfissionais'],
-      'desafio': numerology.numeros['desafio'],
-      // Desafios detalhados
+      'desafio': enrichNumber(numerology.numeros['desafio']),
       'desafiosMapa': numerology.estruturas['desafios'],
-      // Momentos decisivos + atual
       'momentosDecisivos': numerology.estruturas['momentosDecisivos'],
       'momentoDecisivoAtual': numerology.estruturas['momentoDecisivoAtual'],
     };
