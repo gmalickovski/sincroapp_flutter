@@ -14,6 +14,7 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/ai_suggestion_modal.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';

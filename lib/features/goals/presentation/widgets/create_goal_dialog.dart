@@ -8,6 +8,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 // IMPORT ADICIONADO
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
 class CreateGoalDialog extends StatefulWidget {
