@@ -1036,18 +1036,11 @@ class _DashboardScreenState extends State<DashboardScreen>
                     title: "Dias Favoráveis do Mês",
                     content: _buildDiasFavoraveisCompleteContent(),
                     color: Colors.greenAccent.shade200,
-                    icon: Icons.event_available,
+            icon: Icons.event_available,
                     categoryIntro:
-                        "Os Dias Favoráveis são datas do mês em que a vibração do seu Dia Pessoal entra em ressonância com números-chave do seu mapa (como Destino, Expressão, Motivação, Impressão e Missão). Nessas datas, decisões e iniciativas tendem a fluir com mais naturalidade.",
+                        "Os Dias Favoráveis são datas do mês em que a vibração do seu Dia Pessoal entra em ressonância com números-chave do seu mapa (as Destino, Expressão, Motivação, Impressão e Missão). Nessas datas, decisões e iniciativas tendem a fluir com mais naturalidade.",
                   )),
         },
-        'bussola': BussolaCard(
-            key: const ValueKey('bussola'),
-            bussolaContent:
-                _getBussolaContent(_numerologyData!.numeros['diaPessoal'] ?? 0),
-            isEditMode: _isEditMode,
-            dragHandle: _isEditMode ? _buildDragHandle('bussola') : null,
-            onTap: () {}),
       }
     };
     final List<String> cardOrder = _userData!.dashboardCardOrder;
@@ -1112,10 +1105,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             inspiracao: '');
   }
 
-  BussolaContent _getBussolaContent(int number) {
-    return ContentData.bussolaAtividades[number] ??
-        ContentData.bussolaAtividades[0]!;
-  }
+
 
   // Novos getters para os cards adicionais
   VibrationContent _getDestinoContent(int number) {
