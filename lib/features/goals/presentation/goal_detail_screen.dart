@@ -37,7 +37,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   final FirestoreService _firestoreService = FirestoreService();
   bool _isLoading = false;
   static const double kDesktopBreakpoint = 768.0;
-  static const double kMaxContentWidth = 800.0;
+  static const double kMaxContentWidth = 1200.0;
 
   // Função para adicionar novo marco (Atualizada na Turn 14 para usar nova assinatura)
   void _addMilestone() {
@@ -279,8 +279,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       stream: _firestoreService.getTasksForGoalStream(
           widget.userData.uid, widget.initialGoal.id),
       builder: (context, snapshot) {
-        // ... (resto do seu build, _buildMilestonesHeader, _buildMilestonesListWidget, _buildMilestonesListSliver, _GoalInfoCard permanecem inalterados) ...
-        // --- (Código omitido para brevidade, pois não foi alterado) ---
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
           return const Scaffold(
@@ -304,15 +302,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     100)
                 .round();
 
-
-
         return Scaffold(
           backgroundColor: AppColors.background,
           body: Stack(
             children: [
               LayoutBuilder(
                 builder: (context, constraints) {
-                  // ... (código existente do LayoutBuilder)
                   final bool isDesktop =
                       constraints.maxWidth >= kDesktopBreakpoint;
                   final double horizontalPadding = isDesktop ? 24.0 : 12.0;
@@ -321,67 +316,86 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   return SafeArea(
                     child: CustomScrollView(
                       slivers: [
-                        const SliverAppBar(
+                        SliverAppBar(
                           backgroundColor: AppColors.background,
                           elevation: 0,
                           pinned: true,
-                          leading: BackButton(color: AppColors.primary),
-                          title: Text('Detalhes da Jornada',
+                          leading: const BackButton(color: AppColors.primary),
+                          title: Text(widget.initialGoal.title,
                               style:
-                                  TextStyle(color: Colors.white, fontSize: 18)),
+                                  const TextStyle(color: Colors.white, fontSize: 18)),
                         ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: horizontalPadding, vertical: 8.0),
-                            child: isDesktop
-                                ? Center(
-                                    child: ConstrainedBox(
+                        if (isDesktop)
+                          SliverToBoxAdapter(
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                    maxWidth: kMaxContentWidth),
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: horizontalPadding,
+                                      vertical: 24.0),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Left Column: Goal Info
+                                      ConstrainedBox(
                                         constraints: const BoxConstraints(
-                                            maxWidth: kMaxContentWidth),
+                                            maxWidth: 350),
                                         child: _GoalInfoCard(
                                             goal: widget.initialGoal,
-                                            progress: progress)))
-                                : _GoalInfoCard(
-                                    goal: widget.initialGoal,
-                                    progress: progress),
-                          ),
-                        ),
-                        SliverToBoxAdapter(
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(horizontalPadding,
-                                24.0, horizontalPadding, 16.0),
-                            child: isDesktop
-                                ? Center(
-                                    child: ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                            maxWidth: kMaxContentWidth),
-                                        child: _buildMilestonesHeader()))
-                                : _buildMilestonesHeader(),
-                          ),
-                        ),
-                        isDesktop
-                            ? SliverToBoxAdapter(
-                                child: Center(
-                                  child: ConstrainedBox(
-                                    constraints: const BoxConstraints(
-                                        maxWidth: kMaxContentWidth),
-                                    child: _buildMilestonesListWidget(
-                                        milestones: milestones,
-                                        horizontalPadding: 0),
+                                            progress: progress),
+                                      ),
+                                      const SizedBox(width: 24),
+                                      // Right Column: Milestones
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            _buildMilestonesHeader(),
+                                            const SizedBox(height: 16),
+                                            _buildMilestonesListWidget(
+                                                milestones: milestones,
+                                                horizontalPadding: 0),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              )
-                            : _buildMilestonesListSliver(
-                                milestones: milestones,
-                                horizontalPadding: listHorizontalPadding),
+                              ),
+                            ),
+                          )
+                        else ...[
+                          // Mobile Layout
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: horizontalPadding, vertical: 8.0),
+                              child: _CollapsibleGoalInfoCard(
+                                  goal: widget.initialGoal, progress: progress),
+                            ),
+                          ),
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: EdgeInsets.fromLTRB(horizontalPadding,
+                                  24.0, horizontalPadding, 16.0),
+                              child: _buildMilestonesHeader(),
+                            ),
+                          ),
+                          _buildMilestonesListSliver(
+                              milestones: milestones,
+                              horizontalPadding: listHorizontalPadding),
+                        ],
                         const SliverToBoxAdapter(child: SizedBox(height: 80)),
                       ],
                     ),
                   );
                 },
               ),
-              
+
               // Modal de Onboarding (se não houver marcos)
               if (milestones.isEmpty && !_isLoading)
                 GoalOnboardingModal(
@@ -394,16 +408,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     child: const Center(child: CustomLoadingSpinner())),
             ],
           ),
-          floatingActionButton: milestones.isNotEmpty 
-            ? FloatingActionButton.extended(
-                onPressed: _addMilestone,
-                label: const Text('Novo Marco'),
-                icon: const Icon(Icons.add),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                heroTag: 'fab_goal_detail',
-              )
-            : null, // Esconde o FAB se estiver no modo onboarding
+          floatingActionButton: milestones.isNotEmpty
+              ? FloatingActionButton.extended(
+                  onPressed: _addMilestone,
+                  label: const Text('Novo Marco'),
+                  icon: const Icon(Icons.add),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  heroTag: 'fab_goal_detail',
+                )
+              : null,
         );
       },
     );
@@ -546,12 +560,79 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 }
 
+class _CollapsibleGoalInfoCard extends StatefulWidget {
+  final Goal goal;
+  final int progress;
+
+  const _CollapsibleGoalInfoCard({
+    required this.goal,
+    required this.progress,
+  });
+
+  @override
+  State<_CollapsibleGoalInfoCard> createState() =>
+      _CollapsibleGoalInfoCardState();
+}
+
+class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
+  bool _isExpanded = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InkWell(
+          onTap: () {
+            setState(() {
+              _isExpanded = !_isExpanded;
+            });
+          },
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _isExpanded ? 'Ocultar Detalhes' : 'Ver Detalhes',
+                  style: const TextStyle(
+                      color: AppColors.primary, fontWeight: FontWeight.bold),
+                ),
+                Icon(
+                  _isExpanded
+                      ? Icons.keyboard_arrow_up
+                      : Icons.keyboard_arrow_down,
+                  color: AppColors.primary,
+                ),
+              ],
+            ),
+          ),
+        ),
+        AnimatedCrossFade(
+          firstChild: _GoalInfoCard(
+            goal: widget.goal,
+            progress: widget.progress,
+          ),
+          secondChild: const SizedBox.shrink(),
+          crossFadeState: _isExpanded
+              ? CrossFadeState.showFirst
+              : CrossFadeState.showSecond,
+          duration: const Duration(milliseconds: 300),
+        ),
+      ],
+    );
+  }
+}
+
 // Widget _GoalInfoCard (Seu original)
 class _GoalInfoCard extends StatelessWidget {
   final Goal goal;
   final int progress;
 
-  const _GoalInfoCard({required this.goal, required this.progress});
+  const _GoalInfoCard({
+    required this.goal,
+    required this.progress,
+  });
 
   @override
   Widget build(BuildContext context) {

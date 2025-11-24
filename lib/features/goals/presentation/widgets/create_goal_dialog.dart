@@ -293,6 +293,32 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     },
                   ),
                   const SizedBox(height: 16),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: _pickDate,
+                    child: InputDecorator(
+                      decoration: _buildInputDecoration(
+                        labelText: 'Data Alvo *',
+                        errorText: _targetDate == null && _isSaving
+                            ? 'Por favor, defina uma data alvo.'
+                            : null,
+                      ).copyWith(
+                        suffixIcon: const Icon(Icons.calendar_today,
+                            color: AppColors.primary),
+                      ),
+                      child: Text(
+                        _targetDate != null
+                            ? DateFormat('dd/MM/yyyy').format(_targetDate!)
+                            : 'Selecione a data de conclusão',
+                        style: TextStyle(
+                          color: _targetDate != null
+                              ? Colors.white
+                              : AppColors.tertiaryText,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
