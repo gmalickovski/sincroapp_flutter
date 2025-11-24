@@ -874,6 +874,47 @@ INSTRUÇÕES:
     );
   }
 
+  Widget _buildTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Container(
+            width: 40, height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            padding: const EdgeInsets.all(8),
+            child: SvgPicture.asset(
+              'assets/images/icon-ia-sincroapp-branco-v1.svg',
+            ),
+          ),
+          const SizedBox(width: 12),
+          MessageEntryAnimation(
+            isUser: false,
+            duration: const Duration(milliseconds: 300),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                  bottomRight: Radius.circular(16),
+                  bottomLeft: Radius.circular(4),
+                ),
+                border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+              ),
+              child: const TypingIndicator(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildMessageItem(AssistantMessage m, int index) {
     final isUser = m.role == 'user';
     final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
@@ -907,12 +948,14 @@ INSTRUÇÕES:
               ],
               Flexible(
                 child: isUser
-                    ? AnimatedMessageBubble( // User message still slides in
-                        duration: const Duration(milliseconds: 400),
+                    ? MessageEntryAnimation( // User message slides in
+                        isUser: true,
+                        duration: const Duration(milliseconds: 300),
                         child: _buildMessageBubbleContent(m, isUser),
                       )
-                    : MorphingMessageBubble( // AI message morphs from typing size
-                        duration: const Duration(milliseconds: 600),
+                    : MessageEntryAnimation( // AI message slides in
+                        isUser: false,
+                        duration: const Duration(milliseconds: 300),
                         child: _buildMessageBubbleContent(m, isUser),
                       ),
               ),
@@ -933,8 +976,9 @@ INSTRUÇÕES:
           // 2. Actions (Form or Chips) - Enters with delay
           // Check if there's a create_goal action that needs user input (show form)
           if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
-            AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
+            MessageEntryAnimation(
+              isUser: false,
+              delay: const Duration(milliseconds: 400), // Reduced delay
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
@@ -957,8 +1001,9 @@ INSTRUÇÕES:
             )
           // Check if there's a compatibility analysis action (show form)
           else if (!isUser && m.actions.any((a) => a.type == AssistantActionType.analyze_compatibility && !a.isExecuted))
-             AnimatedMessageBubble(
-              delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
+             MessageEntryAnimation(
+              isUser: false,
+              delay: const Duration(milliseconds: 400),
               child: Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Row(
@@ -1001,8 +1046,9 @@ INSTRUÇÕES:
                       }).toList(),
                     ),
                   )
-                : AnimatedMessageBubble(
-                    delay: const Duration(milliseconds: 1000), // Wait for text morph (600ms) + buffer
+                : MessageEntryAnimation(
+                    isUser: false,
+                    delay: const Duration(milliseconds: 400),
                     child: Padding(
                       padding: const EdgeInsets.only(left: 44, top: 12),
                       child: Wrap(

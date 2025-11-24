@@ -2,31 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'dart:math' as math;
 
-/// A wrapper that animates the entry of a chat message (Slide Up + Fade In).
-class AnimatedMessageBubble extends StatefulWidget {
+/// A wrapper that animates the entry of a chat message (Size + Fade + Slide).
+/// Perfect for reverse ListViews to push content smoothly.
+class MessageEntryAnimation extends StatefulWidget {
   final Widget child;
   final Duration duration;
   final Curve curve;
-
   final Duration delay;
+  final bool isUser;
 
-  const AnimatedMessageBubble({
+  const MessageEntryAnimation({
     super.key,
     required this.child,
-    this.duration = const Duration(milliseconds: 400),
+    this.duration = const Duration(milliseconds: 300),
     this.curve = Curves.easeOutQuad,
     this.delay = Duration.zero,
+    this.isUser = false,
   });
 
   @override
-  State<AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
+  State<MessageEntryAnimation> createState() => _MessageEntryAnimationState();
 }
 
-class _AnimatedMessageBubbleState extends State<AnimatedMessageBubble>
+class _MessageEntryAnimationState extends State<MessageEntryAnimation>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _opacity;
   late Animation<Offset> _offset;
+  late Animation<double> _size;
 
   @override
   void initState() {
@@ -34,12 +37,17 @@ class _AnimatedMessageBubbleState extends State<AnimatedMessageBubble>
     _controller = AnimationController(vsync: this, duration: widget.duration);
 
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: widget.curve),
+      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeOut)),
     );
 
-    _offset = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+    _offset = Tween<Offset>(
+      begin: Offset(widget.isUser ? 0.2 : -0.2, 0.5), 
+      end: Offset.zero
+    ).animate(
       CurvedAnimation(parent: _controller, curve: widget.curve),
     );
+    
+    _size = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
 
     if (widget.delay == Duration.zero) {
       _controller.forward();
@@ -58,13 +66,30 @@ class _AnimatedMessageBubbleState extends State<AnimatedMessageBubble>
 
   @override
   Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: SlideTransition(
-        position: _offset,
-        child: widget.child,
+    return SizeTransition(
+      sizeFactor: _size,
+      axisAlignment: -1.0, // Expand from bottom
+      child: FadeTransition(
+        opacity: _opacity,
+        child: SlideTransition(
+          position: _offset,
+          child: widget.child,
+        ),
       ),
     );
+  }
+}
+
+// Keep AnimatedMessageBubble for backward compatibility if needed, or redirect
+class AnimatedMessageBubble extends StatelessWidget {
+  final Widget child;
+  final Duration delay;
+  
+  const AnimatedMessageBubble({super.key, required this.child, this.delay = Duration.zero});
+
+  @override
+  Widget build(BuildContext context) {
+    return MessageEntryAnimation(delay: delay, child: child);
   }
 }
 
