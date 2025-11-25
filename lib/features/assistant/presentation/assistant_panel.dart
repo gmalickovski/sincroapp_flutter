@@ -390,7 +390,12 @@ class _AssistantPanelState extends State<AssistantPanel>
           // Show loading indicator if needed, or just navigate
           // Ideally we should fetch the goal, but for now let's assume we can fetch it or pass it if available.
           // Since we only have ID, we need to fetch it.
-          final goal = await _firestore.getGoal(widget.userData.uid, goalId);
+          // Fetch all active goals and find the one with the matching ID
+          final goals = await _firestore.getActiveGoals(widget.userData.uid);
+          final goal = goals.cast<Goal?>().firstWhere(
+            (g) => g?.id == goalId,
+            orElse: () => null,
+          );
           
           if (goal != null && mounted) {
              Navigator.of(context).push(MaterialPageRoute(
