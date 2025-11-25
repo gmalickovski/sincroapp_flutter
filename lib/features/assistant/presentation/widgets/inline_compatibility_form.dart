@@ -119,7 +119,8 @@ class _InlineCompatibilityFormState extends State<InlineCompatibilityForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Align(
+      alignment: Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 400),
         child: Container(

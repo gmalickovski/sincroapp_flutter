@@ -1194,9 +1194,10 @@ INSTRUÇÕES:
         styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
           p: TextStyle(
             fontSize: 15,
-            height: 1.3,
+            height: 1.2,
             color: isUser ? AppColors.primaryText : AppColors.secondaryText,
           ),
+          blockSpacing: 10.0,
           textAlign: WrapAlignment.start,
         ),
       ),
