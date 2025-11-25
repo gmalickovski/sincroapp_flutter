@@ -955,6 +955,7 @@ INSTRUÇÕES:
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+              children: [
                 Expanded(
                   child: Builder(
                     builder: (context) {
@@ -981,13 +982,24 @@ INSTRUÇÕES:
                   ),
                 ),
                 const SizedBox(width: 12),
-                AnimatedAvatar(
-                  child: UserAvatar(
-                    firstName: widget.userData.primeiroNome,
-                    lastName: widget.userData.sobrenome,
-                    photoUrl: widget.userData.photoUrl,
-                    radius: 20,
-                  ),
+                Builder(
+                  builder: (context) {
+                    final msgKey = m.time.toString();
+                    // If the message ID is NOT in the set, it means it's new OR it's being added right now.
+                    // However, the builder above adds it to the set in post-frame.
+                    // So during the build phase of this frame, it's not in the set yet (if it's new).
+                    // So we can check the set here too.
+                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                    return AnimatedAvatar(
+                      animate: shouldAnimate,
+                      child: UserAvatar(
+                        firstName: widget.userData.primeiroNome,
+                        lastName: widget.userData.sobrenome,
+                        photoUrl: widget.userData.photoUrl,
+                        radius: 20,
+                      ),
+                    );
+                  }
                 ),
               ],
             )

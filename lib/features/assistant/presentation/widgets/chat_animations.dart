@@ -100,12 +100,13 @@ class AnimatedMessageBubble extends StatelessWidget {
 /// An avatar that "pops" in with a scale animation.
 class AnimatedAvatar extends StatefulWidget {
   final Widget child;
-  final Duration duration;
+  final bool animate;
 
   const AnimatedAvatar({
     super.key,
     required this.child,
     this.duration = const Duration(milliseconds: 600),
+    this.animate = true,
   });
 
   @override
@@ -126,7 +127,11 @@ class _AnimatedAvatarState extends State<AnimatedAvatar>
       CurvedAnimation(parent: _controller, curve: Curves.elasticOut),
     );
 
-    _controller.forward();
+    if (widget.animate) {
+      _controller.forward();
+    } else {
+      _controller.value = 1.0;
+    }
   }
 
   @override
