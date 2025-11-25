@@ -963,7 +963,7 @@ INSTRUÇÕES:
                 ),
                 const SizedBox(width: 12),
               ],
-              Flexible(
+              Expanded(
                 child: Align(
                   alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                   child: Builder(
