@@ -973,6 +973,7 @@ INSTRUÇÕES:
                 AnimatedAvatar(
                   child: UserAvatar(
                     firstName: widget.userData.primeiroNome,
+                    lastName: widget.userData.sobrenome,
                     photoUrl: widget.userData.fotoUrl,
                     radius: 20,
                   ),
