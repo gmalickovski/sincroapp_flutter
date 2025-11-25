@@ -1182,6 +1182,7 @@ INSTRUÇÕES:
             height: 1.5,
             color: isUser ? AppColors.primaryText : AppColors.secondaryText,
           ),
+          textAlign: isUser ? WrapAlignment.end : WrapAlignment.start,
         ),
       ),
     );
