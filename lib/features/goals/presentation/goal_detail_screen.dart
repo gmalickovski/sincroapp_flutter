@@ -18,6 +18,8 @@ import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -42,14 +44,39 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // Handle goal editing
   void _handleEditGoal() {
-    // TODO: Implement edit functionality
-    // For now, show a placeholder message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Funcionalidade de edição em desenvolvimento'),
-        backgroundColor: AppColors.primary,
-      ),
-    );
+    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+
+    if (isDesktop) {
+      // Desktop: Show dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return CreateGoalDialog(
+            userData: widget.userData,
+            goalToEdit: widget.initialGoal,
+          );
+        },
+      ).then((result) {
+        if (result == true && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Jornada atualizada com sucesso!'),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        }
+      });
+    } else {
+      // Mobile: Navigate to full screen
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => CreateGoalScreen(
+          userData: widget.userData,
+          goalToEdit: widget.initialGoal,
+        ),
+        fullscreenDialog: true,
+      ));
+    }
   }
 
   // Handle goal deletion
@@ -822,8 +849,8 @@ class _GoalInfoCard extends StatelessWidget {
                         value: 'edit',
                         child: Row(
                           children: [
-                            Icon(Icons.edit, size: 18, color: AppColors.primary),
-                            SizedBox(width: 12),
+                            Icon(Icons.edit_outlined, size: 18, color: Colors.white),
+                            SizedBox(width: 8),
                             Text('Editar',
                                 style: TextStyle(color: Colors.white)),
                           ],
@@ -835,8 +862,8 @@ class _GoalInfoCard extends StatelessWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete, size: 18, color: Colors.redAccent),
-                            SizedBox(width: 12),
+                            Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                            SizedBox(width: 8),
                             Text('Excluir',
                                 style: TextStyle(color: Colors.white)),
                           ],
@@ -966,8 +993,8 @@ class _CircularGoalInfoCard extends StatelessWidget {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit, size: 18, color: AppColors.primary),
-                          SizedBox(width: 12),
+                          Icon(Icons.edit_outlined, size: 18, color: Colors.white),
+                          SizedBox(width: 8),
                           Text('Editar',
                               style: TextStyle(color: Colors.white)),
                         ],
@@ -979,8 +1006,8 @@ class _CircularGoalInfoCard extends StatelessWidget {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete, size: 18, color: Colors.redAccent),
-                          SizedBox(width: 12),
+                          Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          SizedBox(width: 8),
                           Text('Excluir',
                               style: TextStyle(color: Colors.white)),
                         ],
