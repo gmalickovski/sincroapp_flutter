@@ -974,7 +974,7 @@ INSTRUÇÕES:
                   child: UserAvatar(
                     firstName: widget.userData.primeiroNome,
                     lastName: widget.userData.sobrenome,
-                    photoUrl: widget.userData.fotoUrl,
+                    photoUrl: widget.userData.photoUrl,
                     radius: 20,
                   ),
                 ),
