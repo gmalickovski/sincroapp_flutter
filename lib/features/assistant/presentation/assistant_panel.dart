@@ -16,6 +16,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_compatibility_form.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_screen.dart';
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -257,12 +258,26 @@ class _AssistantPanelState extends State<AssistantPanel>
 
       await _scrollToBottom();
     } catch (e) {
+      // Log technical error for debugging
+      debugPrint('Erro no assistente: $e');
+      
+      // Determine friendly message based on error type
+      String friendlyMessage = 'Desculpe, não consegui processar sua solicitação agora. 😔\n\nPode tentar novamente em alguns instantes?';
+      
+      final errorStr = e.toString().toLowerCase();
+      if (errorStr.contains('json')) {
+        friendlyMessage = 'Tive um problema ao entender a resposta. 🤔\n\nPode tentar reformular sua pergunta de outra forma?';
+      } else if (errorStr.contains('network') || errorStr.contains('connection') || errorStr.contains('socket')) {
+        friendlyMessage = 'Parece que estou com problemas de conexão. 📡\n\nVerifique sua internet e tente novamente.';
+      } else if (errorStr.contains('timeout')) {
+        friendlyMessage = 'A resposta está demorando mais que o esperado. ⏱️\n\nTente novamente em alguns instantes.';
+      }
+      
       if (mounted) {
         setState(() {
           _messages.add(AssistantMessage(
               role: 'assistant',
-              content:
-                  'Não consegui processar sua solicitação agora. Tente novamente.\n\n$e',
+              content: friendlyMessage,
               time: DateTime.now()));
         });
         await _scrollToBottom();
@@ -366,6 +381,40 @@ class _AssistantPanelState extends State<AssistantPanel>
   Future<void> _executeAction(
       BuildContext context, AssistantAction action,
       {bool fromAuto = false, int messageIndex = -1, int actionIndex = -1}) async {
+
+    // 1. Check for Navigation Action
+    if (action.data?['action'] == 'navigate_to_goal') {
+      final goalId = action.data?['goalId'] as String?;
+      if (goalId != null) {
+        try {
+          // Show loading indicator if needed, or just navigate
+          // Ideally we should fetch the goal, but for now let's assume we can fetch it or pass it if available.
+          // Since we only have ID, we need to fetch it.
+          final goal = await _firestore.getGoal(widget.userData.uid, goalId);
+          
+          if (goal != null && mounted) {
+             Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => GoalDetailScreen(
+                initialGoal: goal,
+                userData: widget.userData,
+              ),
+            ));
+          } else if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Jornada não encontrada.'), backgroundColor: Colors.redAccent),
+            );
+          }
+        } catch (e) {
+          debugPrint('Error navigating to goal: $e');
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Erro ao abrir jornada.'), backgroundColor: Colors.redAccent),
+            );
+          }
+        }
+      }
+      return; // Stop execution here for navigation actions
+    }
 
     if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
       setState(() {
@@ -770,9 +819,10 @@ INSTRUÇÕES:
 
 
   Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
-    final isExecuted = action.isExecuted;
-    final isExecuting = action.isExecuting;
-    final isDisabled = isExecuted || isExecuting || anyActionExecuted;
+  final isExecuted = action.isExecuted;
+  final isExecuting = action.isExecuting;
+  final isNavigationAction = action.data?['action'] == 'navigate_to_goal';
+  final isDisabled = !isNavigationAction && (isExecuted || isExecuting || anyActionExecuted);
 
     String label = action.title ?? 'Ação';
     if (action.date != null) {
@@ -820,15 +870,17 @@ INSTRUÇÕES:
               child: Text(
                 label,
                 style: TextStyle(
-                  color: isExecuted
-                      ? AppColors.success
-                      : isDisabled
-                          ? AppColors.secondaryText
-                          : Colors.white.withOpacity(0.9), // Texto mais claro e com contraste
-                  fontWeight: FontWeight.w500,
-                  fontSize: 13,
-                  decoration: isExecuted ? TextDecoration.lineThrough : TextDecoration.none, // Garante sem sublinhado
-                ),
+                color: isNavigationAction
+                    ? AppColors.primary
+                    : isExecuted
+                        ? AppColors.success
+                        : isDisabled
+                            ? AppColors.secondaryText
+                            : Colors.white.withOpacity(0.9),
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                decoration: isNavigationAction || !isExecuted ? TextDecoration.none : TextDecoration.lineThrough,
+              ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -912,33 +964,30 @@ INSTRUÇÕES:
                 const SizedBox(width: 12),
               ],
               Flexible(
-                child: Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Builder(
-                    builder: (context) {
-                      final msgKey = m.time.toString();
-                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                      if (shouldAnimate) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _animatedMessageIds.add(msgKey);
-                        });
-                      }
-
-                      return isUser
-                          ? MessageEntryAnimation( // User message slides in
-                              isUser: true,
-                              animate: shouldAnimate,
-                              duration: const Duration(milliseconds: 300),
-                              child: _buildMessageBubbleContent(m, isUser),
-                            )
-                          : MessageEntryAnimation( // AI message slides in
-                              isUser: false,
-                              animate: shouldAnimate,
-                              duration: const Duration(milliseconds: 300),
-                              child: _buildMessageBubbleContent(m, isUser),
-                            );
+                child: Builder(
+                  builder: (context) {
+                    final msgKey = m.time.toString();
+                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                    if (shouldAnimate) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _animatedMessageIds.add(msgKey);
+                      });
                     }
-                  ),
+
+                    return isUser
+                        ? MessageEntryAnimation( // User message slides in
+                            isUser: true,
+                            animate: shouldAnimate,
+                            duration: const Duration(milliseconds: 300),
+                            child: _buildMessageBubbleContent(m, isUser),
+                          )
+                        : MessageEntryAnimation( // AI message slides in
+                            isUser: false,
+                            animate: shouldAnimate,
+                            duration: const Duration(milliseconds: 300),
+                            child: _buildMessageBubbleContent(m, isUser),
+                          );
+                  }
                 ),
               ),
               if (isUser) ...[

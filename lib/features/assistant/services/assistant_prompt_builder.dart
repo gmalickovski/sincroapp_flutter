@@ -412,13 +412,22 @@ Somente DEPOIS que o usuário responder explicando a motivação:
 1. Agradeça e confirme que entendeu
 2. **AGORA SIM** retorne a action "create_goal" com needsUserInput: true
 3. Use a motivação do usuário para preencher o campo "description"
-4. Exemplo de resposta:
+4. **CRÍTICO - OTIMIZAÇÃO DO TÍTULO:**
+   - Crie um título CONCISO e OBJETIVO (máximo 50 caracteres)
+   - Formato: Verbo + Objeto (ex: "Ler 5 livros", "Aprender Dart", "Comprar carro")
+   - Remova palavras desnecessárias: "quero", "vou", "preciso", "gostaria de"
+   - Se o usuário mencionou data no título, extraia para o campo "date"
+   - Exemplos de otimização:
+     * "quero ler 5 livros até junho" → título: "Ler 5 livros", date: "2026-06-30"
+     * "preciso aprender a programar em dart" → título: "Aprender Dart"
+     * "vou comprar um carro novo" → título: "Comprar carro"
+5. Exemplo de resposta:
    ```json
    {
-     "answer": "Perfeito! Entendi sua motivação. 📚 Vou preparar sua jornada 'Ler 5 livros até o meio do ano que vem'. Abaixo você pode revisar os detalhes e ajustar o que precisar antes de salvar! ✨",
+     "answer": "Perfeito! Entendi sua motivação. 📚 Vou preparar sua jornada 'Ler 5 livros'. Abaixo você pode revisar os detalhes e ajustar o que precisar antes de salvar! ✨",
      "actions": [{
        "type": "create_goal",
-       "title": "Ler 5 livros até o meio do ano que vem",
+       "title": "Ler 5 livros",
        "description": "[motivação que o usuário explicou]",
        "date": "2026-06-30",
        "subtasks": ["Escolher os 5 livros", "Ler o primeiro livro", "Ler o segundo livro"],
