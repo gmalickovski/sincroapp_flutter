@@ -971,7 +971,10 @@ INSTRUÇÕES:
                           isUser: true,
                           animate: shouldAnimate,
                           duration: const Duration(milliseconds: 300),
-                          child: _buildMessageBubbleContent(m, isUser),
+                          child: Align(
+                            alignment: Alignment.centerRight,
+                            child: _buildMessageBubbleContent(m, isUser),
+                          ),
                         ),
                       );
                     }
