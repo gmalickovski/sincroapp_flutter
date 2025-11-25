@@ -955,7 +955,7 @@ INSTRUÇÕES:
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Expanded(
+                Flexible(
                   child: Builder(
                     builder: (context) {
                       final msgKey = m.time.toString();
@@ -965,14 +965,11 @@ INSTRUÇÕES:
                           _animatedMessageIds.add(msgKey);
                         });
                       }
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: MessageEntryAnimation(
-                          isUser: true,
-                          animate: shouldAnimate,
-                          duration: const Duration(milliseconds: 300),
-                          child: _buildMessageBubbleContent(m, isUser),
-                        ),
+                      return MessageEntryAnimation(
+                        isUser: true,
+                        animate: shouldAnimate,
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildMessageBubbleContent(m, isUser),
                       );
                     }
                   ),
