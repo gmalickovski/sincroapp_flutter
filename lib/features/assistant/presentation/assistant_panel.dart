@@ -960,11 +960,14 @@ INSTRUÇÕES:
                           _animatedMessageIds.add(msgKey);
                         });
                       }
-                      return MessageEntryAnimation(
-                        isUser: true,
-                        animate: shouldAnimate,
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildMessageBubbleContent(m, isUser),
+                      return Align(
+                        alignment: Alignment.centerRight,
+                        child: MessageEntryAnimation(
+                          isUser: true,
+                          animate: shouldAnimate,
+                          duration: const Duration(milliseconds: 300),
+                          child: _buildMessageBubbleContent(m, isUser),
+                        ),
                       );
                     }
                   ),

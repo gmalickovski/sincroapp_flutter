@@ -70,14 +70,17 @@ class _MessageEntryAnimationState extends State<MessageEntryAnimation>
 
   @override
   Widget build(BuildContext context) {
-    return SizeTransition(
-      sizeFactor: _size,
-      axisAlignment: -1.0, // Expand from bottom
-      child: FadeTransition(
-        opacity: _opacity,
-        child: SlideTransition(
-          position: _offset,
-          child: widget.child,
+    return Align(
+      alignment: widget.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: SizeTransition(
+        sizeFactor: _size,
+        axisAlignment: -1.0, // Expand from bottom
+        child: FadeTransition(
+          opacity: _opacity,
+          child: SlideTransition(
+            position: _offset,
+            child: widget.child,
+          ),
         ),
       ),
     );
