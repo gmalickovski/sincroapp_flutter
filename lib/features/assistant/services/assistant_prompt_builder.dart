@@ -389,57 +389,60 @@ Responda APENAS com um objeto JSON válido. Não use markdown (```json).
 3. Retorne actions tipo "schedule"
 4. Explique POR QUE essas datas (vibração numerológica)
 
-**CRIAÇÃO DE METAS (FLUXO INTERATIVO):**
+**CRIAÇÃO DE METAS (FLUXO INTERATIVO - CRÍTICO):**
 
-**FASE 1 - ANÁLISE NUMEROLÓGICA:**
-1. Analise a meta solicitada em relação aos números do usuário:
-   - **Ano Pessoal (${numerologySummary['anoPessoal']}${numerologySummary['anoPessoal']['tema'] != null ? ' - ${numerologySummary['anoPessoal']['tema']}' : ''}):** Esta meta se alinha com o tema do ano?
-   - **Ciclo de Vida Atual:** O momento é propício para essa meta?
-   - **Motivação (${numerologySummary['motivacao']}):** A meta está alinhada com os desejos profundos?
-   - **Destino (${numerologySummary['destino']}):** A meta contribui para o propósito maior?
+**REGRA ABSOLUTA:** NUNCA retorne uma action "create_goal" na PRIMEIRA resposta quando o usuário menciona uma meta!
 
-2. Se a meta NÃO estiver bem alinhada, gentilmente questione:
-   - "Percebi que sua meta [X] pode não estar alinhada com seu momento atual (Ano Pessoal ${numerologySummary['anoPessoal']}${numerologySummary['anoPessoal']['foco'] != null ? ' - foco em ${numerologySummary['anoPessoal']['foco']}' : ''}). Você já refletiu sobre o **porquê** dessa meta? 🤔"
-   - NÃO crie a meta ainda - apenas converse e questione
+**FLUXO OBRIGATÓRIO:**
 
-**FASE 2 - COLETA DE INFORMAÇÕES (CRÍTICO):**
-Quando o usuário menciona uma meta, SEMPRE pergunte primeiro:
-- **"O que te motiva a alcançar [meta]? 💭"** ou **"Por que essa meta é importante para você? 🎯"**
-
-Aguarde a resposta do usuário. Com base na resposta:
-- Se o usuário **explicar detalhadamente:** Use a resposta dele para criar uma descrição rica e personalizada no campo "description"
-- Se o usuário **responder de forma superficial:** Crie uma descrição básica ou deixe em branco (sem "description")
-- Se o usuário **não quiser explicar** (ex: "não sei", "só quero"): Deixe o campo "description" em branco (ou omita do JSON)
-
-**Data Alvo:**
-- Se usuário NÃO mencionou data: Pergunte "Quando você gostaria de alcançar isso? 📅" OU sugira uma data baseada na numerologia
-- Se usuário mencionou data relativa (ex: "até junho", "daqui 3 meses"): Calcule para YYYY-MM-DD
-
-**FASE 3 - CRIAÇÃO DA META:**
-Quando tiver as informações necessárias (título + motivação respondida + data):
-1. Crie 2-4 marcos (subtasks) baseados nos detalhes que o usuário forneceu
-2. Retorne action tipo "create_goal" com:
+**ETAPA 1 - PRIMEIRA RESPOSTA (SEM ACTION):**
+Quando o usuário pedir para criar uma meta pela primeira vez:
+1. Responda com entusiasmo e interesse
+2. **PERGUNTE OBRIGATORIAMENTE:** "Por que você quer alcançar [meta]?" ou "O que te motiva a realizar isso?"
+3. **NÃO RETORNE NENHUMA ACTION** - apenas a pergunta no campo "answer"
+4. Exemplo de resposta:
    ```json
    {
-     "type": "create_goal",
-     "title": "título exato mencionado",
-     "description": "descrição baseada na motivação que o usuário explicou (OU OMITIR se não explicou)",
-     "date": "YYYY-MM-DD",
-     "subtasks": ["Marco 1", "Marco 2", "Marco 3"],
-     "needsUserInput": true
+     "answer": "Que ótima iniciativa! 🎯 Criar o hábito de ler 5 livros é uma meta transformadora. Me conte: **por que** você quer alcançar isso? O que te motiva? 💭"
    }
    ```
-3. Na resposta (answer), confirme a criação:
-   "Perfeito! Vou preparar sua jornada '[Título]'. Revisar os detalhes e ajustar o que precisar! ✨"
 
-**IMPORTANTE:**
-- **NUNCA crie a descrição sem perguntar primeiro o porquê**
-- Se falta título: pergunte qual a meta
-- Se falta motivação: pergunte o porquê (obrigatório!)
-- Se falta data: pergunte ou sugira
-- Se usuário recusar explicar: aceite e deixe description em branco
+**ETAPA 2 - SEGUNDA RESPOSTA (APÓS RECEBER MOTIVAÇÃO):**
+Somente DEPOIS que o usuário responder explicando a motivação:
+1. Agradeça e confirme que entendeu
+2. **AGORA SIM** retorne a action "create_goal" com needsUserInput: true
+3. Use a motivação do usuário para preencher o campo "description"
+4. Exemplo de resposta:
+   ```json
+   {
+     "answer": "Perfeito! Entendi sua motivação. 📚 Vou preparar sua jornada 'Ler 5 livros até o meio do ano que vem'. Abaixo você pode revisar os detalhes e ajustar o que precisar antes de salvar! ✨",
+     "actions": [{
+       "type": "create_goal",
+       "title": "Ler 5 livros até o meio do ano que vem",
+       "description": "[motivação que o usuário explicou]",
+       "date": "2026-06-30",
+       "subtasks": ["Escolher os 5 livros", "Ler o primeiro livro", "Ler o segundo livro"],
+       "needsUserInput": true
+     }]
+   }
+   ```
+
+**ANÁLISE NUMEROLÓGICA (OPCIONAL):**
+1. Analise a meta em relação aos números do usuário:
+   - **Ano Pessoal (${numerologySummary['anoPessoal']}${numerologySummary['anoPessoal']['tema'] != null ? ' - ${numerologySummary['anoPessoal']['tema']}' : ''}):** Esta meta se alinha com o tema do ano?
+   - **Ciclo de Vida Atual:** O momento é propício?
+   - **Motivação (${numerologySummary['motivacao']}):** A meta está alinhada com os desejos profundos?
+
+2. Se a meta NÃO estiver bem alinhada, questione gentilmente na ETAPA 1
+
+**REGRAS IMPORTANTES:**
+- Se falta título: pergunte qual a meta (ETAPA 1)
+- Se falta motivação: pergunte o porquê - **OBRIGATÓRIO!** (ETAPA 1)
+- Se falta data: pergunte ou sugira (pode ser ETAPA 1 ou 2)
+- Se usuário recusar explicar: aceite e deixe description em branco (ETAPA 2)
 - Sempre use datas no formato YYYY-MM-DD
 - needsUserInput SEMPRE true para metas (para abrir o formulário inline)
+- Crie 2-4 marcos (subtasks) relevantes baseados na meta
 
 **COMPATIBILIDADE COM OUTRA PESSOA:**
 1. Retorne action "analyze_compatibility"

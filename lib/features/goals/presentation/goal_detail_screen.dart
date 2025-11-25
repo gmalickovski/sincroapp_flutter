@@ -40,6 +40,70 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
 
+  // Handle goal editing
+  void _handleEditGoal() {
+    // TODO: Implement edit functionality
+    // For now, show a placeholder message
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Funcionalidade de edição em desenvolvimento'),
+        backgroundColor: AppColors.primary,
+      ),
+    );
+  }
+
+  // Handle goal deletion
+  Future<void> _handleDeleteGoal() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Jornada?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir esta jornada? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _firestoreService.deleteGoal(
+            widget.userData.uid, widget.initialGoal.id);
+        if (mounted) {
+          Navigator.of(context).pop(); // Return to previous screen
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Jornada excluída com sucesso'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir jornada: $e'),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   // Função para adicionar novo marco (Atualizada na Turn 14 para usar nova assinatura)
   void _addMilestone() {
     if (widget.userData.uid.isEmpty) {
@@ -345,8 +409,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                         constraints: const BoxConstraints(
                                             maxWidth: 350),
                                         child: _CircularGoalInfoCard(
-                                            goal: widget.initialGoal,
-                                            progress: progress),
+                                          goal: widget.initialGoal,
+                                          progress: progress,
+                                          onEdit: _handleEditGoal,
+                                          onDelete: _handleDeleteGoal,
+                                        ),
                                       ),
                                       const SizedBox(width: 24),
                                       // Right Column: Milestones
@@ -376,7 +443,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                               padding: EdgeInsets.symmetric(
                                   horizontal: horizontalPadding, vertical: 8.0),
                               child: _CollapsibleGoalInfoCard(
-                                  goal: widget.initialGoal, progress: progress),
+                                goal: widget.initialGoal,
+                                progress: progress,
+                                onEdit: _handleEditGoal,
+                                onDelete: _handleDeleteGoal,
+                              ),
                             ),
                           ),
                           SliverToBoxAdapter(
@@ -617,10 +688,14 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 class _CollapsibleGoalInfoCard extends StatefulWidget {
   final Goal goal;
   final int progress;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _CollapsibleGoalInfoCard({
     required this.goal,
     required this.progress,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -673,6 +748,8 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard>
               ? _GoalInfoCard(
                   goal: widget.goal,
                   progress: widget.progress,
+                  onEdit: widget.onEdit,
+                  onDelete: widget.onDelete,
                 )
               : const SizedBox.shrink(),
         ),
@@ -685,10 +762,14 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard>
 class _GoalInfoCard extends StatelessWidget {
   final Goal goal;
   final int progress;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _GoalInfoCard({
     required this.goal,
     required this.progress,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -713,11 +794,67 @@ class _GoalInfoCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(goal.title,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold)),
+          // Header: Title + Menu
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(goal.title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold)),
+              ),
+              if (onEdit != null || onDelete != null)
+                PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert,
+                    color: AppColors.secondaryText,
+                    size: 20,
+                  ),
+                  tooltip: 'Opções',
+                  color: AppColors.cardBackground,
+                  position: PopupMenuPosition.under,
+                  itemBuilder: (context) {
+                    final items = <PopupMenuEntry<String>>[];
+                    if (onEdit != null) {
+                      items.add(const PopupMenuItem<String>(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, size: 18, color: AppColors.primary),
+                            SizedBox(width: 12),
+                            Text('Editar',
+                                style: TextStyle(color: Colors.white)),
+                          ],
+                        ),
+                      ));
+                    }
+                    if (onDelete != null) {
+                      items.add(const PopupMenuItem<String>(
+                        value: 'delete',
+                        child: Row(
+                          children: [
+                            Icon(Icons.delete, size: 18, color: Colors.redAccent),
+                            SizedBox(width: 12),
+                            Text('Excluir',
+                                style: TextStyle(color: Colors.white)),
+                          ],
+                        ),
+                      ));
+                    }
+                    return items;
+                  },
+                  onSelected: (value) {
+                    if (value == 'edit' && onEdit != null) {
+                      onEdit!();
+                    } else if (value == 'delete' && onDelete != null) {
+                      onDelete!();
+                    }
+                  },
+                ),
+            ],
+          ),
           const SizedBox(height: 8),
           if (goal.description.isNotEmpty)
             Padding(
@@ -776,10 +913,14 @@ class _GoalInfoCard extends StatelessWidget {
 class _CircularGoalInfoCard extends StatelessWidget {
   final Goal goal;
   final int progress;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _CircularGoalInfoCard({
     required this.goal,
     required this.progress,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -805,6 +946,58 @@ class _CircularGoalInfoCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Header: Menu Button (if callbacks provided)
+          if (onEdit != null || onDelete != null)
+            Align(
+              alignment: Alignment.topRight,
+              child: PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: AppColors.secondaryText,
+                  size: 20,
+                ),
+                tooltip: 'Opções',
+                color: AppColors.cardBackground,
+                position: PopupMenuPosition.under,
+                itemBuilder: (context) {
+                  final items = <PopupMenuEntry<String>>[];
+                  if (onEdit != null) {
+                    items.add(const PopupMenuItem<String>(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 18, color: AppColors.primary),
+                          SizedBox(width: 12),
+                          Text('Editar',
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ));
+                  }
+                  if (onDelete != null) {
+                    items.add(const PopupMenuItem<String>(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 18, color: Colors.redAccent),
+                          SizedBox(width: 12),
+                          Text('Excluir',
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      ),
+                    ));
+                  }
+                  return items;
+                },
+                onSelected: (value) {
+                  if (value == 'edit' && onEdit != null) {
+                    onEdit!();
+                  } else if (value == 'delete' && onDelete != null) {
+                    onDelete!();
+                  }
+                },
+              ),
+            ),
           const SizedBox(height: 16),
           // Circular Progress
           SizedBox(

@@ -173,7 +173,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     setState(() {
       _messages.add(
           AssistantMessage(role: 'user', content: q, time: DateTime.now()));
-      _isSending = true; // Start typing animation
     });
 
     _firestore.addAssistantMessage(widget.userData.uid,
@@ -182,6 +181,15 @@ class _AssistantPanelState extends State<AssistantPanel>
     _inputFocusNode.unfocus();
 
     await _scrollToBottom();
+
+    // Add natural delay before showing typing indicator (simulates AI "reading" the message)
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (mounted) {
+      setState(() {
+        _isSending = true; // Start typing animation
+      });
+    }
 
     // Check for affirmative response to pending actions
     final pendingActions = _lastAssistantActions();
@@ -904,30 +912,33 @@ INSTRUÇÕES:
                 const SizedBox(width: 12),
               ],
               Flexible(
-                child: Builder(
-                  builder: (context) {
-                    final msgKey = m.time.toString();
-                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                    if (shouldAnimate) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _animatedMessageIds.add(msgKey);
-                      });
-                    }
+                child: Align(
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Builder(
+                    builder: (context) {
+                      final msgKey = m.time.toString();
+                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                      if (shouldAnimate) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _animatedMessageIds.add(msgKey);
+                        });
+                      }
 
-                    return isUser
-                        ? MessageEntryAnimation( // User message slides in
-                            isUser: true,
-                            animate: shouldAnimate,
-                            duration: const Duration(milliseconds: 300),
-                            child: _buildMessageBubbleContent(m, isUser),
-                          )
-                        : MessageEntryAnimation( // AI message slides in
-                            isUser: false,
-                            animate: shouldAnimate,
-                            duration: const Duration(milliseconds: 300),
-                            child: _buildMessageBubbleContent(m, isUser),
-                          );
-                  }
+                      return isUser
+                          ? MessageEntryAnimation( // User message slides in
+                              isUser: true,
+                              animate: shouldAnimate,
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildMessageBubbleContent(m, isUser),
+                            )
+                          : MessageEntryAnimation( // AI message slides in
+                              isUser: false,
+                              animate: shouldAnimate,
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildMessageBubbleContent(m, isUser),
+                            );
+                    }
+                  ),
                 ),
               ),
               if (isUser) ...[
@@ -959,7 +970,7 @@ INSTRUÇÕES:
                 return MessageEntryAnimation(
                   isUser: false,
                   animate: shouldAnimate,
-                  delay: const Duration(milliseconds: 400), // Reduced delay
+                  delay: const Duration(milliseconds: 2000), // Increased delay to 2s
                   child: Padding(
                     padding: const EdgeInsets.only(top: 12),
                     child: Row(

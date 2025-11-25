@@ -114,8 +114,6 @@ class _GoalCardState extends State<GoalCard> {
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
                                 ),
                                 if (widget.goal.description.isNotEmpty) ...[
                                   const SizedBox(height: 6),
@@ -125,8 +123,6 @@ class _GoalCardState extends State<GoalCard> {
                                       color: AppColors.secondaryText,
                                       fontSize: 14,
                                     ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ],
