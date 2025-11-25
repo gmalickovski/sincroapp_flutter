@@ -964,30 +964,33 @@ INSTRUÇÕES:
                 const SizedBox(width: 12),
               ],
               Flexible(
-                child: Builder(
-                  builder: (context) {
-                    final msgKey = m.time.toString();
-                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                    if (shouldAnimate) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _animatedMessageIds.add(msgKey);
-                      });
-                    }
+                child: Align(
+                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Builder(
+                    builder: (context) {
+                      final msgKey = m.time.toString();
+                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                      if (shouldAnimate) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _animatedMessageIds.add(msgKey);
+                        });
+                      }
 
-                    return isUser
-                        ? MessageEntryAnimation( // User message slides in
-                            isUser: true,
-                            animate: shouldAnimate,
-                            duration: const Duration(milliseconds: 300),
-                            child: _buildMessageBubbleContent(m, isUser),
-                          )
-                        : MessageEntryAnimation( // AI message slides in
-                            isUser: false,
-                            animate: shouldAnimate,
-                            duration: const Duration(milliseconds: 300),
-                            child: _buildMessageBubbleContent(m, isUser),
-                          );
-                  }
+                      return isUser
+                          ? MessageEntryAnimation( // User message slides in
+                              isUser: true,
+                              animate: shouldAnimate,
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildMessageBubbleContent(m, isUser),
+                            )
+                          : MessageEntryAnimation( // AI message slides in
+                              isUser: false,
+                              animate: shouldAnimate,
+                              duration: const Duration(milliseconds: 300),
+                              child: _buildMessageBubbleContent(m, isUser),
+                            );
+                    }
+                  ),
                 ),
               ),
               if (isUser) ...[
