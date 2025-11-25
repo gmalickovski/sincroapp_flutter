@@ -761,8 +761,9 @@ INSTRUÇÕES:
 2. Analise a compatibilidade baseada no Status acima (Vibram Juntos, Atração, Opostos, etc.).
 3. Se forem OPOSTOS, explique que podem dar certo com sabedoria.
 4. Se forem IGUAIS, alerte sobre a monotonia (exceto 5).
-5. Use também os outros números (Destino, Expressão) para complementar a análise.
+5. Use OBRIGATORIAMENTE os outros números (Destino, Expressão, Motivação) para complementar a análise e torná-la única.
 6. Seja empático, construtivo e use emojis.
+7. Formate a resposta com parágrafos curtos e bullet points para facilitar a leitura.
 ''';
 
       // 7. Fetch Context
@@ -1193,10 +1194,10 @@ INSTRUÇÕES:
         styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
           p: TextStyle(
             fontSize: 15,
-            height: 1.5,
+            height: 1.3,
             color: isUser ? AppColors.primaryText : AppColors.secondaryText,
           ),
-          textAlign: isUser ? WrapAlignment.end : WrapAlignment.start,
+          textAlign: WrapAlignment.start,
         ),
       ),
     );

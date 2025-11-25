@@ -119,130 +119,135 @@ class _InlineCompatibilityFormState extends State<InlineCompatibilityForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.pinkAccent.withValues(alpha: 0.3)), // Pink for love/affinity
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 400),
+        child: Container(
+          margin: const EdgeInsets.only(top: 12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.pinkAccent.withValues(alpha: 0.3)), // Pink for love/affinity
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.favorite_rounded, color: Colors.pinkAccent, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  'Análise de Afinidade',
-                  style: TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    const Icon(Icons.favorite_rounded, color: Colors.pinkAccent, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Análise de Afinidade',
+                      style: TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    if (widget.onCancel != null)
+                      IconButton(
+                        icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 18),
+                        onPressed: widget.onCancel,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _nameController,
+                  autofillHints: null,
+                  enableSuggestions: false,
+                  autocorrect: false,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: _buildInputDecoration(
+                    labelText: 'Nome Completo de Nascimento (Parceiro/a) *',
+                    hintText: 'Ex: João da Silva',
+                  ),
+                  textCapitalization: TextCapitalization.words,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Por favor, insira o nome completo.';
+                    }
+                    if (value.trim().split(' ').length < 2) {
+                      return 'Insira pelo menos nome e sobrenome.';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 12),
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: _pickDate,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.calendar_today, color: AppColors.secondaryText, size: 16),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _dob == null
+                                  ? 'Data de Nascimento *'
+                                  : 'Nascimento: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(_dob!)}',
+                              style: TextStyle(
+                                color: _dob == null ? AppColors.secondaryText : Colors.white,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                          const Icon(Icons.chevron_right, color: AppColors.secondaryText, size: 16),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const Spacer(),
-                if (widget.onCancel != null)
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 18),
-                    onPressed: widget.onCancel,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _isAnalyzing ? null : _handleAnalyze,
+                    icon: _isAnalyzing
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
+                    label: Text(
+                      _isAnalyzing ? "Calculando..." : "Analisar Compatibilidade",
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.pinkAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
                   ),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _nameController,
-              autofillHints: null,
-              enableSuggestions: false,
-              autocorrect: false,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-              decoration: _buildInputDecoration(
-                labelText: 'Nome Completo de Nascimento (Parceiro/a) *',
-                hintText: 'Ex: João da Silva',
-              ),
-              textCapitalization: TextCapitalization.words,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Por favor, insira o nome completo.';
-                }
-                if (value.trim().split(' ').length < 2) {
-                  return 'Insira pelo menos nome e sobrenome.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: _pickDate,
-                borderRadius: BorderRadius.circular(8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_today, color: AppColors.secondaryText, size: 16),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _dob == null
-                              ? 'Data de Nascimento *'
-                              : 'Nascimento: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(_dob!)}',
-                          style: TextStyle(
-                            color: _dob == null ? AppColors.secondaryText : Colors.white,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, color: AppColors.secondaryText, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _isAnalyzing ? null : _handleAnalyze,
-                icon: _isAnalyzing
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : const Icon(Icons.auto_awesome, color: Colors.white, size: 18),
-                label: Text(
-                  _isAnalyzing ? "Calculando..." : "Analisar Compatibilidade",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                  ),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.pinkAccent,
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );
