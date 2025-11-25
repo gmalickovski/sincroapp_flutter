@@ -944,12 +944,47 @@ INSTRUÇÕES:
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           // 1. Main Content (Avatar + Text)
-          Row(
-            mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.end, // Avatar na parte inferior
-            children: [
-              if (!isUser) ...[
-                // AI Avatar - Static (no animation) because it was already there during typing
+          if (isUser)
+            // USER MESSAGE LAYOUT (Right Aligned)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Flexible(
+                  child: Builder(
+                    builder: (context) {
+                      final msgKey = m.time.toString();
+                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
+                      if (shouldAnimate) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _animatedMessageIds.add(msgKey);
+                        });
+                      }
+                      return MessageEntryAnimation(
+                        isUser: true,
+                        animate: shouldAnimate,
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildMessageBubbleContent(m, isUser),
+                      );
+                    }
+                  ),
+                ),
+                const SizedBox(width: 12),
+                AnimatedAvatar(
+                  child: UserAvatar(
+                    firstName: widget.userData.primeiroNome,
+                    photoUrl: widget.userData.fotoUrl,
+                    radius: 20,
+                  ),
+                ),
+              ],
+            )
+          else
+            // AI MESSAGE LAYOUT (Left Aligned)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
                 Container(
                   width: 40, height: 40,
                   decoration: BoxDecoration(
@@ -962,10 +997,7 @@ INSTRUÇÕES:
                   ),
                 ),
                 const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Align(
-                  alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+                Flexible(
                   child: Builder(
                     builder: (context) {
                       final msgKey = m.time.toString();
@@ -975,37 +1007,17 @@ INSTRUÇÕES:
                           _animatedMessageIds.add(msgKey);
                         });
                       }
-
-                      return isUser
-                          ? MessageEntryAnimation( // User message slides in
-                              isUser: true,
-                              animate: shouldAnimate,
-                              duration: const Duration(milliseconds: 300),
-                              child: _buildMessageBubbleContent(m, isUser),
-                            )
-                          : MessageEntryAnimation( // AI message slides in
-                              isUser: false,
-                              animate: shouldAnimate,
-                              duration: const Duration(milliseconds: 300),
-                              child: _buildMessageBubbleContent(m, isUser),
-                            );
+                      return MessageEntryAnimation(
+                        isUser: false,
+                        animate: shouldAnimate,
+                        duration: const Duration(milliseconds: 300),
+                        child: _buildMessageBubbleContent(m, isUser),
+                      );
                     }
                   ),
                 ),
-              ),
-              if (isUser) ...[
-                const SizedBox(width: 12),
-                AnimatedAvatar(
-                  child: UserAvatar(
-                    firstName: widget.userData.primeiroNome,
-                    lastName: widget.userData.sobrenome,
-                    photoUrl: widget.userData.photoUrl,
-                    radius: 20,
-                  ),
-                ),
               ],
-            ],
-          ),
+            ),
           
           // 2. Actions (Form or Chips) - Enters with delay
           // Check if there's a create_goal action that needs user input (show form)
