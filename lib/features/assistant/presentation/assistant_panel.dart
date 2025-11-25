@@ -950,7 +950,7 @@ INSTRUÇÕES:
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Flexible(
+                Expanded(
                   child: Builder(
                     builder: (context) {
                       final msgKey = m.time.toString();

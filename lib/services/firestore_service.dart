@@ -855,24 +855,7 @@ class FirestoreService {
     }
   }
 
-  Future<Goal?> getGoal(String userId, String goalId) async {
-    try {
-      final doc = await _db
-          .collection('users')
-          .doc(userId)
-          .collection('goals')
-          .doc(goalId)
-          .get();
 
-      if (doc.exists) {
-        return Goal.fromFirestore(doc);
-      }
-      return null;
-    } catch (e) {
-      debugPrint("Erro ao buscar meta: $e");
-      return null;
-    }
-  }
 
   // --- MÉTODOS DE CONFIGURAÇÃO DO SITE (ADMIN) ---
 
