@@ -1153,35 +1153,43 @@ INSTRUÇÕES:
   }
 
   Widget _buildMessageBubbleContent(AssistantMessage m, bool isUser) {
-    return Container(
-      margin: isUser
-          ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
-          : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isUser ? 16 : 4),
-          bottomRight: Radius.circular(isUser ? 4 : 16),
-        ),
-        border: Border.all(
-          color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
-        ),
-      ),
-      child: MarkdownBody(
-        data: m.content,
-        selectable: true,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-          p: TextStyle(
-            fontSize: 15,
-            height: 1.5,
-            color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+      children: [
+        Flexible(
+          child: Container(
+            margin: isUser
+                ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
+                : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
+              borderRadius: BorderRadius.only(
+                topLeft: const Radius.circular(16),
+                topRight: const Radius.circular(16),
+                bottomLeft: Radius.circular(isUser ? 16 : 4),
+                bottomRight: Radius.circular(isUser ? 4 : 16),
+              ),
+              border: Border.all(
+                color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
+              ),
+            ),
+            child: MarkdownBody(
+              data: m.content,
+              selectable: true,
+              styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                p: TextStyle(
+                  fontSize: 15,
+                  height: 1.5,
+                  color: isUser ? AppColors.primaryText : AppColors.secondaryText,
+                ),
+                textAlign: isUser ? WrapAlignment.end : WrapAlignment.start,
+              ),
+            ),
           ),
-          textAlign: isUser ? WrapAlignment.end : WrapAlignment.start,
         ),
-      ),
+      ],
     );
   }
 
