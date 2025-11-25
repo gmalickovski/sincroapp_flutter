@@ -845,7 +845,6 @@ class FirestoreService {
           .collection('users')
           .doc(userId)
           .collection('goals')
-          // .where('isCompleted', isEqualTo: false) // REMOVIDO: Campo não existe no modelo atual
           .orderBy('createdAt', descending: true)
           .get();
 
@@ -853,6 +852,25 @@ class FirestoreService {
     } catch (e) {
       debugPrint("Erro ao buscar metas ativas: $e");
       return [];
+    }
+  }
+
+  Future<Goal?> getGoal(String userId, String goalId) async {
+    try {
+      final doc = await _db
+          .collection('users')
+          .doc(userId)
+          .collection('goals')
+          .doc(goalId)
+          .get();
+
+      if (doc.exists) {
+        return Goal.fromFirestore(doc);
+      }
+      return null;
+    } catch (e) {
+      debugPrint("Erro ao buscar meta: $e");
+      return null;
     }
   }
 
