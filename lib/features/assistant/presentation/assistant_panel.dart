@@ -955,7 +955,6 @@ INSTRUÇÕES:
               mainAxisAlignment: MainAxisAlignment.end,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-              children: [
                 Expanded(
                   child: Builder(
                     builder: (context) {

@@ -100,6 +100,7 @@ class AnimatedMessageBubble extends StatelessWidget {
 /// An avatar that "pops" in with a scale animation.
 class AnimatedAvatar extends StatefulWidget {
   final Widget child;
+  final Duration duration;
   final bool animate;
 
   const AnimatedAvatar({
