@@ -3,6 +3,7 @@ import 'package:sincro_app_flutter/features/assistant/services/assistant_service
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
@@ -136,6 +137,12 @@ class StrategyEngine {
   }) async {
     // 1. Get base recommendation (static)
     final base = getRecommendation(personalDay);
+
+    // Check if user has access to AI features (Desperta or Sinergia)
+    // Essencial (Free) plan gets only the base recommendation
+    if (user.subscription.plan == SubscriptionPlan.free) {
+      return base;
+    }
 
     // 2. Call AI to generate suggestions
     try {

@@ -117,13 +117,13 @@ class FirestoreService {
         } else {
           switch (subscription.plan) {
             case SubscriptionPlan.free:
-              legacyPlano = 'gratuito';
+              legacyPlano = 'essencial';
               break;
             case SubscriptionPlan.plus:
-              legacyPlano = 'plus';
+              legacyPlano = 'desperta';
               break;
             case SubscriptionPlan.premium:
-              legacyPlano = 'premium';
+              legacyPlano = 'sinergia';
               break;
           }
         }

@@ -315,7 +315,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           ),
           const SizedBox(height: 16),
           _buildPlanRow(
-            planName: 'Sincro Pro (Plus)',
+            planName: 'Sincro Desperta',
             count: plusUsers,
             percentage: plusPercentage,
             color: Colors.blue.shade400,

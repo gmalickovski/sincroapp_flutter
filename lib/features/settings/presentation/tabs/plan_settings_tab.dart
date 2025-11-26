@@ -47,7 +47,7 @@ class PlanSettingsTab extends StatelessWidget {
           const SizedBox(height: 24),
           if (isFreePlan)
             _buildUpgradeCard(
-              title: 'SincroApp Plus',
+              title: 'Sincro Desperta',
               price: 'R\$ 19,90/mês',
               features: [
                 'Análises ilimitadas',

@@ -122,32 +122,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         // Não temos 'bottom' (TabBar) no layout desktop
       ),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 1. A Sidebar de Navegação (Esquerda)
-          SizedBox(
-            width: 260, // Largura fixa para a sidebar
-            child: _buildDesktopSidebar(),
-          ),
-          // Uma divisória visual
-          const VerticalDivider(width: 1, color: AppColors.border),
-
-          // 2. A Área de Conteúdo (Direita)
-          Expanded(
-            // ***** ALTERAÇÃO AQUI *****
-            // Trocamos 'Center' por 'Container' com 'alignment: Alignment.topCenter'.
-            // Isso alinha o conteúdo ao topo, mas mantém o centramento horizontal.
-            child: Container(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 800),
-                // Exibe a página com base no índice selecionado
-                child: _settingsPages[_selectedIndex].page,
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
+          margin: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.border),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
               ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. A Sidebar de Navegação (Esquerda)
+                Container(
+                  width: 260, // Largura fixa para a sidebar
+                  decoration: const BoxDecoration(
+                    border: Border(
+                      right: BorderSide(color: AppColors.border),
+                    ),
+                    color: AppColors.background, // Sidebar um pouco mais escura
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.settings,
+                                color: AppColors.primary),
+                            const SizedBox(width: 12),
+                            Text(
+                              'Configurações',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleLarge
+                                  ?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primaryText,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Expanded(child: _buildDesktopSidebar()),
+                    ],
+                  ),
+                ),
+
+                // 2. A Área de Conteúdo (Direita)
+                Expanded(
+                  child: Container(
+                    color: AppColors.cardBackground,
+                    child: Column(
+                      children: [
+                        // Header da área de conteúdo
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 24),
+                          decoration: const BoxDecoration(
+                            border: Border(
+                              bottom: BorderSide(color: AppColors.border),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _settingsPages[_selectedIndex].icon,
+                                color: AppColors.primary,
+                                size: 28,
+                              ),
+                              const SizedBox(width: 16),
+                              Text(
+                                _settingsPages[_selectedIndex].title,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.primaryText,
+                                ),
+                              ),
+                              const Spacer(),
+                              IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: () => Navigator.of(context).pop(),
+                                tooltip: 'Fechar',
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Conteúdo rolável
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(32),
+                            child: _settingsPages[_selectedIndex].page,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
