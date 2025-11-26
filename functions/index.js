@@ -2,7 +2,7 @@ const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
 const crypto = require("crypto");
-const {RecaptchaEnterpriseServiceClient} = require("@google-cloud/recaptcha-enterprise");
+const { RecaptchaEnterpriseServiceClient } = require("@google-cloud/recaptcha-enterprise");
 
 // Inicializa o SDK Admin
 admin.initializeApp();
@@ -148,7 +148,7 @@ exports.onNewUserDocumentCreate = functions.firestore.document("users/{userId}")
   const userData = snapshot.data();
   const userId = context.params.userId;
   functions.logger.info("Novo documento de usuário criado:", { uid: userId, data: userData });
-  
+
   const payload = {
     event: "user_created",
     email: userData.email,
@@ -156,9 +156,9 @@ exports.onNewUserDocumentCreate = functions.firestore.document("users/{userId}")
     plan: userData.plano || "gratuito",
     userId: userId,
   };
-  
+
   await sendToWebhook(payload);
-  
+
   functions.logger.info("Função onNewUserDocumentCreate concluída.");
   functions.logger.info("================================================================");
   return null;
@@ -187,7 +187,7 @@ exports.onUserUpdate = functions.firestore.document("users/{userId}").onUpdate(a
     };
     await sendToWebhook(payload);
   }
-  
+
   functions.logger.info("==========================================================");
   return null;
 });
@@ -231,7 +231,7 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
 
     // --- PASSO 3: Limpeza dos dados do Firestore (lógica original) ---
     logger.info(`Iniciando limpeza de dados do Firestore para o usuário: ${userId}`);
-    
+
     // Deletar subcoleção 'tasks'
     const tasksRef = userDocRef.collection("tasks");
     const tasksSnapshot = await tasksRef.get();
@@ -257,10 +257,10 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
       await userDocRef.delete();
       logger.log(`Documento principal do usuário ${userId} deletado com sucesso.`);
     }
-    
+
     logger.info(`==========================================================`);
     return { status: "success", message: `Dados do usuário ${userId} limpos com sucesso.` };
-  
+
   } catch (error) {
     logger.error(`Erro ao limpar dados ou enviar webhook para o usuário ${userId}:`, error);
     logger.info(`==========================================================`);
@@ -278,29 +278,29 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
  */
 exports.sendPushNotification = functions.https.onCall(async (data, context) => {
   functions.logger.info("================ sendPushNotification ACIONADA ================");
-  
+
   // Verifica autenticação
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'Usuário não autenticado');
   }
-  
+
   const { userId, title, body, data: notificationData } = data;
-  
+
   try {
     // Busca tokens FCM do usuário
     const userDoc = await db.collection('users').doc(userId).get();
     if (!userDoc.exists) {
       throw new functions.https.HttpsError('not-found', 'Usuário não encontrado');
     }
-    
+
     const userData = userDoc.data();
     const fcmTokens = userData.fcmTokens || [];
-    
+
     if (fcmTokens.length === 0) {
       functions.logger.info(`Usuário ${userId} não tem tokens FCM registrados`);
       return { success: true, message: 'Sem tokens para enviar' };
     }
-    
+
     // Monta mensagem
     const message = {
       notification: {
@@ -310,12 +310,12 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
       data: notificationData || {},
       tokens: fcmTokens
     };
-    
+
     // Envia
     const response = await messaging.sendMulticast(message);
-    
+
     functions.logger.info(`Notificação enviada: ${response.successCount} sucesso, ${response.failureCount} falhas`);
-    
+
     // Remove tokens inválidos
     if (response.failureCount > 0) {
       const tokensToRemove = [];
@@ -324,7 +324,7 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
           tokensToRemove.push(fcmTokens[idx]);
         }
       });
-      
+
       if (tokensToRemove.length > 0) {
         await db.collection('users').doc(userId).update({
           fcmTokens: admin.firestore.FieldValue.arrayRemove(...tokensToRemove)
@@ -332,9 +332,9 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
         functions.logger.info(`Removidos ${tokensToRemove.length} tokens inválidos`);
       }
     }
-    
+
     return { success: true, sent: response.successCount };
-    
+
   } catch (error) {
     functions.logger.error("Erro ao enviar notificação:", error);
     throw new functions.https.HttpsError('internal', 'Erro ao enviar notificação');
@@ -348,29 +348,29 @@ exports.scheduleDailyNotifications = functions.pubsub.schedule('0 21 * * *')
   .timeZone('America/Sao_Paulo')
   .onRun(async (context) => {
     functions.logger.info("================ scheduleDailyNotifications ACIONADA ================");
-    
+
     try {
       // Busca todos os usuários ativos
       const usersSnapshot = await db.collection('users').get();
       const notifications = [];
-      
+
       for (const userDoc of usersSnapshot.docs) {
         const userData = userDoc.data();
         const userId = userDoc.id;
-        
+
         // Verifica se tem tokens
         if (!userData.fcmTokens || userData.fcmTokens.length === 0) continue;
-        
+
         // Verifica tarefas pendentes do dia
         const tasksSnapshot = await db.collection('users').doc(userId)
           .collection('tasks')
           .where('completed', '==', false)
           .where('dueDate', '<=', new Date())
           .get();
-        
+
         if (!tasksSnapshot.empty) {
           const pendingCount = tasksSnapshot.size;
-          
+
           notifications.push({
             userId,
             title: '🌙 Finalizando o dia',
@@ -382,10 +382,10 @@ exports.scheduleDailyNotifications = functions.pubsub.schedule('0 21 * * *')
           });
         }
       }
-      
+
       // Envia todas as notificações
       functions.logger.info(`Enviando ${notifications.length} notificações de fim de dia`);
-      
+
       for (const notif of notifications) {
         try {
           const message = {
@@ -396,180 +396,77 @@ exports.scheduleDailyNotifications = functions.pubsub.schedule('0 21 * * *')
             data: notif.data,
             tokens: (await db.collection('users').doc(notif.userId).get()).data().fcmTokens
           };
-          
+
           await messaging.sendMulticast(message);
         } catch (error) {
           functions.logger.error(`Erro ao enviar notificação para ${notif.userId}:`, error);
         }
       }
-      
+
       functions.logger.info("Notificações de fim de dia enviadas com sucesso");
-      
+
     } catch (error) {
       functions.logger.error("Erro no agendamento de notificações:", error);
     }
   });
+functions.logger.info("================ pagbankWebhook ACIONADA ================");
 
-// ========================================
-// WEBHOOKS DE PAGAMENTO (PAGBANK)
-// ========================================
+try {
+  const payload = req.body;
+  functions.logger.info("Payload recebido:", payload);
 
-/**
- * Inicia checkout web via PagBank
- * Protegido por reCAPTCHA para prevenir fraude
- */
-exports.startWebCheckout = functions.https.onCall(async (data, context) => {
-  functions.logger.info("================ startWebCheckout ACIONADA ================");
-  
-  // Verifica autenticação
-  if (!context.auth) {
-    throw new functions.https.HttpsError('unauthenticated', 'Usuário não autenticado');
-  }
-  
-  const { userId, plan, recaptchaToken } = data;
-  
-  if (!userId || !plan) {
-    throw new functions.https.HttpsError('invalid-argument', 'userId e plan são obrigatórios');
-  }
+  // TODO: Validar assinatura do PagBank
+  // const signature = req.headers['x-pagbank-signature'];
+  // if (!validateSignature(payload, signature)) {
+  //   return res.status(401).send('Assinatura inválida');
+  // }
 
-  // Valida reCAPTCHA (opcional mas recomendado)
-  if (recaptchaToken) {
-    try {
-      const assessment = await assessRecaptcha(recaptchaToken, 'checkout');
-      if (!assessment.valid || assessment.score < 0.5) {
-        functions.logger.warn(`Checkout bloqueado - score reCAPTCHA: ${assessment.score}`);
-        throw new functions.https.HttpsError('permission-denied', 'Verificação de segurança falhou');
-      }
-      functions.logger.info(`✅ Checkout aprovado - score: ${assessment.score}`);
-    } catch (error) {
-      functions.logger.error("Erro ao validar reCAPTCHA no checkout:", error);
-      // Continua mesmo se falhar (graceful degradation)
-    }
-  }
-  
-  try {
-    // Busca dados do usuário
-    const userDoc = await db.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-      throw new functions.https.HttpsError('not-found', 'Usuário não encontrado');
-    }
-    
-    const userData = userDoc.data();
-    
-    // Define valores por plano
-    const planPrices = {
-      plus: { amount: 1990, name: 'Sincro Despertar' }, // R$ 19,90
-      premium: { amount: 3990, name: 'Sincro Sinergia' } // R$ 39,90
+  // Extrai dados do pagamento
+  const { reference_id, status } = payload;
+
+  // Parse do reference_id: userId_plan_timestamp
+  const [userId, plan] = reference_id.split('_');
+
+  if (status === 'PAID' || status === 'APPROVED') {
+    // Pagamento aprovado: atualiza assinatura
+    const planMapping = {
+      plus: 'plus',
+      premium: 'premium'
     };
-    
-    if (!planPrices[plan]) {
-      throw new functions.https.HttpsError('invalid-argument', 'Plano inválido');
-    }
-    
-    // Monta payload PagBank
-    const pagbankPayload = {
-      reference_id: `${userId}_${plan}_${Date.now()}`,
-      customer: {
-        name: `${userData.primeiroNome} ${userData.sobrenome}`,
-        email: userData.email
-      },
-      items: [
-        {
-          name: planPrices[plan].name,
-          quantity: 1,
-          unit_amount: planPrices[plan].amount
-        }
-      ],
-      notification_urls: [
-        `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/pagbankWebhook`
-      ]
-    };
-    
-    // TODO: Chamar API do PagBank
-    // const response = await axios.post('https://api.pagbank.com/checkouts', pagbankPayload, {
-    //   headers: {
-    //     'Authorization': `Bearer ${functions.config().pagbank.token}`,
-    //     'Content-Type': 'application/json'
-    //   }
-    // });
-    
-    // Por enquanto, retorna URL mock
-    functions.logger.info('Checkout iniciado:', pagbankPayload);
-    
-    return {
-      success: true,
-      checkoutUrl: 'https://pagbank.com/checkout/MOCK_ID', // TODO: Usar response.data.links[0].href
-      referenceId: pagbankPayload.reference_id
-    };
-    
-  } catch (error) {
-    functions.logger.error("Erro ao iniciar checkout:", error);
-    throw new functions.https.HttpsError('internal', 'Erro ao processar checkout');
-  }
-});
 
-/**
- * Webhook do PagBank para atualizar status de pagamento
- */
-exports.pagbankWebhook = functions.https.onRequest(async (req, res) => {
-  functions.logger.info("================ pagbankWebhook ACIONADA ================");
-  
-  try {
-    const payload = req.body;
-    functions.logger.info("Payload recebido:", payload);
-    
-    // TODO: Validar assinatura do PagBank
-    // const signature = req.headers['x-pagbank-signature'];
-    // if (!validateSignature(payload, signature)) {
-    //   return res.status(401).send('Assinatura inválida');
-    // }
-    
-    // Extrai dados do pagamento
-    const { reference_id, status } = payload;
-    
-    // Parse do reference_id: userId_plan_timestamp
-    const [userId, plan] = reference_id.split('_');
-    
-    if (status === 'PAID' || status === 'APPROVED') {
-      // Pagamento aprovado: atualiza assinatura
-      const planMapping = {
-        plus: 'plus',
-        premium: 'premium'
-      };
-      
-      const validUntil = new Date();
-      validUntil.setMonth(validUntil.getMonth() + 1); // +30 dias
-      
-      await db.collection('users').doc(userId).update({
-        'subscription.plan': planMapping[plan],
-        'subscription.status': 'active',
-        'subscription.validUntil': admin.firestore.Timestamp.fromDate(validUntil),
-        'subscription.startedAt': admin.firestore.Timestamp.now()
-      });
-      
-      functions.logger.info(`✅ Assinatura ${plan} ativada para usuário ${userId}`);
-      
-      // Envia webhook para n8n
-      await sendToWebhook({
-        event: 'subscription_activated',
-        userId,
-        plan,
-        validUntil: validUntil.toISOString()
-      });
-      
-    } else if (status === 'CANCELED' || status === 'REFUNDED') {
-      // Pagamento cancelado/reembolsado
-      await db.collection('users').doc(userId).update({
-        'subscription.status': 'cancelled'
-      });
-      
-      functions.logger.info(`❌ Assinatura cancelada para usuário ${userId}`);
-    }
-    
-    res.status(200).send('OK');
-    
-  } catch (error) {
-    functions.logger.error("Erro no webhook PagBank:", error);
-    res.status(500).send('Erro interno');
+    const validUntil = new Date();
+    validUntil.setMonth(validUntil.getMonth() + 1); // +30 dias
+
+    await db.collection('users').doc(userId).update({
+      'subscription.plan': planMapping[plan],
+      'subscription.status': 'active',
+      'subscription.validUntil': admin.firestore.Timestamp.fromDate(validUntil),
+      'subscription.startedAt': admin.firestore.Timestamp.now()
+    });
+
+    functions.logger.info(`✅ Assinatura ${plan} ativada para usuário ${userId}`);
+
+    // Envia webhook para n8n
+    await sendToWebhook({
+      event: 'subscription_activated',
+      userId,
+      plan,
+      validUntil: validUntil.toISOString()
+    });
+
+  } else if (status === 'CANCELED' || status === 'REFUNDED') {
+    // Pagamento cancelado/reembolsado
+    await db.collection('users').doc(userId).update({
+      'subscription.status': 'cancelled'
+    });
+
+    functions.logger.info(`❌ Assinatura cancelada para usuário ${userId}`);
   }
+
+  res.status(200).send('OK');
+
+} catch (error) {
+  functions.logger.error("Erro no webhook PagBank:", error);
+  res.status(500).send('Erro interno');
+}
 });

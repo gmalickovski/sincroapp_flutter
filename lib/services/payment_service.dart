@@ -30,6 +30,7 @@ class PaymentService {
   Future<bool> purchaseSubscription({
     required String userId,
     required SubscriptionPlan plan,
+    BillingCycle cycle = BillingCycle.monthly,
   }) async {
     if (plan == SubscriptionPlan.free) {
       throw ArgumentError('Plano free não requer compra');
@@ -37,7 +38,7 @@ class PaymentService {
 
     try {
       if (kIsWeb) {
-        return await _purchaseWeb(userId, plan);
+        return await _purchaseWeb(userId, plan, cycle);
       } else if (defaultTargetPlatform == TargetPlatform.iOS) {
         return await _purchaseIOS(userId, plan);
       } else if (defaultTargetPlatform == TargetPlatform.android) {
@@ -51,11 +52,25 @@ class PaymentService {
     }
   }
 
+  /// Inicia pagamento via PIX (Web/Mobile)
+  Future<bool> purchaseWithPix({
+    required String userId,
+    required SubscriptionPlan plan,
+    BillingCycle cycle = BillingCycle.monthly,
+  }) async {
+    // TODO: Implementar chamada ao backend para gerar QRCode PIX
+    // O backend deve retornar o payload do PIX (Copia e Cola + Imagem)
+    
+    // Mock:
+    await Future.delayed(const Duration(seconds: 2));
+    return true;
+  }
+
   /// ========== WEB: PagBank ==========
-  Future<bool> _purchaseWeb(String userId, SubscriptionPlan plan) async {
+  Future<bool> _purchaseWeb(String userId, SubscriptionPlan plan, BillingCycle cycle) async {
     // Redireciona para checkout do PagBank
     // O checkout será processado via Firebase Functions
-    await _createPagBankCheckout(userId, plan);
+    await _createPagBankCheckout(userId, plan, cycle);
 
     if (kIsWeb) {
       // No web, redireciona para URL de checkout
@@ -70,12 +85,13 @@ class PaymentService {
   Future<String> _createPagBankCheckout(
     String userId,
     SubscriptionPlan plan,
+    BillingCycle cycle,
   ) async {
     // TODO: Chamar Firebase Function que cria checkout PagBank
     // A function retornará a URL de checkout
     // Exemplo de payload:
     // final productId = plan == SubscriptionPlan.plus ? productIdDesperta : productIdSinergia;
-    // userId, plan.name, productId, prices[productId], returnUrl, cancelUrl
+    // userId, plan.name, productId, prices[productId], returnUrl, cancelUrl, cycle
 
     // Mock: retorna URL fake por enquanto
     // final response = await _firestoreService.callFunction('createPagBankCheckout', checkoutData);

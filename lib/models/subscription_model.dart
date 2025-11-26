@@ -17,10 +17,17 @@ enum SubscriptionStatus {
   trial, // Período de teste
 }
 
+/// Ciclo de cobrança
+enum BillingCycle {
+  monthly,
+  annual,
+}
+
 /// Modelo de assinatura do usuário
 class SubscriptionModel {
   final SubscriptionPlan plan;
   final SubscriptionStatus status;
+  final BillingCycle billingCycle; // Novo campo
   final DateTime? validUntil; // null = permanente (free ou vitalício)
   final DateTime startedAt;
   final int aiSuggestionsUsed; // Contador mensal
@@ -30,6 +37,7 @@ class SubscriptionModel {
   const SubscriptionModel({
     required this.plan,
     required this.status,
+    this.billingCycle = BillingCycle.monthly, // Default
     this.validUntil,
     required this.startedAt,
     this.aiSuggestionsUsed = 0,
@@ -42,6 +50,7 @@ class SubscriptionModel {
     return SubscriptionModel(
       plan: SubscriptionPlan.free,
       status: SubscriptionStatus.active,
+      billingCycle: BillingCycle.monthly,
       validUntil: null, // Gratuito não expira
       startedAt: DateTime.now().toUtc(),
       aiSuggestionsUsed: 0,
@@ -63,6 +72,10 @@ class SubscriptionModel {
         (e) => e.name == (data['status'] ?? 'active'),
         orElse: () => SubscriptionStatus.active,
       ),
+      billingCycle: BillingCycle.values.firstWhere(
+        (e) => e.name == (data['billingCycle'] ?? 'monthly'),
+        orElse: () => BillingCycle.monthly,
+      ),
       validUntil: data['validUntil'] != null
           ? (data['validUntil'] as Timestamp).toDate().toUtc()
           : null,
@@ -83,6 +96,7 @@ class SubscriptionModel {
     return {
       'plan': plan.name,
       'status': status.name,
+      'billingCycle': billingCycle.name,
       'validUntil': validUntil != null ? Timestamp.fromDate(validUntil!) : null,
       'startedAt': Timestamp.fromDate(startedAt),
       'aiSuggestionsUsed': aiSuggestionsUsed,
@@ -153,6 +167,7 @@ class SubscriptionModel {
   SubscriptionModel copyWith({
     SubscriptionPlan? plan,
     SubscriptionStatus? status,
+    BillingCycle? billingCycle,
     DateTime? validUntil,
     DateTime? startedAt,
     int? aiSuggestionsUsed,
@@ -162,6 +177,7 @@ class SubscriptionModel {
     return SubscriptionModel(
       plan: plan ?? this.plan,
       status: status ?? this.status,
+      billingCycle: billingCycle ?? this.billingCycle,
       validUntil: validUntil ?? this.validUntil,
       startedAt: startedAt ?? this.startedAt,
       aiSuggestionsUsed: aiSuggestionsUsed ?? this.aiSuggestionsUsed,
@@ -229,6 +245,16 @@ class PlanLimits {
       case SubscriptionPlan.premium:
         return 39.90; // Sincro Sinergia
     }
+  }
+
+  /// Retorna o preço anual do plano (em reais) com 20% de desconto
+  static double getAnnualPrice(SubscriptionPlan plan) {
+    final monthlyPrice = getPlanPrice(plan);
+    if (monthlyPrice == 0) return 0.0;
+    
+    // 12 meses com 20% de desconto
+    // Preço Anual = Mensal * 12 * 0.8
+    return monthlyPrice * 12 * 0.8;
   }
 
   /// Features disponíveis por plano

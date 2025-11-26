@@ -5,9 +5,16 @@ import 'package:sincro_app_flutter/services/payment_service.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/subscription/presentation/widgets/pricing_card.dart';
 
-class SubscriptionScreen extends StatelessWidget {
+class SubscriptionScreen extends StatefulWidget {
   final UserModel user;
   const SubscriptionScreen({super.key, required this.user});
+
+  @override
+  State<SubscriptionScreen> createState() => _SubscriptionScreenState();
+}
+
+class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  BillingCycle _billingCycle = BillingCycle.monthly;
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +55,26 @@ class SubscriptionScreen extends StatelessWidget {
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 64),
+                const SizedBox(height: 32),
+
+                // Toggle Mensal/Anual
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildToggleOption('Mensal', BillingCycle.monthly),
+                      _buildToggleOption('Anual', BillingCycle.annual, badge: '20% OFF'),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 48),
 
                 // Pricing Cards
                 if (isDesktop)
@@ -98,6 +124,49 @@ class SubscriptionScreen extends StatelessWidget {
     );
   }
 
+  Widget _buildToggleOption(String label, BillingCycle cycle, {String? badge}) {
+    final isSelected = _billingCycle == cycle;
+    return GestureDetector(
+      onTap: () => setState(() => _billingCycle = cycle),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(28),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : AppColors.secondaryText,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            if (badge != null) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : AppColors.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  badge,
+                  style: TextStyle(
+                    color: isSelected ? AppColors.primary : Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   List<Widget> _buildCards(BuildContext context, bool isDesktop) {
     final plans = [
       SubscriptionPlan.free,
@@ -106,12 +175,12 @@ class SubscriptionScreen extends StatelessWidget {
     ];
 
     return plans.map((plan) {
-      final isCurrent = user.subscription.plan == plan;
+      final isCurrent = widget.user.subscription.plan == plan;
       
       // Lógica de Destaque Dinâmico
       bool isRecommended = false;
       
-      switch (user.subscription.plan) {
+      switch (widget.user.subscription.plan) {
         case SubscriptionPlan.free:
           // Se for Grátis, destaca Plus e Premium para incentivar upgrade
           if (plan == SubscriptionPlan.plus || plan == SubscriptionPlan.premium) {
@@ -136,6 +205,7 @@ class SubscriptionScreen extends StatelessWidget {
         plan: plan,
         isCurrent: isCurrent,
         isRecommended: isRecommended,
+        billingCycle: _billingCycle,
         onSelect: () => _handlePurchase(context, plan),
       );
 
@@ -159,8 +229,9 @@ class SubscriptionScreen extends StatelessWidget {
     final service = PaymentService();
     try {
       final ok = await service.purchaseSubscription(
-        userId: user.uid,
+        userId: widget.user.uid,
         plan: plan,
+        cycle: _billingCycle,
       );
       if (ok && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(

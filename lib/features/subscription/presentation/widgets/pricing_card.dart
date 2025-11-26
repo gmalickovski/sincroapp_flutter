@@ -7,6 +7,7 @@ class PricingCard extends StatefulWidget {
   final bool isCurrent;
   final VoidCallback? onSelect;
   final bool isRecommended;
+  final BillingCycle billingCycle;
 
   const PricingCard({
     super.key,
@@ -14,6 +15,7 @@ class PricingCard extends StatefulWidget {
     this.isCurrent = false,
     this.onSelect,
     this.isRecommended = false,
+    this.billingCycle = BillingCycle.monthly,
   });
 
   @override
@@ -26,7 +28,33 @@ class _PricingCardState extends State<PricingCard> {
   @override
   Widget build(BuildContext context) {
     final name = PlanLimits.getPlanName(widget.plan);
-    final price = PlanLimits.getPlanPrice(widget.plan);
+    
+    // Calcula preço baseado no ciclo
+    double price;
+    if (widget.billingCycle == BillingCycle.annual) {
+      // Preço total anual
+      price = PlanLimits.getAnnualPrice(widget.plan);
+    } else {
+      price = PlanLimits.getPlanPrice(widget.plan);
+    }
+    
+    // Se for anual, mostra o equivalente mensal para comparação visual?
+    // Ou mostra o total anual? Geralmente mostra o equivalente mensal em destaque
+    // Mas para clareza, vamos mostrar o valor que será cobrado.
+    // O usuário pediu "desconto no valor total de 20%".
+    // Vamos mostrar o valor da parcela equivalente se for anual, ou o total?
+    // Padrão de mercado: Mostrar "R$ X/mês" (cobrado anualmente R$ Y)
+    
+    double displayPrice = price;
+    String periodSuffix = '/mês';
+    String? subtext;
+
+    if (widget.billingCycle == BillingCycle.annual && widget.plan != SubscriptionPlan.free) {
+      // Exibe o equivalente mensal
+      displayPrice = price / 12;
+      subtext = 'Cobrado anualmente (R\$ ${price.toStringAsFixed(2)})';
+    }
+
     final features = _getFeatures(widget.plan);
     
     // Cores baseadas no plano
@@ -57,7 +85,9 @@ class _PricingCardState extends State<PricingCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
+        transform: _isHovered 
+            ? Matrix4.diagonal3Values(1.02, 1.02, 1.0)
+            : Matrix4.identity(),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
@@ -112,24 +142,40 @@ class _PricingCardState extends State<PricingCard> {
                   const SizedBox(height: 24),
                   
                   // Preço
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        widget.plan == SubscriptionPlan.free ? 'Grátis' : 'R\$ ${price.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(
+                            widget.plan == SubscriptionPlan.free ? 'Grátis' : 'R\$ ${displayPrice.toStringAsFixed(2)}',
+                            style: const TextStyle(
+                              color: AppColors.primaryText,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (widget.plan != SubscriptionPlan.free)
+                            Text(
+                              periodSuffix,
+                              style: const TextStyle(
+                                color: AppColors.secondaryText,
+                                fontSize: 16,
+                              ),
+                            ),
+                        ],
                       ),
-                      if (widget.plan != SubscriptionPlan.free)
-                        const Text(
-                          '/mês',
-                          style: TextStyle(
-                            color: AppColors.secondaryText,
-                            fontSize: 16,
+                      if (subtext != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            subtext,
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 12,
+                            ),
                           ),
                         ),
                     ],
