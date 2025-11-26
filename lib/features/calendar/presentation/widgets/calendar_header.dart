@@ -1,6 +1,7 @@
 // lib/features/calendar/presentation/widgets/calendar_header.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class CalendarHeader extends StatelessWidget {
@@ -48,7 +49,7 @@ class CalendarHeader extends StatelessWidget {
                         ),
                       ),
                       maxLines: 1,
-                      textDirection: TextDirection.ltr,
+                      textDirection: ui.TextDirection.ltr,
                     );
                     
                     textPainter.layout(maxWidth: constraints.maxWidth);
