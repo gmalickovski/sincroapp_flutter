@@ -26,11 +26,19 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   void _navigateToSettings(BuildContext context) {
     if (userData != null) {
-      Navigator.of(context).push(
-        MaterialPageRoute(
+      final isDesktop = MediaQuery.of(context).size.width >= 720; // Matches Sidebar logic
+      if (isDesktop) {
+        showDialog(
+          context: context,
           builder: (context) => SettingsScreen(userData: userData!),
-        ),
-      );
+        );
+      } else {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SettingsScreen(userData: userData!),
+          ),
+        );
+      }
     }
   }
 
