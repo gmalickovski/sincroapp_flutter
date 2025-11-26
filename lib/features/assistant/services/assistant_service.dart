@@ -10,6 +10,7 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 
 class AssistantService {
   static GenerativeModel? _model;

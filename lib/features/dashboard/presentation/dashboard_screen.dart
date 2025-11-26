@@ -38,6 +38,7 @@ import 'package:sincro_app_flutter/common/widgets/numerology_detail_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
 
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {

@@ -2,6 +2,7 @@ import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendat
 import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
