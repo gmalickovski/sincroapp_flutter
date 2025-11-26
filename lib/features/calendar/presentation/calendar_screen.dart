@@ -117,6 +117,11 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _currentTasksCreatedAt = []; 
     _processEvents();
     
+    // --- INÍCIO DA CORREÇÃO (Vibração) ---
+    // Atualiza o dia pessoal ao inicializar streams (troca de mês/load)
+    _updatePersonalDay(_selectedDay);
+    // --- FIM DA CORREÇÃO ---
+
     if (isInitialLoad) {
       setState(() {
         _isScreenLoading = false;
@@ -131,11 +136,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Processar tarefas
     for (var task in _currentTasksDueDate) {
       if (task.dueDate != null) {
-        final date = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        // --- INÍCIO DA CORREÇÃO (Marcadores) ---
+        // Usa UTC para chave do mapa de eventos (compatível com CustomCalendar)
+        final dateUtc = DateTime.utc(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        // Usa Local para chave do mapa de raw events (compatível com DayDetailPanel)
+        final dateLocal = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
         
         // Adicionar ao map de eventos do calendário (para bolinhas)
-        if (newEvents[date] == null) newEvents[date] = [];
-        newEvents[date]!.add(CalendarEvent(
+        if (newEvents[dateUtc] == null) newEvents[dateUtc] = [];
+        newEvents[dateUtc]!.add(CalendarEvent(
           title: task.text,
           date: task.dueDate!,
           type: EventType.task,
@@ -143,8 +152,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ));
 
         // Adicionar ao map de raw events (para lista de detalhes)
-        if (newRawEvents[date] == null) newRawEvents[date] = [];
-        newRawEvents[date]!.add(task);
+        if (newRawEvents[dateLocal] == null) newRawEvents[dateLocal] = [];
+        newRawEvents[dateLocal]!.add(task);
+        // --- FIM DA CORREÇÃO ---
       }
     }
 
@@ -155,6 +165,33 @@ class _CalendarScreenState extends State<CalendarScreen> {
       });
     }
   }
+
+  // --- INÍCIO DA CORREÇÃO (Vibração) ---
+  void _updatePersonalDay(DateTime date) {
+    if (widget.userData.nomeAnalise.isEmpty || widget.userData.dataNasc.isEmpty) {
+      return;
+    }
+
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+
+    try {
+      // Calcula para o dia selecionado (em UTC para garantir consistência)
+      final dateUtc = DateTime.utc(date.year, date.month, date.day);
+      final day = engine.calculatePersonalDayForDate(dateUtc);
+      
+      if (_personalDayNumber != day) {
+        setState(() {
+          _personalDayNumber = day;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao calcular dia pessoal: $e');
+    }
+  }
+  // --- FIM DA CORREÇÃO ---
 
   List<dynamic> _getRawEventsForDay(DateTime day) {
     final normalizedDay = DateTime(day.year, day.month, day.day);
@@ -167,6 +204,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
         _selectedDay = selectedDay;
         _focusedDay = focusedDay;
       });
+      // --- INÍCIO DA CORREÇÃO (Vibração) ---
+      _updatePersonalDay(selectedDay);
+      // --- FIM DA CORREÇÃO ---
     }
   }
 

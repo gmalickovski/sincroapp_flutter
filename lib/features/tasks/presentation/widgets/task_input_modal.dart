@@ -118,20 +118,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
         // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
         if (widget.initialDueDate != null) {
           initialDateForPill = widget.initialDueDate!.toLocal();
-          // Define o pill de data APENAS se for uma data diferente de hoje
-          final today = DateTime.now();
-          final todayMidnight = DateTime(today.year, today.month, today.day);
-          final initialMidnight = DateTime(
-            initialDateForPill.year,
-            initialDateForPill.month,
-            initialDateForPill.day,
-          );
-
-          // Só mostra o pill se for uma data futura ou passada (não hoje)
-          if (!isSameDay(initialMidnight, todayMidnight)) {
-            _selectedDate = initialDateForPill;
-          }
-          // Se for hoje, _selectedDate continua null (pill não aparece)
+          // Define o pill de data SEMPRE se for fornecido (mesmo que seja hoje)
+          // Isso garante que tarefas criadas pelo calendário tenham a data correta
+          _selectedDate = initialDateForPill;
         }
       }
       // --- FIM DA CORREÇÃO ---
