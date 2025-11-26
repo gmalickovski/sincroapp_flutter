@@ -87,9 +87,18 @@ class DashboardSidebar extends StatelessWidget {
               text: 'Configurações',
               index: 98,
               onTap: () {
-                Navigator.of(context).push(MaterialPageRoute(
-                  builder: (context) => SettingsScreen(userData: userData),
-                ));
+                // Se for desktop (largura > 720), abre como Modal
+                if (MediaQuery.of(context).size.width >= 720) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => SettingsScreen(userData: userData),
+                  );
+                } else {
+                  // Se for mobile, navega para a tela
+                  Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => SettingsScreen(userData: userData),
+                  ));
+                }
               },
             ),
             _buildNavItem(

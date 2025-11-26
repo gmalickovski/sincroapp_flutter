@@ -110,19 +110,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Layout para Desktop/Web (o novo layout "Notion-style")
   Widget _buildDesktopLayout(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        title: const Text('Configurações'),
-        leading: BackButton(
-          color: AppColors.secondaryText,
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        // Não temos 'bottom' (TabBar) no layout desktop
-      ),
-      body: Center(
+    // Ao ser exibido como Dialog, não usamos Scaffold para permitir transparência
+    // e o efeito de overlay do showDialog.
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 800),
           margin: const EdgeInsets.all(32),
@@ -132,7 +124,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             border: Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),

@@ -67,9 +67,9 @@ class SubscriptionScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppColors.cardBackground.withOpacity(0.5),
+                    color: AppColors.cardBackground.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border.withOpacity(0.6)),
+                    border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
                   ),
                   child: const Column(
                     children: [
@@ -107,7 +107,30 @@ class SubscriptionScreen extends StatelessWidget {
 
     return plans.map((plan) {
       final isCurrent = user.subscription.plan == plan;
-      final isRecommended = plan == SubscriptionPlan.plus; // Desperta é o recomendado
+      
+      // Lógica de Destaque Dinâmico
+      bool isRecommended = false;
+      
+      switch (user.subscription.plan) {
+        case SubscriptionPlan.free:
+          // Se for Grátis, destaca Plus e Premium para incentivar upgrade
+          if (plan == SubscriptionPlan.plus || plan == SubscriptionPlan.premium) {
+            isRecommended = true;
+          }
+          break;
+        case SubscriptionPlan.plus:
+          // Se for Plus, destaca Premium para incentivar upgrade
+          if (plan == SubscriptionPlan.premium) {
+            isRecommended = true;
+          }
+          break;
+        case SubscriptionPlan.premium:
+          // Se for Premium, destaca apenas ele mesmo (não incentiva downgrade)
+          if (plan == SubscriptionPlan.premium) {
+            isRecommended = true;
+          }
+          break;
+      }
       
       final card = PricingCard(
         plan: plan,

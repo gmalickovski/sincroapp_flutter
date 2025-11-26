@@ -14,7 +14,7 @@ class PlanSettingsTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentPlan = userData.subscription.plan;
     final planName = PlanLimits.getPlanName(currentPlan);
-    final isFreePlan = currentPlan == SubscriptionPlan.free;
+
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -22,64 +22,132 @@ class PlanSettingsTab extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Seção do Plano Atual
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.workspace_premium, color: AppColors.primary, size: 32),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 600;
+              return Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Seu Plano Atual',
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 14,
-                        ),
+                child: isMobile
+                    ? Column(
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.workspace_premium,
+                                    color: AppColors.primary, size: 32),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Seu Plano Atual',
+                                      style: TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      planName,
+                                      style: const TextStyle(
+                                        color: AppColors.primaryText,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pushNamed(
+                                  AppRoutes.subscription,
+                                  arguments: {'user': userData},
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.background,
+                                foregroundColor: AppColors.primaryText,
+                                elevation: 0,
+                                side: const BorderSide(color: AppColors.border),
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                              ),
+                              child: const Text('Gerenciar Assinatura'),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.workspace_premium,
+                                color: AppColors.primary, size: 32),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Seu Plano Atual',
+                                  style: TextStyle(
+                                    color: AppColors.secondaryText,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  planName,
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushNamed(
+                                AppRoutes.subscription,
+                                arguments: {'user': userData},
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.background,
+                              foregroundColor: AppColors.primaryText,
+                              elevation: 0,
+                              side: const BorderSide(color: AppColors.border),
+                            ),
+                            child: const Text('Gerenciar Assinatura'),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        planName,
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushNamed(
-                      AppRoutes.subscription,
-                      arguments: {'user': userData},
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.background,
-                    foregroundColor: AppColors.primaryText,
-                    elevation: 0,
-                    side: const BorderSide(color: AppColors.border),
-                  ),
-                  child: const Text('Gerenciar Assinatura'),
-                ),
-              ],
-            ),
+              );
+            },
           ),
           
           const SizedBox(height: 32),

@@ -42,12 +42,12 @@ class _PricingCardState extends State<PricingCard> {
         break;
       case SubscriptionPlan.plus:
         planColor = AppColors.primary;
-        gradientStart = AppColors.primary.withOpacity(0.2);
+        gradientStart = AppColors.primary.withValues(alpha: 0.2);
         gradientEnd = AppColors.cardBackground;
         break;
       case SubscriptionPlan.premium:
         planColor = Colors.amber;
-        gradientStart = Colors.amber.withOpacity(0.2);
+        gradientStart = Colors.amber.withValues(alpha: 0.2);
         gradientEnd = AppColors.cardBackground;
         break;
     }
@@ -62,13 +62,13 @@ class _PricingCardState extends State<PricingCard> {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: widget.isCurrent || _isHovered ? planColor : AppColors.border.withOpacity(0.5),
+            color: widget.isCurrent || _isHovered ? planColor : AppColors.border.withValues(alpha: 0.5),
             width: widget.isCurrent || _isHovered ? 2 : 1,
           ),
           boxShadow: [
             if (_isHovered || widget.isRecommended)
               BoxShadow(
-                color: planColor.withOpacity(0.15),
+                color: planColor.withValues(alpha: 0.15),
                 blurRadius: 24,
                 offset: const Offset(0, 8),
               ),
@@ -77,8 +77,8 @@ class _PricingCardState extends State<PricingCard> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              gradientStart.withOpacity(0.1),
-              gradientEnd.withOpacity(0.05),
+              gradientStart.withValues(alpha: 0.1),
+              gradientEnd.withValues(alpha: 0.05),
             ],
           ),
         ),
@@ -209,7 +209,7 @@ class _PricingCardState extends State<PricingCard> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: planColor.withOpacity(0.4),
+                        color: planColor.withValues(alpha: 0.4),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),

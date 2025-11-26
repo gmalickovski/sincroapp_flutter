@@ -24,7 +24,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/assistant_insights_card.dart';
+
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import '../../calendar/presentation/calendar_screen.dart';
 import '../../journal/presentation/journal_screen.dart';
@@ -468,11 +468,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final Set<String> hidden = _userData?.dashboardHiddenCards.toSet() ?? {};
 
     final Map<String, Widget> allCardsMap = {
-      // Card de insights IA: disponível para todos os planos, mas IA só responde se não excedeu limite
-      'assistantInsights': AssistantInsightsCard(
-        key: const ValueKey('assistantInsights'),
-        user: _userData!,
-      ),
+
       if (_numerologyData != null)
         'strategyCard': StrategyCard(
           key: const ValueKey('strategyCard'),
