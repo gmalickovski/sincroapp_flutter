@@ -9,16 +9,22 @@ class CalendarHeader extends StatelessWidget {
   final VoidCallback onLeftArrowTap;
   final VoidCallback onRightArrowTap;
 
+  final bool isCompact;
+
   const CalendarHeader({
     super.key,
     required this.focusedDay,
     required this.onTodayButtonTap,
     required this.onLeftArrowTap,
     required this.onRightArrowTap,
+    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final dateFormat = isCompact ? DateFormat('MMM. yyyy', 'pt_BR') : DateFormat.yMMMM('pt_BR');
+    final fontSize = isCompact ? 20.0 : 24.0;
+
     return Column(
       children: [
         Padding(
@@ -29,11 +35,10 @@ class CalendarHeader extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  toBeginningOfSentenceCase(
-                      DateFormat.yMMMM('pt_BR').format(focusedDay))!,
-                  style: const TextStyle(
+                  toBeginningOfSentenceCase(dateFormat.format(focusedDay))!,
+                  style: TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: fontSize,
                       fontWeight: FontWeight.bold),
                 ),
               ),

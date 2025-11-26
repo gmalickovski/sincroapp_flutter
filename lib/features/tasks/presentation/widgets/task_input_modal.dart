@@ -110,16 +110,27 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
         // Usa a data inicial APENAS para a pílula de vibração (Problema 1)
         if (widget.initialDueDate != null) {
-          initialDateForPill = widget.initialDueDate!.toLocal();
+          initialDateForPill = DateTime(
+            widget.initialDueDate!.year,
+            widget.initialDueDate!.month,
+            widget.initialDueDate!.day,
+          );
         }
         // _selectedDate continua nulo, então o pill de data não aparece
       } else {
         // --- LÓGICA DO CALENDÁRIO / FOCO ---
         // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
         if (widget.initialDueDate != null) {
-          initialDateForPill = widget.initialDueDate!.toLocal();
+          // CORREÇÃO: Usa os componentes da data para evitar shift de fuso horário (UTC -> Local)
+          // Se widget.initialDueDate for 29/11 00:00 UTC, toLocal() viraria 28/11 21:00 (BRT).
+          // Ao usar DateTime(y,m,d), criamos 29/11 00:00 Local, mantendo o dia correto.
+          initialDateForPill = DateTime(
+            widget.initialDueDate!.year,
+            widget.initialDueDate!.month,
+            widget.initialDueDate!.day,
+          );
+          
           // Define o pill de data SEMPRE se for fornecido (mesmo que seja hoje)
-          // Isso garante que tarefas criadas pelo calendário tenham a data correta
           _selectedDate = initialDateForPill;
         }
       }
