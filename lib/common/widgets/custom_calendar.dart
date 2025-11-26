@@ -208,8 +208,9 @@ class _DayCellState extends State<_DayCell> {
   bool _isHovered = false;
 
   Color _getColorForEventType(EventType type) {
-    if (type == EventType.task) return AppColors.taskMarker;
-    if (type == EventType.goalTask) return AppColors.goalTaskMarker;
+    if (type == EventType.task) return AppColors.primary; // Roxo/Magenta (Normal)
+    if (type == EventType.goalTask) return Colors.cyanAccent; // Ciano (Metas)
+    if (type == EventType.scheduledTask) return Colors.orangeAccent; // Laranja (Agendado)
     if (type == EventType.journal) return AppColors.journalMarker;
     throw StateError('Unhandled EventType: $type');
   }

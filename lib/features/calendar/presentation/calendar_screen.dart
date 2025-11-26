@@ -145,12 +145,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
         // Usa Local para chave do mapa de raw events (compatível com DayDetailPanel)
         final dateLocal = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
         
+        // Determina o tipo de evento para o marcador
+        EventType eventType = EventType.task;
+        if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+          eventType = EventType.goalTask;
+        } else if (task.reminderTime != null) {
+          eventType = EventType.scheduledTask;
+        }
+
         // Adicionar ao map de eventos do calendário (para bolinhas)
         if (newEvents[dateUtc] == null) newEvents[dateUtc] = [];
         newEvents[dateUtc]!.add(CalendarEvent(
           title: task.text,
           date: task.dueDate!,
-          type: EventType.task,
+          type: eventType,
           isCompleted: task.completed,
         ));
 

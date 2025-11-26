@@ -4,6 +4,7 @@
 enum EventType {
   task,
   goalTask,
+  scheduledTask,
   journal,
 }
 
