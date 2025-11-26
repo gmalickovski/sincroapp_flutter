@@ -9,21 +9,16 @@ class CalendarHeader extends StatelessWidget {
   final VoidCallback onLeftArrowTap;
   final VoidCallback onRightArrowTap;
 
-  final bool isCompact;
-
   const CalendarHeader({
     super.key,
     required this.focusedDay,
     required this.onTodayButtonTap,
     required this.onLeftArrowTap,
     required this.onRightArrowTap,
-    this.isCompact = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = isCompact ? DateFormat('MMM. yyyy', 'pt_BR') : DateFormat.yMMMM('pt_BR');
-    final fontSize = isCompact ? 20.0 : 24.0;
 
     return Column(
       children: [
@@ -34,12 +29,47 @@ class CalendarHeader extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
-                child: Text(
-                  toBeginningOfSentenceCase(dateFormat.format(focusedDay))!,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: fontSize,
-                      fontWeight: FontWeight.bold),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final fullFormat = DateFormat('MMMM yyyy', 'pt_BR');
+                    final shortFormat = DateFormat('MMM yyyy', 'pt_BR');
+                    
+                    final fullText = toBeginningOfSentenceCase(fullFormat.format(focusedDay))!;
+                    final shortText = toBeginningOfSentenceCase(shortFormat.format(focusedDay))!;
+
+                    // Check if full text fits
+                    final textPainter = TextPainter(
+                      text: TextSpan(
+                        text: fullText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24, // Tenta manter 24 se couber
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      maxLines: 1,
+                      textDirection: TextDirection.ltr,
+                    );
+                    
+                    textPainter.layout(maxWidth: constraints.maxWidth);
+
+                    final useShort = textPainter.didExceedMaxLines;
+                    
+                    // Se usar short, podemos manter 24 ou reduzir para 20 se ainda assim ficar apertado?
+                    // O usuário pediu "diminuir um pouco a fonte" no request anterior, mas agora pediu "automático".
+                    // Vamos tentar: Se full cabe -> 24. Se não -> Short com 24. 
+                    // Se Short não couber (muito raro), o Text vai quebrar ou elipsar, mas "Nov. 2025" é bem curto.
+                    
+                    return Text(
+                      useShort ? shortText : fullText,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: useShort ? 24 : 24, // Mantém 24 para consistência, ou 20 se preferir
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    );
+                  },
                 ),
               ),
               Row(
