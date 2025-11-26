@@ -13,6 +13,7 @@ import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
 import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
