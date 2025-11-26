@@ -2,6 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
+import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_detail_modal.dart';
 
 class StrategyCard extends StatefulWidget {
   final StrategyRecommendation recommendation;
@@ -223,168 +225,23 @@ class _StrategyCardState extends State<StrategyCard> {
   }
 
   void _showTipsDialog(BuildContext context) {
-    final mode = widget.recommendation.mode;
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.cardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 500),
-          padding: const EdgeInsets.all(24),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(mode.icon, color: mode.color, size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            mode.title,
-                            style: TextStyle(
-                              color: mode.color,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            widget.recommendation.methodologyName,
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white54),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                
-                // Mode Explanation
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: mode.color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: mode.color.withValues(alpha: 0.3)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Sobre este modo",
-                        style: TextStyle(
-                          color: mode.color,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        mode.subtitle,
-                        style: const TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
+    final isDesktop = MediaQuery.of(context).size.width > 600;
 
-                // AI Suggestions
-                if (widget.recommendation.aiSuggestions.isNotEmpty) ...[
-                  const Row(
-                    children: [
-                      Icon(Icons.auto_awesome, color: AppColors.primary, size: 18),
-                      SizedBox(width: 8),
-                      Text(
-                        "Análise Estratégica do Dia",
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  ...widget.recommendation.aiSuggestions.map((suggestion) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text("• ",
-                                style: TextStyle(color: AppColors.primary, fontSize: 16)),
-                            Expanded(
-                              child: Text(
-                                suggestion,
-                                style: const TextStyle(
-                                    color: AppColors.tertiaryText, fontSize: 14, height: 1.4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
-                  const SizedBox(height: 24),
-                  Divider(color: AppColors.border.withValues(alpha: 0.3)),
-                  const SizedBox(height: 24),
-                ],
-
-                const Text(
-                  "Dicas Gerais:",
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16),
-                ),
-                const SizedBox(height: 12),
-                ...widget.recommendation.tips.map((tip) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("• ",
-                              style: TextStyle(color: AppColors.secondaryText, fontSize: 16)),
-                          Expanded(
-                            child: Text(
-                              tip,
-                              style: const TextStyle(
-                                  color: AppColors.tertiaryText, fontSize: 14, height: 1.4),
-                              ),
-                          ),
-                        ],
-                      ),
-                    )),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: mode.color.withValues(alpha: 0.2),
-                      foregroundColor: mode.color,
-                      side: BorderSide(color: mode.color),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                    ),
-                    child: const Text("Entendido"),
-                  ),
-                ),
-              ],
-            ),
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (context) => StrategyDetailModal(
+          recommendation: widget.recommendation,
+        ),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => StrategyDetailModal(
+            recommendation: widget.recommendation,
           ),
         ),
-      ),
-    );
+      );
+    }
   }
 }

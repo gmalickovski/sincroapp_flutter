@@ -70,4 +70,16 @@ enum StrategyMode {
         return [const Color(0xFFAB47BC), const Color(0xFF7B1FA2)];
     }
   }
+  String get detailedDescription {
+    switch (this) {
+      case StrategyMode.focus:
+        return "Este modo é ativado em dias de energia 1, 4 ou 8. A vibração do dia favorece a liderança, a construção e a execução material. É o momento ideal para avançar em grandes projetos, tomar decisões difíceis e focar na qualidade do seu trabalho. Evite dispersões e multitarefas; o sucesso hoje vem da profundidade e da disciplina.";
+      case StrategyMode.flow:
+        return "Este modo é ativado em dias de energia 2, 6 ou 9. A vibração favorece a intuição, os relacionamentos e a conclusão de ciclos. Não é um dia para forçar portas fechadas, mas sim para navegar com a correnteza. Priorize a diplomacia, o cuidado com o próximo e a finalização de pendências. A produtividade hoje é fluida e emocional.";
+      case StrategyMode.grounding:
+        return "Este modo é ativado em dias de energia 3 ou 5. A vibração é de movimento, criatividade e, por vezes, instabilidade. O desafio hoje é manter o foco em meio ao caos criativo ou às mudanças inesperadas. Use listas para se organizar, mas esteja aberto ao novo. É um dia excelente para comunicação e vendas, desde que você mantenha os pés no chão.";
+      case StrategyMode.rescue:
+        return "Este modo é ativado em dias de energia 7, 11 ou 22. A energia física pode estar mais baixa, voltando-se para o mental e o espiritual. Não se cobre uma produtividade mecânica. É um dia para análise, planejamento estratégico e grandes insights. Respeite seu ritmo, faça pausas e use sua intuição para resolver problemas complexos.";
+    }
+  }
 }
