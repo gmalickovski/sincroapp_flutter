@@ -77,6 +77,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   StreamSubscription<List<Goal>>?
       _goalsSubscription; // Stream de metas em tempo real
   final FabOpacityController _fabOpacityController = FabOpacityController();
+  StrategyRecommendation? _strategyRecommendation; // State for AI strategy
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -164,6 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _initializeTasksStream(currentUser.uid);
       _initializeGoalsStream(currentUser.uid);
       _initializeGoalsStream(currentUser.uid); // ativa stream de metas
+      _loadStrategy(); // Load AI strategy
     } catch (e, stackTrace) {
       debugPrint(
           "Erro detalhado ao carregar dados iniciais do dashboard: $e\n$stackTrace");
@@ -193,6 +195,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               _isLoading = false;
             }
             _buildCardList();
+            _loadStrategy(); // Reload strategy when tasks change
           });
         }
       },
@@ -392,6 +395,37 @@ class _DashboardScreenState extends State<DashboardScreen>
     }
   }
 
+  Future<void> _loadStrategy() async {
+    if (_userData == null || _numerologyData == null) return;
+
+    final personalDay = _numerologyData!.numeros['diaPessoal'] ?? 1;
+    
+    // First, set base recommendation immediately to avoid lag
+    if (_strategyRecommendation == null) {
+        setState(() {
+            _strategyRecommendation = StrategyEngine.getRecommendation(personalDay);
+        });
+    }
+
+    // Then fetch AI suggestions
+    try {
+      final strategy = await StrategyEngine.generateDailyStrategy(
+        personalDay: personalDay,
+        tasks: _currentTodayTasks,
+        user: _userData!,
+      );
+      
+      if (mounted) {
+        setState(() {
+          _strategyRecommendation = strategy;
+          _buildCardList(); // Rebuild cards with new strategy
+        });
+      }
+    } catch (e) {
+      debugPrint("Erro ao carregar estratégia IA: $e");
+    }
+  }
+
   // --- FIM DA ATUALIZAÇÃO ---
 
   // Navegação, _buildCardList, _buildDragHandle, Getters de conteúdo,
@@ -441,8 +475,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (_numerologyData != null)
         'strategyCard': StrategyCard(
           key: const ValueKey('strategyCard'),
-          recommendation: StrategyEngine.getRecommendation(
-              _numerologyData!.numeros['diaPessoal'] ?? 1),
+          recommendation: _strategyRecommendation ??
+              StrategyEngine.getRecommendation(
+                  _numerologyData!.numeros['diaPessoal'] ?? 1),
         ),
       'goalsProgress': GoalsProgressCard(
         key: const ValueKey('goalsProgress'),

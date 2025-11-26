@@ -102,4 +102,42 @@ class AssistantService {
 
     return AssistantAnswer.fromJson(data);
   }
+
+  static Future<List<String>> generateStrategySuggestions({
+    required UserModel user,
+    required List<TaskModel> tasks,
+    required int personalDay,
+    required StrategyMode mode,
+  }) async {
+    final prompt = AssistantPromptBuilder.buildStrategyPrompt(
+      user: user,
+      tasks: tasks,
+      personalDay: personalDay,
+      mode: mode,
+    );
+
+    try {
+      final response = await _getModel().generateContent([Content.text(prompt)]);
+      var text = response.text ?? '';
+
+      // Clean up markdown
+      text = text
+          .replaceAll(RegExp(r'```json\s*'), '')
+          .replaceAll(RegExp(r'```\s*'), '');
+
+      final startIndex = text.indexOf('[');
+      final endIndex = text.lastIndexOf(']');
+
+      if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) {
+        return [];
+      }
+
+      final jsonStr = text.substring(startIndex, endIndex + 1);
+      final List<dynamic> data = jsonDecode(jsonStr);
+      return data.map((e) => e.toString()).toList();
+    } catch (e) {
+      debugPrint('Erro ao gerar sugestões de estratégia: $e');
+      return [];
+    }
+  }
 }

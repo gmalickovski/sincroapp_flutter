@@ -489,6 +489,45 @@ $question
         return "Organização, limpeza de pendências, comunicação.";
       case StrategyMode.rescue:
         return "Autocuidado, mini-hábitos, evitar burnout.";
-    }
+    };
+  }
+
+  static String buildStrategyPrompt({
+    required UserModel user,
+    required List<TaskModel> tasks,
+    required int personalDay,
+    required StrategyMode mode,
+  }) {
+    final tasksCompact = tasks.map((t) => {
+          'title': t.text,
+          'dueDate': t.dueDate?.toIso8601String().split('T').first,
+          'hasTime': t.reminderTime != null,
+          'isGoal': t.journeyId != null,
+        }).toList();
+
+    return '''
+Você é o Sincro Flow, um estrategista de produtividade pessoal baseado em numerologia e gestão de tempo.
+O usuário está no Dia Pessoal $personalDay, que corresponde ao modo: ${mode.title}.
+Descrição do modo: ${StrategyEngine.getModeDescription(mode)}.
+
+Tarefas do dia:
+${jsonEncode(tasksCompact)}
+
+Sua missão:
+Analisar as tarefas do usuário e sugerir ajustes ou focos específicos baseados no Modo do Dia.
+- Se o dia for de Foco (1, 4, 8) e houver muitas tarefas dispersas, sugira priorizar ou delegar.
+- Se o dia for de Fluxo (2, 6, 9) e houver tarefas muito rígidas, sugira flexibilidade ou foco em relacionamentos/conclusão.
+- Se o dia for de Aterramento (3, 5) e houver caos, sugira organização ou gestão de imprevistos.
+- Se o dia for de Resgate (7, 11, 22) e houver excesso de trabalho, sugira pausas ou reagendamento.
+
+Retorne APENAS um array JSON de strings com 3 a 5 sugestões curtas e diretas.
+Exemplo:
+[
+  "Como hoje é dia de Foco, priorize a tarefa X e deixe Y para amanhã.",
+  "Evite reuniões longas hoje, sua energia pede execução rápida.",
+  "A tarefa Z exige criatividade, ideal para o dia de hoje."
+]
+''';
   }
 }
+```

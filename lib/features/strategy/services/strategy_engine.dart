@@ -1,13 +1,10 @@
-import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
-import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
+import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
+import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
-    // Busca o conteúdo da Bússola para o dia (ou fallback para dia 1 se não encontrar)
-    final bussola = ContentData.bussolaAtividades[personalDay] ??
-        ContentData.bussolaAtividades[1]!;
-
     switch (personalDay) {
       case 1:
         return StrategyRecommendation(
@@ -19,8 +16,6 @@ class StrategyEngine {
             "Evite multitarefa. Comece o que é mais importante.",
             "Diga 'não' para distrações que não iniciam algo novo."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 2:
         return StrategyRecommendation(
@@ -32,8 +27,6 @@ class StrategyEngine {
             "Use a intuição para decidir o timing das ações.",
             "Se sentir bloqueio, pare e respire. A força bruta não funciona hoje."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 3:
         return StrategyRecommendation(
@@ -45,8 +38,6 @@ class StrategyEngine {
             "Faça listas antes de agir.",
             "Cuidado para não começar 10 coisas e não terminar nenhuma."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 4:
         return StrategyRecommendation(
@@ -58,8 +49,6 @@ class StrategyEngine {
             "Siga um cronograma rígido hoje.",
             "Foque nos detalhes e na qualidade, não na velocidade."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 5:
         return StrategyRecommendation(
@@ -71,8 +60,6 @@ class StrategyEngine {
             "Seja flexível. Se o plano mudar, adapte-se rápido.",
             "Use listas curtas para não se perder no caos."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 6:
         return StrategyRecommendation(
@@ -84,8 +71,6 @@ class StrategyEngine {
             "Trabalhe em um ambiente harmonioso e bonito.",
             "Ajude alguém hoje. A energia flui através do serviço."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 7:
         return StrategyRecommendation(
@@ -97,8 +82,6 @@ class StrategyEngine {
             "Tire tempo para ficar sozinho e pensar.",
             "Evite decisões financeiras ou materiais importantes."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 8:
         return StrategyRecommendation(
@@ -110,8 +93,6 @@ class StrategyEngine {
             "Comporte-se como um executivo: delegue o que puder.",
             "Vista-se para o sucesso, mesmo em casa."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 9:
         return StrategyRecommendation(
@@ -123,8 +104,6 @@ class StrategyEngine {
             "Termine tarefas pendentes há tempos.",
             "Doe o que não usa mais. Abra espaço para o novo (que vem no dia 1)."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       case 11:
       case 22:
@@ -137,8 +116,6 @@ class StrategyEngine {
             "Use sua intuição para guiar grandes visões.",
             "Se sentir sobrecarregado, pare tudo e medite por 5 minutos."
           ],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
       default:
         // Fallback para dia 1 se algo der errado
@@ -147,9 +124,37 @@ class StrategyEngine {
           methodologyName: "The One Thing",
           reason: "Dia de focar no essencial.",
           tips: ["Escolha uma prioridade e vá em frente."],
-          potencializar: bussola.potencializar,
-          atencao: bussola.atencao,
         );
+    }
+  }
+
+  static Future<StrategyRecommendation> generateDailyStrategy({
+    required int personalDay,
+    required List<TaskModel> tasks,
+    required UserModel user,
+  }) async {
+    // 1. Get base recommendation (static)
+    final base = getRecommendation(personalDay);
+
+    // 2. Call AI to generate suggestions
+    try {
+      final suggestions = await AssistantService.generateStrategySuggestions(
+        user: user,
+        tasks: tasks,
+        personalDay: personalDay,
+        mode: base.mode,
+      );
+
+      return StrategyRecommendation(
+        mode: base.mode,
+        reason: base.reason,
+        tips: base.tips,
+        methodologyName: base.methodologyName,
+        aiSuggestions: suggestions,
+      );
+    } catch (e) {
+      // Fallback to base if AI fails
+      return base;
     }
   }
 
