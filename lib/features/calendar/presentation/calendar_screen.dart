@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:collection/collection.dart';
+import 'package:uuid/uuid.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
@@ -37,6 +38,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   final FirestoreService _firestoreService = FirestoreService();
   final AuthRepository _authRepository = AuthRepository();
+  final Uuid _uuid = const Uuid();
 
   DateTime _focusedDay = DateTime.now();
 
@@ -220,7 +222,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return a.year == b.year && a.month == b.month;
   }
 
-  void _openAddTaskModal() {
+    void _openAddTaskModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -230,12 +232,185 @@ class _CalendarScreenState extends State<CalendarScreen> {
         userData: widget.userData,
         initialDueDate: _selectedDay,
         onAddTask: (parsedTask) {
-          // Handle task addition if needed
+          if (parsedTask.recurrenceRule.type == RecurrenceType.none) {
+            _createSingleTask(parsedTask);
+          } else {
+            _createRecurringTasks(parsedTask);
+          }
         },
       ),
     );
   }
 
+  // --- MÉTODOS DE CRIAÇÃO DE TAREFA (Copiados de FocoDoDiaScreen) ---
+
+  int? _calculatePersonalDay(DateTime? date) {
+    if (widget.userData.dataNasc.isEmpty ||
+        widget.userData.nomeAnalise.isEmpty ||
+        date == null) {
+      return null;
+    }
+
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+
+    try {
+      final dateUtc = date.toUtc();
+      final day = engine.calculatePersonalDayForDate(dateUtc);
+      return (day > 0) ? day : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void _createSingleTask(ParsedTask parsedTask, {String? recurrenceId}) {
+    DateTime? finalDueDateUtc;
+    DateTime dateForPersonalDay;
+
+    if (parsedTask.dueDate != null) {
+      final dateLocal = parsedTask.dueDate!.toLocal();
+      finalDueDateUtc =
+          DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
+      dateForPersonalDay = finalDueDateUtc;
+    } else {
+      final now = DateTime.now().toLocal();
+      dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+    }
+
+    final int? finalPersonalDay = _calculatePersonalDay(dateForPersonalDay);
+
+    final newTask = TaskModel(
+      id: '',
+      text: parsedTask.cleanText,
+      createdAt: DateTime.now().toUtc(),
+      dueDate: finalDueDateUtc,
+      journeyId: parsedTask.journeyId,
+      journeyTitle: parsedTask.journeyTitle,
+      tags: parsedTask.tags,
+      reminderTime: parsedTask.reminderTime,
+      recurrenceType: parsedTask.recurrenceRule.type,
+      recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
+      recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
+      recurrenceId: recurrenceId,
+      personalDay: finalPersonalDay,
+    );
+
+    _firestoreService.addTask(_userId, newTask).catchError((error) {
+      _showErrorSnackbar("Erro ao salvar tarefa: $error");
+    });
+  }
+
+  void _createRecurringTasks(ParsedTask parsedTask) {
+    final String recurrenceId = _uuid.v4();
+    final List<DateTime> dates = _calculateRecurrenceDates(
+        parsedTask.recurrenceRule, parsedTask.dueDate);
+
+    if (dates.isEmpty) {
+      _showErrorSnackbar(
+          "Nenhuma data futura encontrada para esta recorrência.");
+      return;
+    }
+
+    for (final date in dates) {
+      final taskForDate = parsedTask.copyWith(
+        dueDate: date,
+      );
+      _createSingleTask(taskForDate, recurrenceId: recurrenceId);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Criando tarefas recorrentes...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  List<DateTime> _calculateRecurrenceDates(
+      RecurrenceRule rule, DateTime? startDate) {
+    final List<DateTime> dates = [];
+    DateTime currentDate = (startDate ?? DateTime.now()).toLocal();
+    currentDate =
+        DateTime(currentDate.year, currentDate.month, currentDate.day);
+
+    final DateTime safetyLimit =
+        DateTime.now().add(const Duration(days: 365 * 2));
+    final DateTime loopEndDate = (rule.endDate?.toLocal() ?? safetyLimit);
+    final DateTime finalEndDate = DateTime(
+        loopEndDate.year, loopEndDate.month, loopEndDate.day, 23, 59, 59);
+
+    int iterations = 0;
+    const int maxIterations = 100;
+
+    if (rule.type != RecurrenceType.none &&
+        _doesDateMatchRule(rule, currentDate, startDate)) {
+      dates.add(currentDate);
+      iterations++;
+    }
+
+    DateTime nextDate = _getNextDate(rule, currentDate);
+
+    while (nextDate.isBefore(finalEndDate) && iterations < maxIterations) {
+      if (_doesDateMatchRule(rule, nextDate, startDate)) {
+        dates.add(nextDate);
+        iterations++;
+      }
+      nextDate = _getNextDate(rule, nextDate);
+      if (iterations > maxIterations + 5) {
+        break;
+      }
+    }
+    return dates;
+  }
+
+  bool _doesDateMatchRule(
+      RecurrenceRule rule, DateTime date, DateTime? ruleStartDate) {
+    switch (rule.type) {
+      case RecurrenceType.daily:
+        return true;
+      case RecurrenceType.weekly:
+        return rule.daysOfWeek.contains(date.weekday);
+      case RecurrenceType.monthly:
+        return date.day == (ruleStartDate?.day ?? date.day);
+      case RecurrenceType.none:
+        return false;
+    }
+  }
+
+  DateTime _getNextDate(RecurrenceRule rule, DateTime currentDate) {
+    switch (rule.type) {
+      case RecurrenceType.daily:
+      case RecurrenceType.weekly:
+        return currentDate.add(const Duration(days: 1));
+      case RecurrenceType.monthly:
+        int nextMonth = currentDate.month + 1;
+        int nextYear = currentDate.year;
+        if (nextMonth > 12) {
+          nextMonth = 1;
+          nextYear++;
+        }
+        int daysInNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
+        int nextDay = currentDate.day > daysInNextMonth
+            ? daysInNextMonth
+            : currentDate.day;
+        return DateTime(nextYear, nextMonth, nextDay);
+      case RecurrenceType.none:
+        return DateTime.now().add(const Duration(days: 365 * 10));
+    }
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: Colors.red),
+      );
+    }
+  }    
+  
   Future<void> _onToggleTask(TaskModel task, bool newValue) async {
     try {
       await _firestoreService.updateTaskCompletion(
