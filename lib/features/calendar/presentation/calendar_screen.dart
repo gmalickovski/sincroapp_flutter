@@ -349,6 +349,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               _focusedDay.year, _focusedDay.month - 1)),
                           onRightArrowTap: () => _onPageChanged(DateTime(
                               _focusedDay.year, _focusedDay.month + 1)),
+                          isCompact: true,
                         ),
                         const SizedBox(height: 8),
                         Stack(
@@ -423,6 +424,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               DateTime(_focusedDay.year, _focusedDay.month - 1)),
                           onRightArrowTap: () => _onPageChanged(
                               DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                          isCompact: true,
                         ),
                         const SizedBox(height: 8),
                         Stack(
