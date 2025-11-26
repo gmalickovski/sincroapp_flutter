@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 /// Serviço centralizado de pagamentos multiplataforma
 ///
@@ -68,17 +70,27 @@ class PaymentService {
 
   /// ========== WEB: PagBank ==========
   Future<bool> _purchaseWeb(String userId, SubscriptionPlan plan, BillingCycle cycle) async {
-    // Redireciona para checkout do PagBank
-    // O checkout será processado via Firebase Functions
-    await _createPagBankCheckout(userId, plan, cycle);
+    try {
+      // Cria checkout via Firebase Function
+      final checkoutUrl = await _createPagBankCheckout(userId, plan, cycle);
 
-    if (kIsWeb) {
-      // No web, redireciona para URL de checkout
-      // TODO: Implementar redirecionamento via url_launcher ou dart:html
-      return true;
+      if (kIsWeb) {
+        // Redireciona para URL de checkout do PagBank
+        final uri = Uri.parse(checkoutUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return true;
+        } else {
+          debugPrint('Não foi possível abrir a URL: $checkoutUrl');
+          return false;
+        }
+      }
+
+      return false;
+    } catch (e) {
+      debugPrint('Erro em _purchaseWeb: $e');
+      rethrow;
     }
-
-    return false;
   }
 
   /// Cria sessão de checkout no PagBank via Firebase Function
@@ -87,17 +99,32 @@ class PaymentService {
     SubscriptionPlan plan,
     BillingCycle cycle,
   ) async {
-    // TODO: Chamar Firebase Function que cria checkout PagBank
-    // A function retornará a URL de checkout
-    // Exemplo de payload:
-    // final productId = plan == SubscriptionPlan.plus ? productIdDesperta : productIdSinergia;
-    // userId, plan.name, productId, prices[productId], returnUrl, cancelUrl, cycle
+    try {
+      // Chama Firebase Function
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('startWebCheckout');
+      
+      final result = await callable.call<Map<String, dynamic>>({
+        'userId': userId,
+        'plan': plan.name,
+        'billingCycle': cycle.name,
+        // 'recaptchaToken': token, // Opcional: adicionar reCAPTCHA se necessário
+      });
 
-    // Mock: retorna URL fake por enquanto
-    // final response = await _firestoreService.callFunction('createPagBankCheckout', checkoutData);
-    // return response['checkoutUrl'];
+      final data = result.data;
+      
+      if (!data.containsKey('checkoutUrl')) {
+        throw Exception('Resposta inválida da Firebase Function');
+      }
 
-    return 'https://pagseguro.uol.com.br/checkout/...';
+      final checkoutUrl = data['checkoutUrl'] as String;
+      debugPrint('Checkout criado com sucesso: $checkoutUrl');
+      
+      return checkoutUrl;
+    } catch (e) {
+      debugPrint('Erro ao criar checkout PagBank: $e');
+      rethrow;
+    }
   }
 
   /// ========== iOS: Apple In-App Purchase ==========
