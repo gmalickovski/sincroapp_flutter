@@ -71,6 +71,6 @@ class AuthRepository {
       // await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
       rethrow;
     }
-  }
+    }
   }
 }
