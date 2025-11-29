@@ -66,19 +66,6 @@ dependencies:
   # Renderização de Markdown nas mensagens do assistente
   flutter_markdown: ^0.6.20
 
-  # Reconhecimento de voz multiplataforma (Android, iOS, Web, Windows)
-  speech_to_text: ^6.6.0
-
-
-  meta: any
-  url_launcher: ^6.3.2
-  flutter_stripe: ^12.1.1
-  http: ^1.6.0
-dev_dependencies:
-  flutter_test:
-    sdk: flutter
-  
-  flutter_lints: ^3.0.2
 
   # 🚀 ADICIONADO: Pacote para gerar os ícones do app (Android/iOS)
   flutter_launcher_icons: ^0.13.1
