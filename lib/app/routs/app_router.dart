@@ -8,6 +8,7 @@ import 'package:sincro_app_flutter/features/authentication/presentation/register
 import 'package:sincro_app_flutter/features/authentication/presentation/user_details/user_details_screen.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:sincro_app_flutter/features/subscription/presentation/subscription_screen.dart';
+import 'package:sincro_app_flutter/features/subscription/presentation/thank_you_screen.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 
 class AppRoutes {
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String userDetails = '/user-details';
   static const String dashboard = '/dashboard';
   static const String subscription = '/subscription';
+  static const String thankYou = '/thank-you';
 }
 
 class AppRouter {
@@ -23,6 +25,7 @@ class AppRouter {
         AppRoutes.login: (_) => const LoginScreen(),
         AppRoutes.register: (_) => const RegisterScreen(),
         AppRoutes.dashboard: (_) => const DashboardScreen(),
+        AppRoutes.thankYou: (_) => const ThankYouScreen(),
       };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
