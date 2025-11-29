@@ -3,18 +3,24 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/features/subscription/presentation/widgets/pricing_card.dart';
+import 'package:sincro_app_flutter/features/subscription/presentation/subscription_screen.dart';
 import 'package:sincro_app_flutter/services/payment_service.dart';
 
-class PlanSettingsTab extends StatelessWidget {
+class PlanSettingsTab extends StatefulWidget {
   final UserModel userData;
   const PlanSettingsTab({super.key, required this.userData});
 
   @override
-  Widget build(BuildContext context) {
-    final currentPlan = userData.subscription.plan;
-    final planName = PlanLimits.getPlanName(currentPlan);
+  State<PlanSettingsTab> createState() => _PlanSettingsTabState();
+}
 
+class _PlanSettingsTabState extends State<PlanSettingsTab> {
+  bool _isLoadingPortal = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final currentPlan = widget.userData.subscription.plan;
+    final planName = PlanLimits.getPlanName(currentPlan);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -75,27 +81,12 @@ class PlanSettingsTab extends StatelessWidget {
                           const SizedBox(height: 24),
                           SizedBox(
                             width: double.infinity,
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                try {
-                                  await PaymentService().openCustomerPortal();
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Erro ao abrir portal: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.background,
-                                foregroundColor: AppColors.primaryText,
-                                elevation: 0,
-                                side: const BorderSide(color: AppColors.border),
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                              ),
-                              child: const Text('Gerenciar Assinatura'),
-                            ),
+                            child: _buildManageButton(),
+                          ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: _buildChangePlanButton(context),
                           ),
                         ],
                       )
@@ -134,174 +125,75 @@ class PlanSettingsTab extends StatelessWidget {
                               ],
                             ),
                           ),
-                          ElevatedButton(
-                              onPressed: () async {
-                                try {
-                                  await PaymentService().openCustomerPortal();
-                                } catch (e) {
-                                  if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Erro ao abrir portal: $e')),
-                                    );
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.background,
-                                foregroundColor: AppColors.primaryText,
-                                elevation: 0,
-                                side: const BorderSide(color: AppColors.border),
-                              ),
-                              child: const Text('Gerenciar Assinatura'),
-                            ),
-                          ],
-                        ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildManageButton(),
+                              const SizedBox(height: 8),
+                              _buildChangePlanButton(context),
+                            ],
+                          ),
+                        ],
+                      ),
               );
             },
           ),
-          
-          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
 
-          const SizedBox(height: 32),
-
-          
-          // Se não for Premium, mostra opção de upgrade
-          if (currentPlan != SubscriptionPlan.premium) ...[
-            const Text(
-              'Faça um Upgrade',
-              style: TextStyle(
+  Widget _buildManageButton() {
+    return ElevatedButton(
+      onPressed: _isLoadingPortal
+          ? null
+          : () async {
+              setState(() => _isLoadingPortal = true);
+              try {
+                await PaymentService().openCustomerPortal();
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Erro ao abrir portal: $e')),
+                  );
+                }
+              } finally {
+                if (mounted) setState(() => _isLoadingPortal = false);
+              }
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.background,
+        foregroundColor: AppColors.primaryText,
+        elevation: 0,
+        side: const BorderSide(color: AppColors.border),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      ),
+      child: _isLoadingPortal
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
                 color: AppColors.primaryText,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
               ),
-            ),
-            const SizedBox(height: 16),
-            
-            // Mostra o próximo plano recomendado
-            PricingCard(
-              plan: currentPlan == SubscriptionPlan.free 
-                  ? SubscriptionPlan.plus 
-                  : SubscriptionPlan.premium,
-              isRecommended: true,
-              onSelect: () => _handleUpgrade(context, currentPlan == SubscriptionPlan.free 
-                  ? SubscriptionPlan.plus 
-                  : SubscriptionPlan.premium),
-            ),
-          ],
-        ],
-      ),
+            )
+          : const Text('Gerenciar Assinatura'),
     );
   }
 
-  Future<void> _handleUpgrade(BuildContext context, SubscriptionPlan plan) async {
-    final service = PaymentService();
-    try {
-      final ok = await service.purchaseSubscription(
-        userId: userData.uid,
-        plan: plan,
-      );
-      if (ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Redirecionando para checkout...'),
-          backgroundColor: Colors.green,
-        ));
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Falha ao iniciar compra: $e'),
-          backgroundColor: Colors.red,
-        ));
-      }
-    }
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: AppColors.primaryText,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
+  Widget _buildChangePlanButton(BuildContext context) {
+    return TextButton(
+      onPressed: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => SubscriptionScreen(user: widget.userData),
+          ),
+        );
+      },
+      style: TextButton.styleFrom(
+        foregroundColor: AppColors.primary,
       ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {Widget? trailing}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 14,
-            ),
-          ),
-          Row(
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              if (trailing != null) ...[
-                const SizedBox(width: 8),
-                trailing,
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInvoiceItem(String date, String amount, String status) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            date,
-            style: const TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 14,
-            ),
-          ),
-          Text(
-            amount,
-            style: const TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 14,
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: status == 'Pago' ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              status,
-              style: TextStyle(
-                color: status == 'Pago' ? Colors.green : Colors.orange,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const Icon(Icons.download_rounded, color: AppColors.secondaryText, size: 20),
-        ],
-      ),
+      child: const Text('Alterar meu plano'),
     );
   }
 }
