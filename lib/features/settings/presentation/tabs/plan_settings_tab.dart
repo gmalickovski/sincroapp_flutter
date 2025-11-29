@@ -133,8 +133,7 @@ class PlanSettingsTab extends StatelessWidget {
                                 ),
                               ],
                             ),
-                          ),
-                            child: ElevatedButton(
+                          ElevatedButton(
                               onPressed: () async {
                                 try {
                                   await PaymentService().openCustomerPortal();
