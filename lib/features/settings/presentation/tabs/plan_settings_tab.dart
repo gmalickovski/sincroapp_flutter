@@ -133,6 +133,7 @@ class PlanSettingsTab extends StatelessWidget {
                                 ),
                               ],
                             ),
+                          ),
                           ElevatedButton(
                               onPressed: () async {
                                 try {
