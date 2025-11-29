@@ -1,3 +1,4 @@
+require('dotenv').config();
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
@@ -374,5 +375,39 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
             return { success: true };
         }
         throw new functions.https.HttpsError('internal', 'Erro ao processar solicitação.');
+    }
+});
+
+/**
+ * Cria uma sessão do Portal do Cliente Stripe
+ */
+exports.createPortalSession = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError('unauthenticated', 'Usuário deve estar logado.');
+    }
+
+    const { returnUrl } = data;
+
+    try {
+        // 1. Buscar o stripeId do usuário no Firestore
+        const userDoc = await admin.firestore().collection('users').doc(context.auth.uid).get();
+        const userData = userDoc.data();
+
+        if (!userData || !userData.stripeId) {
+            throw new functions.https.HttpsError('failed-precondition', 'Usuário não possui ID do Stripe.');
+        }
+
+        // 2. Criar a sessão do portal
+        const session = await stripe.billingPortal.sessions.create({
+            customer: userData.stripeId,
+            return_url: returnUrl || 'https://sincroapp.com.br', // Fallback URL
+            configuration: process.env.STRIPE_PORTAL_CONFIG_ID, // ID da configuração do portal
+        });
+
+        return { url: session.url };
+
+    } catch (error) {
+        console.error('Erro ao criar sessão do portal:', error);
+        throw new functions.https.HttpsError('internal', 'Não foi possível criar a sessão do portal.');
     }
 });

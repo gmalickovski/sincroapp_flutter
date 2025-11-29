@@ -5,6 +5,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
@@ -111,5 +113,35 @@ class PaymentService {
   Future<SubscriptionModel> getSubscriptionStatus(String userId) async {
     final userData = await _firestoreService.getUserData(userId);
     return userData?.subscription ?? SubscriptionModel.free();
+  }
+
+  Future<void> openCustomerPortal() async {
+    try {
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('createPortalSession');
+      
+      // Define a URL de retorno baseada na plataforma
+      // Para mobile, idealmente seria um Deep Link (ex: sincroapp://profile)
+      // Por enquanto, vamos usar o site oficial como fallback
+      const returnUrl = 'https://sincroapp.com.br'; 
+
+      final result = await callable.call({
+        'returnUrl': returnUrl,
+      });
+
+      final url = result.data['url'] as String;
+      
+      // Abre a URL no navegador
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        throw 'Não foi possível abrir a URL: $url';
+      }
+      debugPrint('Portal URL: $url');
+    } catch (e) {
+      debugPrint('Erro ao abrir portal: $e');
+      rethrow;
+    }
   }
 }
