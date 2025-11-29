@@ -172,4 +172,22 @@ class PaymentService {
       rethrow;
     }
   }
+  /// Abre o Link de Pagamento no navegador
+  Future<void> launchPaymentLink(SubscriptionPlan plan, BillingCycle cycle) async {
+    final url = getPaymentLink(plan, cycle);
+    if (url != null) {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri, 
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: '_self',
+        );
+      } else {
+        throw 'Não foi possível abrir a URL: $url';
+      }
+    } else {
+      throw 'Link de pagamento não encontrado para este plano.';
+    }
+  }
 }
