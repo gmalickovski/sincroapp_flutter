@@ -4,166 +4,150 @@
 <head>
   <base href="$FLUTTER_BASE_HREF">
 
-  <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-  <meta name="description" content="A new Flutter project.">
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
+  );
 
-  <meta name="mobile-web-app-capable" content="yes">
-  Ativa debug token APENAS em localhost.
-  Em PRODUÇÃO, o Firebase SDK carrega o reCAPTCHA automaticamente.
+  if (isLocalhost) {
+  // ===== MODO DEBUG (localhost) =====
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+  console.log('🛠️ Modo DEBUG: App Check debug token ativado automaticamente');
+  console.log('📝 Procure no console pelo token gerado e registre no Firebase Console > App Check > Gerenciar tokens de
+  depuração');
+  height: 100 %;
+  background - color: #111827;
+  margin: 0;
+  padding: 0;
+  }
 
-  IMPORTANTE: NÃO carregue o script reCAPTCHA manualmente!
-  O Firebase App Check SDK faz isso internamente quando você
-  passa a site key para ReCaptchaV3Provider().
-  -->
-  <script>
-    // Detecta se está em localhost (desenvolvimento)
-    const isLocalhost = Boolean(
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '[::1]' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname.match(/^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/)
-    );
+  #app - loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex - direction: column;
+  align - items: center;
+  justify - content: center;
+  background: #111827;
+  color: #D1D5DB;
+  z - index: 9999;
+  font - family: 'Poppins', system - ui, -apple - system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', sans -
+  serif;
+  }
 
-    if (isLocalhost) {
-      // ===== MODO DEBUG (localhost) =====
-      self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
-      console.log('🛠️ Modo DEBUG: App Check debug token ativado automaticamente');
-      console.log('📝 Procure no console pelo token gerado e registre no Firebase Console > App Check > Gerenciar tokens de depuração');
-      height: 100 %;
-      background - color: #111827;
-      margin: 0;
-      padding: 0;
-    }
+  /* Star Comet Loader Animation */
+  .logo - loader - container {
+  width: 60px;
+  height: 60px;
+  margin - bottom: 0;
+  }
 
-    #app - loader {
-      position: fixed;
-      inset: 0;
-      display: flex;
-      flex - direction: column;
-      align - items: center;
-      justify - content: center;
-      background: #111827;
-      color: #D1D5DB;
-      z - index: 9999;
-      font - family: 'Poppins', system - ui, -apple - system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', sans - serif;
-    }
+  .comet - assembly {
+  transform - origin: 100px 100px;
+  animation: orbit 2s linear infinite;
+  }
 
-    /* Star Comet Loader Animation */
-    .logo - loader - container {
-      width: 60px;
-      height: 60px;
-      margin - bottom: 0;
-    }
+  .star - dynamic {
+  transform - origin: center;
+  transform - box: fill - box;
+  animation: star - fill - sync 2s ease -in -out infinite;
+  stroke: #7c3aed;
+  stroke - width: 10;
+  stroke - linejoin: miter;
+  stroke - miterlimit: 10;
+  }
 
-    .comet - assembly {
-      transform - origin: 100px 100px;
-      animation: orbit 2s linear infinite;
-    }
+  .tail - path {
+  stroke: #7c3aed;
+  fill: none;
+  stroke - dasharray: 1, 300;
+  animation: dash - elastic - thick 2s ease -in -out infinite;
+  }
 
-    .star - dynamic {
-      transform - origin: center;
-      transform - box: fill - box;
-      animation: star - fill - sync 2s ease -in -out infinite;
-      stroke: #7c3aed;
-      stroke - width: 10;
-      stroke - linejoin: miter;
-      stroke - miterlimit: 10;
-    }
+  @keyframes orbit {
+  0 % {
+  transform: rotate(0deg);
+  }
 
-    .tail - path {
-      stroke: #7c3aed;
-      fill: none;
-      stroke - dasharray: 1, 300;
-      animation: dash - elastic - thick 2s ease -in -out infinite;
-    }
+  100 % {
+  transform: rotate(360deg);
+  }
+  }
 
-    @keyframes orbit {
-      0 % {
-        transform: rotate(0deg);
-      }
+  @keyframes star - fill - sync {
+  0 % {
+  fill: #7c3aed;
+  transform: scale(1.1);
+  }
 
-      100 % {
-        transform: rotate(360deg);
-      }
-    }
+  15 % {
+  fill: transparent;
+  transform: scale(0.95);
+  }
 
-    @keyframes star - fill - sync {
-      0 % {
-        fill: #7c3aed;
-        transform: scale(1.1);
-      }
+  85 % {
+  fill: transparent;
+  transform: scale(0.95);
+  }
 
-      15 % {
-        fill: transparent;
-        transform: scale(0.95);
-      }
+  100 % {
+  fill: #7c3aed;
+  transform: scale(1.1);
+  }
+  }
 
-      85 % {
-        fill: transparent;
-        transform: scale(0.95);
-      }
+  @keyframes dash - elastic - thick {
+  0 % {
+  stroke- dasharray: 1, 300;
+  stroke - dashoffset: 0;
+  stroke - width: 10;
+  stroke - linecap: round;
+  }
 
-      100 % {
-        fill: #7c3aed;
-        transform: scale(1.1);
-      }
-    }
+  10 % {
+  stroke- linecap: round;
+  }
 
-    @keyframes dash - elastic - thick {
-      0 % {
-        stroke- dasharray: 1, 300;
-      stroke - dashoffset: 0;
-      stroke - width: 10;
-      stroke - linecap: round;
-    }
+  15 % {
+  stroke- linecap: butt;
+  }
 
-    10 % {
-      stroke- linecap: round;
-      }
+  50 % {
+  stroke- dasharray: 120, 300;
+  stroke - dashoffset: -50;
+  stroke - width: 22;
+  stroke - linecap: butt;
+  }
 
-    15 % {
-      stroke- linecap: butt;
-      }
+  85 % {
+  stroke- linecap: butt;
+  }
 
-    50 % {
-      stroke- dasharray: 120, 300;
-    stroke - dashoffset: -50;
-    stroke - width: 22;
-    stroke - linecap: butt;
-      }
+  90 % {
+  stroke- linecap: round;
+  }
 
-    85 % {
-      stroke- linecap: butt;
-      }
+  100 % {
+  stroke- dasharray: 1, 300;
+  stroke - dashoffset: -260;
+  stroke - width: 10;
+  stroke - linecap: round;
+  }
+  }
+  </style>
+</head>
 
-    90 % {
-      stroke- linecap: round;
-      }
-
-    100 % {
-      stroke- dasharray: 1, 300;
-    stroke - dashoffset: -260;
-    stroke - width: 10;
-    stroke - linecap: round;
-      }
-    }
-  </style >
-</head >
-
-      <body>
+<body>
   <!-- Overlay exibido até o primeiro frame do Flutter ser renderizado -->
-        <div id="app-loader" role="status" aria-live="polite">
-          <div class="logo-loader-container">
-            <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-              <g class="comet-assembly">
-                <!-- 1. LINHA DINÂMICA -->
-                <circle class="tail-path" cx="100" cy="100" r="42" transform="rotate(-90 100 100)" />
+  <div id="app-loader" role="status" aria-live="polite">
+    <div class="logo-loader-container">
+      <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <g class="comet-assembly">
+          <!-- 1. LINHA DINÂMICA -->
+          <circle class="tail-path" cx="100" cy="100" r="42" transform="rotate(-90 100 100)" />
 
-                <!-- 2. ESTRELA AFIADA (10px Stroke) -->
-                <g transform="translate(100, 58)">
-                  <polygon class="star-dynamic" points="0,-32 
+          <!-- 2. ESTRELA AFIADA (10px Stroke) -->
+          <g transform="translate(100, 58)">
+            <polygon class="star-dynamic" points="0,-32 
                              9,-16 
                              28,-16 
                              18,0 
@@ -175,20 +159,20 @@
                              -18,0 
                              -28,-16 
                              -9,-16" />
-                </g>
-              </g>
-            </svg>
-          </div>
-        </div>
+          </g>
+        </g>
+      </svg>
+    </div>
+  </div>
 
-        <script>
+  <script>
     // Esconde o loader assim que o Flutter renderizar seu primeiro frame
-          window.addEventListener('flutter-first-frame', function () {
+    window.addEventListener('flutter-first-frame', function () {
       var el = document.getElementById('app-loader');
-          if (el) {el.style.display = 'none'; }
+      if (el) { el.style.display = 'none'; }
     });
   </script>
   <script src="flutter_bootstrap.js" async></script>
-  </body>
+</body>
 
 </html>

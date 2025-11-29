@@ -144,7 +144,11 @@ class PaymentService {
       // Abre a URL no navegador
       final uri = Uri.parse(url);
       if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+        await launchUrl(
+          uri, 
+          mode: LaunchMode.externalApplication,
+          webOnlyWindowName: '_self',
+        );
       } else {
         throw 'Não foi possível abrir a URL: $url';
       }
