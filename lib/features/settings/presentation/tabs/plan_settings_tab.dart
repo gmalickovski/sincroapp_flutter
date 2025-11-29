@@ -76,11 +76,16 @@ class PlanSettingsTab extends StatelessWidget {
                           SizedBox(
                             width: double.infinity,
                             child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.of(context).pushNamed(
-                                  AppRoutes.subscription,
-                                  arguments: {'user': userData},
-                                );
+                              onPressed: () async {
+                                try {
+                                  await PaymentService().openCustomerPortal();
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Erro ao abrir portal: $e')),
+                                    );
+                                  }
+                                }
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.background,
@@ -129,23 +134,28 @@ class PlanSettingsTab extends StatelessWidget {
                               ],
                             ),
                           ),
-                          ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushNamed(
-                                AppRoutes.subscription,
-                                arguments: {'user': userData},
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.background,
-                              foregroundColor: AppColors.primaryText,
-                              elevation: 0,
-                              side: const BorderSide(color: AppColors.border),
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                try {
+                                  await PaymentService().openCustomerPortal();
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Erro ao abrir portal: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.background,
+                                foregroundColor: AppColors.primaryText,
+                                elevation: 0,
+                                side: const BorderSide(color: AppColors.border),
+                              ),
+                              child: const Text('Gerenciar Assinatura'),
                             ),
-                            child: const Text('Gerenciar Assinatura'),
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
               );
             },
           ),
@@ -169,7 +179,17 @@ class PlanSettingsTab extends StatelessWidget {
                     'Forma de pagamento',
                     'Mastercard •••• 4242',
                     trailing: TextButton(
-                      onPressed: () {},
+                      onPressed: () async {
+                         try {
+                           await PaymentService().openCustomerPortal();
+                         } catch (e) {
+                           if (context.mounted) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                               SnackBar(content: Text('Erro ao abrir portal: $e')),
+                             );
+                           }
+                         }
+                      },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,
                         minimumSize: const Size(0, 0),
@@ -206,8 +226,16 @@ class PlanSettingsTab extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () {
-                  // TODO: Implement cancel flow
+                onPressed: () async {
+                   try {
+                     await PaymentService().openCustomerPortal();
+                   } catch (e) {
+                     if (context.mounted) {
+                       ScaffoldMessenger.of(context).showSnackBar(
+                         SnackBar(content: Text('Erro ao abrir portal: $e')),
+                       );
+                     }
+                   }
                 },
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.red,

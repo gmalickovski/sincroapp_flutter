@@ -46,6 +46,16 @@ class PaymentService {
       );
 
       // 3. Inicializar Payment Sheet
+      if (paymentData['clientSecret'] == null) {
+        debugPrint('Client Secret é nulo. Assinatura pode não requerer pagamento imediato ou falhou.');
+        // Se não houver clientSecret, talvez seja um trial ou erro. 
+        // Por enquanto, vamos retornar true se houver subscriptionId, assumindo sucesso sem pagamento imediato.
+        if (paymentData['subscriptionId'] != null) {
+             return true;
+        }
+        throw Exception('Falha ao obter segredo de pagamento do Stripe.');
+      }
+
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           customFlow: false,

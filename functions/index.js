@@ -78,8 +78,17 @@ exports.createSubscription = functions.https.onCall(async (data, context) => {
             expand: ['latest_invoice.payment_intent'],
         });
 
+        console.log("Subscription created:", JSON.stringify(subscription, null, 2));
+
         const invoice = subscription.latest_invoice;
-        const paymentIntent = invoice.payment_intent;
+        let clientSecret = null;
+
+        if (invoice && invoice.payment_intent) {
+            clientSecret = invoice.payment_intent.client_secret;
+        } else {
+            console.warn("Payment Intent not found on latest_invoice:", JSON.stringify(invoice, null, 2));
+        }
+
         const ephemeralKey = await stripe.ephemeralKeys.create(
             { customer: customer },
             { apiVersion: "2023-10-16" }
@@ -87,7 +96,7 @@ exports.createSubscription = functions.https.onCall(async (data, context) => {
 
         return {
             subscriptionId: subscription.id,
-            clientSecret: paymentIntent.client_secret,
+            clientSecret: clientSecret,
             ephemeralKey: ephemeralKey.secret,
             customer: customer,
         };
