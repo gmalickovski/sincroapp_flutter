@@ -100,6 +100,20 @@ class PaymentService {
     return null;
   }
 
+  /// Retorna o Link de Pagamento baseado no plano e ciclo
+  String? getPaymentLink(SubscriptionPlan plan, BillingCycle cycle) {
+    if (plan == SubscriptionPlan.plus) { // Desperta
+      return cycle == BillingCycle.monthly 
+          ? StripeConstants.linkDespertaMonthly 
+          : StripeConstants.linkDespertaAnnual;
+    } else if (plan == SubscriptionPlan.premium) { // Sinergia
+      return cycle == BillingCycle.monthly 
+          ? StripeConstants.linkSinergiaMonthly 
+          : StripeConstants.linkSinergiaAnnual;
+    }
+    return null;
+  }
+
   /// Cria Subscription via Firebase Function
   Future<Map<String, dynamic>> _createSubscription({
     required String priceId,

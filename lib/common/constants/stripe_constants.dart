@@ -11,4 +11,10 @@ class StripeConstants {
   // Sincro Sinergia (Product ID: prod_TVrkizVYiXQ2Ue)
   static const String priceSinergiaMonthly = 'price_1SYq1DPxUnpVpxqmb8ezCEMD';
   static const String priceSinergiaAnnual = 'price_1SYq1DPxUnpVpxqmpeKOcBYb';
+
+  // Payment Links
+  static const String linkDespertaMonthly = 'https://buy.stripe.com/test_cNidRbb0xdxBcLT10x5c402';
+  static const String linkDespertaAnnual = 'https://buy.stripe.com/test_5kQ00l9WtdxB4fngZv5c403';
+  static const String linkSinergiaMonthly = 'https://buy.stripe.com/test_eVq7sN3y5alp4fndNj5c400';
+  static const String linkSinergiaAnnual = 'https://buy.stripe.com/test_9B614p2u19hl4fn5gN5c401';
 }

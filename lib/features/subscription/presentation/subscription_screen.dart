@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
@@ -228,16 +229,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Future<void> _handlePurchase(BuildContext context, SubscriptionPlan plan) async {
     final service = PaymentService();
     try {
-      final ok = await service.purchaseSubscription(
-        userId: widget.user.uid,
-        plan: plan,
-        cycle: _billingCycle,
-      );
-      if (ok && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Assinatura realizada com sucesso!'),
-          backgroundColor: Colors.green,
-        ));
+      if (kIsWeb) {
+        // Na Web, usa Links de Pagamento
+        await service.launchPaymentLink(plan, _billingCycle);
+      } else {
+        // No Mobile, usa Payment Sheet Nativo
+        final ok = await service.purchaseSubscription(
+          userId: widget.user.uid,
+          plan: plan,
+          cycle: _billingCycle,
+        );
+        if (ok && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Assinatura realizada com sucesso!'),
+            backgroundColor: Colors.green,
+          ));
+        }
       }
     } catch (e) {
       if (context.mounted) {
