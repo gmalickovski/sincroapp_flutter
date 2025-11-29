@@ -235,7 +235,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       );
       if (ok && context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Redirecionando para checkout...'),
+          content: Text('Assinatura realizada com sucesso!'),
           backgroundColor: Colors.green,
         ));
       }

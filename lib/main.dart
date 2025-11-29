@@ -23,6 +23,7 @@ import 'package:intl/date_symbol_data_local.dart';
 
 // --- INÍCIO DAS NOVAS IMPORTAÇÕES ---
 import 'package:sincro_app_flutter/services/notification_service.dart';
+import 'package:sincro_app_flutter/services/payment_service.dart';
 // Removidos imports não utilizados após simplificação do fluxo de autenticação
 // --- FIM DAS NOVAS IMPORTAÇÕES ---
 
@@ -72,6 +73,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Inicializa Stripe
+  await PaymentService.initialize();
 
   // ========================================
   // APP CHECK - ATIVAR IMEDIATAMENTE APÓS FIREBASE

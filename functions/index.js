@@ -1,349 +1,378 @@
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios = require("axios");
+// Initialize Stripe with your Secret Key
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
-// Inicializa o SDK Admin
 admin.initializeApp();
 
-// URL do seu webhook
+// URL do webhook do n8n
 const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
 
 /**
- * Fun+∫+˙o auxiliar para enviar dados ao webhook do n8n.
+ * Fun√ß√£o auxiliar para enviar dados ao webhook do n8n.
  */
 const sendToWebhook = async (payload) => {
-  try {
-    functions.logger.info("Tentando enviar dados para o n8n:", payload);
-    await axios.post(N8N_WEBHOOK_URL, payload);
-    functions.logger.info("Webhook enviado com sucesso para n8n.");
-  } catch (error) {
-    functions.logger.error("ERRO AO ENVIAR WEBHOOK:", { errorMessage: error.message });
-  }
+    try {
+        functions.logger.info("Tentando enviar dados para o n8n:", payload);
+        await axios.post(N8N_WEBHOOK_URL, payload);
+        functions.logger.info("Webhook enviado com sucesso para n8n.");
+    } catch (error) {
+        functions.logger.error("ERRO AO ENVIAR WEBHOOK:", { errorMessage: error.message });
+    }
 };
 
 /**
- * Acionado quando um novo documento de usu+Ìrio +Æ criado no Firestore.
+ * Cria uma Assinatura no Stripe
+ */
+exports.createSubscription = functions.https.onCall(async (data, context) => {
+    if (!context.auth) {
+        throw new functions.https.HttpsError(
+            "unauthenticated",
+            "A fun√ß√£o deve ser chamada enquanto autenticado."
+        );
+    }
+
+    const { priceId, customerId } = data;
+
+    if (!priceId) {
+        throw new functions.https.HttpsError("invalid-argument", "A fun√ß√£o deve ser chamada com um priceId.");
+    }
+
+    try {
+        let customer = customerId;
+
+        // Se n√£o houver ID de cliente, procure ou crie um
+        if (!customer) {
+            const userSnapshot = await admin.firestore().collection("users").doc(context.auth.uid).get();
+            const userData = userSnapshot.data();
+
+            if (userData && userData.stripeId) {
+                customer = userData.stripeId;
+            } else {
+                // Criar novo cliente Stripe
+                const newCustomer = await stripe.customers.create({
+                    email: context.auth.token.email,
+                    metadata: {
+                        firebaseUID: context.auth.uid
+                    }
+                });
+                customer = newCustomer.id;
+
+                // Salvar Stripe ID no Firestore
+                await admin.firestore().collection("users").doc(context.auth.uid).update({
+                    stripeId: customer
+                });
+            }
+        }
+
+        // Criar a assinatura
+        const subscription = await stripe.subscriptions.create({
+            customer: customer,
+            items: [{
+                price: priceId,
+            }],
+            payment_behavior: 'default_incomplete',
+            payment_settings: { save_default_payment_method: 'on_subscription' },
+            expand: ['latest_invoice.payment_intent'],
+        });
+
+        const invoice = subscription.latest_invoice;
+        const paymentIntent = invoice.payment_intent;
+        const ephemeralKey = await stripe.ephemeralKeys.create(
+            { customer: customer },
+            { apiVersion: "2023-10-16" }
+        );
+
+        return {
+            subscriptionId: subscription.id,
+            clientSecret: paymentIntent.client_secret,
+            ephemeralKey: ephemeralKey.secret,
+            customer: customer,
+        };
+    } catch (error) {
+        console.error("Erro ao criar assinatura:", error);
+        throw new functions.https.HttpsError("internal", error.message);
+    }
+});
+
+/**
+ * Webhook para lidar com eventos do Stripe
+ */
+exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    // TODO: Substitua pelo seu Segredo de Webhook real do Dashboard do Stripe
+    const endpointSecret = "whsec_...";
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
+    } catch (err) {
+        console.error(`Falha na verifica√ß√£o da assinatura do webhook.`, err.message);
+        return res.status(400).send(`Erro Webhook: ${err.message}`);
+    }
+
+    const dataObject = event.data.object;
+
+    try {
+        // Manipular o evento
+        switch (event.type) {
+            case "invoice.payment_succeeded": {
+                const customerId = dataObject.customer;
+                const amount = dataObject.amount_paid / 100; // Valor em reais
+                const currency = dataObject.currency;
+
+                // Buscar usu√°rio no Firestore pelo stripeId
+                const usersRef = admin.firestore().collection('users');
+                const snapshot = await usersRef.where('stripeId', '==', customerId).limit(1).get();
+
+                if (!snapshot.empty) {
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+                    const userId = userDoc.id;
+
+                    // Atualizar status no Firestore
+                    // Nota: A l√≥gica exata de qual plano √© depende do Price ID, 
+                    // mas aqui vamos apenas garantir que est√° ativo.
+                    // Idealmente, mapear√≠amos Price ID -> Nome do Plano.
+
+                    await userDoc.ref.update({
+                        'subscription.status': 'active',
+                        'subscription.lastPayment': admin.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    // Enviar notifica√ß√£o para n8n
+                    await sendToWebhook({
+                        event: 'subscription_activated',
+                        email: userData.email,
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        userId: userId,
+                        amount: amount,
+                        currency: currency,
+                        stripeCustomerId: customerId
+                    });
+                }
+                break;
+            }
+
+            case "customer.subscription.deleted": {
+                const customerId = dataObject.customer;
+
+                const usersRef = admin.firestore().collection('users');
+                const snapshot = await usersRef.where('stripeId', '==', customerId).limit(1).get();
+
+                if (!snapshot.empty) {
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+                    const userId = userDoc.id;
+
+                    await userDoc.ref.update({
+                        'subscription.status': 'cancelled'
+                    });
+
+                    await sendToWebhook({
+                        event: 'subscription_cancelled',
+                        email: userData.email,
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        userId: userId
+                    });
+                }
+                break;
+            }
+
+            case "customer.subscription.updated": {
+                const subscription = dataObject;
+                const customerId = subscription.customer;
+                const status = subscription.status;
+                const priceId = subscription.items.data[0].price.id;
+
+                const usersRef = admin.firestore().collection('users');
+                const snapshot = await usersRef.where('stripeId', '==', customerId).limit(1).get();
+
+                if (!snapshot.empty) {
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+                    const userId = userDoc.id;
+
+                    await userDoc.ref.update({
+                        'subscription.status': status,
+                        'subscription.priceId': priceId,
+                        'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    await sendToWebhook({
+                        event: 'subscription_updated',
+                        email: userData.email,
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        userId: userId,
+                        status: status,
+                        priceId: priceId
+                    });
+                }
+                break;
+            }
+
+            case "invoice.payment_failed": {
+                const customerId = dataObject.customer;
+
+                const usersRef = admin.firestore().collection('users');
+                const snapshot = await usersRef.where('stripeId', '==', customerId).limit(1).get();
+
+                if (!snapshot.empty) {
+                    const userDoc = snapshot.docs[0];
+                    const userData = userDoc.data();
+
+                    await sendToWebhook({
+                        event: 'payment_failed',
+                        email: userData.email,
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        userId: userDoc.id
+                    });
+                }
+                break;
+            }
+
+            default:
+                console.log(`Tipo de evento n√£o tratado: ${event.type}`);
+        }
+    } catch (error) {
+        console.error("Erro ao processar webhook:", error);
+    }
+
+    res.json({ received: true });
+});
+
+/**
+ * Acionado quando um novo documento de usu√°rio √© criado no Firestore.
  * Envia um evento 'user_created' para o n8n.
  */
 exports.onNewUserDocumentCreate = functions.firestore.document("users/{userId}").onCreate(async (snapshot, context) => {
-  functions.logger.info("================ onNewUserDocumentCreate ACIONADA ================");
-  const userData = snapshot.data();
-  const userId = context.params.userId;
-  functions.logger.info("Novo documento de usu+Ìrio criado:", { uid: userId, data: userData });
-  
-  const payload = {
-    event: "user_created",
-    email: userData.email,
-    name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
-    plan: userData.plano || "gratuito",
-    userId: userId,
-  };
-  
-  await sendToWebhook(payload);
-  
-  functions.logger.info("Fun+∫+˙o onNewUserDocumentCreate conclu+°da.");
-  functions.logger.info("================================================================");
-  return null;
-});
+    functions.logger.info("================ onNewUserDocumentCreate ACIONADA ================");
+    const userData = snapshot.data();
+    const userId = context.params.userId;
 
-/**
- * Acionado quando um documento de usu+Ìrio +Æ atualizado no Firestore.
- * Se o plano mudou para 'premium', envia um evento 'plan_upgraded'.
- */
-exports.onUserUpdate = functions.firestore.document("users/{userId}").onUpdate(async (change, context) => {
-  functions.logger.info("================ onUserUpdate ACIONADA ================");
-  const beforeData = change.before.data();
-  const afterData = change.after.data();
-  const userId = context.params.userId;
-  functions.logger.info(`Documento do usu+Ìrio ${userId} foi atualizado.`);
-
-  // Verifica se o plano foi atualizado para premium
-  if (beforeData.plano !== "premium" && afterData.plano === "premium") {
-    functions.logger.info(`Usu+Ìrio ${userId} fez upgrade para o plano Premium.`);
     const payload = {
-      event: "plan_upgraded",
-      email: afterData.email,
-      name: `${afterData.primeiroNome || ''} ${afterData.sobrenome || ''}`.trim(),
-      plan: afterData.plano,
-      userId,
+        event: "user_created",
+        email: userData.email,
+        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+        plan: userData.plano || "gratuito",
+        userId: userId,
     };
+
     await sendToWebhook(payload);
-  }
-  
-  functions.logger.info("==========================================================");
-  return null;
+    return null;
 });
 
 /**
- * Acionado quando um usu+Ìrio +Æ exclu+°do do Firebase Authentication.
+ * Acionado quando um usu√°rio √© exclu√≠do do Firebase Authentication.
  * 1. Envia um webhook 'user_deleted' para o n8n.
- * 2. Limpa todos os dados associados a esse usu+Ìrio no Firestore.
+ * 2. Limpa todos os dados associados a esse usu√°rio no Firestore.
  */
 exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
-  const userId = user.uid;
-  const userEmail = user.email; // O e-mail vem do objeto 'user' do Auth
-  const logger = functions.logger;
-  logger.info(`================ onUserDeleted ACIONADA =================`);
-  logger.info(`Usu+Ìrio a ser deletado: ${userId} (${userEmail})`);
+    const userId = user.uid;
+    const userEmail = user.email;
+    const logger = functions.logger;
+    logger.info(`================ onUserDeleted ACIONADA =================`);
 
-  const firestore = admin.firestore();
-  const userDocRef = firestore.collection("users").doc(userId);
+    const firestore = admin.firestore();
+    const userDocRef = firestore.collection("users").doc(userId);
 
-  try {
-    // --- PASSO 1: Buscar dados do usu+Ìrio ANTES de deletar ---
-    const userDoc = await userDocRef.get();
-    let userName = '';
-    if (userDoc.exists) {
-      const userData = userDoc.data();
-      userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
-      logger.info(`Dados do usu+Ìrio encontrados para o webhook: ${userName}`);
-    } else {
-      logger.warn(`Documento ${userId} n+˙o encontrado no Firestore, mas a conta de autentica+∫+˙o foi exclu+°da.`);
+    try {
+        // --- PASSO 1: Buscar dados do usu√°rio ANTES de deletar ---
+        const userDoc = await userDocRef.get();
+        let userName = '';
+        if (userDoc.exists) {
+            const userData = userDoc.data();
+            userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
+        }
+
+        // --- PASSO 2: Enviar o webhook de conta deletada ---
+        const payload = {
+            event: "user_deleted",
+            email: userEmail,
+            name: userName,
+            userId: userId,
+        };
+        await sendToWebhook(payload);
+
+        // --- PASSO 3: Limpeza dos dados do Firestore ---
+
+        // Deletar subcole√ß√£o 'tasks'
+        const tasksRef = userDocRef.collection("tasks");
+        const tasksSnapshot = await tasksRef.get();
+        if (!tasksSnapshot.empty) {
+            const batch = firestore.batch();
+            tasksSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
+            await batch.commit();
+        }
+
+        // Deletar subcole√ß√£o 'journalEntries'
+        const journalRef = userDocRef.collection("journalEntries");
+        const journalSnapshot = await journalRef.get();
+        if (!journalSnapshot.empty) {
+            const journalBatch = firestore.batch();
+            journalSnapshot.docs.forEach((doc) => journalBatch.delete(doc.ref));
+            await journalBatch.commit();
+        }
+
+        // Deletar o documento principal do usu√°rio
+        if (userDoc.exists) {
+            await userDocRef.delete();
+        }
+
+        return { status: "success", message: `Dados do usu√°rio ${userId} limpos com sucesso.` };
+
+    } catch (error) {
+        logger.error(`Erro ao limpar dados ou enviar webhook para o usu√°rio ${userId}:`, error);
+        return { status: "error", message: `Falha no processo de exclus√£o do usu√°rio ${userId}.` };
     }
-
-    // --- PASSO 2: Enviar o webhook de conta deletada ---
-    const payload = {
-      event: "user_deleted",
-      email: userEmail,
-      name: userName,
-      userId: userId,
-    };
-    await sendToWebhook(payload);
-    logger.info(`Webhook 'user_deleted' enviado para ${userId}.`);
-
-    // --- PASSO 3: Limpeza dos dados do Firestore (l+¶gica original) ---
-    logger.info(`Iniciando limpeza de dados do Firestore para o usu+Ìrio: ${userId}`);
-    
-    // Deletar subcole+∫+˙o 'tasks'
-    const tasksRef = userDocRef.collection("tasks");
-    const tasksSnapshot = await tasksRef.get();
-    if (!tasksSnapshot.empty) {
-      const batch = firestore.batch();
-      tasksSnapshot.docs.forEach((doc) => batch.delete(doc.ref));
-      await batch.commit();
-      logger.log(`Subcole+∫+˙o 'tasks' do usu+Ìrio ${userId} deletada.`);
-    }
-
-    // Deletar subcole+∫+˙o 'journalEntries'
-    const journalRef = userDocRef.collection("journalEntries");
-    const journalSnapshot = await journalRef.get();
-    if (!journalSnapshot.empty) {
-      const journalBatch = firestore.batch();
-      journalSnapshot.docs.forEach((doc) => journalBatch.delete(doc.ref));
-      await journalBatch.commit();
-      logger.log(`Subcole+∫+˙o 'journalEntries' do usu+Ìrio ${userId} deletada.`);
-    }
-
-    // Deletar o documento principal do usu+Ìrio
-    if (userDoc.exists) {
-      await userDocRef.delete();
-      logger.log(`Documento principal do usu+Ìrio ${userId} deletado com sucesso.`);
-    }
-    
-    logger.info(`==========================================================`);
-    return { status: "success", message: `Dados do usu+Ìrio ${userId} limpos com sucesso.` };
-  
-  } catch (error) {
-    logger.error(`Erro ao limpar dados ou enviar webhook para o usu+Ìrio ${userId}:`, error);
-    logger.info(`==========================================================`);
-    return { status: "error", message: `Falha no processo de exclus+˙o do usu+Ìrio ${userId}.` };
-  }
 });
 
-// ========================================
-// WEBHOOKS DE PAGAMENTO (PAGBANK)
-// ========================================
-
-// Token PagBank (ambiente de teste)
-const PAGBANK_TOKEN = 'eafff115-5393-4566-b470-70e3a3016e23448c98f54df88f35255b8ff344373ddc8ec3-275a-4d80-b1a0-02dc946cc97c';
-const PAGBANK_API_URL = 'https://sandbox.api.pagbank.com';
-
 /**
- * Inicia checkout web via PagBank
+ * Solicita redefini√ß√£o de senha personalizada via n8n
  */
-exports.startWebCheckout = functions.https.onCall(async (data, context) => {
-    functions.logger.info('================ startWebCheckout ACIONADA ================');
+exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
+    const { email } = data;
 
-    if (!context.auth) {
-        throw new functions.https.HttpsError('unauthenticated', 'Usu√°rio n√£o autenticado');
+    if (!email) {
+        throw new functions.https.HttpsError('invalid-argument', 'O e-mail √© obrigat√≥rio.');
     }
 
-    const { userId, plan, recaptchaToken, billingCycle = 'monthly' } = data;
+    try {
+        // Gera o link de redefini√ß√£o de senha usando o Admin SDK
+        const link = await admin.auth().generatePasswordResetLink(email);
 
-    if (!userId || !plan) {
-        throw new functions.https.HttpsError('invalid-argument', 'userId e plan s√£o obrigat√≥rios');
-    }
-
-    if (recaptchaToken) {
+        // Busca dados do usu√°rio para personalizar o e-mail (opcional, mas bom)
+        let name = '';
         try {
-            const assessment = await assessRecaptcha(recaptchaToken, 'checkout');
-            if (!assessment.valid || assessment.score < 0.5) {
-                functions.logger.warn(`Checkout bloqueado - score reCAPTCHA: ${assessment.score}`);
-                throw new functions.https.HttpsError('permission-denied', 'Verifica√ß√£o de seguran√ßa falhou');
+            const userRecord = await admin.auth().getUserByEmail(email);
+            const userDoc = await admin.firestore().collection("users").doc(userRecord.uid).get();
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                name = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
             }
-            functions.logger.info(`‚úÖ Checkout aprovado - score: ${assessment.score}`);
-        } catch (error) {
-            functions.logger.error('Erro ao validar reCAPTCHA no checkout:', error);
-        }
-    }
-
-    try {
-        const userDoc = await db.collection('users').doc(userId).get();
-        if (!userDoc.exists) {
-            throw new functions.https.HttpsError('not-found', 'Usu√°rio n√£o encontrado');
+        } catch (e) {
+            // Se n√£o encontrar usu√°rio ou der erro no firestore, apenas segue sem nome
+            console.log("Usu√°rio n√£o encontrado no Firestore ou Auth para pegar nome:", e.message);
         }
 
-        const userData = userDoc.data();
+        // Envia para o n8n
+        await sendToWebhook({
+            event: 'password_reset_requested',
+            email: email,
+            name: name,
+            link: link
+        });
 
-        const planPrices = {
-            plus: {
-                monthly: 1990,
-                annual: 19104,
-                name: 'Sincro Desperta'
-            },
-            premium: {
-                monthly: 3990,
-                annual: 38304,
-                name: 'Sincro Sinergia'
-            }
-        };
-
-        if (!planPrices[plan]) {
-            throw new functions.https.HttpsError('invalid-argument', 'Plano inv√°lido');
-        }
-
-        const amount = billingCycle === 'annual' ? planPrices[plan].annual : planPrices[plan].monthly;
-        const description = `${planPrices[plan].name} (${billingCycle === 'annual' ? 'Anual' : 'Mensal'})`;
-        const referenceId = `${userId}_${plan}_${billingCycle}_${Date.now()}`;
-
-        const pagbankPayload = {
-            reference_id: referenceId,
-            customer_modifiable: false,
-            items: [
-                {
-                    name: description,
-                    quantity: 1,
-                    unit_amount: amount
-                }
-            ],
-            notification_urls: [
-                `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/pagbankWebhook`
-            ],
-            payment_notification_urls: [
-                `https://us-central1-${process.env.GCLOUD_PROJECT}.cloudfunctions.net/pagbankWebhook`
-            ]
-        };
-
-        functions.logger.info('Criando checkout PagBank:', { referenceId, amount, billingCycle });
-
-        const response = await axios.post(
-            `${PAGBANK_API_URL}/checkouts`,
-            pagbankPayload,
-            {
-                headers: {
-                    'Authorization': `Bearer ${PAGBANK_TOKEN}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }
-            }
-        );
-
-        functions.logger.info('Resposta PagBank:', response.data);
-
-        const payLink = response.data.links.find(link => link.rel === 'PAY');
-
-        if (!payLink) {
-            throw new Error('URL de pagamento n√£o encontrada na resposta do PagBank');
-        }
-
-        return {
-            success: true,
-            checkoutUrl: payLink.href,
-            checkoutId: response.data.id,
-            referenceId: referenceId
-        };
-
+        return { success: true };
     } catch (error) {
-        functions.logger.error('Erro ao iniciar checkout:', error.response?.data || error.message);
-        throw new functions.https.HttpsError('internal', `Erro ao processar checkout: ${error.message}`);
-    }
-});
-
-/**
- * Webhook do PagBank
- */
-exports.pagbankWebhook = functions.https.onRequest(async (req, res) => {
-    functions.logger.info('================ pagbankWebhook ACIONADA ================');
-
-    try {
-        const payload = req.body;
-        functions.logger.info('Payload recebido:', JSON.stringify(payload, null, 2));
-
-        const { reference_id, status, charges } = payload;
-
-        if (!reference_id) {
-            functions.logger.error('reference_id n√£o encontrado no payload');
-            return res.status(400).send('reference_id obrigat√≥rio');
+        console.error("Erro ao gerar link de redefini√ß√£o:", error);
+        // N√£o expor erro detalhado de "usu√°rio n√£o encontrado" por seguran√ßa (user enumeration)
+        if (error.code === 'auth/user-not-found') {
+            // Retorna sucesso mesmo se n√£o achar, para n√£o revelar e-mails cadastrados
+            return { success: true };
         }
-
-        const parts = reference_id.split('_');
-        const userId = parts[0];
-        const plan = parts[1];
-        const billingCycle = parts[2] || 'monthly';
-
-        functions.logger.info(`Processando webhook para userId: ${userId}, plan: ${plan}, cycle: ${billingCycle}, status: ${status}`);
-
-        if (status === 'PAID' || status === 'APPROVED' || (charges && charges[0]?.status === 'PAID')) {
-            const planMapping = {
-                plus: 'plus',
-                premium: 'premium'
-            };
-
-            const validUntil = new Date();
-
-            if (billingCycle === 'annual') {
-                validUntil.setFullYear(validUntil.getFullYear() + 1);
-            } else {
-                validUntil.setMonth(validUntil.getMonth() + 1);
-            }
-
-            await db.collection('users').doc(userId).update({
-                'subscription.plan': planMapping[plan],
-                'subscription.status': 'active',
-                'subscription.billingCycle': billingCycle,
-                'subscription.validUntil': admin.firestore.Timestamp.fromDate(validUntil),
-                'subscription.startedAt': admin.firestore.Timestamp.now()
-            });
-
-            functions.logger.info(`‚úÖ Assinatura ${plan} (${billingCycle}) ativada para usu√°rio ${userId} at√© ${validUntil.toISOString()}`);
-
-            await sendToWebhook({
-                event: 'subscription_activated',
-                userId,
-                plan,
-                billingCycle,
-                validUntil: validUntil.toISOString()
-            });
-
-        } else if (status === 'CANCELED' || status === 'REFUNDED') {
-            await db.collection('users').doc(userId).update({
-                'subscription.status': 'cancelled'
-            });
-
-            functions.logger.info(`‚ùå Assinatura cancelada para usu√°rio ${userId}`);
-
-            await sendToWebhook({
-                event: 'subscription_cancelled',
-                userId,
-                plan,
-                reason: status
-            });
-        }
-
-        res.status(200).send('OK');
-
-    } catch (error) {
-        functions.logger.error('Erro no webhook PagBank:', error);
-        res.status(500).send('Erro interno');
+        throw new functions.https.HttpsError('internal', 'Erro ao processar solicita√ß√£o.');
     }
 });

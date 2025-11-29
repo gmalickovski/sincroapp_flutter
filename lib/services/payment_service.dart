@@ -3,32 +3,25 @@
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:sincro_app_flutter/common/constants/stripe_constants.dart';
 
-/// Serviço centralizado de pagamentos multiplataforma
-///
-/// Arquitetura:
-/// - Web: PagBank via checkout redirect
-/// - iOS: Apple In-App Purchase (a implementar)
-/// - Android: Google Play Billing (a implementar)
-/// - Todas as plataformas sincronizam status via Firestore
+/// Serviço centralizado de pagamentos com Stripe
 class PaymentService {
   final FirestoreService _firestoreService = FirestoreService();
 
-  /// IDs dos produtos (devem corresponder aos IDs nas lojas)
-  static const String productIdDesperta = 'sincro_desperta_monthly';
-  static const String productIdSinergia = 'sincro_sinergia_monthly';
+  /// Inicializa o Stripe (deve ser chamado no main ou splash)
+  static Future<void> initialize() async {
+    // TODO: Substituir pela sua Publishable Key do Stripe
+    Stripe.publishableKey = 'pk_test_51SYoC3PxUnpVpxqmeShfUQCAev2DIsGD2X4JMJLJHGMF6nXXzIoN3orUh9ptYZgQTV6nAOHpOVv9k5a9IpFV0xUh0007i5ifDi'; 
+    await Stripe.instance.applySettings();
+  }
 
-  /// Preços (mantidos para referência e web)
-  static const Map<String, double> prices = {
-    productIdDesperta: 19.90,
-    productIdSinergia: 39.90,
-  };
-
-  /// Inicia processo de compra baseado na plataforma
+  /// Inicia processo de assinatura via Stripe
   Future<bool> purchaseSubscription({
     required String userId,
     required SubscriptionPlan plan,
@@ -39,180 +32,84 @@ class PaymentService {
     }
 
     try {
-      if (kIsWeb) {
-        return await _purchaseWeb(userId, plan, cycle);
-      } else if (defaultTargetPlatform == TargetPlatform.iOS) {
-        return await _purchaseIOS(userId, plan);
-      } else if (defaultTargetPlatform == TargetPlatform.android) {
-        return await _purchaseAndroid(userId, plan);
-      } else {
-        throw UnsupportedError('Plataforma não suportada para pagamentos');
+      // 1. Determinar o Price ID correto
+      final priceId = _getPriceId(plan, cycle);
+      if (priceId == null) {
+        throw UnimplementedError('Plano/Ciclo não configurado no StripeConstants');
       }
+
+      // 2. Criar Assinatura no backend (retorna clientSecret do PaymentIntent da fatura)
+      final paymentData = await _createSubscription(
+        priceId: priceId,
+      );
+
+      // 3. Inicializar Payment Sheet
+      await Stripe.instance.initPaymentSheet(
+        paymentSheetParameters: SetupPaymentSheetParameters(
+          customFlow: false,
+          merchantDisplayName: 'Sincro App',
+          paymentIntentClientSecret: paymentData['clientSecret'],
+          customerEphemeralKeySecret: paymentData['ephemeralKey'],
+          customerId: paymentData['customer'],
+          style: ThemeMode.system,
+        ),
+      );
+
+      // 4. Apresentar Payment Sheet
+      await Stripe.instance.presentPaymentSheet();
+
+      // 5. Sucesso!
+      debugPrint('Assinatura realizada com sucesso!');
+      return true;
+
+    } on StripeException catch (e) {
+      debugPrint('Erro do Stripe: ${e.error.localizedMessage}');
+      if (e.error.code == FailureCode.Canceled) {
+        return false; // Usuário cancelou
+      }
+      rethrow;
     } catch (e) {
-      debugPrint('Erro ao processar compra: $e');
+      debugPrint('Erro ao processar assinatura: $e');
       rethrow;
     }
   }
 
-  /// Inicia pagamento via PIX (Web/Mobile)
-  Future<bool> purchaseWithPix({
-    required String userId,
-    required SubscriptionPlan plan,
-    BillingCycle cycle = BillingCycle.monthly,
+  /// Retorna o Price ID baseado no plano e ciclo
+  String? _getPriceId(SubscriptionPlan plan, BillingCycle cycle) {
+    if (plan == SubscriptionPlan.plus) { // Desperta
+      return cycle == BillingCycle.monthly 
+          ? StripeConstants.priceDespertaMonthly 
+          : StripeConstants.priceDespertaAnnual;
+    } else if (plan == SubscriptionPlan.premium) { // Sinergia
+      return cycle == BillingCycle.monthly 
+          ? StripeConstants.priceSinergiaMonthly 
+          : StripeConstants.priceSinergiaAnnual;
+    }
+    return null;
+  }
+
+  /// Cria Subscription via Firebase Function
+  Future<Map<String, dynamic>> _createSubscription({
+    required String priceId,
   }) async {
-    // TODO: Implementar chamada ao backend para gerar QRCode PIX
-    // O backend deve retornar o payload do PIX (Copia e Cola + Imagem)
-    
-    // Mock:
-    await Future.delayed(const Duration(seconds: 2));
-    return true;
-  }
-
-  /// ========== WEB: PagBank ==========
-  Future<bool> _purchaseWeb(String userId, SubscriptionPlan plan, BillingCycle cycle) async {
     try {
-      // Cria checkout via Firebase Function
-      final checkoutUrl = await _createPagBankCheckout(userId, plan, cycle);
-
-      if (kIsWeb) {
-        // Redireciona para URL de checkout do PagBank
-        final uri = Uri.parse(checkoutUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          return true;
-        } else {
-          debugPrint('Não foi possível abrir a URL: $checkoutUrl');
-          return false;
-        }
-      }
-
-      return false;
-    } catch (e) {
-      debugPrint('Erro em _purchaseWeb: $e');
-      rethrow;
-    }
-  }
-
-  /// Cria sessão de checkout no PagBank via Firebase Function
-  Future<String> _createPagBankCheckout(
-    String userId,
-    SubscriptionPlan plan,
-    BillingCycle cycle,
-  ) async {
-    try {
-      // Chama Firebase Function
       final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('startWebCheckout');
+      final callable = functions.httpsCallable('createSubscription');
       
       final result = await callable.call<Map<String, dynamic>>({
-        'userId': userId,
-        'plan': plan.name,
-        'billingCycle': cycle.name,
-        // 'recaptchaToken': token, // Opcional: adicionar reCAPTCHA se necessário
+        'priceId': priceId,
       });
 
-      final data = result.data;
-      
-      if (!data.containsKey('checkoutUrl')) {
-        throw Exception('Resposta inválida da Firebase Function');
-      }
-
-      final checkoutUrl = data['checkoutUrl'] as String;
-      debugPrint('Checkout criado com sucesso: $checkoutUrl');
-      
-      return checkoutUrl;
+      return result.data;
     } catch (e) {
-      debugPrint('Erro ao criar checkout PagBank: $e');
+      debugPrint('Erro ao chamar createSubscription: $e');
       rethrow;
     }
   }
-
-  /// ========== iOS: Apple In-App Purchase ==========
-  Future<bool> _purchaseIOS(String userId, SubscriptionPlan plan) async {
-    // TODO: Implementar com in_app_purchase package
-
-    // Fluxo básico:
-    // 1. Inicializar InAppPurchase
-    // 2. Buscar produtos disponíveis
-    // 3. Iniciar compra
-    // 4. Aguardar confirmação da Apple
-    // 5. Enviar receipt para validação no backend
-    // 6. Atualizar Firestore com status da assinatura
-
-    throw UnimplementedError('iOS IAP ainda não implementado');
-  }
-
-  /// ========== Android: Google Play Billing ==========
-  Future<bool> _purchaseAndroid(String userId, SubscriptionPlan plan) async {
-    // TODO: Implementar com in_app_purchase package
-
-    // Fluxo básico:
-    // 1. Inicializar InAppPurchase
-    // 2. Buscar produtos disponíveis
-    // 3. Iniciar compra
-    // 4. Aguardar confirmação do Google Play
-    // 5. Enviar purchase token para validação no backend
-    // 6. Atualizar Firestore com status da assinatura
-
-    throw UnimplementedError('Android IAP ainda não implementado');
-  }
-
-  /// ========== Gerenciamento de Assinatura ==========
 
   /// Verifica status da assinatura atual
   Future<SubscriptionModel> getSubscriptionStatus(String userId) async {
     final userData = await _firestoreService.getUserData(userId);
     return userData?.subscription ?? SubscriptionModel.free();
-  }
-
-  /// Cancela assinatura (mantém acesso até fim do período pago)
-  Future<void> cancelSubscription(String userId) async {
-    // TODO: Cancelar no gateway correspondente
-    // - Web: Cancelar recorrência no PagBank
-    // - iOS: Usuário cancela nas configurações do iOS
-    // - Android: Usuário cancela na Play Store
-
-    // Busca assinatura atual
-    final currentSubscription = await getSubscriptionStatus(userId);
-
-    // Atualiza status para cancelado (mas mantém ativa até validUntil)
-    final updatedSubscription = currentSubscription.copyWith(
-      status: SubscriptionStatus.cancelled,
-    );
-
-    // Atualizar Firestore para marcar como "cancelada mas ativa até..."
-    await _firestoreService.updateUserSubscription(
-      userId,
-      updatedSubscription.toFirestore(),
-    );
-  }
-
-  /// Restaura compras (principalmente para iOS/Android)
-  Future<bool> restorePurchases(String userId) async {
-    if (kIsWeb) {
-      // Web não precisa restaurar - status vem do backend
-      return true;
-    }
-
-    // TODO: Implementar restauração de compras nativas
-    // 1. Buscar receipts/tokens salvos
-    // 2. Validar no backend
-    // 3. Atualizar Firestore
-
-    throw UnimplementedError('Restore purchases ainda não implementado');
-  }
-
-  /// ========== Webhooks & Validação ==========
-
-  /// Valida recibo da Apple
-  Future<bool> validateAppleReceipt(String receipt) async {
-    // TODO: Enviar para Firebase Function que valida com Apple
-    return false;
-  }
-
-  /// Valida purchase token do Google
-  Future<bool> validateGooglePurchase(String purchaseToken) async {
-    // TODO: Enviar para Firebase Function que valida com Google
-    return false;
   }
 }

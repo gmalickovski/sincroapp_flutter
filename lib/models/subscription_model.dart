@@ -33,6 +33,7 @@ class SubscriptionModel {
   final int aiSuggestionsUsed; // Contador mensal
   final int aiSuggestionsLimit; // Limite do plano
   final DateTime? lastAiReset; // Última vez que resetou o contador
+  final String? stripeId; // ID do cliente no Stripe
 
   const SubscriptionModel({
     required this.plan,
@@ -43,6 +44,7 @@ class SubscriptionModel {
     this.aiSuggestionsUsed = 0,
     required this.aiSuggestionsLimit,
     this.lastAiReset,
+    this.stripeId,
   });
 
   /// Cria assinatura gratuita padrão
@@ -56,6 +58,7 @@ class SubscriptionModel {
       aiSuggestionsUsed: 0,
       aiSuggestionsLimit: 0, // Essencial não tem IA
       lastAiReset: DateTime.now().toUtc(),
+      stripeId: null,
     );
   }
 
@@ -88,6 +91,7 @@ class SubscriptionModel {
       lastAiReset: data['lastAiReset'] != null
           ? (data['lastAiReset'] as Timestamp).toDate().toUtc()
           : null,
+      stripeId: data['stripeId'],
     );
   }
 
@@ -103,6 +107,7 @@ class SubscriptionModel {
       'aiSuggestionsLimit': aiSuggestionsLimit,
       'lastAiReset':
           lastAiReset != null ? Timestamp.fromDate(lastAiReset!) : null,
+      'stripeId': stripeId,
     };
   }
 
@@ -183,6 +188,7 @@ class SubscriptionModel {
       aiSuggestionsUsed: aiSuggestionsUsed ?? this.aiSuggestionsUsed,
       aiSuggestionsLimit: aiSuggestionsLimit ?? this.aiSuggestionsLimit,
       lastAiReset: lastAiReset ?? this.lastAiReset,
+      stripeId: stripeId ?? this.stripeId,
     );
   }
 }

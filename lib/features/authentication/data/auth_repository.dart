@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
@@ -57,7 +59,19 @@ class AuthRepository {
   // Envia email de redefinição de senha
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
-      await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+      // Chama a Cloud Function personalizada para enviar via n8n
+      final functions = FirebaseFunctions.instance;
+      final callable = functions.httpsCallable('requestPasswordReset');
+      await callable.call({'email': email.trim()});
+    } catch (e) {
+      // Fallback: Se a função falhar (ex: offline), tenta o método nativo
+      // Mas idealmente queremos forçar o n8n.
+      debugPrint('Erro na função requestPasswordReset: $e');
+      // Opcional: Descomente abaixo se quiser fallback
+      // await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+      rethrow;
+    }
+  }
     } on FirebaseAuthException {
       // Repassa para a UI decidir a mensagem
       rethrow;
