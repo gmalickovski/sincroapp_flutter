@@ -72,11 +72,5 @@ class AuthRepository {
       rethrow;
     }
   }
-    } on FirebaseAuthException {
-      // Repassa para a UI decidir a mensagem
-      rethrow;
-    } catch (e) {
-      rethrow;
-    }
   }
 }
