@@ -75,7 +75,11 @@ Future<void> main() async {
   );
 
   // Inicializa Stripe
-  await PaymentService.initialize();
+  try {
+    await PaymentService.initialize();
+  } catch (e) {
+    debugPrint('Erro ao inicializar Stripe: $e');
+  }
 
   // ========================================
   // APP CHECK - ATIVAR IMEDIATAMENTE APÓS FIREBASE
