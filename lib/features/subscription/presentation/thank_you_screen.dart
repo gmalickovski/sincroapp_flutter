@@ -56,8 +56,7 @@ class ThankYouScreen extends StatelessWidget {
               
               // Botão de Ação
               SizedBox(
-                width: double.infinity,
-                constraints: const BoxConstraints(maxWidth: 300),
+                width: 300,
                 child: ElevatedButton(
                   onPressed: () {
                     // Boas práticas: Limpar a stack de navegação para evitar 
