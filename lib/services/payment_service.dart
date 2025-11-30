@@ -20,7 +20,9 @@ class PaymentService {
   static Future<void> initialize() async {
     // TODO: Substituir pela sua Publishable Key do Stripe
     Stripe.publishableKey = 'pk_test_51SYoC3PxUnpVpxqmeShfUQCAev2DIsGD2X4JMJLJHGMF6nXXzIoN3orUh9ptYZgQTV6nAOHpOVv9k5a9IpFV0xUh0007i5ifDi'; 
-    await Stripe.instance.applySettings();
+    if (!kIsWeb) {
+      await Stripe.instance.applySettings();
+    }
   }
 
   /// Inicia processo de assinatura via Stripe
