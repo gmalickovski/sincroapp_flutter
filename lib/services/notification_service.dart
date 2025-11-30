@@ -2,25 +2,23 @@
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/firebase_options.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:flutter/material.dart'; // Para TimeOfDay
 
-// --- INÍCIO DA CORREÇÃO DEFINITIVA ---
 // Importa os DADOS de fuso horário (do arquivo 'latest.dart') com um apelido ÚNICO
 import 'package:timezone/data/latest.dart' as tz_data;
 // Importa as FUNÇÕES de fuso horário (do arquivo 'timezone.dart') com outro apelido ÚNICO
 import 'package:timezone/timezone.dart' as tz;
-// --- FIM DA CORREÇÃO DEFINITIVA ---
 
 // --- IMPORTANTE ---
 // Esta função DEVE ser de nível superior (fora de qualquer classe)
 // para funcionar em background no Android.
 @pragma('vm:entry-point')
-Future<void> _showEndOfDayReminder(NotificationResponse response) async {
+Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
   // Precisamos inicializar o Firebase aqui para acesso em background
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
@@ -57,8 +55,8 @@ class NotificationService {
   static final NotificationService instance =
       NotificationService._privateConstructor();
 
-  final FlutterLocalNotificationsPlugin _localNotifications =
-      FlutterLocalNotificationsPlugin();
+  final fln.FlutterLocalNotificationsPlugin _localNotifications =
+      fln.FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
 
   // IDs dos Canais (Android)
@@ -82,18 +80,18 @@ class NotificationService {
     await _requestPermissions();
 
     // Configurações de inicialização do FlutterLocalNotifications
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings(
+    const fln.AndroidInitializationSettings androidSettings =
+        fln.AndroidInitializationSettings(
             '@mipmap/ic_launcher'); // Usando o ícone padrão do app
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
+    const fln.DarwinInitializationSettings iosSettings =
+        fln.DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    const InitializationSettings settings =
-        InitializationSettings(android: androidSettings, iOS: iosSettings);
+    const fln.InitializationSettings settings =
+        fln.InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _localNotifications.initialize(
       settings,
@@ -155,36 +153,36 @@ class NotificationService {
 
   /// Cria os canais de notificação para Android (Oreo+)
   Future<void> _createAndroidChannels() async {
-    const AndroidNotificationChannel reminderChannel =
-        AndroidNotificationChannel(
+    const fln.AndroidNotificationChannel reminderChannel =
+        fln.AndroidNotificationChannel(
       _channelIdReminder,
       _channelNameReminder,
       description: _channelDescReminder,
-      importance: Importance.max,
+      importance: fln.Importance.max,
       playSound: true,
     );
 
-    const AndroidNotificationChannel dailyChannel = AndroidNotificationChannel(
+    const fln.AndroidNotificationChannel dailyChannel = fln.AndroidNotificationChannel(
       _channelIdDaily,
       _channelNameDaily,
       description: _channelDescDaily,
-      importance: Importance.defaultImportance,
+      importance: fln.Importance.defaultImportance,
       playSound: true,
     );
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+            fln.AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(reminderChannel);
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+            fln.AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(dailyChannel);
   }
 
   /// Callback para quando uma notificação é tocada
-  static void _onNotificationResponse(NotificationResponse response) {
+  static void _onNotificationResponse(fln.NotificationResponse response) {
     // Handle notification tap
   }
 
@@ -213,19 +211,19 @@ class NotificationService {
     String channelId = _channelIdDaily,
     String? payload,
   }) async {
-    final androidDetails = AndroidNotificationDetails(
+    final androidDetails = fln.AndroidNotificationDetails(
       channelId,
       channelId == _channelIdDaily ? _channelNameDaily : _channelNameReminder,
       importance: channelId == _channelIdDaily
-          ? Importance.defaultImportance
-          : Importance.max,
+          ? fln.Importance.defaultImportance
+          : fln.Importance.max,
       priority: channelId == _channelIdDaily
-          ? Priority.defaultPriority
-          : Priority.max,
+          ? fln.Priority.defaultPriority
+          : fln.Priority.max,
     );
-    const iosDetails = DarwinNotificationDetails();
+    const iosDetails = fln.DarwinNotificationDetails();
     final platformDetails =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
+        fln.NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.show(id, title, body, platformDetails,
         payload: payload);
@@ -241,15 +239,15 @@ class NotificationService {
   }) async {
     await _localNotifications.cancel(_dailyPersonalDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
-    const androidDetails = AndroidNotificationDetails(
+    const androidDetails = fln.AndroidNotificationDetails(
       _channelIdDaily,
       _channelNameDaily,
-      importance: Importance.defaultImportance,
-      priority: Priority.defaultPriority,
+      importance: fln.Importance.defaultImportance,
+      priority: fln.Priority.defaultPriority,
     );
-    const iosDetails = DarwinNotificationDetails();
+    const iosDetails = fln.DarwinNotificationDetails();
     const platformDetails =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
+        fln.NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(
       _dailyPersonalDayId,
@@ -258,10 +256,10 @@ class NotificationService {
       scheduledDate,
       platformDetails,
       payload: 'personal_day',
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // Repete diariamente
+          fln.UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: fln.DateTimeComponents.time, // Repete diariamente
     );
   }
 
@@ -282,16 +280,16 @@ class NotificationService {
       return;
     }
 
-    const androidDetails = AndroidNotificationDetails(
+    const androidDetails = fln.AndroidNotificationDetails(
       _channelIdReminder,
       _channelNameReminder,
-      importance: Importance.max,
-      priority: Priority.max,
+      importance: fln.Importance.max,
+      priority: fln.Priority.max,
     );
     const iosDetails =
-        DarwinNotificationDetails(presentAlert: true, presentSound: true);
+        fln.DarwinNotificationDetails(presentAlert: true, presentSound: true);
     const platformDetails =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
+        fln.NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(
       notificationId,
@@ -300,9 +298,9 @@ class NotificationService {
       scheduledDateTime,
       platformDetails,
       payload: 'task_${task.id}',
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
+          fln.UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 
@@ -322,15 +320,15 @@ class NotificationService {
       String userId, TimeOfDay scheduleTime) async {
     await _localNotifications.cancel(_dailyEndOfDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
-    const androidDetails = AndroidNotificationDetails(
+    const androidDetails = fln.AndroidNotificationDetails(
       _channelIdDaily,
       _channelNameDaily,
-      importance: Importance.low,
-      priority: Priority.low,
+      importance: fln.Importance.low,
+      priority: fln.Priority.low,
     );
-    const iosDetails = DarwinNotificationDetails(presentAlert: true);
+    const iosDetails = fln.DarwinNotificationDetails(presentAlert: true);
     const platformDetails =
-        NotificationDetails(android: androidDetails, iOS: iosDetails);
+        fln.NotificationDetails(android: androidDetails, iOS: iosDetails);
 
     await _localNotifications.zonedSchedule(
       _dailyEndOfDayId,
@@ -339,10 +337,10 @@ class NotificationService {
       scheduledDate,
       platformDetails,
       payload: userId,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      matchDateTimeComponents: DateTimeComponents.time, // Repete diariamente
+          fln.UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: fln.DateTimeComponents.time, // Repete diariamente
     );
   }
 }

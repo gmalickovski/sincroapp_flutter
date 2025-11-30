@@ -26,7 +26,7 @@ class AssistantService {
     final model = FirebaseAI.vertexAI(
       auth: FirebaseAuth.instance,
       appCheck: FirebaseAppCheck.instance,
-    ).generativeModel(model: 'gemini-2.5-flash-lite');
+    ).generativeModel(model: 'gemini-1.5-flash');
     _model = model;
     return model;
   }

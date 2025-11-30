@@ -24,6 +24,10 @@
   <script src="https://js.stripe.com/v3/"></script>
 
   <script>
+    window.flutterWebRenderer = "canvaskit";
+  </script>
+
+  <script>
     // Detecta se está em localhost (desenvolvimento)
     const isLocalhost = Boolean(
       window.location.hostname === 'localhost' ||
@@ -64,8 +68,8 @@
 
     /* Star Comet Loader Animation */
     .logo-loader-container {
-      width: 60px;
-      height: 60px;
+      width: 120px;
+      height: 120px;
       margin-bottom: 0;
     }
 

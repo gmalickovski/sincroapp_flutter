@@ -52,7 +52,7 @@ dependencies:
   # Permissões do sistema
   permission_handler: ^11.3.1
   
-  # Fuso horário (VERSÃO ATUALIZADA)
+  # Fuso horário
   timezone: ^0.9.4
   
   # Firebase Cloud Messaging
@@ -67,7 +67,7 @@ dependencies:
   flutter_markdown: ^0.6.20
 
   # Reconhecimento de voz multiplataforma (Android, iOS, Web, Windows)
-  speech_to_text: ^6.6.0
+  # speech_to_text: ^6.6.0 (REMOVIDO TEMPORARIAMENTE)
 
   meta: any
   url_launcher: ^6.3.2

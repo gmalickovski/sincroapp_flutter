@@ -138,13 +138,13 @@ Future<void> main() async {
     }
   }
 
-  if (kDebugMode) {
-    try {
-      await _connectToEmulators();
-    } catch (e) {
-      // Intencional: ignorar falha ao conectar aos emuladores em debug
-    }
-  }
+  // if (kDebugMode) {
+  //   try {
+  //     await _connectToEmulators();
+  //   } catch (e) {
+  //     // Intencional: ignorar falha ao conectar aos emuladores em debug
+  //   }
+  // }
 
   runApp(const SincroApp());
 }
