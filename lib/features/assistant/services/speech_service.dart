@@ -47,6 +47,7 @@ class SpeechService {
   Future<String> _findBestPortugueseLocale() async {
     try {
       var locales = await _speech.locales();
+      debugPrint('Locales disponíveis: ${locales.map((l) => l.localeId).join(', ')}');
       
       // 1. Tenta pt_BR exato
       var exact = locales.where((l) => l.localeId == 'pt_BR').firstOrNull;
@@ -63,7 +64,7 @@ class SpeechService {
     } catch (e) {
       debugPrint('Erro ao buscar locales: $e');
     }
-    return 'pt_BR'; // Fallback
+    return 'pt_BR'; // Fallback forte
   }
 
   Future<void> start({
@@ -77,20 +78,29 @@ class SpeechService {
     }
 
     // Configurações de silêncio
-    // Mobile: usa pauseFor nativo
     // Web: usa timer manual pois o nativo é inconsistente
-    final pauseFor = kIsWeb ? const Duration(seconds: 5) : const Duration(seconds: 3);
+    // Mobile: usa pauseFor nativo, mas mantemos o timer como segurança
+    final pauseFor = kIsWeb ? const Duration(seconds: 3) : const Duration(seconds: 5);
     final listenFor = const Duration(seconds: 30);
+    
+    // Garante que o locale seja pt_BR se a detecção falhou ou ainda é nula
+    final localeId = _detectedLocaleId ?? 'pt_BR';
+    debugPrint('Iniciando reconhecimento de voz com locale: $localeId');
 
     _startSilenceTimer(onDone);
 
     await _speech.listen(
       onResult: (result) {
+        debugPrint('Speech Result: ${result.recognizedWords} (Final: ${result.finalResult})');
+        
         if (result.finalResult) {
-           // Se for resultado final, o próprio plugin vai parar logo em seguida
            _cancelSilenceTimer();
+           // No Web, as vezes o finalResult vem mas o status não muda para done imediatamente
+           if (kIsWeb) {
+             stop(); // Força parada no Web ao receber resultado final
+             onDone?.call();
+           }
         } else {
-           // Se ainda está ouvindo, reinicia o timer de silêncio
            _resetSilenceTimer(onDone);
         }
         
@@ -98,23 +108,27 @@ class SpeechService {
       },
       listenFor: listenFor,
       pauseFor: pauseFor,
-      localeId: _detectedLocaleId ?? 'pt_BR',
+      localeId: localeId,
       cancelOnError: true,
       partialResults: true,
     );
   }
 
   Future<void> stop() async {
+    debugPrint('SpeechService: Parando...');
     _cancelSilenceTimer();
     await _speech.stop();
   }
 
   void _startSilenceTimer(VoidCallback? onDone) {
     _cancelSilenceTimer();
-    // Timer de segurança: se não houver resultado ou silêncio prolongado, para manualmente
-    // No Web isso é crítico. No mobile é um fallback.
-    _silenceTimer = Timer(const Duration(seconds: 4), () {
-      debugPrint('SpeechService: Silêncio detectado pelo timer manual. Parando.');
+    // Timer de segurança
+    // Web: 3 segundos de silêncio = fim
+    // Mobile: 5 segundos (dá chance pro pauseFor nativo agir antes)
+    final duration = kIsWeb ? const Duration(seconds: 3) : const Duration(seconds: 5);
+    
+    _silenceTimer = Timer(duration, () {
+      debugPrint('SpeechService: Silêncio detectado pelo timer manual ($duration). Parando.');
       stop();
       onDone?.call();
     });
