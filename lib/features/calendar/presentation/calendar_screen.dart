@@ -457,7 +457,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     }
 
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -479,28 +479,25 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
         ),
       ),
-      floatingActionButton: Padding(
-        padding: EdgeInsets.only(bottom: bottomInset), // Manually move FAB up
-        child: TransparentFabWrapper(
-          controller: _fabOpacityController,
-          child: (widget.userData.subscription.isActive &&
-                  widget.userData.subscription.plan == SubscriptionPlan.premium)
-              ? ExpandingAssistantFab(
-                  onPrimary: _openAddTaskModal,
-                  primaryIcon: Icons.edit_calendar, // Ícone de agendamento
-                  primaryTooltip: 'Nova Tarefa',
-                  onOpenAssistant: (message) {
-                    AssistantPanel.show(context, widget.userData, initialMessage: message);
-                  },
-                )
-              : FloatingActionButton(
-                  onPressed: _openAddTaskModal,
-                  backgroundColor: AppColors.primary,
-                  tooltip: 'Nova Tarefa',
-                  heroTag: 'calendar_fab',
-                  child: const Icon(Icons.add, color: Colors.white),
-                ),
-        ),
+      floatingActionButton: TransparentFabWrapper(
+        controller: _fabOpacityController,
+        child: (widget.userData.subscription.isActive &&
+                widget.userData.subscription.plan == SubscriptionPlan.premium)
+            ? ExpandingAssistantFab(
+                onPrimary: _openAddTaskModal,
+                primaryIcon: Icons.edit_calendar, // Ícone de agendamento
+                primaryTooltip: 'Nova Tarefa',
+                onOpenAssistant: (message) {
+                  AssistantPanel.show(context, widget.userData, initialMessage: message);
+                },
+              )
+            : FloatingActionButton(
+                onPressed: _openAddTaskModal,
+                backgroundColor: AppColors.primary,
+                tooltip: 'Nova Tarefa',
+                heroTag: 'calendar_fab',
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
       ),
     );
   }
