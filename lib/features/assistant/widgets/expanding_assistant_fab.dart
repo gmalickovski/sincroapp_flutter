@@ -217,7 +217,12 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 
   @override
   Widget build(BuildContext context) {
-    if (_isSimpleButton && !_isInputMode) {
+    // Only show simple static button if:
+    // 1. It is a simple button (no primary action)
+    // 2. Not in input mode
+    // 3. Not expanded (menu open)
+    // 4. Not animating (forward or reverse)
+    if (_isSimpleButton && !_isInputMode && !_expanded && !_controller.isAnimating) {
        return SizedBox(
         width: _kFabHeight,
         height: _kFabHeight,

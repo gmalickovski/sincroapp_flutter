@@ -585,7 +585,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       );
     } else {
-      // Layout Retrato - Stack com painel arrastável
+          // Layout Retrato - Stack com painel arrastável
       return LayoutBuilder(
         builder: (context, constraints) {
           final screenHeight = constraints.maxHeight;
@@ -639,24 +639,29 @@ class _CalendarScreenState extends State<CalendarScreen> {
               ),
               
               // Painel arrastável
-              DraggableScrollableSheet(
-                initialChildSize: initialSize,
-                minChildSize: initialSize,
-                maxChildSize: 0.95,
-                snap: true,
-                snapSizes: [initialSize, 0.7, 0.95],
-                builder: (context, scrollController) {
-                  return DayDetailPanel(
-                    scrollController: scrollController,
-                    selectedDay: _selectedDay,
-                    personalDayNumber: _personalDayNumber,
-                    events: _getRawEventsForDay(_selectedDay),
-                    isDesktop: false,
-                    onAddTask: _openAddTaskModal,
-                    onToggleTask: _onToggleTask,
-                    onTaskTap: _handleTaskTap,
-                  );
-                },
+              // Wrap in MediaQuery to force viewInsets.bottom to 0
+              // This prevents the sheet from moving up when the keyboard opens
+              MediaQuery(
+                data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
+                child: DraggableScrollableSheet(
+                  initialChildSize: initialSize,
+                  minChildSize: initialSize,
+                  maxChildSize: 0.95,
+                  snap: true,
+                  snapSizes: [initialSize, 0.7, 0.95],
+                  builder: (context, scrollController) {
+                    return DayDetailPanel(
+                      scrollController: scrollController,
+                      selectedDay: _selectedDay,
+                      personalDayNumber: _personalDayNumber,
+                      events: _getRawEventsForDay(_selectedDay),
+                      isDesktop: false,
+                      onAddTask: _openAddTaskModal,
+                      onToggleTask: _onToggleTask,
+                      onTaskTap: _handleTaskTap,
+                    );
+                  },
+                ),
               ),
             ],
           );
