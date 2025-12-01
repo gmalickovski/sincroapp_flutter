@@ -89,6 +89,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                         plus: plusUsers,
                         premium: premiumUsers,
                         total: totalUsers,
+                        isDesktop: isDesktop,
                       ),
                     ),
                     const SizedBox(width: 24),
@@ -275,6 +276,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     required int plus,
     required int premium,
     required int total,
+    required bool isDesktop,
   }) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -295,68 +297,94 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             ),
           ),
           const SizedBox(height: 32),
-          SizedBox(
-            height: 200,
-            child: Row(
+          if (isDesktop)
+            SizedBox(
+              height: 200,
+              child: Row(
+                children: [
+                  Expanded(
+                    flex: 1,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 40,
+                        sections: _buildPieSections(free, plus, premium, total),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    flex: 1,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
+                        const SizedBox(height: 12),
+                        _buildLegendItem('Desperta (Plus)', plus, Colors.blue.shade400),
+                        const SizedBox(height: 12),
+                        _buildLegendItem('Sinergia (Premium)', premium, Colors.purple.shade400),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
               children: [
-                Expanded(
-                  flex: 1,
+                SizedBox(
+                  height: 200,
                   child: PieChart(
                     PieChartData(
                       sectionsSpace: 2,
                       centerSpaceRadius: 40,
-                      sections: [
-                        if (free > 0)
-                          PieChartSectionData(
-                            color: Colors.grey.shade400,
-                            value: free.toDouble(),
-                            title: '${((free / total) * 100).toStringAsFixed(0)}%',
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        if (plus > 0)
-                          PieChartSectionData(
-                            color: Colors.blue.shade400,
-                            value: plus.toDouble(),
-                            title: '${((plus / total) * 100).toStringAsFixed(0)}%',
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                        if (premium > 0)
-                          PieChartSectionData(
-                            color: Colors.purple.shade400,
-                            value: premium.toDouble(),
-                            title: '${((premium / total) * 100).toStringAsFixed(0)}%',
-                            radius: 60, // Highlight premium
-                            titleStyle: const TextStyle(
-                                fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-                          ),
-                      ],
+                      sections: _buildPieSections(free, plus, premium, total),
                     ),
                   ),
                 ),
-                const SizedBox(width: 24),
-                Expanded(
-                  flex: 1,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
-                      const SizedBox(height: 12),
-                      _buildLegendItem('Desperta (Plus)', plus, Colors.blue.shade400),
-                      const SizedBox(height: 12),
-                      _buildLegendItem('Sinergia (Premium)', premium, Colors.purple.shade400),
-                    ],
-                  ),
-                ),
+                const SizedBox(height: 24),
+                _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
+                const SizedBox(height: 12),
+                _buildLegendItem('Desperta (Plus)', plus, Colors.blue.shade400),
+                const SizedBox(height: 12),
+                _buildLegendItem('Sinergia (Premium)', premium, Colors.purple.shade400),
               ],
             ),
-          ),
         ],
       ),
     );
+  }
+
+  List<PieChartSectionData> _buildPieSections(int free, int plus, int premium, int total) {
+    return [
+      if (free > 0)
+        PieChartSectionData(
+          color: Colors.grey.shade400,
+          value: free.toDouble(),
+          title: '${((free / total) * 100).toStringAsFixed(0)}%',
+          radius: 50,
+          titleStyle: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      if (plus > 0)
+        PieChartSectionData(
+          color: Colors.blue.shade400,
+          value: plus.toDouble(),
+          title: '${((plus / total) * 100).toStringAsFixed(0)}%',
+          radius: 50,
+          titleStyle: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+      if (premium > 0)
+        PieChartSectionData(
+          color: Colors.purple.shade400,
+          value: premium.toDouble(),
+          title: '${((premium / total) * 100).toStringAsFixed(0)}%',
+          radius: 60, // Highlight premium
+          titleStyle: const TextStyle(
+              fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+        ),
+    ];
   }
 
   Widget _buildLegendItem(String label, int value, Color color) {

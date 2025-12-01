@@ -154,12 +154,12 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
         // Barra de filtros e busca
         Container(
           padding: EdgeInsets.all(isDesktop ? 24 : 16),
-          decoration: const BoxDecoration(
-            color: AppColors.cardBackground,
-            border: Border(
-              bottom: BorderSide(color: AppColors.border, width: 1),
-            ),
-          ),
+          // decoration: const BoxDecoration(
+          //   color: AppColors.cardBackground,
+          //   border: Border(
+          //     bottom: BorderSide(color: AppColors.border, width: 1),
+          //   ),
+          // ),
           child: Column(
             children: [
               // Campo de busca

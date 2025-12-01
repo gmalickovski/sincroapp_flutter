@@ -112,27 +112,47 @@ class AdminFinancialCard extends StatelessWidget {
               const SizedBox(height: 24),
               
               // Cards de Bruto vs Líquido
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildValueCard(
+              // Cards de Bruto vs Líquido
+              if (isDesktop)
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildValueCard(
+                        title: 'Receita Bruta (MRR)',
+                        value: currencyFormat.format(mrr),
+                        color: Colors.blue.shade400,
+                        icon: Icons.attach_money,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildValueCard(
+                        title: 'Lucro Líquido Previsto',
+                        value: currencyFormat.format(netProfit),
+                        color: netProfit >= 0 ? Colors.green.shade400 : Colors.red.shade400,
+                        icon: Icons.savings_outlined,
+                      ),
+                    ),
+                  ],
+                )
+              else
+                Column(
+                  children: [
+                    _buildValueCard(
                       title: 'Receita Bruta (MRR)',
                       value: currencyFormat.format(mrr),
                       color: Colors.blue.shade400,
                       icon: Icons.attach_money,
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildValueCard(
+                    const SizedBox(height: 16),
+                    _buildValueCard(
                       title: 'Lucro Líquido Previsto',
                       value: currencyFormat.format(netProfit),
                       color: netProfit >= 0 ? Colors.green.shade400 : Colors.red.shade400,
                       icon: Icons.savings_outlined,
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               const SizedBox(height: 24),
               
               const Text(
