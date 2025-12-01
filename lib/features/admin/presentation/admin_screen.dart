@@ -6,6 +6,8 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/tabs/admin_dashboard_tab.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/tabs/admin_users_tab.dart';
 
+import 'package:sincro_app_flutter/features/admin/presentation/widgets/admin_sidebar.dart';
+
 class AdminScreen extends StatefulWidget {
   final UserModel userData;
 
@@ -21,17 +23,32 @@ class AdminScreen extends StatefulWidget {
 class _AdminScreenState extends State<AdminScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  int _selectedIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (_tabController.indexIsChanging) {
+        setState(() {
+          _selectedIndex = _tabController.index;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  void _onSidebarSelected(int index) {
+    setState(() {
+      _selectedIndex = index;
+      _tabController.animateTo(index);
+    });
   }
 
   @override
@@ -83,7 +100,61 @@ class _AdminScreenState extends State<AdminScreen>
       );
     }
 
-    // UI Admin
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        body: Row(
+          children: [
+            AdminSidebar(
+              selectedIndex: _selectedIndex,
+              onItemSelected: _onSidebarSelected,
+            ),
+            Expanded(
+              child: Column(
+                children: [
+                  // Desktop Header
+                  Container(
+                    height: 80,
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    decoration: const BoxDecoration(
+                      color: AppColors.background,
+                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedIndex == 0 ? 'Dashboard' : 'Gerenciar Usuários',
+                          style: const TextStyle(
+                            color: AppColors.primaryText,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // User Profile / Actions could go here
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: IndexedStack(
+                      index: _selectedIndex,
+                      children: [
+                        AdminDashboardTab(userData: widget.userData),
+                        AdminUsersTab(userData: widget.userData),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Mobile Layout (Existing)
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -94,7 +165,7 @@ class _AdminScreenState extends State<AdminScreen>
             Icon(Icons.admin_panel_settings, color: AppColors.primary),
             SizedBox(width: 12),
             Text(
-              'Painel Administrativo',
+              'Painel Admin',
               style: TextStyle(
                 color: AppColors.primaryText,
                 fontWeight: FontWeight.bold,
