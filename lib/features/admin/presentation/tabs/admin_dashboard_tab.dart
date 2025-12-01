@@ -120,7 +120,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               const SizedBox(height: 32),
 
               // 4. Site Control
-              _buildSiteControlSection(),
+              _buildSiteControlSection(isDesktop),
             ],
           ),
         );
@@ -476,7 +476,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     );
   }
 
-  Widget _buildSiteControlSection() {
+  Widget _buildSiteControlSection(bool isDesktop) {
     return StreamBuilder<Map<String, dynamic>>(
       stream: _firestoreService.getSiteSettingsStream(),
       builder: (context, siteSnapshot) {
@@ -485,6 +485,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         return _SiteControlCard(
           currentStatus: siteData['status'] ?? 'active',
           currentPassword: siteData['bypassPassword'] ?? '',
+          isDesktop: isDesktop,
           onSave: (status, password) async {
             await _firestoreService.updateSiteSettings(
               status: status,
@@ -508,11 +509,13 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
 class _SiteControlCard extends StatefulWidget {
   final String currentStatus;
   final String currentPassword;
+  final bool isDesktop;
   final Function(String, String) onSave;
 
   const _SiteControlCard({
     required this.currentStatus,
     required this.currentPassword,
+    required this.isDesktop,
     required this.onSave,
   });
 
@@ -576,87 +579,114 @@ class _SiteControlCardState extends State<_SiteControlCard> {
             ],
           ),
           const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (widget.isDesktop)
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatusField(),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildPasswordField(),
+                ),
+                const SizedBox(width: 16),
+                Column(
                   children: [
-                    const Text('Status', style: TextStyle(color: AppColors.secondaryText)),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                      decoration: BoxDecoration(
-                        color: AppColors.background,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedStatus,
-                          isExpanded: true,
-                          dropdownColor: AppColors.cardBackground,
-                          style: const TextStyle(color: AppColors.primaryText),
-                          items: const [
-                            DropdownMenuItem(value: 'active', child: Text('Ativo (Online)')),
-                            DropdownMenuItem(value: 'maintenance', child: Text('Manutenção')),
-                            DropdownMenuItem(value: 'construction', child: Text('Em Construção')),
-                          ],
-                          onChanged: (v) => setState(() => _selectedStatus = v!),
-                        ),
-                      ),
-                    ),
+                    const SizedBox(height: 28),
+                    _buildSaveButton(),
                   ],
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Senha Bypass', style: TextStyle(color: AppColors.secondaryText)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _passwordController,
-                      style: const TextStyle(color: AppColors.primaryText),
-                      decoration: InputDecoration(
-                        hintText: 'Senha...',
-                        filled: true,
-                        fillColor: AppColors.background,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                    ),
-                  ],
+              ],
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatusField(),
+                const SizedBox(height: 16),
+                _buildPasswordField(),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: _buildSaveButton(),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Column(
-                children: [
-                  const SizedBox(height: 28),
-                  ElevatedButton(
-                    onPressed: _isLoading
-                        ? null
-                        : () async {
-                            setState(() => _isLoading = true);
-                            await widget.onSave(_selectedStatus, _passwordController.text);
-                            setState(() => _isLoading = false);
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : const Text('Salvar', style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatusField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Status', style: TextStyle(color: AppColors.secondaryText)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedStatus,
+              isExpanded: true,
+              dropdownColor: AppColors.cardBackground,
+              style: const TextStyle(color: AppColors.primaryText),
+              items: const [
+                DropdownMenuItem(value: 'active', child: Text('Ativo (Online)')),
+                DropdownMenuItem(value: 'maintenance', child: Text('Manutenção')),
+                DropdownMenuItem(value: 'construction', child: Text('Em Construção')),
+              ],
+              onChanged: (v) => setState(() => _selectedStatus = v!),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Senha Bypass', style: TextStyle(color: AppColors.secondaryText)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _passwordController,
+          style: const TextStyle(color: AppColors.primaryText),
+          decoration: InputDecoration(
+            hintText: 'Senha...',
+            filled: true,
+            fillColor: AppColors.background,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return ElevatedButton(
+      onPressed: _isLoading
+          ? null
+          : () async {
+              setState(() => _isLoading = true);
+              await widget.onSave(_selectedStatus, _passwordController.text);
+              setState(() => _isLoading = false);
+            },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      ),
+      child: _isLoading
+          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : const Text('Salvar', style: TextStyle(color: Colors.white)),
     );
   }
 }
