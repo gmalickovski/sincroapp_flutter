@@ -1,44 +1,43 @@
 import 'dart:async';
+import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter/foundation.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 class SpeechService {
   static final SpeechService _instance = SpeechService._internal();
   factory SpeechService() => _instance;
   SpeechService._internal();
 
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  SpeechToText? _speech;
   bool _available = false;
-  
-  // Timer manual para garantir que pare após silêncio (essencial para web/android)
+  String? _detectedLocaleId;
+
   Timer? _silenceTimer;
 
   bool get isAvailable => _available;
-  bool get isListening => _speech.isListening;
-
-  String? _detectedLocaleId;
+  bool get isListening => _speech?.isListening ?? false;
 
   Future<bool> init() async {
+    if (_speech != null) return _available;
+
+    _speech = SpeechToText();
     try {
-      _available = await _speech.initialize(
-        onStatus: (status) {
-          debugPrint('Speech status: $status');
-          if (status == 'done' || status == 'notListening') {
-            _cancelSilenceTimer();
-          }
-        },
-        onError: (errorNotification) {
-          debugPrint('Speech error: $errorNotification');
-          _cancelSilenceTimer();
-        },
+      // AQUI ESTÁ A CORREÇÃO DO ECO PARA WEB:
+      // A opção 'webDoNotAggregate' impede que o plugin tente juntar pedaços
+      // que o navegador já juntou, evitando a duplicação "testandotestando".
+      var options = [SpeechToText.webDoNotAggregate];
+
+      _available = await _speech!.initialize(
+        onError: (e) => debugPrint('Speech error: $e'),
+        onStatus: (s) => debugPrint('Speech status: $s'),
+        debugLogging: kDebugMode,
+        options: options, // Passamos a opção aqui
       );
 
       if (_available) {
         _detectedLocaleId = await _findBestPortugueseLocale();
-        debugPrint('Locale detectado para fala: $_detectedLocaleId');
       }
     } catch (e) {
-      debugPrint('Erro ao inicializar speech: $e');
+      debugPrint('Erro fatal ao iniciar SpeechToText: $e');
       _available = false;
     }
     return _available;
@@ -46,100 +45,69 @@ class SpeechService {
 
   Future<String> _findBestPortugueseLocale() async {
     try {
-      var locales = await _speech.locales();
-      debugPrint('Locales disponíveis: ${locales.map((l) => l.localeId).join(', ')}');
-      
-      // 1. Tenta pt_BR exato
-      var exact = locales.where((l) => l.localeId == 'pt_BR').firstOrNull;
-      if (exact != null) return exact.localeId;
-
-      // 2. Tenta qualquer pt_BR (case insensitive ou com traço)
-      var loose = locales.where((l) => l.localeId.toLowerCase().replaceAll('-', '_') == 'pt_br').firstOrNull;
-      if (loose != null) return loose.localeId;
-
-      // 3. Tenta qualquer português
-      var anyPt = locales.where((l) => l.localeId.toLowerCase().startsWith('pt')).firstOrNull;
-      if (anyPt != null) return anyPt.localeId;
-
+      var locales = await _speech!.locales();
+      // Prioriza pt_BR
+      try {
+        var ptBR = locales.firstWhere((l) => l.localeId == 'pt_BR');
+        return ptBR.localeId;
+      } catch (_) {}
+      // Tenta qualquer pt
+      try {
+        var anyPt = locales
+            .firstWhere((l) => l.localeId.toLowerCase().startsWith('pt'));
+        return anyPt.localeId;
+      } catch (_) {}
+      return '';
     } catch (e) {
-      debugPrint('Erro ao buscar locales: $e');
+      return '';
     }
-    return 'pt_BR'; // Fallback forte
   }
 
   Future<void> start({
     required Function(String text) onResult,
     VoidCallback? onDone,
   }) async {
-    if (!_available) {
-      debugPrint('SpeechService: Start chamado mas serviço não está disponível');
-      onDone?.call();
-      return;
-    }
+    if (_speech == null) await init();
+    if (!_available) return;
 
-    // Configurações de silêncio
-    // Web: usa timer manual pois o nativo é inconsistente
-    // Mobile: usa pauseFor nativo, mas mantemos o timer como segurança
-    final pauseFor = kIsWeb ? const Duration(seconds: 3) : const Duration(seconds: 5);
-    final listenFor = const Duration(seconds: 30);
-    
-    // Garante que o locale seja pt_BR se a detecção falhou ou ainda é nula
-    final localeId = _detectedLocaleId ?? 'pt_BR';
-    debugPrint('Iniciando reconhecimento de voz com locale: $localeId');
+    // Inicia o timer de silêncio
+    _resetSilenceTimer(onDone);
 
-    _startSilenceTimer(onDone);
-
-    await _speech.listen(
+    await _speech!.listen(
+      localeId: _detectedLocaleId ?? 'pt_BR',
       onResult: (result) {
-        debugPrint('Speech Result: ${result.recognizedWords} (Final: ${result.finalResult})');
-        
-        if (result.finalResult) {
-           _cancelSilenceTimer();
-           // No Web, as vezes o finalResult vem mas o status não muda para done imediatamente
-           if (kIsWeb) {
-             stop(); // Força parada no Web ao receber resultado final
-             onDone?.call();
-           }
-        } else {
-           _resetSilenceTimer(onDone);
-        }
-        
+        // Reinicia o timer pois o usuário ainda está falando
+        _resetSilenceTimer(onDone);
+
+        // Com a flag webDoNotAggregate, result.recognizedWords agora é seguro
         onResult(result.recognizedWords);
+
+        // Se o motor nativo decidir que acabou, paramos.
+        if (result.finalResult) {
+          stop();
+          onDone?.call();
+        }
       },
-      listenFor: listenFor,
-      pauseFor: pauseFor,
-      localeId: localeId,
       cancelOnError: true,
       partialResults: true,
+      listenMode: ListenMode.dictation,
+      // pauseFor ajuda, mas o nosso timer manual _silenceTimer é a garantia real
+      pauseFor: const Duration(seconds: 3),
     );
   }
 
   Future<void> stop() async {
-    debugPrint('SpeechService: Parando...');
-    _cancelSilenceTimer();
-    await _speech.stop();
-  }
-
-  void _startSilenceTimer(VoidCallback? onDone) {
-    _cancelSilenceTimer();
-    // Timer de segurança
-    // Web: 3 segundos de silêncio = fim
-    // Mobile: 5 segundos (dá chance pro pauseFor nativo agir antes)
-    final duration = kIsWeb ? const Duration(seconds: 3) : const Duration(seconds: 5);
-    
-    _silenceTimer = Timer(duration, () {
-      debugPrint('SpeechService: Silêncio detectado pelo timer manual ($duration). Parando.');
-      stop();
-      onDone?.call();
-    });
+    _silenceTimer?.cancel();
+    if (_speech == null) return;
+    await _speech!.stop();
   }
 
   void _resetSilenceTimer(VoidCallback? onDone) {
-    _startSilenceTimer(onDone);
-  }
-
-  void _cancelSilenceTimer() {
     _silenceTimer?.cancel();
-    _silenceTimer = null;
+    // Se ficar 3 segundos sem receber novas palavras, encerra a escuta
+    _silenceTimer = Timer(const Duration(seconds: 3), () {
+      stop();
+      onDone?.call();
+    });
   }
 }
