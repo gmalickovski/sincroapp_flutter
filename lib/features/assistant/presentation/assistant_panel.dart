@@ -43,11 +43,20 @@ class AssistantPanel extends StatefulWidget {
         builder: (_) => AssistantPanel(userData: userData, initialMessage: initialMessage),
       );
     } else {
-      await showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => AssistantPanel(userData: userData, initialMessage: initialMessage),
+      // Mobile: Full Screen Page instead of ModalBottomSheet
+      await Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => 
+            AssistantPanel(userData: userData, initialMessage: initialMessage, isFullScreen: true),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            // Slide up transition to match the "expanding" feel
+            const begin = Offset(0.0, 1.0);
+            const end = Offset.zero;
+            const curve = Curves.easeOutCubic;
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            return SlideTransition(position: animation.drive(tween), child: child);
+          },
+        ),
       );
     }
   }
@@ -77,8 +86,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   late DraggableScrollableController _sheetController;
   bool _isSheetExpanded = false;
   
-  // Desktop Window Mode
-  late bool _isWindowMode;
+
 
   // --- Animation ---
   late AnimationController _animController;
@@ -87,7 +95,6 @@ class _AssistantPanelState extends State<AssistantPanel>
   @override
   void initState() {
     super.initState();
-    _isWindowMode = widget.isFullScreen;
     _sheetController = DraggableScrollableController();
     _sheetController.addListener(_onSheetChanged);
 
@@ -141,7 +148,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   void didUpdateWidget(AssistantPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.isFullScreen != widget.isFullScreen) {
-      _isWindowMode = widget.isFullScreen;
+      // _isWindowMode removed
     }
   }
 
@@ -1254,15 +1261,9 @@ INSTRUÇÕES:
     double? height;
     
     if (isDesktop) {
-      if (_isWindowMode) {
-        // "Large Floating Modal" - Window Mode (Widescreen)
-        width = 1200;
-        height = 600;
-      } else {
-        // "Normal Floating Modal"
-        width = 600;
-        height = 550;
-      }
+      // Desktop: Fixed size floating dialog
+      width = 600;
+      height = 600;
       
       // Clamp to screen size
       if (width > screenSize.width - 40) width = screenSize.width - 40;
@@ -1272,11 +1273,7 @@ INSTRUÇÕES:
     // Border Radius Logic
     BorderRadiusGeometry borderRadius;
     if (isDesktop) {
-      if (_isWindowMode) {
-        borderRadius = BorderRadius.circular(24); // All rounded for Window Mode
-      } else {
-        borderRadius = const BorderRadius.vertical(top: Radius.circular(24)); // Top rounded for Normal Mode
-      }
+      borderRadius = BorderRadius.circular(24); // Always rounded on desktop
     } else {
       // Mobile
       if (_isSheetExpanded) {
@@ -1350,32 +1347,8 @@ INSTRUÇÕES:
     );
 
     if (isDesktop) {
-      // Center the panel on Desktop and handle outside clicks
-      return GestureDetector(
-        onTap: () {
-          // Close on outside click
-          if (widget.onClose != null) {
-            widget.onClose!();
-          } else {
-             Navigator.of(context).pop();
-          }
-        },
-        behavior: HitTestBehavior.opaque, // Catch all clicks
-        child: Container(
-          height: screenSize.height,
-          width: screenSize.width,
-          color: Colors.transparent,
-          child: AnimatedAlign(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            alignment: _isWindowMode ? Alignment.center : Alignment.bottomCenter,
-            child: GestureDetector(
-              onTap: () {}, // Consume clicks on the panel itself
-              child: panelContent,
-            ),
-          ),
-        ),
-      );
+      // Desktop: Just return the content, showDialog handles centering/scrim
+      return Center(child: panelContent);
     }
 
     return panelContent;
@@ -1424,24 +1397,6 @@ INSTRUÇÕES:
               
               // --- Desktop Buttons ---
               
-              // Window Mode Toggle (Desktop Only)
-              if (isDesktop)
-                IconButton(
-                  icon: Icon(
-                    _isWindowMode ? Icons.close_fullscreen_rounded : Icons.open_in_new_rounded,
-                    color: AppColors.secondaryText,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isWindowMode = !_isWindowMode;
-                    });
-                    if (widget.onToggleFullScreen != null) {
-                      widget.onToggleFullScreen!();
-                    }
-                  },
-                  tooltip: _isWindowMode ? 'Restaurar Tamanho' : 'Modo Janela',
-                ),
-              
               // Close Button (Always Visible on Desktop, or Mobile Modal)
               if (isDesktop || isModal)
                  IconButton(
@@ -1478,33 +1433,41 @@ INSTRUÇÕES:
         border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end, // Align bottom for multiline
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8), // Added vertical padding
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppColors.border),
+                color: AppColors.primaryAccent, // Match FAB background
+                borderRadius: BorderRadius.circular(28), // Match FAB radius
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               child: TextField(
                 controller: _controller,
                 focusNode: _inputFocusNode,
-                maxLines: 5, // Allow up to 5 lines
+                maxLines: 5,
                 minLines: 1,
                 keyboardType: TextInputType.multiline,
+                style: const TextStyle(color: Colors.white, fontSize: 16), // White text
                 decoration: const InputDecoration(
                   hintText: 'Como posso ajudar hoje?',
                   border: InputBorder.none,
-                  isDense: true, // Compact layout
-                  hintStyle: TextStyle(color: AppColors.secondaryText),
+                  isDense: false,
+                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+                  hintStyle: TextStyle(color: Colors.white54), // White hint
                 ),
-                onSubmitted: (_) => _send(), // Note: onSubmitted might not trigger with multiline + enter
+                onSubmitted: (_) => _send(),
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           _buildDynamicButton(),
         ],
       ),
@@ -1516,59 +1479,35 @@ INSTRUÇÕES:
       duration: const Duration(milliseconds: 200),
       transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
       child: _isListening
-          ? GestureDetector(
+          ? IconButton(
               key: const ValueKey('stop'),
-              onTap: _stopListening,
-              child: Container(
-                width: 48, height: 48,
-                decoration: BoxDecoration(
-                  color: Colors.redAccent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.redAccent),
-                ),
-                child: const Icon(Icons.stop_rounded, color: Colors.redAccent),
+              onPressed: _stopListening,
+              icon: const Icon(Icons.mic_off, color: Colors.redAccent),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.redAccent.withOpacity(0.1),
+                shape: const CircleBorder(),
+                padding: const EdgeInsets.all(12),
               ),
             )
-          : !_isInputEmpty
-              ? GestureDetector(
-                  key: const ValueKey('send'),
-                  onTap: _isSending ? null : _send,
-                  child: Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
+          : IconButton(
+              key: const ValueKey('action'),
+              onPressed: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
+              icon: _isSending
+                  ? const SizedBox(
+                      width: 24, height: 24,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Icon(
+                      _isInputEmpty ? Icons.mic : Icons.send,
+                      color: Colors.white,
                     ),
-                    child: _isSending
-                        ? const Center(
-                            child: SizedBox(
-                              width: 20, height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            ),
-                          )
-                        : const Icon(Icons.send_rounded, color: Colors.white),
-                  ),
-                )
-              : GestureDetector(
-                  key: const ValueKey('mic'),
-                  onTap: _onMicPressed,
-                  child: Container(
-                    width: 48, height: 48,
-                    decoration: BoxDecoration(
-                      color: AppColors.cardBackground,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Icon(Icons.mic_none_rounded, color: AppColors.secondaryText),
-                  ),
-                ),
+              style: IconButton.styleFrom(
+                backgroundColor: AppColors.primaryAccent,
+                shape: const CircleBorder(),
+                padding: const EdgeInsets.all(12),
+                elevation: 2,
+              ),
+            ),
     );
   }
 
