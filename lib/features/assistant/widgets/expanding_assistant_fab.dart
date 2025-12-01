@@ -129,15 +129,21 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     super.dispose();
   }
 
-  void _toggleMenu() {
+  void _toggleMenu() async {
     if (_isInputMode) return;
     
-    setState(() => _expanded = !_expanded);
-    _updateAnimation();
     if (_expanded) {
-      _controller.forward();
+      // Closing: Reverse animation first, then update state
+      await _controller.reverse();
+      if (mounted) {
+        setState(() => _expanded = false);
+        _updateAnimation();
+      }
     } else {
-      _controller.reverse();
+      // Opening: Update state first, then forward animation
+      setState(() => _expanded = true);
+      _updateAnimation();
+      _controller.forward();
     }
   }
   
@@ -276,12 +282,23 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   }
   
   Widget _buildInputContent() {
+    // Animate X to + (Rotation)
+    // Controller 1.0 (Open) -> Rotation 0 (X)
+    // Controller 0.0 (Closed) -> Rotation 0.25 (90deg) or 0.125 (45deg)
+    // Icons.close is X. Rotated 45deg (0.125) is +.
+    final iconRotation = Tween<double>(begin: 0.125, end: 0.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+
     return Row(
       children: [
-        IconButton(
-          onPressed: _closeInputMode,
-          icon: const Icon(Icons.close, color: Colors.white70),
-          tooltip: 'Cancelar',
+        RotationTransition(
+          turns: iconRotation,
+          child: IconButton(
+            onPressed: _closeInputMode,
+            icon: const Icon(Icons.close, color: Colors.white70),
+            tooltip: 'Cancelar',
+          ),
         ),
         
         Expanded(
