@@ -175,6 +175,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: ScreenInteractionListener(
         controller: _fabOpacityController,

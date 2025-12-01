@@ -2047,6 +2047,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     }
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent resizing of main scaffold (fixes Calendar modal issue)
       backgroundColor: AppColors.background,
       appBar: CustomAppBar(
         userData: _userData,

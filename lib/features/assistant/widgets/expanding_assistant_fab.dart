@@ -154,15 +154,21 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     });
   }
   
-  void _closeInputMode() {
+  void _closeInputMode() async {
     _textController.clear();
     _focusNode.unfocus();
     _stopListening();
-    setState(() {
-      _isInputMode = false;
-    });
-    _updateAnimation();
-    _controller.reverse();
+    
+    // Reverse animation first
+    await _controller.reverse();
+    
+    // Then update state to switch back to simple button (if applicable)
+    if (mounted) {
+      setState(() {
+        _isInputMode = false;
+      });
+      _updateAnimation();
+    }
   }
 
   void _handleSend() {

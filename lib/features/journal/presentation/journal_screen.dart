@@ -154,6 +154,7 @@ class _JournalScreenState extends State<JournalScreen> {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: ScreenInteractionListener(
         controller: _fabOpacityController,

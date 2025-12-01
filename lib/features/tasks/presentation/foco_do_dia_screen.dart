@@ -517,6 +517,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     final bool isMobile = screenWidth < 600;
 
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: SafeArea(
         child: Center(
