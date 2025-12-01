@@ -93,22 +93,32 @@ Future<void> main() async {
     debugPrint(
         '🔧 Ativando App Check no startup (ANTES de qualquer serviço Firebase)...');
 
-    if (kDebugMode) {
-      // Modo Debug: usa debug provider
+    // IMPORTANTE: App Check no Android com Play Integrity só funciona para apps
+    // distribuídos via Play Store (produção, teste interno/fechado).
+    // Para APKs instalados diretamente (sideload), desabilitamos App Check no Android.
+    if (kIsWeb) {
+      // Web: usa reCAPTCHA v3
       await FirebaseAppCheck.instance.activate(
         webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
-        androidProvider: AndroidProvider.debug,
-        appleProvider: AppleProvider.debug,
       );
-      debugPrint('✅ App Check ativado em MODO DEBUG');
+      debugPrint('✅ App Check ativado para WEB (reCAPTCHA v3)');
+    } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      // iOS/macOS: usa App Attest
+      await FirebaseAppCheck.instance.activate(
+        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+      );
+      debugPrint('✅ App Check ativado para iOS/macOS');
     } else {
-      // Modo Produção: usa providers reais
+      // Android: Usa Debug Provider para permitir teste em dispositivo físico (sideload)
+      // O Play Integrity só funciona se baixado da Play Store.
+      // Para funcionar agora, usaremos o Debug Provider e você precisará registrar o token no console.
       await FirebaseAppCheck.instance.activate(
-        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
-        androidProvider: AndroidProvider.playIntegrity,
-        appleProvider: AppleProvider.appAttest,
+        androidProvider: AndroidProvider.debug,
+        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
       );
-      debugPrint('✅ App Check ativado em MODO PRODUÇÃO');
+      debugPrint('✅ App Check ativado para Android usando DEBUG PROVIDER');
+      debugPrint('⚠️ Procure no log por: "Enter this debug token into the Firebase console"');
     }
 
     // Aguarda token estar pronto (evita race condition com primeiros requests)

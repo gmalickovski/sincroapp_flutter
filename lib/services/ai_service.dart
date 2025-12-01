@@ -33,6 +33,8 @@ class AIService {
 
       await _ensureAppCheckReady();
 
+      await _ensureAppCheckReady();
+
       final model = FirebaseAI.vertexAI(
         auth: FirebaseAuth.instance,
         appCheck: FirebaseAppCheck.instance,

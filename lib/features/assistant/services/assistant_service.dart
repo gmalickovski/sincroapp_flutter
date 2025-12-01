@@ -23,10 +23,12 @@ class AssistantService {
       throw Exception(
           'Usuário não autenticado. Faça login para usar o assistente.');
     }
+    
     final model = FirebaseAI.vertexAI(
       auth: FirebaseAuth.instance,
       appCheck: FirebaseAppCheck.instance,
     ).generativeModel(model: 'gemini-2.5-flash-lite');
+    
     _model = model;
     return model;
   }
