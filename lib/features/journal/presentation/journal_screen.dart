@@ -318,6 +318,10 @@ class _JournalScreenState extends State<JournalScreen> {
                 onPressed: () => _openJournalEditor(),
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
                 child: const Icon(Icons.add),
               ),
       ),

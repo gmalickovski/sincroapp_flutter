@@ -496,6 +496,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 backgroundColor: AppColors.primary,
                 tooltip: 'Nova Tarefa',
                 heroTag: 'calendar_fab',
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
       ),

@@ -342,32 +342,61 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
 /**
  * Solicita redefinição de senha personalizada via n8n
  */
+/**
+ * Solicita redefinição de senha personalizada via n8n (Gera Token Customizado)
+ */
 exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
     const { email } = data;
+    const crypto = require('crypto');
 
     if (!email) {
         throw new functions.https.HttpsError('invalid-argument', 'O e-mail é obrigatório.');
     }
 
     try {
-        // Gera o link de redefinição de senha usando o Admin SDK
-        const link = await admin.auth().generatePasswordResetLink(email);
+        // 1. Verificar se o usuário existe
+        let userRecord;
+        try {
+            userRecord = await admin.auth().getUserByEmail(email);
+        } catch (e) {
+            if (e.code === 'auth/user-not-found') {
+                // Retorna sucesso por segurança (user enumeration)
+                return { success: true };
+            }
+            throw e;
+        }
 
-        // Busca dados do usuário para personalizar o e-mail (opcional, mas bom)
+        // 2. Gerar Token Seguro
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + 3600000); // 1 hora de validade
+
+        // 3. Salvar Token no Firestore
+        await admin.firestore().collection('password_resets').add({
+            email: email,
+            token: token,
+            expiresAt: expiresAt,
+            used: false,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        // 4. Gerar Link Personalizado
+        // Ajuste o domínio conforme necessário (produção vs dev)
+        const baseUrl = "https://sincroapp.com.br";
+        const link = `${baseUrl}/reset-password?token=${token}`;
+
+        // 5. Buscar nome do usuário para o e-mail
         let name = '';
         try {
-            const userRecord = await admin.auth().getUserByEmail(email);
             const userDoc = await admin.firestore().collection("users").doc(userRecord.uid).get();
             if (userDoc.exists) {
                 const userData = userDoc.data();
                 name = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
             }
         } catch (e) {
-            // Se não encontrar usuário ou der erro no firestore, apenas segue sem nome
-            console.log("Usuário não encontrado no Firestore ou Auth para pegar nome:", e.message);
+            console.log("Erro ao buscar nome do usuário:", e.message);
         }
 
-        // Envia para o n8n
+        // 6. Enviar para o n8n
         await sendToWebhook({
             event: 'password_reset_requested',
             email: email,
@@ -377,13 +406,69 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
 
         return { success: true };
     } catch (error) {
-        console.error("Erro ao gerar link de redefinição:", error);
-        // Não expor erro detalhado de "usuário não encontrado" por segurança (user enumeration)
-        if (error.code === 'auth/user-not-found') {
-            // Retorna sucesso mesmo se não achar, para não revelar e-mails cadastrados
-            return { success: true };
-        }
+        console.error("Erro ao solicitar redefinição de senha:", error);
         throw new functions.https.HttpsError('internal', 'Erro ao processar solicitação.');
+    }
+});
+
+/**
+ * Conclui a redefinição de senha usando o Token Customizado
+ */
+exports.completePasswordReset = functions.https.onCall(async (data, context) => {
+    const { token, newPassword } = data;
+
+    if (!token || !newPassword) {
+        throw new functions.https.HttpsError('invalid-argument', 'Token e nova senha são obrigatórios.');
+    }
+
+    if (newPassword.length < 6) {
+        throw new functions.https.HttpsError('invalid-argument', 'A senha deve ter pelo menos 6 caracteres.');
+    }
+
+    try {
+        // 1. Buscar o token no Firestore
+        const snapshot = await admin.firestore().collection('password_resets')
+            .where('token', '==', token)
+            .limit(1)
+            .get();
+
+        if (snapshot.empty) {
+            throw new functions.https.HttpsError('not-found', 'Token inválido ou não encontrado.');
+        }
+
+        const tokenDoc = snapshot.docs[0];
+        const tokenData = tokenDoc.data();
+
+        // 2. Validar Token (Uso e Expiração)
+        if (tokenData.used) {
+            throw new functions.https.HttpsError('failed-precondition', 'Este link já foi utilizado.');
+        }
+
+        const now = admin.firestore.Timestamp.now();
+        if (tokenData.expiresAt < now) {
+            throw new functions.https.HttpsError('failed-precondition', 'Este link expirou.');
+        }
+
+        // 3. Atualizar a senha do usuário no Auth
+        const userRecord = await admin.auth().getUserByEmail(tokenData.email);
+        await admin.auth().updateUser(userRecord.uid, {
+            password: newPassword
+        });
+
+        // 4. Marcar token como usado
+        await tokenDoc.ref.update({
+            used: true,
+            usedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        return { success: true };
+
+    } catch (error) {
+        console.error("Erro ao redefinir senha:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', 'Erro ao redefinir senha.');
     }
 });
 

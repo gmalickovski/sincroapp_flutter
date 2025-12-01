@@ -3,13 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
-import 'package:sincro_app_flutter/features/authentication/presentation/register/register_screen.dart';
-import 'package:sincro_app_flutter/features/authentication/presentation/user_details/user_details_screen.dart';
-import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
-import 'package:sincro_app_flutter/features/subscription/presentation/subscription_screen.dart';
-import 'package:sincro_app_flutter/features/subscription/presentation/thank_you_screen.dart';
-import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/forgot_password_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/reset_password_screen.dart';
 
 class AppRoutes {
   static const String login = '/login';
@@ -18,6 +13,8 @@ class AppRoutes {
   static const String dashboard = '/dashboard';
   static const String subscription = '/subscription';
   static const String thankYou = '/thank-you';
+  static const String forgotPassword = '/forgot-password';
+  static const String resetPassword = '/reset-password';
 }
 
 class AppRouter {
@@ -26,9 +23,21 @@ class AppRouter {
         AppRoutes.register: (_) => const RegisterScreen(),
         AppRoutes.dashboard: (_) => const DashboardScreen(),
         AppRoutes.thankYou: (_) => const ThankYouScreen(),
+        AppRoutes.forgotPassword: (_) => const ForgotPasswordScreen(),
       };
 
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
+    // Handle routes with query parameters (like /reset-password?token=...)
+    final uri = Uri.parse(settings.name ?? '');
+    
+    if (uri.path == AppRoutes.resetPassword) {
+      final token = uri.queryParameters['token'];
+      return MaterialPageRoute(
+        builder: (_) => ResetPasswordScreen(token: token),
+        settings: settings,
+      );
+    }
+
     switch (settings.name) {
       case AppRoutes.userDetails:
         final args = settings.arguments;

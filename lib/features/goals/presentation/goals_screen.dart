@@ -287,6 +287,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 backgroundColor: AppColors.primary,
                 tooltip: 'Nova Jornada',
                 heroTag: 'fab_goals_screen',
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
       ),
