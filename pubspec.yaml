@@ -60,20 +60,6 @@ dependencies:
   
   # --- FIM: DEPENDÊNCIAS PARA NOTIFICAÇÕES ---
 
-  # 🚀 ADICIONADO: Pacote para renderizar imagens SVG (o logo)
-  flutter_svg: ^2.0.10+1
-
-  # Renderização de Markdown nas mensagens do assistente
-  flutter_markdown: ^0.6.20
-
-  # Reconhecimento de voz multiplataforma (Android, iOS, Web, Windows)
-  # speech_to_text: ^6.6.0 (REMOVIDO TEMPORARIAMENTE)
-
-  meta: any
-  url_launcher: ^6.3.2
-  flutter_stripe: ^11.5.0
-  http: ^1.6.0
-  flutter_stripe_web: ^6.5.1
 
 dev_dependencies:
   flutter_test:
