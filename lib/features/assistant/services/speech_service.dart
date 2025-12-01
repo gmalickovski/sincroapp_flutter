@@ -16,6 +16,8 @@ class SpeechService {
   bool get isAvailable => _available;
   bool get isListening => _speech.isListening;
 
+  String? _detectedLocaleId;
+
   Future<bool> init() async {
     try {
       _available = await _speech.initialize(
@@ -30,11 +32,38 @@ class SpeechService {
           _cancelSilenceTimer();
         },
       );
+
+      if (_available) {
+        _detectedLocaleId = await _findBestPortugueseLocale();
+        debugPrint('Locale detectado para fala: $_detectedLocaleId');
+      }
     } catch (e) {
       debugPrint('Erro ao inicializar speech: $e');
       _available = false;
     }
     return _available;
+  }
+
+  Future<String> _findBestPortugueseLocale() async {
+    try {
+      var locales = await _speech.locales();
+      
+      // 1. Tenta pt_BR exato
+      var exact = locales.where((l) => l.localeId == 'pt_BR').firstOrNull;
+      if (exact != null) return exact.localeId;
+
+      // 2. Tenta qualquer pt_BR (case insensitive ou com traço)
+      var loose = locales.where((l) => l.localeId.toLowerCase().replaceAll('-', '_') == 'pt_br').firstOrNull;
+      if (loose != null) return loose.localeId;
+
+      // 3. Tenta qualquer português
+      var anyPt = locales.where((l) => l.localeId.toLowerCase().startsWith('pt')).firstOrNull;
+      if (anyPt != null) return anyPt.localeId;
+
+    } catch (e) {
+      debugPrint('Erro ao buscar locales: $e');
+    }
+    return 'pt_BR'; // Fallback
   }
 
   Future<void> start({
@@ -69,7 +98,7 @@ class SpeechService {
       },
       listenFor: listenFor,
       pauseFor: pauseFor,
-      localeId: 'pt_BR',
+      localeId: _detectedLocaleId ?? 'pt_BR',
       cancelOnError: true,
       partialResults: true,
     );

@@ -291,7 +291,10 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Logic: Speech ---
 
   Future<void> _onMicPressed() async {
+    // 1. Garante que o teclado feche para não conflitar com o microfone nativo (mobile web)
     _inputFocusNode.unfocus();
+    await Future.delayed(const Duration(milliseconds: 300));
+
     final available = await _speechService.init();
     if (!available) {
       if (mounted) {
