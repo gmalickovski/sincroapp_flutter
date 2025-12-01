@@ -486,6 +486,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         // --- FIM DA CORREÇÃO ---
         break;
 
+      case TaskFilterType.atrasadas:
+        baseTasks = allTasks.where((task) => !task.completed && task.isOverdue).toList();
+        break;
+
       case TaskFilterType.todas:
         // Filtro "Todas" agora significa "Todas as Pendentes"
         baseTasks = allTasks.where((task) => !task.completed).toList();
