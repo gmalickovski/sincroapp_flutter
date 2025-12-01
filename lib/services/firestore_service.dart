@@ -1653,17 +1653,23 @@ class FirestoreService {
       int activeCount = 0;
       int expiredCount = 0;
       double mrr = 0.0;
+      
+      // Contadores por fonte de receita (para usuários PAGANTES)
+      int stripeCount = 0;
+      int playStoreCount = 0;
+      int appStoreCount = 0;
 
       for (final user in users) {
-        switch (user.subscription.plan.name) {
-          case 'free':
+        final plan = user.subscription.plan;
+        switch (plan) {
+          case SubscriptionPlan.free:
             freeCount++;
             break;
-          case 'plus':
+          case SubscriptionPlan.plus:
             plusCount++;
             if (user.subscription.isActive) mrr += 19.90;
             break;
-          case 'premium':
+          case SubscriptionPlan.premium:
             premiumCount++;
             if (user.subscription.isActive) mrr += 39.90;
             break;
@@ -1671,6 +1677,20 @@ class FirestoreService {
 
         if (user.subscription.isActive) {
           activeCount++;
+          
+          // Se é pagante, tenta identificar a fonte
+          if (plan != SubscriptionPlan.free) {
+            if (user.subscription.stripeId != null) {
+              stripeCount++;
+            } else {
+              // Se não tem stripeId mas é pagante, assumimos loja (Play Store/App Store)
+              // Como não temos o campo 'provider' ainda, vamos estimar ou usar um padrão.
+              // Por enquanto, vamos agrupar em 'playStore' como genérico para "Lojas"
+              // ou dividir 50/50 se quiser simular.
+              // O ideal é ter o campo provider no SubscriptionModel.
+              playStoreCount++; 
+            }
+          }
         } else {
           expiredCount++;
         }
@@ -1684,9 +1704,47 @@ class FirestoreService {
         'activeSubscriptions': activeCount,
         'expiredSubscriptions': expiredCount,
         'estimatedMRR': mrr,
+        'stripeSubscribers': stripeCount,
+        'storeSubscribers': playStoreCount + appStoreCount, // Agrupado por enquanto
         'lastUpdated': DateTime.now().toUtc(),
       };
     });
+  }
+
+  /// Obtém configurações financeiras do admin
+  Stream<Map<String, dynamic>> getAdminFinancialSettingsStream() {
+    return _db
+        .collection('admin_settings')
+        .doc('financial')
+        .snapshots()
+        .map((doc) {
+      if (!doc.exists) {
+        // Retorna valores padrão se não existir
+        return {
+          'stripeFeePercent': 3.99,
+          'stripeFixedFee': 0.39,
+          'storeFeePercent': 15.0, // Média Play/App Store (15% small business)
+          'aiCostPerUser': 0.50, // Custo médio IA
+          'cacPerUser': 5.00, // Custo aquisição
+          'fixedCosts': 100.00, // Custos fixos servidor/firebase
+          'taxRate': 6.0, // Impostos (Simples Nacional aprox)
+        };
+      }
+      return doc.data() as Map<String, dynamic>;
+    });
+  }
+
+  /// Atualiza configurações financeiras
+  Future<void> updateAdminFinancialSettings(Map<String, dynamic> data) async {
+    try {
+      await _db
+          .collection('admin_settings')
+          .doc('financial')
+          .set(data, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Erro ao atualizar configurações financeiras: $e");
+      rethrow;
+    }
   }
 
   // ========================================================================

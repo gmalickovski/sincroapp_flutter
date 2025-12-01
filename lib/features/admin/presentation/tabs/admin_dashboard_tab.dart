@@ -6,6 +6,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/features/admin/presentation/widgets/admin_financial_card.dart';
 
 class AdminDashboardTab extends StatefulWidget {
   final UserModel userData;
