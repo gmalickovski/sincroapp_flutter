@@ -1357,13 +1357,11 @@ INSTRUÇÕES:
   Widget _buildHeader(bool isModal, bool isDesktop) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
-      ),
+      // Removed border decoration for cleaner look
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Drag Handle (Mobile Only)
+          // Drag Handle (Mobile Only - Modal)
           if (isModal && !isDesktop && !_isSheetExpanded)
             Center(
               child: Container(
@@ -1395,24 +1393,22 @@ INSTRUÇÕES:
                 ),
               ),
               
-              // --- Desktop Buttons ---
-              
-              // Close Button (Always Visible on Desktop, or Mobile Modal)
-              if (isDesktop || isModal)
+              // Close Button (Desktop or Mobile FullScreen)
+              if (isDesktop || widget.isFullScreen)
                  IconButton(
                   icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                   onPressed: () {
                      if (widget.onClose != null) {
                         widget.onClose!();
                       } else if (!isDesktop && isModal) {
-                        // Mobile internal close logic
+                        // Mobile internal close logic (for modal)
                         _sheetController.animateTo(
                           0.0,
                           duration: const Duration(milliseconds: 300),
                           curve: Curves.easeInOut,
                         );
                       } else {
-                        // Desktop default close
+                        // Desktop or FullScreen close
                         Navigator.of(context).pop();
                       }
                   },
@@ -1428,10 +1424,7 @@ INSTRUÇÕES:
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
-      ),
+      // Removed outer decoration/background for cleaner look
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [

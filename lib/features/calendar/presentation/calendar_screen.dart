@@ -465,6 +465,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: SafeArea(
+          bottom: false, // Prevent SafeArea from reacting to keyboard/bottom insets
           child: _isScreenLoading
               ? const Center(child: CustomLoadingSpinner())
               : LayoutBuilder(

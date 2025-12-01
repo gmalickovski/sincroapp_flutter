@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 import 'package:flutter/foundation.dart';
 
 class ExpandingAssistantFab extends StatefulWidget {
@@ -41,11 +41,9 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   final FocusNode _focusNode = FocusNode();
   
   // Speech
-  final stt.SpeechToText _speech = stt.SpeechToText();
+  final SpeechService _speechService = SpeechService();
   bool _isListening = false;
-  bool _speechAvailable = false;
-  Timer? _silenceTimer;
-
+  
   bool _expanded = false;
   bool _isSimpleButton = false;
   late double _expandedWidth;
@@ -127,7 +125,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     _controller.dispose();
     _textController.dispose();
     _focusNode.dispose();
-    _silenceTimer?.cancel();
+    _speechService.stop();
     super.dispose();
   }
 
@@ -159,7 +157,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   void _closeInputMode() {
     _textController.clear();
     _focusNode.unfocus();
-    _stopListening(); // Garante que pare de ouvir
+    _stopListening();
     setState(() {
       _isInputMode = false;
     });
@@ -184,78 +182,52 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   }
 
   Future<void> _startListening() async {
-    if (!_speechAvailable) {
-      bool available = await _speech.initialize(
-        onStatus: (status) {
-          if (status == 'done' || status == 'notListening') {
-             // O plugin parou nativamente (ex: timeout nativo ou erro)
-             if (mounted && _isListening) {
-               _stopListening();
-             }
-          }
-        },
-        onError: (error) => debugPrint('Speech error: $error'),
-      );
-      if (mounted) setState(() => _speechAvailable = available);
-      if (!available) return;
+    final available = await _speechService.init();
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Reconhecimento de voz indisponível.'),
+            backgroundColor: Colors.redAccent));
+      }
+      return;
     }
 
     setState(() => _isListening = true);
-    
-    // Inicia timer de silêncio manual (fallback)
-    _resetSilenceTimer();
 
-    await _speech.listen(
-      onResult: (result) {
-        if (mounted) {
-          setState(() {
-            _textController.text = result.recognizedWords;
-            _textController.selection = TextSelection.fromPosition(TextPosition(offset: _textController.text.length));
-          });
-          
-          // Reinicia timer a cada palavra reconhecida
-          _resetSilenceTimer();
-        }
-      },
-      localeId: 'pt_BR',
-      cancelOnError: true,
-      partialResults: true,
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3), // Pausa nativa
-    );
-  }
-
-  Future<void> _stopListening() async {
-    _silenceTimer?.cancel();
-    await _speech.stop();
-    if (mounted) {
-      setState(() => _isListening = false);
-    }
-  }
-
-  void _resetSilenceTimer() {
-    _silenceTimer?.cancel();
-    _silenceTimer = Timer(const Duration(seconds: 2), () {
-      // Se silêncio por 2s, para de ouvir
+    await _speechService.start(onResult: (text) {
+      if (mounted) {
+        setState(() {
+          _textController.text = text;
+          _textController.selection = TextSelection.fromPosition(TextPosition(offset: _textController.text.length));
+        });
+      }
+    }, onDone: () {
       if (mounted && _isListening) {
         _stopListening();
       }
     });
   }
 
+  Future<void> _stopListening() async {
+    await _speechService.stop();
+    if (mounted) {
+      setState(() => _isListening = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (_isSimpleButton && !_isInputMode) { // Correção: só mostra botão simples se NÃO estiver em input mode
+    if (_isSimpleButton && !_isInputMode) {
        return SizedBox(
         width: _kFabHeight,
         height: _kFabHeight,
         child: FloatingActionButton(
-          onPressed: _openInputMode, // Botão simples agora abre input mode
+          onPressed: _openInputMode,
           backgroundColor: AppColors.primaryAccent,
           foregroundColor: Colors.white,
           elevation: 4,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28), // Arredondado igual ao expandido
+            borderRadius: BorderRadius.circular(28),
           ),
           tooltip: 'Abrir Sincro IA',
           heroTag: 'simple_assistant_fab',
@@ -321,9 +293,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
           valueListenable: _textController,
           builder: (context, value, child) {
             final hasText = value.text.trim().isNotEmpty;
-            // Se tem texto, mostra Enviar.
-            // Se não tem texto e está ouvindo, mostra Mic Ativo (pode clicar para parar).
-            // Se não tem texto e não está ouvindo, mostra Mic Inativo.
             
             return IconButton(
               onPressed: hasText ? _handleSend : _toggleListening,
@@ -331,7 +300,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                 hasText ? Icons.send : Icons.mic,
                 color: (hasText || _isListening) ? Colors.white : Colors.white70,
               ),
-              // Animação de pulso ou cor para indicar gravando
               style: _isListening && !hasText ? IconButton.styleFrom(
                 backgroundColor: Colors.redAccent.withOpacity(0.8),
                 hoverColor: Colors.redAccent,
@@ -345,13 +313,9 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   }
 
   Widget _buildMenuContent() {
-    final int actionsCount = 1 + (widget.onPrimary != null ? 1 : 0);
-    final double actionsWidth = actionsCount > 0
-        ? (actionsCount * _kIconSlot) + ((actionsCount - 1) * _kGap)
-        : 0.0;
-    final double availableContentWidth = _widthAnim.value - _kFabHeight - _kOuterPad;
-    final bool showActions = _expanded && availableContentWidth >= actionsWidth;
-
+    // Removed the 'showActions' logic to prevent delay. 
+    // Icons will be rendered but their opacity is controlled by the animation controller.
+    
     return Stack(
       children: [
         if (!_isSimpleButton)
@@ -363,30 +327,28 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (showActions) ...[
-                      if (widget.onPrimary != null && widget.primaryIcon != null) ...[
-                        _AnimatedActionSlot(
-                          controller: _controller,
-                          tooltip: widget.primaryTooltip,
-                          icon: widget.primaryIcon!,
-                          onPressed: () {
-                            _toggleMenu();
-                            widget.onPrimary!();
-                          },
-                        ),
-                        const SizedBox(width: _kGap),
-                      ],
+                    if (widget.onPrimary != null && widget.primaryIcon != null) ...[
                       _AnimatedActionSlot(
                         controller: _controller,
-                        tooltip: 'Assistente IA',
-                        iconWidget: SvgPicture.asset(
-                          'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                          width: 24,
-                          height: 24,
-                        ),
-                        onPressed: _openInputMode,
+                        tooltip: widget.primaryTooltip,
+                        icon: widget.primaryIcon!,
+                        onPressed: () {
+                          _toggleMenu();
+                          widget.onPrimary!();
+                        },
                       ),
+                      const SizedBox(width: _kGap),
                     ],
+                    _AnimatedActionSlot(
+                      controller: _controller,
+                      tooltip: 'Assistente IA',
+                      iconWidget: SvgPicture.asset(
+                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                        width: 24,
+                        height: 24,
+                      ),
+                      onPressed: _openInputMode,
+                    ),
                   ],
                 ),
               ),
@@ -446,9 +408,9 @@ class _AnimatedActionSlot extends StatelessWidget {
     return SizedBox(
       width: _slotWidth,
       height: _slotHeight,
-      child: AnimatedOpacity(
-        opacity: controller.value,
-        duration: const Duration(milliseconds: 150),
+      // Use Opacity instead of AnimatedOpacity for direct sync with controller
+      child: Opacity(
+        opacity: controller.value.clamp(0.0, 1.0),
         child: IconButton(
           tooltip: tooltip,
           onPressed: onPressed,
