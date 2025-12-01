@@ -230,13 +230,13 @@ class TaskItem extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (shouldShowDateIcon)
-                          const Padding(
+                           Padding(
                             padding:
-                                EdgeInsets.symmetric(horizontal: 3.0),
+                                const EdgeInsets.symmetric(horizontal: 3.0),
                             child: Icon(
-                              Icons.calendar_today_outlined,
+                              task.isOverdue ? Icons.event_busy : Icons.calendar_today_outlined,
                               size: iconIndicatorSize,
-                              color: Color(
+                              color: task.isOverdue ? Colors.red : const Color(
                                   0xFFFB923C), // orange-400 (laranja como no chip)
                             ),
                           ),

@@ -260,22 +260,28 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
-        return Container(
-          width: _widthAnim.value,
-          height: _kFabHeight,
-          decoration: BoxDecoration(
-            color: AppColors.primaryAccent,
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
+        // Fix 1: Add padding to move FAB up when keyboard is open (only in input mode)
+        final bottomPadding = _isInputMode ? MediaQuery.of(context).viewInsets.bottom : 0.0;
+        
+        return Padding(
+          padding: EdgeInsets.only(bottom: bottomPadding),
+          child: Container(
+            width: _widthAnim.value,
+            height: _kFabHeight,
+            decoration: BoxDecoration(
+              color: AppColors.primaryAccent,
+              borderRadius: BorderRadius.circular(28),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.hardEdge,
+            child: _isInputMode ? _buildInputContent() : _buildMenuContent(),
           ),
-          clipBehavior: Clip.hardEdge,
-          child: _isInputMode ? _buildInputContent() : _buildMenuContent(),
         );
       },
     );
@@ -283,21 +289,26 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   
   Widget _buildInputContent() {
     // Animate X to + (Rotation)
-    // Controller 1.0 (Open) -> Rotation 0 (X)
-    // Controller 0.0 (Closed) -> Rotation 0.25 (90deg) or 0.125 (45deg)
-    // Icons.close is X. Rotated 45deg (0.125) is +.
+    // Refined: Use a FadeTransition combined with Rotation for smoother effect
     final iconRotation = Tween<double>(begin: 0.125, end: 0.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    
+    final iconOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeIn)),
     );
 
     return Row(
       children: [
-        RotationTransition(
-          turns: iconRotation,
-          child: IconButton(
-            onPressed: _closeInputMode,
-            icon: const Icon(Icons.close, color: Colors.white70),
-            tooltip: 'Cancelar',
+        FadeTransition(
+          opacity: iconOpacity,
+          child: RotationTransition(
+            turns: iconRotation,
+            child: IconButton(
+              onPressed: _closeInputMode,
+              icon: const Icon(Icons.close, color: Colors.white70),
+              tooltip: 'Cancelar',
+            ),
           ),
         ),
         
@@ -341,9 +352,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   }
 
   Widget _buildMenuContent() {
-    // Removed the 'showActions' logic to prevent delay. 
-    // Icons will be rendered but their opacity is controlled by the animation controller.
-    
     return Stack(
       children: [
         if (!_isSimpleButton)
@@ -433,12 +441,17 @@ class _AnimatedActionSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Fix 2: Use Interval for delayed opacity to prevent "sliding in" effect
+    final opacityAnim = CurvedAnimation(
+      parent: controller,
+      curve: const Interval(0.4, 1.0, curve: Curves.easeIn),
+    );
+
     return SizedBox(
       width: _slotWidth,
       height: _slotHeight,
-      // Use Opacity instead of AnimatedOpacity for direct sync with controller
-      child: Opacity(
-        opacity: controller.value.clamp(0.0, 1.0),
+      child: FadeTransition(
+        opacity: opacityAnim,
         child: IconButton(
           tooltip: tooltip,
           onPressed: onPressed,

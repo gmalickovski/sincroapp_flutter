@@ -24,7 +24,7 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 // --- FIM DA MUDANÇA ---
 
 // --- INÍCIO DA MUDANÇA (Solicitação 2): Adicionado 'concluidas' ---
-enum TaskFilterType { focoDoDia, todas, vibracao, concluidas }
+enum TaskFilterType { focoDoDia, todas, vibracao, concluidas, atrasadas }
 // --- FIM DA MUDANÇA ---
 
 class FocoDoDiaScreen extends StatefulWidget {
@@ -435,6 +435,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         baseTasks = allTasks.where((task) {
           if (task.completed) return false;
 
+          // --- INÍCIO DA MUDANÇA (Solicitação 2): Incluir Atrasadas no Foco do Dia ---
+          if (task.isOverdue) return true;
+          // --- FIM DA MUDANÇA ---
+
           final DateTime taskDate = task.dueDate ?? task.createdAt;
           final taskDateOnly = localDateOnly(taskDate);
           if (taskDateOnly == null) return false;
@@ -746,6 +750,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                     case TaskFilterType.concluidas:
                       label = 'Concluídas';
                       icon = Icons.check_circle_outline_rounded;
+                      break;
+                    case TaskFilterType.atrasadas:
+                      label = 'Atrasadas';
+                      icon = Icons.warning_amber_rounded;
                       break;
                   }
 

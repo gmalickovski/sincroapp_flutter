@@ -199,6 +199,25 @@ class TaskModel {
       // --- FIM DA MUDANÇA ---
     };
   }
+  // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
+  bool get isOverdue {
+    if (completed || dueDate == null) return false;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // dueDate é armazenado como UTC 00:00. Precisamos converter para local para comparar corretamente com "hoje" local?
+    // Ou assumimos que dueDate é "data pura" independente de fuso?
+    // O app parece converter para UTC ao salvar: DateTime.utc(dateLocal.year, ...).
+    // Se dueDate é 2023-12-01 00:00 UTC.
+    // E hoje é 2023-12-02 (Brasil -3).
+    // 2023-12-01 UTC é antes de 2023-12-02 Local?
+    // Melhor comparar dueDate (convertido para local) com today.
+    
+    final localDueDate = dueDate!.toLocal();
+    final localDueDateOnly = DateTime(localDueDate.year, localDueDate.month, localDueDate.day);
+    
+    return localDueDateOnly.isBefore(today);
+  }
+  // --- FIM DA MUDANÇA ---
 }
 
 // Classe auxiliar para o copyWith permitir definir campos como null
