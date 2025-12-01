@@ -5,6 +5,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/forgot_password_screen.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/reset_password_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/register/register_screen.dart';
+import 'package:sincro_app_flutter/features/authentication/presentation/user_details/user_details_screen.dart';
+import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:sincro_app_flutter/features/subscription/presentation/subscription_screen.dart';
+import 'package:sincro_app_flutter/features/subscription/presentation/thank_you_screen.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
 
 class AppRoutes {
   static const String login = '/login';
