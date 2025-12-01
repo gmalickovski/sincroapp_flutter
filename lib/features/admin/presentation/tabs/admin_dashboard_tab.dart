@@ -108,6 +108,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                   plus: plusUsers,
                   premium: premiumUsers,
                   total: totalUsers,
+                  isDesktop: isDesktop,
                 ),
                 const SizedBox(height: 24),
                 _buildSubscriptionStatus(
