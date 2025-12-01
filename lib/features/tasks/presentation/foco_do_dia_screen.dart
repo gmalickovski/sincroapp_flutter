@@ -674,8 +674,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   onPrimary: _openAddTaskModal,
                   primaryIcon: Icons.add_task,
                   primaryTooltip: 'Nova Tarefa',
-                  onOpenAssistant: () =>
-                      AssistantPanel.show(context, widget.userData!),
+                  onOpenAssistant: (message) =>
+                      AssistantPanel.show(context, widget.userData!, initialMessage: message),
                 )
               : FloatingActionButton(
                   onPressed: _openAddTaskModal,

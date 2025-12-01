@@ -311,7 +311,7 @@ class _JournalScreenState extends State<JournalScreen> {
                 onPrimary: () => _openJournalEditor(),
                 primaryIcon: Icons.edit_note,
                 primaryTooltip: 'Nova Anotação',
-                onOpenAssistant: () => AssistantPanel.show(context, widget.userData),
+                onOpenAssistant: (message) => AssistantPanel.show(context, widget.userData, initialMessage: message),
               )
             : FloatingActionButton(
                 onPressed: () => _openJournalEditor(),

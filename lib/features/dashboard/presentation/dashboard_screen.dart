@@ -2023,9 +2023,9 @@ class _DashboardScreenState extends State<DashboardScreen>
           // ATUALIZADO: Agora o FAB só tem a função de abrir o assistente,
           // ativando o novo modo simples do ExpandingAssistantFab.
           fab = ExpandingAssistantFab(
-            onOpenAssistant: () {
+            onOpenAssistant: (message) {
               if (_userData == null) return;
-              AssistantPanel.show(context, _userData!);
+              AssistantPanel.show(context, _userData!, initialMessage: message);
             },
           );
           break;

@@ -23,6 +23,7 @@ class AssistantPanel extends StatefulWidget {
   final bool isFullScreen;
   final VoidCallback? onToggleFullScreen;
   final VoidCallback? onClose;
+  final String? initialMessage; // Mensagem inicial para envio automático
 
   const AssistantPanel({
     super.key,
@@ -30,22 +31,23 @@ class AssistantPanel extends StatefulWidget {
     this.isFullScreen = false,
     this.onToggleFullScreen,
     this.onClose,
+    this.initialMessage,
   });
 
-  static Future<void> show(BuildContext context, UserModel userData) async {
+  static Future<void> show(BuildContext context, UserModel userData, {String? initialMessage}) async {
     final isDesktop = MediaQuery.of(context).size.width > 768;
     if (isDesktop) {
       await showDialog(
         context: context,
         barrierColor: Colors.transparent,
-        builder: (_) => AssistantPanel(userData: userData),
+        builder: (_) => AssistantPanel(userData: userData, initialMessage: initialMessage),
       );
     } else {
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (_) => AssistantPanel(userData: userData),
+        builder: (_) => AssistantPanel(userData: userData, initialMessage: initialMessage),
       );
     }
   }
@@ -104,6 +106,14 @@ class _AssistantPanelState extends State<AssistantPanel>
     _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
+
+    // Se houver mensagem inicial, envia automaticamente
+    if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _controller.text = widget.initialMessage!;
+        _send();
+      });
+    }
   }
 
   void _onSheetChanged() {

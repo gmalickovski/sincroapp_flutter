@@ -483,8 +483,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 onPrimary: _openAddTaskModal,
                 primaryIcon: Icons.edit_calendar, // Ícone de agendamento
                 primaryTooltip: 'Nova Tarefa',
-                onOpenAssistant: () {
-                  AssistantPanel.show(context, widget.userData);
+                onOpenAssistant: (message) {
+                  AssistantPanel.show(context, widget.userData, initialMessage: message);
                 },
               )
             : FloatingActionButton(

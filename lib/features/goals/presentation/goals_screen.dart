@@ -277,8 +277,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
                     _navigateToCreateGoal, // Chama screen ou dialog conforme plataforma
                 primaryIcon: Icons.flag_outlined, // Ícone de meta
                 primaryTooltip: 'Nova Jornada',
-                onOpenAssistant: () {
-                  AssistantPanel.show(context, widget.userData);
+                onOpenAssistant: (message) {
+                  AssistantPanel.show(context, widget.userData, initialMessage: message);
                 },
               )
             : FloatingActionButton(
