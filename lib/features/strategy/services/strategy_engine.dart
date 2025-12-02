@@ -4,6 +4,7 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
@@ -144,7 +145,19 @@ class StrategyEngine {
       return base;
     }
 
-    // 2. Call AI to generate suggestions
+    // 2. Check Cache
+    final cached = await _getCachedStrategy(user.uid, personalDay);
+    if (cached != null) {
+      return StrategyRecommendation(
+        mode: base.mode,
+        reason: base.reason,
+        tips: base.tips,
+        methodologyName: base.methodologyName,
+        aiSuggestions: cached,
+      );
+    }
+
+    // 3. Call AI to generate suggestions
     try {
       final suggestions = await AssistantService.generateStrategySuggestions(
         user: user,
@@ -152,6 +165,11 @@ class StrategyEngine {
         personalDay: personalDay,
         mode: base.mode,
       );
+
+      // Cache the result
+      if (suggestions.isNotEmpty) {
+        await _cacheStrategy(user.uid, personalDay, suggestions);
+      }
 
       return StrategyRecommendation(
         mode: base.mode,
@@ -163,6 +181,35 @@ class StrategyEngine {
     } catch (e) {
       // Fallback to base if AI fails
       return base;
+    }
+  }
+
+  // --- Caching Logic ---
+
+  static String _getCacheKey(String userId) {
+    final now = DateTime.now();
+    final dateStr = "${now.year}-${now.month}-${now.day}";
+    return "strategy_cache_${userId}_$dateStr";
+  }
+
+  static Future<List<String>?> _getCachedStrategy(String userId, int personalDay) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getCacheKey(userId);
+      final cachedList = prefs.getStringList(key);
+      return cachedList;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<void> _cacheStrategy(String userId, int personalDay, List<String> suggestions) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getCacheKey(userId);
+      await prefs.setStringList(key, suggestions);
+    } catch (e) {
+      // Ignore cache errors
     }
   }
 

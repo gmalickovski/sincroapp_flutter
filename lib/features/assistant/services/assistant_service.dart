@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/services/assistant_prompt_builder.dart';
@@ -56,6 +57,27 @@ class AssistantService {
     return false;
   }
 
+  static Future<void> _logUsage({
+    required String userId,
+    required String type,
+    required int promptLength,
+  }) async {
+    try {
+      // Estimativa grosseira: 1 token ~= 4 caracteres
+      final estimatedTokens = (promptLength / 4).ceil();
+      
+      await FirebaseFirestore.instance.collection('ai_usage_logs').add({
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+        'type': type,
+        'promptLength': promptLength,
+        'estimatedTokens': estimatedTokens,
+      });
+    } catch (e) {
+      debugPrint('Erro ao logar uso de IA: $e');
+    }
+  }
+
   static Future<AssistantAnswer> ask({
     required String question,
     required UserModel user,
@@ -76,6 +98,13 @@ class AssistantService {
       recentJournal: recentJournal,
       isFirstMessageOfDay: isFirstOfDay,
       chatHistory: chatHistory,
+    );
+
+    // Log Usage
+    _logUsage(
+      userId: user.uid,
+      type: 'assistant_chat',
+      promptLength: prompt.length,
     );
 
     final response = await _getModel().generateContent([Content.text(prompt)]);
@@ -117,6 +146,13 @@ class AssistantService {
       tasks: tasks,
       personalDay: personalDay,
       mode: mode,
+    );
+
+    // Log Usage
+    _logUsage(
+      userId: user.uid,
+      type: 'strategy_flow',
+      promptLength: prompt.length,
     );
 
     try {

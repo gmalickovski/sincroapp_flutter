@@ -196,7 +196,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               _isLoading = false;
             }
             _buildCardList();
-            _loadStrategy(); // Reload strategy when tasks change
+            // _loadStrategy(); // REMOVIDO: Evita chamar IA a cada atualização de tarefa. Cache diário é suficiente.
           });
         }
       },
