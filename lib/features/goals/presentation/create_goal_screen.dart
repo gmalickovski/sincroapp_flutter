@@ -9,6 +9,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 
 class CreateGoalScreen extends StatefulWidget {
@@ -83,28 +84,25 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
 
     // 1.1 Checagem de limite de metas por plano
     if (widget.goalToEdit == null) {
-      // Só checa ao criar nova meta
-      int maxGoals = 1;
       final plan = widget.userData.subscription.plan;
-      if (plan.toString().contains('despertar')) {
-        maxGoals = 5;
-      } else if (plan.toString().contains('sinergia')) {
-        maxGoals = 99999; // ilimitado
-      }
-      // Busca número atual de metas do usuário
-      final goalsSnapshot =
-          await FirestoreService().getActiveGoals(widget.userData.uid);
-      if (goalsSnapshot.length >= maxGoals) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red,
-            content: Text(maxGoals == 99999
-                ? 'Você já atingiu o limite de metas.'
-                : 'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
-          ),
-        );
-        return;
+      final int maxGoals = PlanLimits.getGoalsLimit(plan);
+
+      // Se maxGoals for -1, é ilimitado. Se não for -1, verifica o limite.
+      if (maxGoals != -1) {
+        // Busca número atual de metas do usuário
+        final goalsSnapshot =
+            await FirestoreService().getActiveGoals(widget.userData.uid);
+        if (goalsSnapshot.length >= maxGoals) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.red,
+              content: Text(
+                  'Seu plano permite criar até $maxGoals meta${maxGoals > 1 ? 's' : ''}. Para mais, faça upgrade!'),
+            ),
+          );
+          return;
+        }
       }
     }
 
