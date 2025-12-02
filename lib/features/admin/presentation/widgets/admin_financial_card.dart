@@ -82,6 +82,10 @@ class AdminFinancialCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.border, width: 1),
           ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
                 'Detalhamento de Custos e Taxas',
                 style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.bold),
               ),
