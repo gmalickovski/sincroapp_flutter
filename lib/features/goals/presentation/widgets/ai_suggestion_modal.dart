@@ -173,76 +173,81 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
   @override
   Widget build(BuildContext context) {
-    // Calcula tamanho dinâmico baseado no teclado
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final hasKeyboard = bottomInset > 0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
 
-    // Usa DraggableScrollableSheet sempre, mas ajusta os tamanhos dinamicamente
-    return DraggableScrollableSheet(
-      initialChildSize: hasKeyboard ? 0.95 : 0.6,
-      // Reduz a altura mínima quando teclado não está visível para permitir colapso maior
-      minChildSize: hasKeyboard ? 0.95 : 0.35,
-      maxChildSize: 0.95,
-      expand: false,
-      snap: true,
-      snapSizes: hasKeyboard ? const [0.95] : const [0.6, 0.95],
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(20),
-              topRight: Radius.circular(20),
-            ),
-            border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.3),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: _buildContent(),
+        if (isMobile) {
+          return Scaffold(
+            backgroundColor: AppColors.cardBackground,
+            body: SafeArea(
+              child: Column(
+                children: [
+                  _buildHeader(isMobile: true),
+                  Expanded(
+                    child: _buildContent(),
+                  ),
+                  if (_state == AiModalState.suggestions) _buildSuggestionsFooter(isMobile: true),
+                ],
               ),
-              // Só mostra o rodapé se houver sugestões
-              if (_state == AiModalState.suggestions) _buildSuggestionsFooter(),
-            ],
+            ),
+          );
+        }
+
+        // Desktop Layout
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
+            child: Container(
+              margin: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+                border: Border.all(
+                  color: AppColors.border.withValues(alpha: 0.3),
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildHeader(isMobile: false),
+                    Expanded(
+                      child: _buildContent(),
+                    ),
+                    if (_state == AiModalState.suggestions) _buildSuggestionsFooter(isMobile: false),
+                  ],
+                ),
+              ),
+            ),
           ),
         );
       },
     );
   }
 
-  // ----- Widgets internos (_buildHeader, _buildContent, etc.) -----
-  // Nenhuma alteração necessária nestes widgets internos,
-  // pois eles lidam apenas com os estados (_state, _errorMessage, _suggestions)
-  // e não diretamente com os modelos UserModel ou TaskModel.
-  // Cole o código completo deles da resposta anterior aqui se precisar.
-
-  Widget _buildHeader() {
+  Widget _buildHeader({required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: AppColors.border.withValues(alpha: 0.3),
-            width: 1,
-          ),
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Row(
-            mainAxisAlignment: MainAxisAlignment.start,
             children: [
               Icon(Icons.auto_awesome, color: AppColors.primary, size: 24),
               SizedBox(width: 12),
               Text(
                 "Sugestões da IA",
                 style: TextStyle(
-                  fontSize: 20,
+                  fontSize: 22,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryText,
                   letterSpacing: -0.5,
@@ -252,8 +257,11 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
           ),
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-            iconSize: 24,
             onPressed: () => Navigator.of(context).pop(),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.background,
+              padding: const EdgeInsets.all(8),
+            ),
           ),
         ],
       ),
@@ -279,21 +287,24 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
   Widget _buildLoadingState(String message) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const CustomLoadingSpinner(),
-          const SizedBox(height: 24),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 16,
-              height: 1.5,
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CustomLoadingSpinner(size: 40),
+            const SizedBox(height: 32),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 16,
+                height: 1.5,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -301,32 +312,38 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
   Widget _buildErrorState() {
     return Center(
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 20),
-        padding: const EdgeInsets.all(24),
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: const Color(0xFFEF4444).withValues(alpha: 0.5), // red-500
-            width: 1.5,
+            color: const Color(0xFFEF4444).withValues(alpha: 0.3),
+            width: 1,
           ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              Icons.error_outline,
-              color: Color(0xFFEF4444), // red-500
-              size: 48,
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline,
+                color: Color(0xFFEF4444),
+                size: 32,
+              ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             const Text(
               "Ocorreu um Erro",
               style: TextStyle(
                 color: AppColors.primaryText,
-                fontSize: 18,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
               ),
             ),
             const SizedBox(height: 12),
@@ -335,31 +352,32 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: AppColors.secondaryText,
-                fontSize: 14,
+                fontSize: 15,
                 height: 1.5,
               ),
             ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              onPressed: _state == AiModalState.error && _suggestions.isEmpty
-                  ? _fetchContextData
-                  : _handleGenerate,
-              child: const Text(
-                "Tentar Novamente",
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                onPressed: _state == AiModalState.error && _suggestions.isEmpty
+                    ? _fetchContextData
+                    : _handleGenerate,
+                child: const Text(
+                  "Tentar Novamente",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
@@ -372,33 +390,46 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
   Widget _buildInitialState() {
     return Column(
       children: [
-        const SizedBox(height: 16),
-        const Text(
-          "Quebre sua meta em marcos inteligentes",
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppColors.primaryText,
-            letterSpacing: -0.5,
-            height: 1.3,
-          ),
-        ),
-        const SizedBox(height: 16),
-        const Padding(
-          padding: EdgeInsets.symmetric(
-              horizontal: 4.0), // padding mínimo apenas para respirar
-          child: Text(
-            "A IA analisará seu contexto para sugerir os melhores passos e datas. Adicione detalhes para sugestões mais precisas.",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 15,
-              height: 1.5,
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.psychology, size: 48, color: AppColors.primary),
+                ),
+                const SizedBox(height: 32),
+                const Text(
+                  "Quebre sua meta em\nmarcos inteligentes",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                    height: 1.3,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "A IA analisará seu contexto para sugerir os melhores passos e datas. Adicione detalhes para sugestões mais precisas.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.secondaryText,
+                    fontSize: 16,
+                    height: 1.6,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
-        const Spacer(),
         _buildInitialFooterInput(),
       ],
     );
@@ -408,137 +439,134 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
     final bool isGenerating = _state == AiModalState.loadingAi;
     final currentLength = _additionalInfoController.text.length;
 
-    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: bottomInset),
-      child: SafeArea(
-        top: false,
-        left: false,
-        right: false,
-        bottom: true,
-        child: Padding(
-          // Ajuste: adiciona padding lateral de respiro igual ao painel assistente (20)
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8, left: 4),
+            child: Text(
+              '$currentLength/$_characterLimit caracteres',
+              style: const TextStyle(
+                color: AppColors.tertiaryText,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // Contador de caracteres à esquerda, acima do TextField
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8, left: 2),
-                child: Text(
-                  '$currentLength/$_characterLimit caracteres',
+              Expanded(
+                child: TextField(
+                  controller: _additionalInfoController,
+                  onSubmitted: (_) => _handleGenerate(),
+                  onChanged: (_) => setState(() {}),
+                  maxLines: null,
+                  minLines: 1,
+                  maxLength: _characterLimit,
+                  textInputAction: TextInputAction.send,
                   style: const TextStyle(
-                    color: AppColors.tertiaryText,
-                    fontSize: 12,
+                    color: AppColors.primaryText,
+                    fontSize: 16,
+                    height: 1.5,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Adicione contexto (opcional)...',
+                    hintStyle: const TextStyle(
+                      color: AppColors.tertiaryText,
+                      fontSize: 16,
+                    ),
+                    filled: true,
+                    fillColor: AppColors.background,
+                    counterText: '',
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _additionalInfoController,
-                      onSubmitted: (_) => _handleGenerate(),
-                      onChanged: (_) => setState(() {}), // Atualiza contador
-                      maxLines: null,
-                      minLines: 1,
-                      maxLength: _characterLimit,
-                      textInputAction: TextInputAction.newline,
-                      style: const TextStyle(
-                        color: AppColors.primaryText,
-                        fontSize: 15,
-                        height: 1.45,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: 'Adicione contexto para a IA (opcional)...',
-                        hintStyle: const TextStyle(
-                          color: AppColors.tertiaryText,
-                          fontSize: 14,
-                        ),
-                        filled: true,
-                        fillColor: AppColors.cardBackground,
-                        counterText: '', // Remove contador padrão do TextField
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: BorderSide(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12.0),
-                          borderSide: const BorderSide(
-                            color: AppColors.primary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      icon: isGenerating
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(Icons.send, color: Colors.white),
-                      onPressed: isGenerating ? null : _handleGenerate,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
+                child: IconButton(
+                  icon: isGenerating
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.send_rounded, color: Colors.white),
+                  onPressed: isGenerating ? null : _handleGenerate,
+                  padding: const EdgeInsets.all(16),
+                ),
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
 
   Widget _buildSuggestionsList() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(bottom: 16.0),
-            child: Text(
-              "Selecione os marcos que deseja adicionar:",
-              style: TextStyle(
-                color: AppColors.secondaryText,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(24, 0, 24, 16),
+          child: Text(
+            "Selecione os marcos que deseja adicionar:",
+            style: TextStyle(
+              color: AppColors.secondaryText,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.only(bottom: 16),
-              itemCount: _suggestions.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
+        ),
+        Expanded(
+          child: ListView.separated(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            itemCount: _suggestions.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
               final suggestion = _suggestions[index];
               final isSelected = _selectedSuggestions.any((s) =>
                   s['title'] == suggestion['title'] &&
@@ -546,97 +574,75 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
               return InkWell(
                 onTap: () => _toggleSelection(suggestion),
-                borderRadius: BorderRadius.circular(12),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
+                borderRadius: BorderRadius.circular(16),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.08)
-                        : AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(12),
+                        ? AppColors.primary.withValues(alpha: 0.1)
+                        : AppColors.background,
+                    borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary.withValues(alpha: 0.5)
-                          : AppColors.border.withValues(alpha: 0.3),
-                      width: isSelected ? 1.5 : 1,
+                          ? AppColors.primary
+                          : Colors.transparent,
+                      width: 1.5,
                     ),
                   ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Checkbox
                       Container(
-                        width: 32,
-                        constraints: const BoxConstraints(minHeight: 32),
-                        alignment: Alignment.topLeft,
-                        margin: const EdgeInsets.only(right: 12.0, top: 2.0),
-                        child: Transform.scale(
-                          scale: 0.9,
-                          child: Checkbox(
-                            value: isSelected,
-                            onChanged: (bool? value) {
-                              _toggleSelection(suggestion);
-                            },
-                            checkColor: Colors.black,
-                            activeColor: AppColors.primary,
-                            side: BorderSide(
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : AppColors.border.withValues(alpha: 0.5),
-                              width: 2,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            materialTapTargetSize:
-                                MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: VisualDensity.compact,
-                          ),
-                        ),
-                      ),
-                      // Texto
-                      Expanded(
-                        child: Text(
-                          suggestion['title']!,
-                          style: const TextStyle(
-                            color: AppColors.primaryText,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                            height: 1.45,
-                            letterSpacing: 0.15,
-                          ),
-                        ),
-                      ),
-                      // Data
-                      const SizedBox(width: 12),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
+                        width: 24,
+                        height: 24,
+                        margin: const EdgeInsets.only(top: 2, right: 16),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFB923C).withValues(alpha: 0.15),
+                          color: isSelected ? AppColors.primary : Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: const Color(0xFFFB923C).withValues(alpha: 0.3),
-                            width: 1,
+                            color: isSelected ? AppColors.primary : AppColors.tertiaryText,
+                            width: 2,
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                        child: isSelected
+                            ? const Icon(Icons.check, size: 16, color: Colors.white)
+                            : null,
+                      ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.calendar_today,
-                              color: Color(0xFFFB923C), // orange-400
-                              size: 14,
-                            ),
-                            const SizedBox(width: 6),
                             Text(
-                              _formatDate(suggestion['date']!),
-                              style: const TextStyle(
-                                color: Color(0xFFFB923C), // orange-400
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                              suggestion['title']!,
+                              style: TextStyle(
+                                color: isSelected ? AppColors.primaryText : AppColors.secondaryText,
+                                fontSize: 16,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calendar_today, size: 12, color: AppColors.tertiaryText),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _formatDate(suggestion['date']!),
+                                    style: const TextStyle(
+                                      color: AppColors.tertiaryText,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -650,95 +656,65 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
           ),
         ),
       ],
-      ),
     );
   }
 
-  Widget _buildSuggestionsFooter() {
+  Widget _buildSuggestionsFooter({required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.border.withValues(alpha: 0.3),
-            width: 1,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -5),
           ),
-        ),
+        ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // Botão Voltar
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _state = AiModalState.initial;
-                _suggestions = [];
-                _selectedSuggestions = [];
-              });
-            },
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.secondaryText,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 14,
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () {
+                setState(() {
+                  _state = AiModalState.initial;
+                  _suggestions = [];
+                  _selectedSuggestions = [];
+                });
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.arrow_back_ios_new, size: 16),
-                SizedBox(width: 8),
-                Text(
-                  "Voltar",
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+              child: const Text("Voltar", style: TextStyle(color: AppColors.secondaryText)),
             ),
           ),
-          // Botão Adicionar
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 28,
-                vertical: 16,
+          const SizedBox(width: 16),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: _selectedSuggestions.isEmpty
+                  ? null
+                  : () {
+                      widget.onAddSuggestions(_selectedSuggestions);
+                      Navigator.of(context).pop();
+                    },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+              child: Text(
+                "Adicionar (${_selectedSuggestions.length})",
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
-              elevation: 0,
-              disabledBackgroundColor: AppColors.border.withValues(alpha: 0.3),
-            ),
-            onPressed: _selectedSuggestions.isEmpty
-                ? null
-                : () {
-                    widget.onAddSuggestions(_selectedSuggestions);
-                    Navigator.of(context).pop();
-                  },
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.add_task, size: 20),
-                const SizedBox(width: 10),
-                Text(
-                  "Adicionar (${_selectedSuggestions.length})",
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ],
             ),
           ),
         ],
       ),
     );
   }
-} // Fim da classe _AiSuggestionModalState
+}
