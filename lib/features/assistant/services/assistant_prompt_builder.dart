@@ -63,7 +63,63 @@ class AssistantPromptBuilder {
 
     // ... (Helper function enrichNumber remains unchanged) ...
 
-    // ... (Numerology summary logic remains unchanged) ...
+    // Helper function to enrich number with metadata AND VibrationContent
+    Map<String, dynamic> enrichNumber(int? number, {String? vibrationKey}) {
+      if (number == null) return {'numero': null};
+      
+      final baseEnrichment = {
+        'numero': number,
+        'significado': NumerologyInterpretations.getMeaning(number),
+        'palavrasChave': NumerologyInterpretations.getKeywords(number),
+        'desafio': NumerologyInterpretations.getChallenge(number),
+      };
+
+      // Add VibrationContent if available (for diaPessoal, mesPessoal, anoPessoal)
+      if (vibrationKey != null) {
+        final vibrationContent = ContentData.vibracoes[vibrationKey]?[number];
+        if (vibrationContent != null) {
+          return {
+            ...baseEnrichment,
+            'conteudo': {
+              'titulo': vibrationContent.titulo,
+              'descricao': vibrationContent.descricaoCompleta,
+              'inspiracao': vibrationContent.inspiracao,
+              'tags': vibrationContent.tags,
+            }
+          };
+        }
+      }
+
+      return baseEnrichment;
+    }
+
+    // Numerologia COMPLETA com metadados interpretativos E conteúdo rico
+    final numerologySummary = {
+      'diaPessoal': enrichNumber(numerology.numeros['diaPessoal'], vibrationKey: 'diaPessoal'),
+      'mesPessoal': enrichNumber(numerology.numeros['mesPessoal'], vibrationKey: 'mesPessoal'),
+      'anoPessoal': {
+        ...enrichNumber(numerology.numeros['anoPessoal'], vibrationKey: 'anoPessoal'),
+        'tema': NumerologyInterpretations.personalYearThemes[numerology.numeros['anoPessoal']]?['tema'],
+        'foco': NumerologyInterpretations.personalYearThemes[numerology.numeros['anoPessoal']]?['foco'],
+      },
+      'destino': enrichNumber(numerology.numeros['destino']),
+      'expressao': enrichNumber(numerology.numeros['expressao']),
+      'motivacao': enrichNumber(numerology.numeros['motivacao']),
+      'impressao': enrichNumber(numerology.numeros['impressao']),
+      'missao': enrichNumber(numerology.numeros['missao']),
+      'talentoOculto': enrichNumber(numerology.numeros['talentoOculto']),
+      'respostaSubconsciente': numerology.numeros['respostaSubconsciente'],
+      'cicloDeVidaAtual': numerology.estruturas['cicloDeVidaAtual'],
+      'licoesCarmicas': numerology.listas['licoesCarmicas'],
+      'debitosCarmicos': numerology.listas['debitosCarmicos'],
+      'tendenciasOcultas': numerology.listas['tendenciasOcultas'],
+      'harmoniaConjugal': numerology.estruturas['harmoniaConjugal'],
+      'aptidoesProfissionais': numerology.numeros['aptidoesProfissionais'],
+      'desafio': enrichNumber(numerology.numeros['desafio']),
+      'desafiosMapa': numerology.estruturas['desafios'],
+      'momentosDecisivos': numerology.estruturas['momentosDecisivos'],
+      'momentoDecisivoAtual': numerology.estruturas['momentoDecisivoAtual'],
+    };
 
     // REMOVED: personalDaysNext30 (Too heavy, rarely used)
 
