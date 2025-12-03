@@ -494,10 +494,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       final tomorrow = DateTime(now.year, now.month, now.day + 1);
       final tomorrowUtc = tomorrow.toUtc();
 
-      await _firestoreService.updateTask(
+      await _firestoreService.updateTaskFields(
         _userId,
         task.id,
-        dueDate: tomorrowUtc,
+        {'dueDate': tomorrowUtc},
       );
 
       if (mounted) {

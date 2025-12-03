@@ -366,10 +366,10 @@ class _DashboardScreenState extends State<DashboardScreen>
       final tomorrow = DateTime(now.year, now.month, now.day + 1);
       final tomorrowUtc = tomorrow.toUtc();
 
-      await _firestoreService.updateTask(
+      await _firestoreService.updateTaskFields(
         _userData!.uid,
         task.id,
-        dueDate: tomorrowUtc,
+        {'dueDate': tomorrowUtc},
       );
 
       if (mounted) {

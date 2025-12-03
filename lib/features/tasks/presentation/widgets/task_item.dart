@@ -309,7 +309,7 @@ class TaskItem extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20.0),
         decoration: BoxDecoration(
-          color: AppColors.secondary, // Laranja/Azul (Reagendar)
+          color: Colors.orange, // Laranja (Reagendar)
           borderRadius: BorderRadius.circular(8.0),
         ),
         child: const Icon(Icons.calendar_month_outlined, color: Colors.white),

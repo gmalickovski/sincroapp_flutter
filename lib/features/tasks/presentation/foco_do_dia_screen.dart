@@ -571,10 +571,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       final tomorrowUtc = tomorrow.toUtc();
 
       // Atualiza a tarefa
-      await _firestoreService.updateTask(
+      await _firestoreService.updateTaskFields(
         _userId,
         task.id,
-        dueDate: tomorrowUtc,
+        {'dueDate': tomorrowUtc},
       );
 
       if (mounted) {

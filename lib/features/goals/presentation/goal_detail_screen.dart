@@ -428,10 +428,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       final tomorrowUtc = tomorrow.toUtc();
 
       // Atualiza a tarefa
-      await _firestoreService.updateTask(
+      await _firestoreService.updateTaskFields(
         widget.userData.uid,
         task.id,
-        dueDate: tomorrowUtc,
+        {'dueDate': tomorrowUtc},
       );
 
       if (mounted) {
