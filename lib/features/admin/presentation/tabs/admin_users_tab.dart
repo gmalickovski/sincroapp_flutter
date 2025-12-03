@@ -345,129 +345,163 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
           width: 1,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.all(16),
-        leading: CircleAvatar(
-          backgroundColor: planColor.withValues(alpha: 0.2),
-          child: user.photoUrl != null
-              ? ClipOval(
-                  child: Image.network(
-                    user.photoUrl!,
-                    width: 40,
-                    height: 40,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        Icon(Icons.person, color: planColor),
-                  ),
-                )
-              : Icon(Icons.person, color: planColor),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                '${user.primeiroNome} ${user.sobrenome}',
-                style: const TextStyle(
-                  color: AppColors.primaryText,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            if (isDesktop) ...[
-              const SizedBox(width: 16),
-              _buildCostBadge('Hoje', costToday, Colors.green),
-              const SizedBox(width: 8),
-              _buildCostBadge('Mês', costMonth, Colors.blue),
-            ],
-          ],
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 4),
-            Text(
-              user.email,
-              style: const TextStyle(color: AppColors.secondaryText),
-            ),
-            const SizedBox(height: 8),
-            // Usa Wrap para evitar overflow em telas estreitas
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
+            // Header: Nome + Menu de 3 pontos
+            Row(
               children: [
-                if (!isDesktop) ...[
-                   _buildCostBadge('Hoje', costToday, Colors.green),
-                   _buildCostBadge('Mês', costMonth, Colors.blue),
-                ],
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: planColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: planColor, width: 1),
-                  ),
+                Expanded(
                   child: Text(
-                    user.planDisplayName,
-                    style: TextStyle(
-                      color: planColor,
-                      fontSize: 12,
+                    '${user.primeiroNome} ${user.sobrenome}',
+                    style: const TextStyle(
+                      color: AppColors.primaryText,
                       fontWeight: FontWeight.bold,
+                      fontSize: 16,
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (!isActiveSubscription)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.red, width: 1),
-                    ),
-                    child: const Text(
-                      'EXPIRADA',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
+                  color: AppColors.cardBackground,
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      _showEditDialog(user);
+                    } else if (value == 'delete') {
+                      _confirmDelete(user);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, color: AppColors.primary, size: 20),
+                          SizedBox(width: 12),
+                          Text('Editar', style: TextStyle(color: AppColors.primaryText)),
+                        ],
                       ),
                     ),
-                  ),
-                if (user.isAdmin)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppColors.primary, width: 1),
-                    ),
-                    child: const Text(
-                      'ADMIN',
-                      style: TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, color: Colors.red.shade400, size: 20),
+                          const SizedBox(width: 12),
+                          const Text('Excluir', style: TextStyle(color: AppColors.primaryText)),
+                        ],
                       ),
                     ),
-                  ),
+                  ],
+                ),
               ],
             ),
-          ],
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.edit, color: AppColors.primary),
-              onPressed: () => _showEditDialog(user),
-              tooltip: 'Editar usuário',
-            ),
-            IconButton(
-              icon: Icon(Icons.delete, color: Colors.red.shade400),
-              onPressed: () => _confirmDelete(user),
-              tooltip: 'Deletar usuário',
+            const SizedBox(height: 12),
+            // Body: Avatar + Dados
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Avatar (esquerda, menor)
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: planColor.withValues(alpha: 0.2),
+                  child: user.photoUrl != null
+                      ? ClipOval(
+                          child: Image.network(
+                            user.photoUrl!,
+                            width: 48,
+                            height: 48,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                Icon(Icons.person, color: planColor, size: 24),
+                          ),
+                        )
+                      : Icon(Icons.person, color: planColor, size: 24),
+                ),
+                const SizedBox(width: 12),
+                // Dados (direita, ocupa espaço restante)
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Email
+                      Text(
+                        user.email,
+                        style: const TextStyle(
+                          color: AppColors.secondaryText,
+                          fontSize: 13,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      // Badges: Custos IA + Plano + Status
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _buildCostBadge('Hoje', costToday, Colors.green),
+                          _buildCostBadge('Mês', costMonth, Colors.blue),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: planColor.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: planColor, width: 1),
+                            ),
+                            child: Text(
+                              user.planDisplayName,
+                              style: TextStyle(
+                                color: planColor,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          if (!isActiveSubscription)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.red, width: 1),
+                              ),
+                              child: const Text(
+                                'EXPIRADA',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          if (user.isAdmin)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: AppColors.primary, width: 1),
+                              ),
+                              child: const Text(
+                                'ADMIN',
+                                style: TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

@@ -75,46 +75,56 @@ class AdminFinancialCard extends StatelessWidget {
         final double totalDeductions = totalProcessingFees + totalAiCost + estimatedMarketingCost + fixedCosts + taxes;
         final double netProfit = mrr - totalDeductions;
 
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border, width: 1),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Detalhamento de Custos e Taxas',
-                style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              
-              _buildCostRow('Processamento (Stripe/Lojas)', totalProcessingFees, currencyFormat, Colors.orange),
-              _buildCostRow('Custos IA (Cloud/Tokens)', totalAiCost, currencyFormat, Colors.purple),
-              _buildCostRow('Marketing (CAC Estimado)', estimatedMarketingCost, currencyFormat, Colors.pink),
-              _buildCostRow('Impostos (${taxRate.toStringAsFixed(1)}%)', taxes, currencyFormat, Colors.red),
-              _buildCostRow('Custos Fixos (Servidor/Outros)', fixedCosts, currencyFormat, Colors.grey),
-              
-              const Divider(color: AppColors.border, height: 32),
-              
-              // Métricas Unitárias
-              const Text(
-                'Métricas Unitárias (KPIs)',
-                style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 16,
-                runSpacing: 16,
-                children: [
-                  _buildKpiChip('CAC (Custo Aquisição)', currencyFormat.format(cacPerUser)),
-                  _buildKpiChip('Custo IA / Usuário', currencyFormat.format(aiCostPerUser)),
-                  _buildKpiChip('LTV Estimado (12m)', currencyFormat.format((mrr / (totalPaid > 0 ? totalPaid : 1)) * 12)),
-                ],
-              ),
-            ],
+        return InkWell(
+          onTap: () => _showEditDialog(context, settings, firestoreService),
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border, width: 1),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Detalhamento de Custos',
+                  style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 20),
+                
+                _buildCostRow('Processamento (Stripe/Lojas)', totalProcessingFees, currencyFormat, Colors.orange),
+                _buildCostRow('Custos IA (Cloud/Tokens)', totalAiCost, currencyFormat, Colors.purple),
+                _buildCostRow('Marketing (CAC Estimado)', estimatedMarketingCost, currencyFormat, Colors.pink),
+                _buildCostRow('Impostos (${taxRate.toStringAsFixed(1)}%)', taxes, currencyFormat, Colors.red),
+                _buildCostRow('Custos Fixos (Servidor/Outros)', fixedCosts, currencyFormat, Colors.grey),
+                
+                const Divider(color: AppColors.border, height: 32),
+                
+                // Métricas Unitárias
+                const Text(
+                  'Métricas Unitárias (KPIs)',
+                  style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildKpiChip('CAC (Custo Aquisição)', currencyFormat.format(cacPerUser)),
+                    _buildKpiChip('Custo IA / Usuário', currencyFormat.format(aiCostPerUser)),
+                    _buildKpiChip('LTV Estimado (12m)', currencyFormat.format((mrr / (totalPaid > 0 ? totalPaid : 1)) * 12)),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -162,24 +172,36 @@ class AdminFinancialCard extends StatelessWidget {
 
   Widget _buildCostRow(String label, double value, NumberFormat format, Color color) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
+      padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              ),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: AppColors.primaryText)),
-            ],
+          Container(
+            width: 8,
+            height: 8,
+            margin: const EdgeInsets.only(top: 6),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.primaryText,
+                fontSize: 14,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 12),
           Text(
             '- ${format.format(value)}',
-            style: TextStyle(color: Colors.red.shade300, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              color: Colors.red.shade300,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
         ],
       ),

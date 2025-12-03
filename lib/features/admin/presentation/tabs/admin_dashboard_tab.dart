@@ -288,6 +288,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
             'Distribuição de Planos',
@@ -305,11 +306,13 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 children: [
                   Expanded(
                     flex: 1,
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 40,
-                        sections: _buildPieSections(free, plus, premium, total),
+                    child: RepaintBoundary(
+                      child: PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 40,
+                          sections: _buildPieSections(free, plus, premium, total),
+                        ),
                       ),
                     ),
                   ),
@@ -332,14 +335,17 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             )
           else
             Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 SizedBox(
                   height: 200,
-                  child: PieChart(
-                    PieChartData(
-                      sectionsSpace: 2,
-                      centerSpaceRadius: 40,
-                      sections: _buildPieSections(free, plus, premium, total),
+                  child: RepaintBoundary(
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 40,
+                        sections: _buildPieSections(free, plus, premium, total),
+                      ),
                     ),
                   ),
                 ),
