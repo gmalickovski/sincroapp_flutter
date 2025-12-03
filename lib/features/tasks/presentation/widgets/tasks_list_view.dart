@@ -66,8 +66,7 @@ class TasksListView extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(
-          8, 8, 16, 80), // Added right padding for scrollbar
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];

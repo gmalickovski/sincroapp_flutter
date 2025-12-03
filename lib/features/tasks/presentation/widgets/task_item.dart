@@ -67,7 +67,7 @@ class TaskItem extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: 32),
         alignment: Alignment.topLeft,
         // Alinha com a primeira linha do texto (ajustado para height 1.45)
-        margin: const EdgeInsets.only(right: 12.0, top: 2.0),
+        margin: const EdgeInsets.only(right: 8.0, top: 2.0),
         child: Container(
           width: 19, // Tamanho do círculo
           height: 19,
@@ -99,7 +99,7 @@ class TaskItem extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 32),
       alignment: Alignment.topLeft,
       // Alinha com a primeira linha do texto (ajustado para compensar padding interno do Checkbox)
-      margin: const EdgeInsets.only(right: 8.0, top: 0.0),
+      margin: const EdgeInsets.only(right: 6.0, top: 0.0),
       child: Transform.scale(
         scale: 0.9, // Reduz ligeiramente para melhor proporção
         child: Checkbox(
@@ -177,11 +177,15 @@ class TaskItem extends StatelessWidget {
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.2)
                 : Colors.transparent,
+            border: Border.all(
+              color: AppColors.border.withValues(alpha: 0.3),
+              width: 0.5,
+            ),
             borderRadius: BorderRadius.circular(8.0)),
         // --- FIM DA MUDANÇA ---
         child: Padding(
           padding:
-              EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 8.0),
+              EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 4.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
