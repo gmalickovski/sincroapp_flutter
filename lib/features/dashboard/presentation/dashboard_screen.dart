@@ -39,6 +39,7 @@ import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
+import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -72,6 +73,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isMobileDrawerOpen = false;
   late AnimationController _menuAnimationController;
   final FirestoreService _firestoreService = FirestoreService();
+  final TaskActionService _taskActionService = TaskActionService();
   Key _masonryGridKey = UniqueKey();
   StreamSubscription<List<TaskModel>>? _todayTasksSubscription;
   List<TaskModel> _currentTodayTasks = [];
@@ -361,39 +363,15 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<bool?> _handleRescheduleTask(TaskModel task) async {
     if (_userData == null) return false;
-    try {
-      final now = DateTime.now();
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      final tomorrowUtc = tomorrow.toUtc();
 
-      await _firestoreService.updateTaskFields(
-        _userData!.uid,
-        task.id,
-        {'dueDate': tomorrowUtc},
-      );
+    final newDate = await _taskActionService.rescheduleTask(
+      context,
+      task,
+      _userData!,
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa adiada para amanhã! 📅'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      return true; // Remove from "Focus Day" card as it's no longer for today
-    } catch (e) {
-      debugPrint("Erro ao reagendar tarefa: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao reagendar tarefa: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return false;
-    }
+    // Se reagendou com sucesso, remove do card "Foco do Dia" (pois não é mais para hoje)
+    return newDate != null;
   }
 
   Future<void> _handleAddTask() async {

@@ -21,6 +21,7 @@ import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 // --- INÍCIO DA MUDANÇA: Importar o motor de numerologia ---
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 // --- FIM DA MUDANÇA ---
 
 // --- INÍCIO DA MUDANÇA (Solicitação 2): Adicionado 'concluidas' ---
@@ -36,6 +37,7 @@ class FocoDoDiaScreen extends StatefulWidget {
 
 class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   final FirestoreService _firestoreService = FirestoreService();
+  final TaskActionService _taskActionService = TaskActionService();
   late final String _userId;
   final Uuid _uuid = const Uuid();
 
@@ -562,51 +564,36 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     return false;
   }
 
-  // Swipe Right: Reagendar para Amanhã
+  // Swipe Right: Reagendar (Usando TaskActionService)
   Future<bool?> _handleSwipeRight(TaskModel task) async {
-    try {
-      // Calcula a data de amanhã
-      final now = DateTime.now();
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      final tomorrowUtc = tomorrow.toUtc();
+    if (_userData == null) return false;
 
-      // Atualiza a tarefa
-      await _firestoreService.updateTaskFields(
-        _userId,
-        task.id,
-        {'dueDate': tomorrowUtc},
-      );
+    final newDate = await _taskActionService.rescheduleTask(
+      context,
+      task,
+      widget.userData!,
+    );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa adiada para amanhã! 📅'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
+    if (newDate != null) {
+      // Lógica de remoção visual baseada no filtro
+      if (_selectedFilter == TaskFilterType.focoDoDia) {
+        // Se estava no Foco do Dia (Hoje), e mudou a data (para Amanhã), remove.
+        // Se era Atrasada e veio para Hoje, mantém (mas a lista deve atualizar via stream).
+        // Como o reschedule sempre joga para o futuro (exceto atrasada -> hoje),
+        // vamos simplificar: se a nova data NÃO é hoje, removemos da lista de "Hoje".
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
+        
+        if (!newDateOnly.isAtSameMomentAs(today)) {
+           return true; // Remove visualmente
+        }
+      } else if (_selectedFilter == TaskFilterType.atrasadas) {
+         // Se estava em Atrasadas e foi reagendada (para Hoje ou Futuro), sai da lista de Atrasadas.
+         return true;
       }
-
-      // Se o filtro for "Foco do Dia" ou "Atrasadas", a tarefa deve sair da lista
-      // Se for "Todas", ela apenas muda a data, mas continua na lista (talvez reordenada)
-      // Para UX consistente, vamos retornar true se ela não pertencer mais ao filtro atual
-      if (_selectedFilter == TaskFilterType.focoDoDia ||
-          _selectedFilter == TaskFilterType.atrasadas) {
-        return true;
-      }
-      return false; // Mantém na lista (Stream atualizará os dados)
-    } catch (e) {
-      debugPrint("Erro ao reagendar tarefa: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao reagendar tarefa: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return false;
     }
+    return false; // Deixa o StreamBuilder atualizar
   }
   // --- FIM DA MUDANÇA ---
 

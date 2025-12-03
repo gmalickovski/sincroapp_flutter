@@ -10,6 +10,7 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -38,6 +39,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   static const double kTabletBreakpoint = 768.0;
 
   final FirestoreService _firestoreService = FirestoreService();
+  final TaskActionService _taskActionService = TaskActionService();
   final AuthRepository _authRepository = AuthRepository();
   final Uuid _uuid = const Uuid();
 
@@ -489,39 +491,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<bool?> _handleRescheduleTask(TaskModel task) async {
-    try {
-      final now = DateTime.now();
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      final tomorrowUtc = tomorrow.toUtc();
+    final newDate = await _taskActionService.rescheduleTask(
+      context,
+      task,
+      widget.userData,
+    );
 
-      await _firestoreService.updateTaskFields(
-        _userId,
-        task.id,
-        {'dueDate': tomorrowUtc},
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Tarefa adiada para amanhã! 📅'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-      return true; 
-    } catch (e) {
-      debugPrint("Erro ao reagendar tarefa: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao reagendar tarefa: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return false;
+    // Se a data mudou, precisamos atualizar a UI.
+    // O stream de tarefas já deve cuidar disso, mas podemos retornar true
+    // se quisermos remover visualmente da lista do dia atual (se a nova data for diferente).
+    if (newDate != null) {
+       final now = DateTime.now();
+       final today = DateTime(now.year, now.month, now.day);
+       final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
+       
+       // Se a nova data não for a mesma do dia selecionado, remove visualmente
+       if (!newDateOnly.isAtSameMomentAs(_selectedDay)) {
+          return true;
+       }
     }
+    return false;
   }
 
   void _handleTaskTap(TaskModel task) {

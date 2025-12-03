@@ -20,6 +20,7 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
+import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -38,6 +39,7 @@ class GoalDetailScreen extends StatefulWidget {
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
   // Já temos a instância do FirestoreService aqui!
   final FirestoreService _firestoreService = FirestoreService();
+  final TaskActionService _taskActionService = TaskActionService();
   bool _isLoading = false;
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
@@ -419,46 +421,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     return false;
   }
 
-  // Swipe Right: Reagendar para Amanhã
+  // Swipe Right: Reagendar (Usando TaskActionService)
   Future<bool?> _handleSwipeRight(TaskModel task) async {
-    try {
-      // Calcula a data de amanhã
-      final now = DateTime.now();
-      final tomorrow = DateTime(now.year, now.month, now.day + 1);
-      final tomorrowUtc = tomorrow.toUtc();
+    await _taskActionService.rescheduleTask(
+      context,
+      task,
+      widget.userData,
+    );
 
-      // Atualiza a tarefa
-      await _firestoreService.updateTaskFields(
-        widget.userData.uid,
-        task.id,
-        {'dueDate': tomorrowUtc},
-      );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Marco adiado para amanhã! 📅'),
-            backgroundColor: AppColors.primary,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-
-      // Na tela de detalhes da meta, mostramos todos os marcos.
-      // Reagendar apenas muda a data, não remove da lista.
-      return false; 
-    } catch (e) {
-      debugPrint("Erro ao reagendar marco: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erro ao reagendar marco: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-      return false;
-    }
+    // Na tela de detalhes da meta, mostramos todos os marcos.
+    // Reagendar apenas muda a data, não remove da lista.
+    return false;
   }
   // --- FIM DA MUDANÇA ---
 
