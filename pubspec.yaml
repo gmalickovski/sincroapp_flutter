@@ -53,6 +53,35 @@ dependencies:
   permission_handler: ^11.3.1
   
   
+  # Fuso horário
+  timezone: ^0.9.4
+  
+  # Firebase Cloud Messaging
+  firebase_messaging: ^15.1.3 
+  
+  # --- FIM: DEPENDÊNCIAS PARA NOTIFICAÇÕES ---
+
+  # 🚀 ADICIONADO: Pacote para renderizar imagens SVG (o logo)
+  flutter_svg: ^2.0.10+1
+
+  # Renderização de Markdown nas mensagens do assistente
+  flutter_markdown: ^0.6.20
+
+  # Reconhecimento de voz multiplataforma (Android, iOS, Web, Windows)
+  speech_to_text: 6.6.1
+
+  meta: any
+  url_launcher: ^6.3.2
+  flutter_stripe: ^11.5.0
+  http: ^1.6.0
+  flutter_stripe_web: ^6.5.1
+  fl_chart: 0.69.0
+  shared_preferences: ^2.5.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
   flutter_lints: ^3.0.2
 
   # 🚀 ADICIONADO: Pacote para gerar os ícones do app (Android/iOS)

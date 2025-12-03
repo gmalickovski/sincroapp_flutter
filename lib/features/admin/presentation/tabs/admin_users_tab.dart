@@ -24,6 +24,10 @@ class AdminUsersTab extends StatefulWidget {
 class _AdminUsersTabState extends State<AdminUsersTab> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _searchController = TextEditingController();
+  List<UserModel> _allUsers = [];
+  List<UserModel> _filteredUsers = [];
+  bool _isLoading = true;
+  String _filterPlan = 'all'; // all, free, plus, premium
   Map<String, Map<String, double>> _userCosts = {};
   final double _usdToBrl = 6.0; // Taxa de câmbio fixa para estimativa
   final double _priceInputPer1M = 0.075; // USD
