@@ -27,7 +27,13 @@ class FocusDayCard extends StatefulWidget {
     required this.onAddTask,
     this.dragHandle,
     this.isEditMode = false,
+    // Callbacks de Swipe
+    this.onDeleteTask,
+    this.onRescheduleTask,
   });
+
+  final Future<bool?> Function(TaskModel)? onDeleteTask;
+  final Future<bool?> Function(TaskModel)? onRescheduleTask;
 
   @override
   State<FocusDayCard> createState() => _FocusDayCardState();
@@ -228,6 +234,9 @@ class _FocusDayCardState extends State<FocusDayCard> {
           onTap:
               widget.onTaskTap != null ? () => widget.onTaskTap!(task) : null,
           verticalPaddingOverride: 6.0,
+          // Callbacks de Swipe
+          onSwipeLeft: widget.onDeleteTask,
+          onSwipeRight: widget.onRescheduleTask,
         ),
         );
       }).toList(),

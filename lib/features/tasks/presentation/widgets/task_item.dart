@@ -43,9 +43,14 @@ class TaskItem extends StatelessWidget {
     // Props de layout
     this.isCompact = false,
     this.verticalPaddingOverride,
-    // Callbacks de menu removidos: onDelete, onEdit, onDuplicate
-    // Props de exibição antigos removidos: showJourney, showTags, showGoal, showVibration
+    // Callbacks de Swipe
+    this.onSwipeLeft,
+    this.onSwipeRight,
   });
+
+  // Callbacks de Swipe (Future<bool> para confirmar ação)
+  final Future<bool?> Function(TaskModel)? onSwipeLeft; // Excluir
+  final Future<bool?> Function(TaskModel)? onSwipeRight; // Reagendar
 
   // Helper para verificar se a data NÃO é hoje (inalterado)
   bool _isNotToday(DateTime? date) {
@@ -151,7 +156,8 @@ class TaskItem extends StatelessWidget {
     final bool isSelected = selectedTaskIds.contains(task.id);
     // --- FIM DA MUDANÇA ---
 
-    return InkWell(
+    // Widget principal (Conteúdo)
+    final Widget content = InkWell(
       // --- INÍCIO DA MUDANÇA (Solicitação 1): Lógica de toque dinâmica ---
       onTap: () {
         if (selectionMode) {
@@ -288,6 +294,50 @@ class TaskItem extends StatelessWidget {
           ),
         ),
       ),
+    );
+
+    // Se estiver em modo de seleção, NÃO permite swipe
+    if (selectionMode) {
+      return content;
+    }
+
+    // Retorna o Dismissible
+    return Dismissible(
+      key: ValueKey('dismiss_${task.id}'),
+      direction: DismissDirection.horizontal,
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20.0),
+        decoration: BoxDecoration(
+          color: AppColors.secondary, // Laranja/Azul (Reagendar)
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: const Icon(Icons.calendar_month_outlined, color: Colors.white),
+      ),
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        decoration: BoxDecoration(
+          color: Colors.red, // Vermelho (Excluir)
+          borderRadius: BorderRadius.circular(8.0),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          // Swipe Left (Excluir)
+          if (onSwipeLeft != null) {
+            return await onSwipeLeft!(task);
+          }
+        } else if (direction == DismissDirection.startToEnd) {
+          // Swipe Right (Reagendar)
+          if (onSwipeRight != null) {
+            return await onSwipeRight!(task);
+          }
+        }
+        return false;
+      },
+      child: content,
     );
   }
 } // Fim da classe TaskItem

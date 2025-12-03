@@ -434,6 +434,96 @@ class _CalendarScreenState extends State<CalendarScreen> {
     }
   }
 
+  // --- Swipe Actions ---
+  Future<bool?> _handleDeleteTask(TaskModel task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Tarefa?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _firestoreService.deleteTask(_userId, task.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tarefa excluída com sucesso'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+        return true;
+      } catch (e) {
+        debugPrint("Erro ao excluir tarefa: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir tarefa: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  Future<bool?> _handleRescheduleTask(TaskModel task) async {
+    try {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final tomorrowUtc = tomorrow.toUtc();
+
+      await _firestoreService.updateTask(
+        _userId,
+        task.id,
+        dueDate: tomorrowUtc,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tarefa adiada para amanhã! 📅'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return true; 
+    } catch (e) {
+      debugPrint("Erro ao reagendar tarefa: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao reagendar tarefa: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
   void _handleTaskTap(TaskModel task) {
     showDialog(
       context: context,
@@ -580,6 +670,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
               onAddTask: _openAddTaskModal,
               onToggleTask: _onToggleTask,
               onTaskTap: _handleTaskTap,
+              // Callbacks de Swipe
+              onDeleteTask: _handleDeleteTask,
+              onRescheduleTask: _handleRescheduleTask,
             ),
             // --- FIM DA CORREÇÃO ---
           ),
@@ -660,6 +753,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       onAddTask: _openAddTaskModal,
                       onToggleTask: _onToggleTask,
                       onTaskTap: _handleTaskTap,
+                      // Callbacks de Swipe
+                      onDeleteTask: _handleDeleteTask,
+                      onRescheduleTask: _handleRescheduleTask,
                     );
                   },
                 ),
@@ -750,6 +846,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 onAddTask: _openAddTaskModal,
                 onToggleTask: _onToggleTask,
                 onTaskTap: _handleTaskTap,
+                // Callbacks de Swipe
+                onDeleteTask: _handleDeleteTask,
+                onRescheduleTask: _handleRescheduleTask,
               ),
             ),
           ),

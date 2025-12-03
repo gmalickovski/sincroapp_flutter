@@ -305,6 +305,97 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ---
   // --- ATUALIZAÇÃO NESTA FUNÇÃO ---
   // ---
+  // --- Swipe Actions ---
+  Future<bool?> _handleDeleteTask(TaskModel task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Tarefa?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && _userData != null) {
+      try {
+        await _firestoreService.deleteTask(_userData!.uid, task.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tarefa excluída com sucesso'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+        return true;
+      } catch (e) {
+        debugPrint("Erro ao excluir tarefa: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir tarefa: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  Future<bool?> _handleRescheduleTask(TaskModel task) async {
+    if (_userData == null) return false;
+    try {
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final tomorrowUtc = tomorrow.toUtc();
+
+      await _firestoreService.updateTask(
+        _userData!.uid,
+        task.id,
+        dueDate: tomorrowUtc,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tarefa adiada para amanhã! 📅'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+      return true; // Remove from "Focus Day" card as it's no longer for today
+    } catch (e) {
+      debugPrint("Erro ao reagendar tarefa: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao reagendar tarefa: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
   Future<void> _handleAddTask() async {
     if (_userData == null) return;
     showModalBottomSheet<void>(
@@ -495,6 +586,9 @@ class _DashboardScreenState extends State<DashboardScreen>
         onTaskTap: _handleTaskTap,
         isEditMode: _isEditMode,
         dragHandle: _isEditMode ? _buildDragHandle('focusDay') : null,
+        // Callbacks de Swipe
+        onDeleteTask: _handleDeleteTask,
+        onRescheduleTask: _handleRescheduleTask,
       ),
       if (_numerologyData != null) ...{
         'vibracaoDia': InfoCard(

@@ -45,7 +45,13 @@ class DayDetailPanel extends StatelessWidget {
     // required this.onJournalTap,
     // --- FIM MUDANÇA ---
     this.scrollController,
+    // Callbacks de Swipe
+    this.onDeleteTask,
+    this.onRescheduleTask,
   });
+
+  final Future<bool?> Function(TaskModel)? onDeleteTask;
+  final Future<bool?> Function(TaskModel)? onRescheduleTask;
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +165,9 @@ class DayDetailPanel extends StatelessWidget {
                         showTagsIconFlag: true,
                         showVibrationPillFlag: true,
                         verticalPaddingOverride: 4.0,
+                        // Callbacks de Swipe
+                        onSwipeLeft: onDeleteTask,
+                        onSwipeRight: onRescheduleTask,
                       ),
                       );
                     }

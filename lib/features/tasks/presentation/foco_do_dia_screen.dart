@@ -507,6 +507,109 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
   // --- FIM DA MUDANÇA ---
 
+  // --- INÍCIO DA MUDANÇA (Swipe Actions) ---
+  // Swipe Left: Excluir Tarefa
+  Future<bool?> _handleSwipeLeft(TaskModel task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Tarefa?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _firestoreService.deleteTask(_userId, task.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Tarefa excluída com sucesso'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+        return true; // Confirma a exclusão visual
+      } catch (e) {
+        debugPrint("Erro ao excluir tarefa: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir tarefa: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // Swipe Right: Reagendar para Amanhã
+  Future<bool?> _handleSwipeRight(TaskModel task) async {
+    try {
+      // Calcula a data de amanhã
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final tomorrowUtc = tomorrow.toUtc();
+
+      // Atualiza a tarefa
+      await _firestoreService.updateTask(
+        _userId,
+        task.id,
+        dueDate: tomorrowUtc,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Tarefa adiada para amanhã! 📅'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Se o filtro for "Foco do Dia" ou "Atrasadas", a tarefa deve sair da lista
+      // Se for "Todas", ela apenas muda a data, mas continua na lista (talvez reordenada)
+      // Para UX consistente, vamos retornar true se ela não pertencer mais ao filtro atual
+      if (_selectedFilter == TaskFilterType.focoDoDia ||
+          _selectedFilter == TaskFilterType.atrasadas) {
+        return true;
+      }
+      return false; // Mantém na lista (Stream atualizará os dados)
+    } catch (e) {
+      debugPrint("Erro ao reagendar tarefa: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao reagendar tarefa: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+  // --- FIM DA MUDANÇA ---
+
   @override
   Widget build(BuildContext context) {
     if (widget.userData == null || _userId.isEmpty) {
@@ -671,6 +774,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                         "Erro ao atualizar tarefa: $error");
                                   });
                                 },
+                                // Callbacks de Swipe
+                                onSwipeLeft: _handleSwipeLeft,
+                                onSwipeRight: _handleSwipeRight,
                               ),
                             ),
                           ],

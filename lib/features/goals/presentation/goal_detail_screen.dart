@@ -364,6 +364,104 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
   // --- FIM DA CORREÇÃO ---
 
+  // --- INÍCIO DA MUDANÇA (Swipe Actions) ---
+  // Swipe Left: Excluir Tarefa
+  Future<bool?> _handleSwipeLeft(TaskModel task) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Marco?',
+            style: TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir este marco? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await _firestoreService.deleteTask(widget.userData.uid, task.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Marco excluído com sucesso'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+        return true; // Confirma a exclusão visual
+      } catch (e) {
+        debugPrint("Erro ao excluir marco: $e");
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erro ao excluir marco: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return false;
+      }
+    }
+    return false;
+  }
+
+  // Swipe Right: Reagendar para Amanhã
+  Future<bool?> _handleSwipeRight(TaskModel task) async {
+    try {
+      // Calcula a data de amanhã
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+      final tomorrowUtc = tomorrow.toUtc();
+
+      // Atualiza a tarefa
+      await _firestoreService.updateTask(
+        widget.userData.uid,
+        task.id,
+        dueDate: tomorrowUtc,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Marco adiado para amanhã! 📅'),
+            backgroundColor: AppColors.primary,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      // Na tela de detalhes da meta, mostramos todos os marcos.
+      // Reagendar apenas muda a data, não remove da lista.
+      return false; 
+    } catch (e) {
+      debugPrint("Erro ao reagendar marco: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao reagendar marco: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+  // --- FIM DA MUDANÇA ---
+
   // Build principal (Sua lógica original, sem alterações estruturais)
   @override
   Widget build(BuildContext context) {
@@ -650,6 +748,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               }
             },
             onTap: () => _handleMilestoneTap(task),
+            // Callbacks de Swipe
+            onSwipeLeft: _handleSwipeLeft,
+            onSwipeRight: _handleSwipeRight,
           ),
           );
         }),
@@ -708,6 +809,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 }
               },
               onTap: () => _handleMilestoneTap(task),
+              // Callbacks de Swipe
+              onSwipeLeft: _handleSwipeLeft,
+              onSwipeRight: _handleSwipeRight,
             ),
             );
           },

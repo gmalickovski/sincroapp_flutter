@@ -38,7 +38,14 @@ class TasksListView extends StatelessWidget {
     this.selectedTaskIds = const {},
     this.onTaskSelected, // Não é mais 'required'
     // --- FIM DA MUDANÇA ---
+    // Callbacks de Swipe
+    this.onSwipeLeft,
+    this.onSwipeRight,
   });
+
+  // Callbacks de Swipe
+  final Future<bool?> Function(TaskModel)? onSwipeLeft;
+  final Future<bool?> Function(TaskModel)? onSwipeRight;
 
   @override
   Widget build(BuildContext context) {
@@ -83,9 +90,11 @@ class TasksListView extends StatelessWidget {
           selectedTaskIds: selectedTaskIds,
           onTaskSelected: onTaskSelected,
           // Layout flags com valores default
-          showGoalIconFlag: true,
           showTagsIconFlag: true,
           showVibrationPillFlag: true,
+          // Callbacks de Swipe
+          onSwipeLeft: onSwipeLeft,
+          onSwipeRight: onSwipeRight,
           ),
         );
       },
