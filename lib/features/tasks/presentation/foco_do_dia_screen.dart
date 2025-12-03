@@ -532,12 +532,15 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 800),
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 12.0 : 24.0),
+              padding: EdgeInsets.symmetric(horizontal: isMobile ? 4.0 : 24.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Header (título e filtros principais)
-                  _buildHeader(isMobile: isMobile),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    child: _buildHeader(isMobile: isMobile),
+                  ),
 
                   Expanded(
                     child: StreamBuilder<List<TaskModel>>(
@@ -610,11 +613,20 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                             // --- INÍCIO DA MUDANÇA (Solicitação 1 & 3): Barras Dinâmicas ---
                             // 1. Filtros de Tag (só aparece se não estiver selecionando)
                             if (!_isSelectionMode)
-                              _buildTagFilters(allTags, isMobile: isMobile),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: _buildTagFilters(allTags,
+                                    isMobile: isMobile),
+                              ),
 
                             // 2. Controles de Seleção (nova UI)
                             // Sempre mostrar os controles de seleção, independente do filtro
-                            _buildSelectionControls(tasksToShow),
+                            Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8.0),
+                              child: _buildSelectionControls(tasksToShow),
+                            ),
                             // --- FIM DA MUDANÇA ---
 
                             Expanded(
