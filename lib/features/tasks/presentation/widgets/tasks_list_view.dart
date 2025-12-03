@@ -66,11 +66,13 @@ class TasksListView extends StatelessWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 80),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
         final task = tasks[index];
-        return TaskItem(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: TaskItem(
           key: ValueKey(task.id),
           task: task,
           // Core callbacks
@@ -84,6 +86,7 @@ class TasksListView extends StatelessWidget {
           showGoalIconFlag: true,
           showTagsIconFlag: true,
           showVibrationPillFlag: true,
+          ),
         );
       },
     );

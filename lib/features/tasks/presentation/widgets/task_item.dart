@@ -185,7 +185,7 @@ class TaskItem extends StatelessWidget {
         // --- FIM DA MUDANÇA ---
         child: Padding(
           padding:
-              EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 4.0),
+              EdgeInsets.symmetric(vertical: verticalPadding, horizontal: 6.0),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
