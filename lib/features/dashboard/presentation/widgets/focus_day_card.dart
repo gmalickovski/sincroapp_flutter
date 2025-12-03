@@ -215,7 +215,9 @@ class _FocusDayCardState extends State<FocusDayCard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: tasksToShow.map((task) {
-        return TaskItem(
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8.0),
+          child: TaskItem(
           key: ValueKey(task.id),
           task: task,
           showGoalIconFlag: true,
@@ -226,6 +228,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
           onTap:
               widget.onTaskTap != null ? () => widget.onTaskTap!(task) : null,
           verticalPaddingOverride: 6.0,
+        ),
         );
       }).toList(),
     );

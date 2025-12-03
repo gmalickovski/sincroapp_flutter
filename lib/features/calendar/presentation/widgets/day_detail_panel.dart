@@ -146,7 +146,9 @@ class DayDetailPanel extends StatelessWidget {
                   (context, index) {
                     final event = events[index];
                     if (event is TaskModel) {
-                      return TaskItem(
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: TaskItem(
                         key: ValueKey('task_${event.id}'),
                         task: event,
                         onToggle: (isCompleted) =>
@@ -157,6 +159,7 @@ class DayDetailPanel extends StatelessWidget {
                         showTagsIconFlag: true,
                         showVibrationPillFlag: true,
                         verticalPaddingOverride: 4.0,
+                      ),
                       );
                     }
                     return const SizedBox.shrink();

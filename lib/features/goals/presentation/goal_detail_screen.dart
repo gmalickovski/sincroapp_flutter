@@ -624,7 +624,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       child: Column(
         children: List.generate(milestones.length, (index) {
           final task = milestones[index];
-          return TaskItem(
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: TaskItem(
             key: ValueKey(task.id),
             task: task,
             showGoalIconFlag: false,
@@ -648,6 +650,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               }
             },
             onTap: () => _handleMilestoneTap(task),
+          ),
           );
         }),
       ),
@@ -679,7 +682,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final task = milestones[index];
-            return TaskItem(
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: TaskItem(
               key: ValueKey(task.id),
               task: task,
               showGoalIconFlag: false,
@@ -703,6 +708,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 }
               },
               onTap: () => _handleMilestoneTap(task),
+            ),
             );
           },
           childCount: milestones.length,
