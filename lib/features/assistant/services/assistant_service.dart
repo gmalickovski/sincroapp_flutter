@@ -61,17 +61,21 @@ class AssistantService {
     required String userId,
     required String type,
     required int promptLength,
+    required int outputLength,
   }) async {
     try {
       // Estimativa grosseira: 1 token ~= 4 caracteres
-      final estimatedTokens = (promptLength / 4).ceil();
+      final estimatedInputTokens = (promptLength / 4).ceil();
+      final estimatedOutputTokens = (outputLength / 4).ceil();
       
       await FirebaseFirestore.instance.collection('ai_usage_logs').add({
         'userId': userId,
         'timestamp': FieldValue.serverTimestamp(),
         'type': type,
         'promptLength': promptLength,
-        'estimatedTokens': estimatedTokens,
+        'outputLength': outputLength,
+        'estimatedInputTokens': estimatedInputTokens,
+        'estimatedOutputTokens': estimatedOutputTokens,
       });
     } catch (e) {
       debugPrint('Erro ao logar uso de IA: $e');
@@ -100,16 +104,17 @@ class AssistantService {
       chatHistory: chatHistory,
     );
 
-    // Log Usage
+    final response = await _getModel().generateContent([Content.text(prompt)]);
+    var text = response.text ?? '';
+    
+    // Log Usage AFTER response
     _logUsage(
       userId: user.uid,
       type: 'assistant_chat',
       promptLength: prompt.length,
+      outputLength: text.length,
     );
 
-    final response = await _getModel().generateContent([Content.text(prompt)]);
-    var text = response.text ?? '';
-    
     // Remove markdown code blocks if present
     text = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
     
@@ -148,16 +153,17 @@ class AssistantService {
       mode: mode,
     );
 
-    // Log Usage
-    _logUsage(
-      userId: user.uid,
-      type: 'strategy_flow',
-      promptLength: prompt.length,
-    );
-
     try {
       final response = await _getModel().generateContent([Content.text(prompt)]);
       var text = response.text ?? '';
+
+      // Log Usage AFTER response
+      _logUsage(
+        userId: user.uid,
+        type: 'strategy_flow',
+        promptLength: prompt.length,
+        outputLength: text.length,
+      );
 
       // Clean up markdown
       text = text

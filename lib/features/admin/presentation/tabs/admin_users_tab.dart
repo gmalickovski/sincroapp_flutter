@@ -6,6 +6,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/widgets/user_edit_dialog.dart';
 
 class AdminUsersTab extends StatefulWidget {
@@ -23,10 +24,10 @@ class AdminUsersTab extends StatefulWidget {
 class _AdminUsersTabState extends State<AdminUsersTab> {
   final FirestoreService _firestoreService = FirestoreService();
   final TextEditingController _searchController = TextEditingController();
-  List<UserModel> _allUsers = [];
-  List<UserModel> _filteredUsers = [];
-  bool _isLoading = true;
-  String _filterPlan = 'all'; // all, free, plus, premium
+  Map<String, Map<String, double>> _userCosts = {};
+  final double _usdToBrl = 6.0; // Taxa de câmbio fixa para estimativa
+  final double _priceInputPer1M = 0.075; // USD
+  final double _priceOutputPer1M = 0.30; // USD
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
     setState(() => _isLoading = true);
     try {
       final users = await _firestoreService.getAllUsers();
+      await _calculateUserCosts(users); // Calcula custos após carregar usuários
       setState(() {
         _allUsers = users;
         _applyFilters();
@@ -59,6 +61,51 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
           ),
         );
       }
+    }
+  }
+
+  Future<void> _calculateUserCosts(List<UserModel> users) async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+    final startOfDay = DateTime(now.year, now.month, now.day);
+
+    try {
+      // Busca todos os logs do mês atual
+      // Nota: Em produção com muitos usuários, isso deve ser paginado ou agregado via Cloud Functions
+      final logsSnapshot = await FirebaseFirestore.instance
+          .collection('ai_usage_logs')
+          .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+          .get();
+
+      final Map<String, Map<String, double>> costs = {};
+
+      for (var doc in logsSnapshot.docs) {
+        final data = doc.data();
+        final userId = data['userId'] as String;
+        final timestamp = (data['timestamp'] as Timestamp).toDate();
+        
+        // Suporte a logs antigos e novos
+        final int inputTokens = data['estimatedInputTokens'] ?? data['estimatedTokens'] ?? 0;
+        final int outputTokens = data['estimatedOutputTokens'] ?? 0;
+
+        final double costUSD = (inputTokens * _priceInputPer1M / 1000000) +
+            (outputTokens * _priceOutputPer1M / 1000000);
+        final double costBRL = costUSD * _usdToBrl;
+
+        if (!costs.containsKey(userId)) {
+          costs[userId] = {'today': 0.0, 'month': 0.0};
+        }
+
+        costs[userId]!['month'] = (costs[userId]!['month'] ?? 0.0) + costBRL;
+
+        if (timestamp.isAfter(startOfDay)) {
+          costs[userId]!['today'] = (costs[userId]!['today'] ?? 0.0) + costBRL;
+        }
+      }
+
+      _userCosts = costs;
+    } catch (e) {
+      debugPrint('Erro ao calcular custos de IA: $e');
     }
   }
 
@@ -278,6 +325,10 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   Widget _buildUserCard(UserModel user, bool isDesktop) {
     final planColor = _getPlanColor(user.subscription.plan);
     final bool isActiveSubscription = user.subscription.isActive;
+    
+    final costs = _userCosts[user.uid] ?? {'today': 0.0, 'month': 0.0};
+    final costToday = costs['today']!;
+    final costMonth = costs['month']!;
 
     return Container(
       decoration: BoxDecoration(
@@ -307,12 +358,24 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                 )
               : Icon(Icons.person, color: planColor),
         ),
-        title: Text(
-          '${user.primeiroNome} ${user.sobrenome}',
-          style: const TextStyle(
-            color: AppColors.primaryText,
-            fontWeight: FontWeight.bold,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                '${user.primeiroNome} ${user.sobrenome}',
+                style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            if (isDesktop) ...[
+              const SizedBox(width: 16),
+              _buildCostBadge('Hoje', costToday, Colors.green),
+              const SizedBox(width: 8),
+              _buildCostBadge('Mês', costMonth, Colors.blue),
+            ],
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -328,6 +391,10 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
               spacing: 8,
               runSpacing: 8,
               children: [
+                if (!isDesktop) ...[
+                   _buildCostBadge('Hoje', costToday, Colors.green),
+                   _buildCostBadge('Mês', costMonth, Colors.blue),
+                ],
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -400,6 +467,32 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCostBadge(String label, double value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.5), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.attach_money, size: 12, color: color),
+          const SizedBox(width: 4),
+          Text(
+            '$label: R\$ ${value.toStringAsFixed(4)}',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
