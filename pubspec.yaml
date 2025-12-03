@@ -68,13 +68,14 @@ dependencies:
   flutter_markdown: ^0.6.20
 
   # Reconhecimento de voz multiplataforma (Android, iOS, Web, Windows)
-  speech_to_text: 6.6.1
+  speech_to_text: ^7.0.0
 
   meta: any
   url_launcher: ^6.3.2
   flutter_stripe: ^11.5.0
   http: ^1.6.0
   flutter_stripe_web: ^6.5.1
+
   fl_chart: 0.69.0
   shared_preferences: ^2.5.3
 
