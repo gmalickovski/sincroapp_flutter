@@ -566,7 +566,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
   // Swipe Right: Reagendar (Usando TaskActionService)
   Future<bool?> _handleSwipeRight(TaskModel task) async {
-    if (_userData == null) return false;
+    if (widget.userData == null) return false;
 
     final newDate = await _taskActionService.rescheduleTask(
       context,
