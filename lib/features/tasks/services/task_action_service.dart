@@ -64,7 +64,9 @@ class TaskActionService {
 
       // Prepara os campos para atualização
       final updates = <String, dynamic>{
-        'dueDate': DateTime.utc(targetDate.year, targetDate.month, targetDate.day),
+        // Usa .toUtc() para preservar o instante exato da meia-noite local
+        // Isso evita que a data volte um dia ao ser convertida de volta para local em fusos negativos (ex: Brasil)
+        'dueDate': targetDate.toUtc(),
       };
       
       // Atualiza o personalDay se foi calculado (ou remove se não conseguiu)
