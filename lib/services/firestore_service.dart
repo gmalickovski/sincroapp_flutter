@@ -460,14 +460,12 @@ class FirestoreService {
       }
       if (finalUpdates.containsKey('dueDate')) {
         if (finalUpdates['dueDate'] is DateTime) {
-          // Garante que só a data (sem hora) em UTC seja salva
+          // Garante que só a data (sem hora) seja salva, mas preservando o fuso (salvando como UTC correspondente à meia-noite local)
           final localDate = (finalUpdates['dueDate'] as DateTime).toLocal();
-          final dateOnlyUtc = DateTime.utc(
-            localDate.year,
-            localDate.month,
-            localDate.day,
-          );
-          finalUpdates['dueDate'] = Timestamp.fromDate(dateOnlyUtc);
+          // Cria um DateTime Local na meia-noite
+          final localDateOnly = DateTime(localDate.year, localDate.month, localDate.day);
+          // Converte para UTC (ex: 00:00 BRT -> 03:00 Z)
+          finalUpdates['dueDate'] = Timestamp.fromDate(localDateOnly.toUtc());
         } else {
           finalUpdates['dueDate'] = null; // Garante null se não for DateTime
         }
