@@ -57,7 +57,9 @@ class TaskItem extends StatelessWidget {
     if (date == null) return false;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final targetDate = DateTime(date.year, date.month, date.day);
+    // CORREÇÃO: Converter para Local antes de extrair dia/mês/ano
+    final dateLocal = date.toLocal();
+    final targetDate = DateTime(dateLocal.year, dateLocal.month, dateLocal.day);
     return !today.isAtSameMomentAs(targetDate);
   }
 

@@ -20,7 +20,7 @@ class TaskActionService {
     UserModel userData,
   ) async {
     try {
-      final now = DateTime.now();
+      final now = DateTime.now().toLocal();
       final today = DateTime(now.year, now.month, now.day);
       
       DateTime targetDate;
