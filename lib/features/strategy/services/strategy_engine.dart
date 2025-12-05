@@ -157,8 +157,24 @@ class StrategyEngine {
       );
     }
 
-    // 3. Call AI to generate suggestions
+    // 3. Circuit Breaker: Check daily API call limit
+    final apiCallCount = await _getApiCallCount(user.uid);
+    if (apiCallCount >= 3) {
+      debugPrint("⚠️ Circuit Breaker: Daily limit reached for Strategy AI. Returning base/cached.");
+      return StrategyRecommendation(
+        mode: base.mode,
+        reason: base.reason,
+        tips: base.tips,
+        methodologyName: base.methodologyName,
+        aiSuggestions: cached ?? [], // Return cached if available, even if partial
+      );
+    }
+
+    // 4. Call AI to generate suggestions
     try {
+      // Increment counter BEFORE calling to prevent race conditions in tight loops
+      await _incrementApiCallCount(user.uid);
+
       final suggestions = await AssistantService.generateStrategySuggestions(
         user: user,
         tasks: tasks,
@@ -179,6 +195,7 @@ class StrategyEngine {
         aiSuggestions: suggestions,
       );
     } catch (e) {
+      debugPrint("Erro ao carregar estratégia IA: $e");
       // Fallback to base if AI fails
       return base;
     }
@@ -210,6 +227,35 @@ class StrategyEngine {
       await prefs.setStringList(key, suggestions);
     } catch (e) {
       // Ignore cache errors
+    }
+  }
+
+  // --- Circuit Breaker Helpers ---
+
+  static String _getApiCountKey(String userId) {
+    final now = DateTime.now();
+    final dateStr = "${now.year}-${now.month}-${now.day}";
+    return "strategy_api_count_${userId}_$dateStr";
+  }
+
+  static Future<int> _getApiCallCount(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getApiCountKey(userId);
+      return prefs.getInt(key) ?? 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  static Future<void> _incrementApiCallCount(String userId) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final key = _getApiCountKey(userId);
+      final current = prefs.getInt(key) ?? 0;
+      await prefs.setInt(key, current + 1);
+    } catch (e) {
+      // Ignore errors
     }
   }
 
