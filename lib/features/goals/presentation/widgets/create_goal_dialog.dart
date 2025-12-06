@@ -10,6 +10,10 @@ import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:image_picker/image_picker.dart'; // Import ImagePicker
+import 'package:sincro_app_flutter/services/storage_service.dart'; // Import StorageService
+import 'dart:io'; // Import File
+import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb
 
 class CreateGoalDialog extends StatefulWidget {
   final UserModel userData;
@@ -32,6 +36,12 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
   DateTime? _targetDate;
   bool _isSaving = false;
 
+  // Image Logic
+  final ImagePicker _picker = ImagePicker();
+  XFile? _selectedImage;
+  String? _existingImageUrl;
+  final StorageService _storageService = StorageService();
+
   @override
   void initState() {
     super.initState();
@@ -41,10 +51,48 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       _titleController.text = widget.goalToEdit!.title;
       _descriptionController.text = widget.goalToEdit!.description;
       _targetDate = widget.goalToEdit!.targetDate;
+      _existingImageUrl = widget.goalToEdit!.imageUrl;
     }
   }
 
   final _firestoreService = FirestoreService();
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar imagem: $e')),
+        );
+      }
+    }
+  }
+
+  void _clearImage() {
+    setState(() {
+      _selectedImage = null;
+      if (_existingImageUrl != null && _selectedImage == null) {
+          // TODO: Implement delete logic if strictly needed.
+          // For now, clearing selection of *new* image reverts to existing.
+          // If user wants to remove existing image, we need explicit "remove" action.
+          // For this dialog, let's assume "Clear" removes the *picked* image if any,
+          // or clears the *existing* image from view (and logically) if no new picked image.
+          _existingImageUrl = null;
+      }
+    });
+  }
 
   Future<void> _pickDate() async {
     // Esconde o teclado antes de abrir o seletor de data
@@ -120,6 +168,16 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     setState(() => _isSaving = true);
 
     try {
+      String? finalImageUrl = _existingImageUrl;
+
+      // Upload new image if selected
+      if (_selectedImage != null) {
+        finalImageUrl = await _storageService.uploadGoalImage(
+          file: _selectedImage!,
+          userId: widget.userData.uid,
+        );
+      }
+
       String goalId;
       
       if (widget.goalToEdit != null) {
@@ -133,6 +191,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           userId: widget.userData.uid,
           createdAt: widget.goalToEdit!.createdAt,
           subTasks: widget.goalToEdit!.subTasks, // Mantém subtasks antigas se existirem (legado)
+          imageUrl: finalImageUrl,
         ));
       } else {
         // Gerar ID manualmente para usar nas tasks
@@ -147,6 +206,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           'progress': 0,
           'createdAt': Timestamp.now(),
           'subTasks': [], // Não salvamos subtasks internas
+          'imageUrl': finalImageUrl,
         };
         
         await docRef.set(dataToSave);
@@ -267,6 +327,71 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                       return null;
                     },
                   ),
+                  const SizedBox(height: 16),
+                  
+                  // --- Image Picker UI ---
+                  GestureDetector(
+                    onTap: _pickImage,
+                    child: Container(
+                      height: 180,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                        image: (_selectedImage != null || _existingImageUrl != null)
+                            ? DecorationImage(
+                                image: _selectedImage != null
+                                    ? (kIsWeb
+                                        ? NetworkImage(_selectedImage!.path)
+                                        : FileImage(File(_selectedImage!.path))
+                                            as ImageProvider)
+                                    : NetworkImage(_existingImageUrl!),
+                                fit: BoxFit.cover,
+                              )
+                            : null,
+                      ),
+                      child: (_selectedImage == null && _existingImageUrl == null)
+                          ? const Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined,
+                                    color: AppColors.primary, size: 36),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Adicionar Imagem (Opcional)',
+                                  style: TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 14),
+                                ),
+                              ],
+                            )
+                          : Stack(
+                              children: [
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      _clearImage();
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.close,
+                                          color: Colors.white, size: 18),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  // -----------------------
+                  
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
