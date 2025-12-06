@@ -58,7 +58,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
       _showAddForm = false;
     });
 
-    // Chama o callback para adicionar no Firestore
     widget.onAddMilestone(
       milestone['title']!,
       milestone['date'],
@@ -109,7 +108,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                          onPressed: () => Navigator.of(context).pop(), // FIXED: Force close
+                          onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
                     ),
@@ -164,15 +163,18 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       ),
                     ],
                   ),
-                  child: ClipRRect( // FIXED: Rounded corners on desktop
+                  child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Desktop Fixed Header
+                        _buildDesktopHeader(),
+
                         // Scrollable Content
                         Flexible(
                           child: SingleChildScrollView(
-                            padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                            padding: const EdgeInsets.fromLTRB(32, 0, 32, 0),
                             child: _buildContent(isMobile: false),
                           ),
                         ),
@@ -190,6 +192,55 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
           ],
         );
       },
+    );
+  }
+
+  // NEW: Dedicated Header for Desktop
+  Widget _buildDesktopHeader() {
+    return Stack(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 32.0, left: 32, right: 32, bottom: 16),
+          child: Column(
+            children: [
+              Center(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.flag_rounded,
+                    size: 32,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Center(
+                child: Text(
+                  'Comece sua Jornada!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24, // Centralized and larger
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Positioned(
+          top: 16,
+          right: 16,
+          child: IconButton(
+            icon: const Icon(Icons.close, color: AppColors.secondaryText),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ],
     );
   }
 
@@ -223,38 +274,9 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ] else ...[
-          // Compact Row Header for Desktop
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.flag_rounded,
-                  size: 24,
-                  color: AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Text(
-                  'Comece sua Jornada!',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const SizedBox(height: 16), // Spacing after mobile header
         ],
-        
-        const SizedBox(height: 16),
+        // Note: Desktop header is removed from here and handled by _buildDesktopHeader
         
         // Subtitle
         Text(
@@ -272,9 +294,9 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
         const SizedBox(height: 24),
 
         // Explanatory Text
-        if (!_showAddForm) // Hide info when adding to save space
+        if (!_showAddForm)
           Container(
-            padding: const EdgeInsets.all(16), // Increased padding
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(12),
@@ -286,7 +308,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                 const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
                 const SizedBox(width: 12),
                 const Expanded(
-                  // FIXED: Expanded explanatory text
                   child: Text(
                     'Marcos são etapas fundamentais para você alcançar seu objetivo final. Eles ajudam a manter o foco e celebrar pequenas vitórias ao longo do caminho.',
                     style: TextStyle(
@@ -314,7 +335,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                 // FIXED: Removed Row with Close Icon, just keeping Title
                  const Text(
                    'Novo Marco',
                    style: TextStyle(
@@ -456,7 +476,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
            // ACTIONS FOR ADD FORM (Back & Add)
            Row(
              children: [
-               // Back Button
                Expanded(
                  flex: 1,
                  child: OutlinedButton(
@@ -478,7 +497,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                  ),
                ),
                const SizedBox(width: 12),
-               // Add Button
                Expanded(
                  flex: 3,
                  child: ElevatedButton(

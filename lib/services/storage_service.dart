@@ -8,37 +8,36 @@ class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final Uuid _uuid = const Uuid();
 
-  /// Uploads a goal image to Firebase Storage.
+  /// Uploads a goal image to Firebase Storage using raw bytes.
   /// Returns the download URL of the uploaded image.
   /// 
-  /// [file] is the image selected by the user (cross-platform XFile).
+  /// [fileBytes] is the image data.
+  /// [fileName] is the original filename (used for extension and metadata).
   /// [userId] is required to organize files by user.
   Future<String> uploadGoalImage({
-    required XFile file,
+    required Uint8List fileBytes,
+    required String fileName,
     required String userId,
   }) async {
     try {
       // Create a unique filename
-      final String fileExtension = file.name.split('.').last;
-      final String fileName = '${_uuid.v4()}.$fileExtension';
+      final String fileExtension = fileName.contains('.') ? fileName.split('.').last : 'jpg';
+      final String uniqueName = '${_uuid.v4()}.$fileExtension';
       
-      // Define the path: users/{userId}/goals/{fileName}
+      // Define the path: users/{userId}/goals/{uniqueName}
       final Reference ref = _storage
           .ref()
           .child('users')
           .child(userId)
           .child('goals')
-          .child(fileName);
-
-      // Read file as bytes (works for Web and Mobile)
-      final Uint8List fileBytes = await file.readAsBytes();
+          .child(uniqueName);
 
       // Upload metadata context
       final SettableMetadata metadata = SettableMetadata(
         contentType: 'image/$fileExtension',
         customMetadata: {
           'userId': userId,
-          'originalName': file.name,
+          'originalName': fileName,
         },
       );
 
