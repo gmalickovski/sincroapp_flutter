@@ -304,7 +304,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _titleController,
                     autofillHints: null, // Desabilita autofill
@@ -344,8 +344,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                                 image: _selectedImage != null
                                     ? (kIsWeb
                                         ? NetworkImage(_selectedImage!.path)
-                                        : FileImage(File(_selectedImage!.path))
-                                            as ImageProvider)
+                                        : FileImage(File(_selectedImage!.path))) as ImageProvider
                                     : NetworkImage(_existingImageUrl!),
                                 fit: BoxFit.cover,
                               )
@@ -444,7 +443,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

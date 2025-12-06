@@ -120,7 +120,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       child: _buildContent(isMobile: true),
                     ),
                   ),
-                  // Mobile Footer
+                  // Mobile Footer (Fixed)
                   Padding(
                     padding: const EdgeInsets.all(24),
                     child: _buildFooter(isMobile: true),
@@ -149,7 +149,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                 constraints: const BoxConstraints(maxWidth: 600, maxHeight: 800),
                 child: Container(
                   margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-                  // Padding removed from Container and moved to children to handle scrolling correctly
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(24),
@@ -196,42 +195,70 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Header (Compact Row)
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.flag_rounded,
-                size: 24,
-                color: AppColors.primary,
-              ),
+        // Header
+        if (isMobile) ...[
+          // Big Centered Header for Mobile
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            const SizedBox(width: 16),
-            const Expanded(
-              child: Text(
-                'Comece sua Jornada!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+            child: const Icon(
+              Icons.flag_rounded,
+              size: 48,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Comece sua Jornada!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ] else ...[
+          // Compact Row Header for Desktop
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.flag_rounded,
+                  size: 24,
+                  color: AppColors.primary,
                 ),
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Comece sua Jornada!',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
         
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
         
-        // Subtitle (Left aligned)
+        // Subtitle
         Text(
           _addedMilestones.isEmpty
               ? 'Adicione marcos iniciais para dar os primeiros passos.'
               : '${_addedMilestones.length} marco(s) adicionado(s).',
+          textAlign: isMobile ? TextAlign.center : TextAlign.left,
           style: const TextStyle(
             color: AppColors.secondaryText,
             fontSize: 14,
@@ -239,37 +266,39 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
           ),
         ),
         
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
 
-        // Explanatory Text (Compact)
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-              const SizedBox(width: 10),
-              const Expanded(
-                child: Text(
-                  'Marcos são pequenas vitórias que compõem sua meta maior.',
-                  style: TextStyle(
-                    color: AppColors.tertiaryText,
-                    fontSize: 13,
-                    height: 1.3,
+        // Explanatory Text
+        if (!_showAddForm) // Hide info when adding to save space
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Marcos são pequenas vitórias que compõem sua meta maior.',
+                    style: TextStyle(
+                      color: AppColors.tertiaryText,
+                      fontSize: 13,
+                      height: 1.3,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
+
         const SizedBox(height: 20),
 
-        // Add Form
+        // Add Form Section
         if (_showAddForm) ...[
           Container(
             padding: const EdgeInsets.all(16),
@@ -281,7 +310,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
@@ -292,7 +321,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    // Close Button for Add Form
+                    // Close Button within form (kept as convenience)
                     GestureDetector(
                       onTap: () {
                         setState(() {
@@ -357,20 +386,9 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _addMilestone,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      elevation: 0,
-                    ),
-                    child: const Text('Adicionar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ),
-                ),
+                // Button removed from here for Mobile, kept for Desktop logic if needed, 
+                // but simpler to use the unified footer logic.
+                // We'll hide the internal button and use the footer button.
               ],
             ),
           ),
@@ -378,7 +396,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
         ],
 
         // Milestones List
-        if (_addedMilestones.isNotEmpty) ...[
+        if (_addedMilestones.isNotEmpty && !_showAddForm) ...[
           Container(
             constraints: const BoxConstraints(maxHeight: 200),
             child: ListView.separated(
@@ -453,7 +471,54 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (!_showAddForm) ...[
+        if (_showAddForm) ...[
+           // ACTIONS FOR ADD FORM (Back & Add)
+           Row(
+             children: [
+               // Back Button
+               Expanded(
+                 flex: 1,
+                 child: OutlinedButton(
+                    onPressed: () {
+                      setState(() {
+                        _showAddForm = false;
+                        _titleController.clear();
+                        _selectedDate = null;
+                      });
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: const Icon(Icons.arrow_back, color: AppColors.secondaryText, size: 20),
+                 ),
+               ),
+               const SizedBox(width: 12),
+               // Add Button
+               Expanded(
+                 flex: 3,
+                 child: ElevatedButton(
+                    onPressed: _addMilestone,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      elevation: 4,
+                      shadowColor: AppColors.primary.withValues(alpha: 0.4),
+                    ),
+                    child: const Text('Adicionar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                 ),
+               ),
+             ],
+           ),
+
+        ] else ...[
+          // ACTIONS FOR MAIN VIEW
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(

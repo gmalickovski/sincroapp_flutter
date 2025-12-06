@@ -357,7 +357,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // --- Image Picker UI ---
               GestureDetector(
@@ -374,8 +374,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                             image: _selectedImage != null
                                 ? (kIsWeb
                                     ? NetworkImage(_selectedImage!.path)
-                                    : FileImage(File(_selectedImage!.path))
-                                        as ImageProvider)
+                                    : FileImage(File(_selectedImage!.path))) as ImageProvider
                                 : NetworkImage(_existingImageUrl!),
                             fit: BoxFit.cover,
                           )
@@ -423,7 +422,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               ),
               // -----------------------
 
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _descriptionController,
                 autofillHints: null, // Desabilita autofill
@@ -449,7 +448,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               Material(
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(8),
