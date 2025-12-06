@@ -1,5 +1,4 @@
 // lib/features/goals/presentation/widgets/ai_suggestion_modal.dart
-// (Arquivo existente, código completo RE-ATUALIZADO e CORRIGIDO)
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +7,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-// ATUALIZADO: Importa o UserModel correto
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/ai_service.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
@@ -63,7 +61,6 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
   Future<void> _fetchContextData() async {
     setState(() {
-      // Garante que o estado volte para fetching a cada tentativa
       _state = AiModalState.fetchingContext;
       _errorMessage = '';
     });
@@ -74,10 +71,8 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
       }
 
       final firestoreService = FirestoreService();
-      // Busca dados em paralelo
       final userFuture = firestoreService.getUserData(userId);
-      final tasksFuture = firestoreService.getRecentTasks(userId,
-          limit: 20); // Buscar tarefas recentes
+      final tasksFuture = firestoreService.getRecentTasks(userId, limit: 20);
 
       final user = await userFuture;
       if (user == null) {
@@ -86,24 +81,18 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
       _userModel = user;
 
-      // --- CORREÇÃO AQUI ---
-      // Usar user.nomeAnalise e user.dataNasc corretamente
-      // O NumerologyEngine espera a data como String 'dd/MM/yyyy', que user.dataNasc já é.
       final engine = NumerologyEngine(
         nomeCompleto: user.nomeAnalise,
         dataNascimento: user.dataNasc,
       );
-      // --- FIM DA CORREÇÃO ---
 
       _numerologyResult = engine.calcular();
 
       if (_numerologyResult == null) {
-        // Trata o caso de nome ou data inválidos para o cálculo
         throw Exception(
             "Não foi possível calcular dados de numerologia. Verifique nome e data de nascimento.");
       }
 
-      // Espera pelas tarefas ANTES de mudar o estado para 'initial'
       _userTasks = await tasksFuture;
 
       setState(() {
@@ -126,8 +115,6 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
     });
 
     try {
-      // A chamada para AIService.generateSuggestions já foi corrigida
-      // na resposta anterior para usar os modelos corretos internamente.
       final result = await AIService.generateSuggestions(
         goal: widget.goal,
         user: _userModel!,
@@ -151,7 +138,6 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
   void _toggleSelection(Map<String, String> suggestion) {
     setState(() {
-      // Procura pelo título e data para identificar unicamente
       final index = _selectedSuggestions.indexWhere((s) =>
           s['title'] == suggestion['title'] && s['date'] == suggestion['date']);
       if (index >= 0) {
@@ -167,7 +153,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
       final date = DateTime.parse(dateString); // YYYY-MM-DD
       return DateFormat('dd/MM').format(date);
     } catch (e) {
-      return dateString; // Retorna a string original se o parse falhar
+      return dateString;
     }
   }
 
@@ -258,10 +244,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
           IconButton(
             icon: const Icon(Icons.close, color: AppColors.tertiaryText),
             onPressed: () => Navigator.of(context).pop(),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.background,
-              padding: const EdgeInsets.all(8),
-            ),
+            // REMOVED STYLE: Cleaner generic close icon
           ),
         ],
       ),
@@ -441,19 +424,10 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
 
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
+      // No decoration to make elements float on background
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -465,81 +439,90 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
               ),
             ),
           ),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _additionalInfoController,
-                  onSubmitted: (_) => _handleGenerate(),
-                  onChanged: (_) => setState(() {}),
-                  maxLines: null,
-                  minLines: 1,
-                  maxLength: _characterLimit,
-                  textInputAction: TextInputAction.send,
-                  style: const TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 16,
-                    height: 1.5,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: 'Adicione contexto (opcional)...',
-                    hintStyle: const TextStyle(
-                      color: AppColors.tertiaryText,
-                      fontSize: 16,
-                    ),
-                    filled: true,
-                    fillColor: AppColors.background,
-                    counterText: '',
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20, vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: AppColors.primary,
-                        width: 1.5,
-                      ),
-                    ),
-                  ),
-                ),
+          
+          TextField(
+            controller: _additionalInfoController,
+            onSubmitted: (_) => _handleGenerate(),
+            onChanged: (_) => setState(() {}),
+            maxLines: null,
+            minLines: 1,
+            maxLength: _characterLimit,
+            textInputAction: TextInputAction.send,
+            style: const TextStyle(
+              color: AppColors.primaryText,
+              fontSize: 16,
+              height: 1.5,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Adicione contexto (opcional)...',
+              hintStyle: const TextStyle(
+                color: AppColors.tertiaryText,
+                fontSize: 16,
               ),
-              const SizedBox(width: 12),
-              Container(
-                decoration: BoxDecoration(
+              filled: true,
+              fillColor: AppColors.background,
+              counterText: '',
+              contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: const BorderSide(
                   color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  icon: isGenerating
-                      ? const SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Icon(Icons.send_rounded, color: Colors.white),
-                  onPressed: isGenerating ? null : _handleGenerate,
-                  padding: const EdgeInsets.all(16),
+                  width: 1.5,
                 ),
               ),
-            ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Full width Button (Floating look)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                elevation: 4,
+                shadowColor: AppColors.primary.withValues(alpha: 0.3),
+              ),
+              onPressed: isGenerating ? null : _handleGenerate,
+              child: isGenerating
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.auto_awesome, size: 20),
+                        SizedBox(width: 8),
+                        Text(
+                          "Ver sugestões",
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
           ),
         ],
       ),
