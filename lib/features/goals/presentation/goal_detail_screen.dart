@@ -18,8 +18,11 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onbo
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart'; // Add
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upload_dialog.dart'; // Add
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upload_dialog.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
+import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -41,6 +44,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   bool _isLoading = false;
   // NEW STATE: Controls the visibility of the top carousel
   bool _isMilestonesExpanded = false; 
+  final FabOpacityController _fabOpacityController = FabOpacityController(); 
 
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
@@ -50,6 +54,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   void initState() {
     super.initState();
     _currentGoal = widget.initialGoal;
+  }
+
+  @override
+  void dispose() {
+    _fabOpacityController.dispose();
+    super.dispose();
   }
 
   // Handle goal editing
@@ -469,211 +479,228 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
         return Scaffold(
           backgroundColor: AppColors.background,
-          body: Stack(
-            children: [
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final bool isDesktop =
-                      constraints.maxWidth >= kDesktopBreakpoint;
-                  final double horizontalPadding = isDesktop ? 24.0 : 12.0;
-                  final double listHorizontalPadding = isDesktop ? 24.0 : 12.0;
+          body: ScreenInteractionListener(
+            controller: _fabOpacityController,
+            child: Stack(
+              children: [
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final bool isDesktop =
+                        constraints.maxWidth >= kDesktopBreakpoint;
+                    final double horizontalPadding = isDesktop ? 24.0 : 12.0;
+                    final double listHorizontalPadding = isDesktop ? 24.0 : 12.0;
 
-                  return SafeArea(
-                    child: CustomScrollView(
-                      physics: _isMilestonesExpanded 
-                          ? const ClampingScrollPhysics() 
-                          : const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        SliverAppBar(
-                          backgroundColor: AppColors.background,
-                          elevation: 0,
-                          pinned: true,
-                          leading: const BackButton(color: AppColors.primary),
-                          title: Text(widget.initialGoal.title,
-                              style:
-                                  const TextStyle(color: Colors.white, fontSize: 18)),
-                        ),
-                        if (isDesktop)
-                          SliverToBoxAdapter(
-                            child: Center(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                    maxWidth: kMaxContentWidth),
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: horizontalPadding,
-                                      vertical: 24.0),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                    return SafeArea(
+                      child: CustomScrollView(
+                        physics: _isMilestonesExpanded 
+                            ? const ClampingScrollPhysics() 
+                            : const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          SliverAppBar(
+                            backgroundColor: AppColors.background,
+                            elevation: 0,
+                            pinned: true,
+                            leading: const BackButton(color: AppColors.primary),
+                            title: Text(widget.initialGoal.title,
+                                style:
+                                    const TextStyle(color: Colors.white, fontSize: 18)),
+                          ),
+                          if (isDesktop)
+                            SliverToBoxAdapter(
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                      maxWidth: kMaxContentWidth),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: horizontalPadding,
+                                        vertical: 24.0),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                              maxWidth: 350),
+                                          child: Column(
+                                            children: [
+                                              _CircularGoalInfoCard(
+                                                goal: _currentGoal,
+                                                progress: progress,
+                                                onEdit: _handleEditGoal,
+                                                onDelete: _handleDeleteGoal,
+                                              ),
+                                              const SizedBox(height: 24),
+                                              GoalImageCard(
+                                                goal: _currentGoal,
+                                                onTap: _handleImageTap,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 24),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              _buildMilestonesHeader(),
+                                              const SizedBox(height: 16),
+                                              _buildMilestonesListWidget(
+                                                  milestones: milestones,
+                                                  horizontalPadding: 0),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            // Mobile Layout
+                            // Collapsible Header (Carousel)
+                            SliverToBoxAdapter(
+                              child: AnimatedCrossFade(
+                                firstChild: SizedBox(
+                                  height: 380, // Height for the carousel
+                                  child: PageView(
+                                    padEnds: false,
+                                    controller: PageController(viewportFraction: 1.0), // Full width
                                     children: [
-                                      ConstrainedBox(
-                                        constraints: const BoxConstraints(
-                                            maxWidth: 350),
-                                        child: Column(
-                                          children: [
-                                            _CircularGoalInfoCard(
-                                              goal: _currentGoal,
-                                              progress: progress,
-                                              onEdit: _handleEditGoal,
-                                              onDelete: _handleDeleteGoal,
-                                            ),
-                                            const SizedBox(height: 24),
-                                            GoalImageCard(
-                                              goal: _currentGoal,
-                                              onTap: _handleImageTap,
-                                            ),
-                                          ],
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: horizontalPadding, vertical: 8.0),
+                                        child: _CollapsibleGoalInfoCard(
+                                          goal: _currentGoal,
+                                          progress: progress,
+                                          onEdit: _handleEditGoal,
+                                          onDelete: _handleDeleteGoal,
                                         ),
                                       ),
-                                      const SizedBox(width: 24),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            _buildMilestonesHeader(),
-                                            const SizedBox(height: 16),
-                                            _buildMilestonesListWidget(
-                                                milestones: milestones,
-                                                horizontalPadding: 0),
-                                          ],
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: horizontalPadding, vertical: 8.0),
+                                        child: GoalImageCard(
+                                          goal: _currentGoal,
+                                          onTap: _handleImageTap,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                secondChild: const SizedBox.shrink(),
+                                crossFadeState: _isMilestonesExpanded
+                                    ? CrossFadeState.showSecond
+                                    : CrossFadeState.showFirst,
+                                duration: const Duration(milliseconds: 300),
+                                sizeCurve: Curves.easeInOut,
                               ),
                             ),
-                          )
-                        else ...[
-                          // Mobile Layout
-                          // Collapsible Header (Carousel)
-                          SliverToBoxAdapter(
-                            child: AnimatedCrossFade(
-                              firstChild: SizedBox(
-                                height: 380, // Height for the carousel
-                                child: PageView(
-                                  padEnds: false,
-                                  controller: PageController(viewportFraction: 1.0), // Full width
-                                  children: [
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: horizontalPadding, vertical: 8.0),
-                                      child: _CollapsibleGoalInfoCard(
-                                        goal: _currentGoal,
-                                        progress: progress,
-                                        onEdit: _handleEditGoal,
-                                        onDelete: _handleDeleteGoal,
-                                      ),
-                                    ),
-                                    Padding(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: horizontalPadding, vertical: 8.0),
-                                      child: GoalImageCard(
-                                        goal: _currentGoal,
-                                        onTap: _handleImageTap,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                            
+                            // Header for Milestones
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding: EdgeInsets.fromLTRB(horizontalPadding,
+                                    8.0, horizontalPadding, 16.0),
+                                child: _buildMilestonesHeader(),
                               ),
-                              secondChild: const SizedBox.shrink(),
-                              crossFadeState: _isMilestonesExpanded
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                              duration: const Duration(milliseconds: 300),
-                              sizeCurve: Curves.easeInOut,
                             ),
-                          ),
-                          
-                          // Header for Milestones
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(horizontalPadding,
-                                  8.0, horizontalPadding, 16.0),
-                              child: _buildMilestonesHeader(),
-                            ),
-                          ),
-                          
-                          _buildMilestonesListSliver(
-                              milestones: milestones,
-                              horizontalPadding: listHorizontalPadding),
+                            
+                            _buildMilestonesListSliver(
+                                milestones: milestones,
+                                horizontalPadding: listHorizontalPadding),
+                          ],
+                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
                         ],
-                        const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
-              if (milestones.isEmpty && !_isLoading)
-                GoalOnboardingModal(
-                  onAddMilestone: (String title, String? dateStr) {
-                    DateTime? dueDate;
-                    if (dateStr != null) {
-                      try {
-                        final parts = dateStr.split('/');
-                        if (parts.length == 3) {
-                          dueDate = DateTime(
-                            int.parse(parts[2]), // ano
-                            int.parse(parts[1]), // mês
-                            int.parse(parts[0]), // dia
-                          ).toUtc();
-                        }
-                      } catch (e) {
-                        debugPrint('Erro ao converter data: $e');
-                      }
-                    }
-
-                    final dateForPersonalDay = dueDate ?? DateTime.now().toUtc();
-                    final int? personalDay = _calculatePersonalDay(dateForPersonalDay);
-
-                    final newTask = TaskModel(
-                      id: '',
-                      text: title,
-                      createdAt: DateTime.now().toUtc(),
-                      dueDate: dueDate,
-                      journeyId: widget.initialGoal.id,
-                      journeyTitle: widget.initialGoal.title,
-                      tags: [],
-                      personalDay: personalDay,
+                      ),
                     );
-
-                    _firestoreService.addTask(widget.userData.uid, newTask).catchError((error) {
-                      if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Erro ao salvar marco: $error'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    });
                   },
-                  onClose: () {},
-                  userData: widget.userData,
-                  onSuggestWithAI: widget.userData.subscription.plan ==
-                          SubscriptionPlan.premium
-                      ? _openAiSuggestions
-                      : null,
                 ),
 
-              if (_isLoading)
-                Container(
-                    color: Colors.black.withValues(alpha: 0.6),
-                    child: const Center(child: CustomLoadingSpinner())),
-            ],
+                if (milestones.isEmpty && !_isLoading)
+                  GoalOnboardingModal(
+                    onAddMilestone: (String title, String? dateStr) {
+                      DateTime? dueDate;
+                      if (dateStr != null) {
+                        try {
+                          final parts = dateStr.split('/');
+                          if (parts.length == 3) {
+                            dueDate = DateTime(
+                              int.parse(parts[2]), // ano
+                              int.parse(parts[1]), // mês
+                              int.parse(parts[0]), // dia
+                            ).toUtc();
+                          }
+                        } catch (e) {
+                          debugPrint('Erro ao converter data: $e');
+                        }
+                      }
+
+                      final dateForPersonalDay = dueDate ?? DateTime.now().toUtc();
+                      final int? personalDay = _calculatePersonalDay(dateForPersonalDay);
+
+                      final newTask = TaskModel(
+                        id: '',
+                        text: title,
+                        createdAt: DateTime.now().toUtc(),
+                        dueDate: dueDate,
+                        journeyId: widget.initialGoal.id,
+                        journeyTitle: widget.initialGoal.title,
+                        tags: [],
+                        personalDay: personalDay,
+                      );
+
+                      _firestoreService.addTask(widget.userData.uid, newTask).catchError((error) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Erro ao salvar marco: $error'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      });
+                    },
+                    onClose: () {},
+                    userData: widget.userData,
+                    onSuggestWithAI: widget.userData.subscription.plan ==
+                            SubscriptionPlan.premium
+                        ? _openAiSuggestions
+                        : null,
+                  ),
+
+                if (_isLoading)
+                  Container(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      child: const Center(child: CustomLoadingSpinner())),
+              ],
+            ),
           ),
-          floatingActionButton: milestones.isNotEmpty
-              ? FloatingActionButton.extended(
-                  onPressed: _addMilestone,
-                  label: const Text('Novo Marco'),
-                  icon: const Icon(Icons.add),
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  heroTag: 'fab_goal_detail',
-                )
-              : null,
+          floatingActionButton: milestones.isEmpty
+              ? null
+              : TransparentFabWrapper(
+                  controller: _fabOpacityController,
+                  child: (widget.userData.subscription.isActive &&
+                          widget.userData.subscription.plan ==
+                              SubscriptionPlan.premium)
+                      ? ExpandingAssistantFab(
+                          onPrimary: _addMilestone,
+                          primaryIcon: Icons.add,
+                          primaryTooltip: 'Novo Marco',
+                          onOpenAssistant: (message) {
+                            AssistantPanel.show(context, widget.userData,
+                                initialMessage: message);
+                          },
+                        )
+                      : FloatingActionButton(
+                          onPressed: _addMilestone,
+                          backgroundColor: AppColors.primary,
+                          tooltip: 'Novo Marco',
+                          heroTag: 'fab_goal_detail',
+                          child: const Icon(Icons.add, color: Colors.white),
+                        ),
+                ),
         );
       },
     );
@@ -768,8 +795,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 }
               }
             },
-            onDelete: () => _handleSwipeLeft(task),
-            onTap: () => _handleMilestoneTap(task),
+            onSwipeLeft: (t) => _handleSwipeLeft(t),
+            onAction: () => _handleMilestoneTap(task),
             ),
           );
         }),
@@ -848,7 +875,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     }
                   },
                   onTap: () => _handleMilestoneTap(task),
-                  onDelete: null, // handled by dismissible
+
                 ),
               ),
             );
