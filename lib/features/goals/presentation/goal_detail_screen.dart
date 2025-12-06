@@ -796,7 +796,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               }
             },
             onSwipeLeft: (t) => _handleSwipeLeft(t),
-            onAction: () => _handleMilestoneTap(task),
+            onTap: () => _handleMilestoneTap(task),
             ),
           );
         }),
