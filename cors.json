@@ -1,8 +1,7 @@
 [
     {
         "origin": [
-            "https://sincroapp.com.br",
-            "http://localhost:*"
+            "*"
         ],
         "method": [
             "GET",
@@ -17,7 +16,8 @@
             "Authorization",
             "Content-Length",
             "User-Agent",
-            "X-Requested-With"
+            "X-Requested-With",
+            "Access-Control-Allow-Origin"
         ]
     }
 ]

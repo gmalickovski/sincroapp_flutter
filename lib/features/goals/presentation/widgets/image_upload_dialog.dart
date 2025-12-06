@@ -151,39 +151,53 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
-            child: Container(
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: BorderRadius.circular(24), // 4 Rounded Borders
-                border: Border.all(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                    width: 1,
                   ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min, // Shrink to fit content
-                  children: [
-                    // Desktop Header
-                    _buildDesktopHeader(),
-                    
-                    // Content
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
-                      child: _buildContent(),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
                     ),
-
-                    // Footer spacing
-                    const SizedBox(height: 24),
                   ],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Desktop Header
+                      _buildDesktopHeader(),
+                      
+                      // Content (Scrollable)
+                      Flexible(
+                         child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                               _buildErrorMessage(),
+                               _buildImagePreview(),
+                               const SizedBox(height: 24),
+                               _buildInstructions(),
+                               const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+            
+                      // Footer (Fixed Buttons)
+                      _buildFooterButtons(),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -201,7 +215,7 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         children: [
           const Row(
             children: [
-              Icon(Icons.image, color: AppColors.primary, size: 24), // Icone de Imagem
+              Icon(Icons.image, color: AppColors.primary, size: 24),
               SizedBox(width: 12),
               Text(
                 "Adicionar Imagem",
@@ -222,70 +236,77 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
     );
   }
 
-  Widget _buildContent() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (_errorMessage != null)
-           Padding(
-            padding: const EdgeInsets.only(bottom: 16.0),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.withOpacity(0.3)),
-              ),
-              child: Text(
-                _errorMessage!,
-                style: const TextStyle(color: Colors.redAccent, fontSize: 13),
-                textAlign: TextAlign.center,
-              ),
-            ),
-          ),
-        
-        // Image Preview Area
-        GestureDetector(
-          onTap: _pickImage,
-          child: Container(
-            height: 250,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                  color: _imageBytes != null ? AppColors.primary : AppColors.border, 
-                  width: _imageBytes != null ? 1.5 : 1
-              ),
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: _buildImageContent(),
-            ),
+  Widget _buildErrorMessage() {
+    if (_errorMessage == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+        ),
+        child: Text(
+          _errorMessage!,
+          style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+          textAlign: TextAlign.center,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview() {
+    return GestureDetector(
+      onTap: _pickImage,
+      child: Container(
+        height: 250,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: _imageBytes != null ? AppColors.primary : AppColors.border, 
+              width: _imageBytes != null ? 1.5 : 1
           ),
         ),
-        
-        const SizedBox(height: 24),
-        
-        // Instructions
-        const Text(
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: _buildImageContent(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInstructions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Text(
           "Dicas para a imagem:",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
         ),
-        const SizedBox(height: 8),
-        const Text(
+        SizedBox(height: 8),
+        Text(
           "• Use imagens no formato paisagem (horizontal).\n• Escolha imagens que inspirem sua meta.\n• Tamanho máximo recomendado: 2MB.",
           style: TextStyle(color: AppColors.secondaryText, height: 1.5, fontSize: 13),
         ),
+      ],
+    );
+  }
 
-        const SizedBox(height: 32),
-
-        // Action Buttons
-        if (_isSaving)
-          const Center(child: CustomLoadingSpinner())
-        else
-          Row(
+  Widget _buildFooterButtons() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+         border: Border(
+            top: BorderSide(color: AppColors.border.withValues(alpha: 0.2)),
+         )
+      ),
+      child: _isSaving
+        ? const Center(child: CustomLoadingSpinner())
+        : Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               Expanded(
@@ -308,22 +329,74 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withOpacity(0.3),
-                    disabledForegroundColor: Colors.white.withOpacity(0.5),
+                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.3),
+                    disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 0, // Flat standard
+                    elevation: 0,
                   ),
                   child: const Text("Salvar Imagem", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
           ),
-      ],
     );
   }
+  
+  // Kept for compatibility with Mobile Layout call
+  Widget _buildContent() {
+     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildErrorMessage(),
+        _buildImagePreview(),
+        const SizedBox(height: 24),
+        _buildInstructions(),
+        const SizedBox(height: 24),
+        // On mobile, footer is part of content for now to keep it simple or we could refactor similarly
+        _isSaving
+        ? const Center(child: CustomLoadingSpinner())
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+             children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Cancelar", style: TextStyle(color: AppColors.secondaryText)),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _imageBytes != null ? _handleSave : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.3),
+                    disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text("Salvar Imagem", style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+      ]
+     );
 
   Widget _buildImageContent() {
     if (_imageBytes != null) {

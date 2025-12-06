@@ -249,18 +249,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     if (isDesktop) {
       showDialog(
         context: context,
-        builder: (context) => Dialog(
-          backgroundColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: ImageUploadDialog(
-              userData: widget.userData,
-              goal: goal,
-            ),
-          ),
+        builder: (context) => ImageUploadDialog(
+          userData: widget.userData,
+          goal: goal,
         ),
       );
     } else {
