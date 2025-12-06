@@ -245,11 +245,16 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
-        centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.secondaryText),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        centerTitle: false, // 1. Title Left
+        automaticallyImplyLeading: false, // Remove default back button
+        actions: [
+          // 2. Close Button on Right
+          IconButton(
+            icon: const Icon(Icons.close, color: AppColors.secondaryText),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -297,7 +302,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                           labelText: 'Descrição',
                           hintText:
                               'Descreva o que você quer alcançar e por que isso é importante para você.',
-                        ),
+                        ).copyWith(alignLabelWithHint: true), // 3. Top-Left alignment for label
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Por favor, insira uma descrição.';
@@ -400,10 +405,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
             // Fixed Bottom Container
             Container(
               padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                border: Border(top: BorderSide(color: AppColors.border.withValues(alpha: 0.5))),
-              ),
+              // 4. Removed decoration (color/border)
               child: SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

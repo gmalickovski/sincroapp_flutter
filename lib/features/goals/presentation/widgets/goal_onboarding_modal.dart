@@ -109,7 +109,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                          onPressed: widget.onClose,
+                          onPressed: () => Navigator.of(context).pop(), // FIXED: Force close
                         ),
                       ],
                     ),
@@ -164,22 +164,25 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       ),
                     ],
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Scrollable Content
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
-                          child: _buildContent(isMobile: false),
+                  child: ClipRRect( // FIXED: Rounded corners on desktop
+                    borderRadius: BorderRadius.circular(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Scrollable Content
+                        Flexible(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(32, 32, 32, 0),
+                            child: _buildContent(isMobile: false),
+                          ),
                         ),
-                      ),
-                      // Fixed Footer
-                      Padding(
-                        padding: const EdgeInsets.all(32),
-                        child: _buildFooter(isMobile: false),
-                      ),
-                    ],
+                        // Fixed Footer
+                        Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: _buildFooter(isMobile: false),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -271,7 +274,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
         // Explanatory Text
         if (!_showAddForm) // Hide info when adding to save space
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(16), // Increased padding
             decoration: BoxDecoration(
               color: AppColors.background,
               borderRadius: BorderRadius.circular(12),
@@ -280,15 +283,16 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: AppColors.primary, size: 18),
-                const SizedBox(width: 10),
+                const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                const SizedBox(width: 12),
                 const Expanded(
+                  // FIXED: Expanded explanatory text
                   child: Text(
-                    'Marcos são pequenas vitórias que compõem sua meta maior.',
+                    'Marcos são etapas fundamentais para você alcançar seu objetivo final. Eles ajudam a manter o foco e celebrar pequenas vitórias ao longo do caminho.',
                     style: TextStyle(
                       color: AppColors.tertiaryText,
                       fontSize: 13,
-                      height: 1.3,
+                      height: 1.4,
                     ),
                   ),
                 ),
@@ -310,34 +314,15 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Novo Marco',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    // Close Button within form (kept as convenience)
-                    GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _showAddForm = false;
-                          _titleController.clear();
-                          _selectedDate = null;
-                        });
-                      },
-                      child: const Icon(
-                        Icons.close,
-                        color: AppColors.secondaryText,
-                        size: 20,
-                      ),
-                    ),
-                  ],
-                ),
+                 // FIXED: Removed Row with Close Icon, just keeping Title
+                 const Text(
+                   'Novo Marco',
+                   style: TextStyle(
+                     color: Colors.white,
+                     fontSize: 15,
+                     fontWeight: FontWeight.bold,
+                   ),
+                 ),
                 const SizedBox(height: 12),
                 TextField(
                   controller: _titleController,
@@ -378,7 +363,8 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                           style: TextStyle(
                             color: _selectedDate == null
                                 ? AppColors.tertiaryText
-                                : Colors.white,
+                                ? Colors.white
+                                : Colors.white, // Fixed potential ternary issue
                             fontSize: 14,
                           ),
                         ),
@@ -386,9 +372,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                     ),
                   ),
                 ),
-                // Button removed from here for Mobile, kept for Desktop logic if needed, 
-                // but simpler to use the unified footer logic.
-                // We'll hide the internal button and use the footer button.
               ],
             ),
           ),
@@ -461,7 +444,6 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
               },
             ),
           ),
-          // const SizedBox(height: 16), // Spacing handled by padding of parent scrollview/footer
         ],
       ],
     );
@@ -547,7 +529,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
-                    ),
+                      ),
                   ),
                 ],
               ),

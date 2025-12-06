@@ -208,136 +208,149 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 500),
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. Header (Fixed at top)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                          widget.goalToEdit != null
-                              ? 'Editar Jornada'
-                              : 'Criar Nova Jornada',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold)),
-                      IconButton(
-                        icon: const Icon(Icons.close,
-                            color: AppColors.secondaryText),
-                        onPressed: () => Navigator.of(context).pop(false),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  TextFormField(
-                    controller: _titleController,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                    decoration: _buildInputDecoration(
-                      labelText: 'Título da Jornada *',
-                      hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
-                    ),
-                    textCapitalization: TextCapitalization.sentences,
-                    maxLength: 80,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Por favor, insira um título.';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'O título deve ter pelo menos 3 caracteres.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  TextFormField(
-                    controller: _descriptionController,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                    maxLines: 5,
-                    minLines: 3,
-                    maxLength: 500,
-                    decoration: _buildInputDecoration(
-                      labelText: 'Descrição',
-                      hintText:
-                          'O que você quer alcançar com essa jornada? Quais são seus objetivos?',
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Por favor, insira uma descrição.';
-                      }
-                      if (value.trim().length < 10) {
-                        return 'A descrição deve ter pelo menos 10 caracteres.';
-                      }
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  // Clean Date Picker for Desktop
-                  GestureDetector(
-                    onTap: _pickDate,
-                    child: InputDecorator(
-                      decoration: _buildInputDecoration(
-                        labelText: 'Data Alvo *',
-                        errorText: _targetDate == null && _isSaving
-                            ? 'Por favor, defina uma data alvo.'
-                            : null,
-                      ).copyWith(
-                        suffixIcon: const Icon(Icons.calendar_today,
-                            color: AppColors.primary),
-                      ),
-                      child: Text(
-                        _targetDate != null
-                            ? DateFormat('dd/MM/yyyy').format(_targetDate!)
-                            : 'Selecione a data de conclusão',
-                        style: TextStyle(
-                          color: _targetDate != null
-                              ? Colors.white
-                              : AppColors.tertiaryText,
-                          fontSize: 16,
-                        ),
-                      ),
+                  Text(
+                    widget.goalToEdit != null
+                        ? 'Editar Jornada'
+                        : 'Criar Nova Jornada',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _handleSave,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 18),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12)),
-                        elevation: 0,
-                      ),
-                      child: _isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                        : Text(
-                            widget.goalToEdit != null
-                                ? "Atualizar Jornada"
-                                : "Salvar Jornada",
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16),
-                          ),
-                    ),
-                  )
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                    onPressed: () => Navigator.of(context).pop(false),
+                  ),
                 ],
               ),
-            ),
+              const SizedBox(height: 24),
+              
+              // 2. Scrollable Content (Flexible)
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextFormField(
+                          controller: _titleController,
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          decoration: _buildInputDecoration(
+                            labelText: 'Título da Jornada *',
+                            hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
+                          ),
+                          textCapitalization: TextCapitalization.sentences,
+                          maxLength: 80,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Por favor, insira um título.';
+                            }
+                            if (value.trim().length < 3) {
+                              return 'O título deve ter pelo menos 3 caracteres.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        TextFormField(
+                          controller: _descriptionController,
+                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          maxLines: 5,
+                          minLines: 3,
+                          maxLength: 500,
+                          decoration: _buildInputDecoration(
+                            labelText: 'Descrição',
+                            hintText:
+                                'O que você quer alcançar com essa jornada? Quais são seus objetivos?',
+                          ).copyWith(alignLabelWithHint: true), // Fixed: Top-Left Alignment
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Por favor, insira uma descrição.';
+                            }
+                            if (value.trim().length < 10) {
+                              return 'A descrição deve ter pelo menos 10 caracteres.';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Clean Date Picker for Desktop
+                        GestureDetector(
+                          onTap: _pickDate,
+                          child: InputDecorator(
+                            decoration: _buildInputDecoration(
+                              labelText: 'Data Alvo *',
+                              errorText: _targetDate == null && _isSaving
+                                  ? 'Por favor, defina uma data alvo.'
+                                  : null,
+                            ).copyWith(
+                              suffixIcon: const Icon(Icons.calendar_today,
+                                  color: AppColors.primary),
+                            ),
+                            child: Text(
+                              _targetDate != null
+                                  ? DateFormat('dd/MM/yyyy').format(_targetDate!)
+                                  : 'Selecione a data de conclusão',
+                              style: TextStyle(
+                                color: _targetDate != null
+                                    ? Colors.white
+                                    : AppColors.tertiaryText,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 32),
+              
+              // 3. Button (Fixed at bottom)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSaving ? null : _handleSave,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    elevation: 0,
+                  ),
+                  child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(
+                        widget.goalToEdit != null
+                            ? "Atualizar Jornada"
+                            : "Salvar Jornada",
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16),
+                      ),
+                ),
+              )
+            ],
           ),
         ),
       ),
