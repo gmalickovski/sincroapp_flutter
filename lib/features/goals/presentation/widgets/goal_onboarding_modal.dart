@@ -363,8 +363,7 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
                           style: TextStyle(
                             color: _selectedDate == null
                                 ? AppColors.tertiaryText
-                                ? Colors.white
-                                : Colors.white, // Fixed potential ternary issue
+                                : Colors.white,
                             fontSize: 14,
                           ),
                         ),
