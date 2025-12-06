@@ -577,7 +577,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             SliverToBoxAdapter(
                               child: AnimatedCrossFade(
                                 firstChild: SizedBox(
-                                  height: 260, // Height for the carousel (reduced to fit compact card)
+                                  height: 180, // Compact height to match card content
                                   child: PageView(
                                     padEnds: false,
                                     controller: PageController(viewportFraction: 1.0), // Full width
@@ -1072,7 +1072,7 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -1085,7 +1085,7 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max, // Fill parent
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
            // Header: Title + Menu
@@ -1101,21 +1101,21 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
                       goal.title,
                       style: const TextStyle(
                         color: Colors.white,
-                        fontSize: 18,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
                       ),
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     if (goal.description != null && goal.description!.isNotEmpty) ...[
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 4),
                       Text(
                         goal.description!,
                         style: const TextStyle(
                           color: AppColors.secondaryText,
-                          fontSize: 14,
+                          fontSize: 13,
                         ),
-                        maxLines: 2,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ],
@@ -1124,7 +1124,7 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
               ),
               PopupMenuButton<String>(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
+                icon: const Icon(Icons.more_vert, color: AppColors.secondaryText, size: 20),
                 color: AppColors.cardBackground,
                 onSelected: (value) {
                   if (value == 'edit') onEdit();
@@ -1152,9 +1152,10 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
             ],
           ),
           
-          const SizedBox(height: 24),
+          // Spacer to push footer to bottom
+          const Spacer(),
 
-          // Footer: Date + Percent
+          // Footer: Date + Percent + Progress Bar
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
