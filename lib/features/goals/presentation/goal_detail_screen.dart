@@ -1138,6 +1138,7 @@ class _CircularGoalInfoCard extends StatelessWidget {
         ],
       ),
       child: Stack(
+        alignment: Alignment.center,
         children: [
           // Content
           Column(
