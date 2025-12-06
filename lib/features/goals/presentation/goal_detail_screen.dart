@@ -48,7 +48,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
-  static const double kMaxContentWidth = 1200.0;
 
   @override
   void initState() {
@@ -441,8 +440,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-  @override
-  Widget build(BuildContext context) {
     return StreamBuilder<Goal>(
       stream: _firestoreService.getGoalStream(
           widget.userData.uid, widget.initialGoal.id),
@@ -717,6 +714,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           child: const Icon(Icons.add, color: Colors.white),
                         ),
                 ),
+            );
+          },
         );
       },
     );
