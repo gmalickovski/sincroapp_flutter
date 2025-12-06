@@ -251,6 +251,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         context: context,
         builder: (context) => Dialog(
           backgroundColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
             child: ImageUploadDialog(
