@@ -48,12 +48,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
-  late Goal _currentGoal;
+  static const double kMaxContentWidth = 1200.0;
 
   @override
   void initState() {
     super.initState();
-    _currentGoal = widget.initialGoal;
+    // No explicit initialization needed for stream
   }
 
   @override
@@ -63,7 +63,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // Handle goal editing
-  void _handleEditGoal() {
+  void _handleEditGoal(Goal goal) {
     final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
 
     if (isDesktop) {
@@ -74,7 +74,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         builder: (BuildContext dialogContext) {
           return CreateGoalDialog(
             userData: widget.userData,
-            goalToEdit: widget.initialGoal,
+            goalToEdit: goal,
           );
         },
       ).then((result) {
@@ -92,7 +92,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => CreateGoalScreen(
           userData: widget.userData,
-          goalToEdit: widget.initialGoal,
+          goalToEdit: goal,
         ),
         fullscreenDialog: true,
       ));
@@ -100,7 +100,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // Handle goal deletion
-  Future<void> _handleDeleteGoal() async {
+  Future<void> _handleDeleteGoal(Goal goal) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -128,7 +128,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     if (confirmed == true) {
       try {
         await _firestoreService.deleteGoal(
-            widget.userData.uid, widget.initialGoal.id);
+            widget.userData.uid, goal.id);
         if (mounted) {
           Navigator.of(context).pop(); // Return to previous screen
           ScaffoldMessenger.of(context).showSnackBar(
@@ -152,7 +152,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // Função para adicionar novo marco
-  void _addMilestone() {
+  void _addMilestone(Goal goal) {
     if (widget.userData.uid.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Erro: ID do usuário não encontrado.')));
@@ -168,7 +168,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         return TaskInputModal(
           userData: widget.userData,
           userId: widget.userData.uid,
-          preselectedGoal: widget.initialGoal, 
+          preselectedGoal: goal, 
           initialDueDate: DateTime.now(), 
           onAddTask: (ParsedTask parsedTask) {
             DateTime? finalDueDateUtc = parsedTask.dueDate?.toUtc();
@@ -189,8 +189,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               text: parsedTask.cleanText,
               createdAt: DateTime.now().toUtc(),
               dueDate: finalDueDateUtc, 
-              journeyId: widget.initialGoal.id, 
-              journeyTitle: widget.initialGoal.title, 
+              journeyId: goal.id, 
+              journeyTitle: goal.title, 
               tags: parsedTask.tags,
               personalDay: finalPersonalDay, 
             );
@@ -223,7 +223,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  void _openAiSuggestions() {
+  void _openAiSuggestions(Goal goal) {
     if (_isLoading) return;
     debugPrint("GoalDetailScreen: Abrindo modal de sugestões da IA...");
 
@@ -233,18 +233,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       backgroundColor: Colors.transparent,
       builder: (ctx) {
         return AiSuggestionModal(
-          goal: widget.initialGoal,
+          goal: goal,
           onAddSuggestions: (suggestions) {
             debugPrint(
                 "GoalDetailScreen: Recebeu ${suggestions.length} sugestões do modal.");
-            _addSuggestionsAsTasks(suggestions);
+            _addSuggestionsAsTasks(suggestions, goal);
           },
         );
       },
     );
   }
 
-  void _handleImageTap() {
+  void _handleImageTap(Goal goal) {
     final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
 
     if (isDesktop) {
@@ -256,35 +256,26 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             constraints: const BoxConstraints(maxWidth: 500),
             child: ImageUploadDialog(
               userData: widget.userData,
-              goal: widget.initialGoal,
+              goal: goal,
             ),
           ),
         ),
-      ).then((_) {
-        _refreshGoal();
-      });
+      );
     } else {
       Navigator.of(context).push(MaterialPageRoute(
         builder: (context) => ImageUploadDialog(
           userData: widget.userData,
-          goal: widget.initialGoal,
+          goal: goal,
         ),
         fullscreenDialog: true,
-      )).then((_) => _refreshGoal());
+      ));
     }
   }
 
-  void _refreshGoal() async {
-    final doc = await _firestoreService.getGoalById(widget.userData.uid, widget.initialGoal.id);
-    if (doc != null && mounted) {
-       setState(() {
-         _currentGoal = doc;
-       });
-    }
-  }
+  // _refreshGoal removed as stream handles updates
 
   Future<void> _addSuggestionsAsTasks(
-      List<Map<String, String>> suggestions) async {
+      List<Map<String, String>> suggestions, Goal goal) async {
     if (suggestions.isEmpty) {
       debugPrint(
           "GoalDetailScreen: Nenhuma sugestão selecionada para adicionar.");
@@ -329,8 +320,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         createdAt: DateTime.now().toUtc(), 
         dueDate: deadline?.toUtc(), 
         tags: [],
-        journeyId: widget.initialGoal.id, 
-        journeyTitle: widget.initialGoal.title,
+        journeyId: goal.id, 
+        journeyTitle: goal.title,
         personalDay: personalDay,
       );
       tasksToAdd.add(newTask);
@@ -450,34 +441,59 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<List<TaskModel>>(
-      stream: _firestoreService.getTasksForGoalStream(
-          widget.userData.uid, _currentGoal.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Goal>(
+      stream: _firestoreService.getGoalStream(
+          widget.userData.uid, widget.initialGoal.id),
+      builder: (context, goalSnapshot) {
+        if (goalSnapshot.connectionState == ConnectionState.waiting &&
+            !goalSnapshot.hasData) {
+              // Show loading only if we don't have initial data? 
+              // Actually we have widget.initialGoal, we could use it optimistically, 
+              // but stream gives us the fresh state.
+              // Let's use initialGoal as fallback or show spinner.
+              // Given the user wants "no errors", spinner is safer.
           return const Scaffold(
               backgroundColor: AppColors.background,
               body: Center(child: CustomLoadingSpinner()));
         }
-        if (snapshot.hasError) {
-          debugPrint("Erro no Stream de Tarefas da Meta: ${snapshot.error}");
+        if (goalSnapshot.hasError) {
           return Scaffold(
               backgroundColor: AppColors.background,
-              body: Center(
-                  child: Text("Erro ao carregar marcos: ${snapshot.error}",
-                      style: const TextStyle(color: Colors.red))));
+              body: Center(child: Text("Erro ao carregar meta: ${goalSnapshot.error}")));
         }
 
-        final milestones = snapshot.data ?? [];
-        final int progress = milestones.isEmpty
-            ? 0
-            : (milestones.where((m) => m.completed).length /
-                    milestones.length *
-                    100)
-                .round();
+        final Goal currentGoal = goalSnapshot.data ?? widget.initialGoal;
 
-        return Scaffold(
+        return StreamBuilder<List<TaskModel>>(
+          stream: _firestoreService.getTasksForGoalStream(
+              widget.userData.uid, currentGoal.id),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const Scaffold(
+                  backgroundColor: AppColors.background,
+                  body: Center(child: CustomLoadingSpinner()));
+            }
+            if (snapshot.hasError) {
+              debugPrint("Erro no Stream de Tarefas da Meta: ${snapshot.error}");
+              return Scaffold(
+                  backgroundColor: AppColors.background,
+                  body: Center(
+                      child: Text("Erro ao carregar marcos: ${snapshot.error}",
+                          style: const TextStyle(color: Colors.red))));
+            }
+
+            final milestones = snapshot.data ?? [];
+            final int progress = milestones.isEmpty
+                ? 0
+                : (milestones.where((m) => m.completed).length /
+                        milestones.length *
+                        100)
+                    .round();
+
+            return Scaffold(
           backgroundColor: AppColors.background,
           body: ScreenInteractionListener(
             controller: _fabOpacityController,
@@ -501,9 +517,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             elevation: 0,
                             pinned: true,
                             leading: const BackButton(color: AppColors.primary),
-                            title: Text(widget.initialGoal.title,
+                            title: const Text('Jornadas',
                                 style:
-                                    const TextStyle(color: Colors.white, fontSize: 18)),
+                                    TextStyle(color: Colors.white, fontSize: 18)),
                           ),
                           if (isDesktop)
                             SliverToBoxAdapter(
@@ -525,15 +541,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                           child: Column(
                                             children: [
                                               _CircularGoalInfoCard(
-                                                goal: _currentGoal,
+                                                goal: currentGoal,
                                                 progress: progress,
-                                                onEdit: _handleEditGoal,
-                                                onDelete: _handleDeleteGoal,
+                                                onEdit: () => _handleEditGoal(currentGoal),
+                                                onDelete: () => _handleDeleteGoal(currentGoal),
                                               ),
                                               const SizedBox(height: 24),
                                               GoalImageCard(
-                                                goal: _currentGoal,
-                                                onTap: _handleImageTap,
+                                                goal: currentGoal,
+                                                onTap: () => _handleImageTap(currentGoal),
                                               ),
                                             ],
                                           ),
@@ -544,7 +560,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              _buildMilestonesHeader(),
+                                              _buildMilestonesHeader(currentGoal),
                                               const SizedBox(height: 16),
                                               _buildMilestonesListWidget(
                                                   milestones: milestones,
@@ -564,7 +580,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             SliverToBoxAdapter(
                               child: AnimatedCrossFade(
                                 firstChild: SizedBox(
-                                  height: 380, // Height for the carousel
+                                  height: 260, // Height for the carousel (reduced to fit compact card)
                                   child: PageView(
                                     padEnds: false,
                                     controller: PageController(viewportFraction: 1.0), // Full width
@@ -573,18 +589,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                         padding: EdgeInsets.symmetric(
                                             horizontal: horizontalPadding, vertical: 8.0),
                                         child: _CollapsibleGoalInfoCard(
-                                          goal: _currentGoal,
+                                          goal: currentGoal,
                                           progress: progress,
-                                          onEdit: _handleEditGoal,
-                                          onDelete: _handleDeleteGoal,
+                                          onEdit: () => _handleEditGoal(currentGoal),
+                                          onDelete: () => _handleDeleteGoal(currentGoal),
                                         ),
                                       ),
                                       Padding(
                                         padding: EdgeInsets.symmetric(
                                             horizontal: horizontalPadding, vertical: 8.0),
                                         child: GoalImageCard(
-                                          goal: _currentGoal,
-                                          onTap: _handleImageTap,
+                                          goal: currentGoal,
+                                          onTap: () => _handleImageTap(currentGoal),
                                         ),
                                       ),
                                     ],
@@ -685,7 +701,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           widget.userData.subscription.plan ==
                               SubscriptionPlan.premium)
                       ? ExpandingAssistantFab(
-                          onPrimary: _addMilestone,
+                          onPrimary: () => _addMilestone(currentGoal),
                           primaryIcon: Icons.add,
                           primaryTooltip: 'Novo Marco',
                           onOpenAssistant: (message) {
@@ -694,7 +710,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           },
                         )
                       : FloatingActionButton(
-                          onPressed: _addMilestone,
+                          onPressed: () => _addMilestone(currentGoal),
                           backgroundColor: AppColors.primary,
                           tooltip: 'Novo Marco',
                           heroTag: 'fab_goal_detail',
@@ -707,7 +723,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // Header do marcos (com botão de expandir e IA simplificado)
-  Widget _buildMilestonesHeader() {
+  Widget _buildMilestonesHeader(Goal goal) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -722,27 +740,28 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             // AI Suggestion Button (Icon Only)
             if (widget.userData.subscription.plan == SubscriptionPlan.premium)
               IconButton(
-                onPressed: _openAiSuggestions,
+                onPressed: () => _openAiSuggestions(goal),
                 icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
                 tooltip: 'Sugerir com IA',
               ),
             
-            // Expand/Collapse Button
-            IconButton(
-              onPressed: () {
-                setState(() {
-                  _isMilestonesExpanded = !_isMilestonesExpanded;
-                });
-              },
-              icon: AnimatedRotation(
-                turns: _isMilestonesExpanded ? 0.5 : 0.0, 
-                duration: const Duration(milliseconds: 300),
-                child: const Icon(
-                  Icons.keyboard_arrow_up,
-                  color: AppColors.secondaryText,
+            // Expand/Collapse Button (Mobile Only)
+            if (!isDesktop)
+              IconButton(
+                onPressed: () {
+                  setState(() {
+                    _isMilestonesExpanded = !_isMilestonesExpanded;
+                  });
+                },
+                icon: AnimatedRotation(
+                  turns: _isMilestonesExpanded ? 0.5 : 0.0, 
+                  duration: const Duration(milliseconds: 300),
+                  child: const Icon(
+                    Icons.keyboard_arrow_up,
+                    color: AppColors.secondaryText,
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],
@@ -969,11 +988,11 @@ class _CircularGoalInfoCard extends StatelessWidget {
             alignment: Alignment.center,
             children: [
               SizedBox(
-                width: 120,
-                height: 120,
+                width: 180, // Increased size
+                height: 180,
                 child: CircularProgressIndicator(
                   value: progress / 100,
-                  strokeWidth: 10,
+                  strokeWidth: 12, // Slightly thicker
                   backgroundColor: AppColors.background,
                   valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 ),
@@ -985,13 +1004,13 @@ class _CircularGoalInfoCard extends StatelessWidget {
                     '$progress%',
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 24,
+                      fontSize: 42, // Larger font
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const Text(
                     'Concluído',
-                    style: TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                    style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
                   ),
                 ],
               ),
@@ -1054,7 +1073,7 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20), // Padding ajustado para visual mais limpo
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -1067,23 +1086,41 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           // Header: Title and Options
+           // Header: Title + Menu
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
-                child: Text(
-                  goal.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20, // Aumentado um pouco
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      goal.title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (goal.description != null && goal.description!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        goal.description!,
+                        style: const TextStyle(
+                          color: AppColors.secondaryText,
+                          fontSize: 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ],
                 ),
               ),
               PopupMenuButton<String>(
@@ -1116,30 +1153,24 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
             ],
           ),
           
-          const SizedBox(height: 16),
-          
-          // Description (Flexible height)
-          Expanded(
-            child: SingleChildScrollView(
-              child: Text(
-                goal.description ?? 'Sem descrição.',
-                style: const TextStyle(
-                  color: AppColors.secondaryText, 
-                  fontSize: 14,
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // Linear Progress Bar
+          // Footer: Date + Percent
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Progresso", style: TextStyle(color: AppColors.secondaryText)),
-              Text("$progress%", style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
+              if (goal.targetDate != null)
+                 _buildDateBadge(goal.targetDate!)
+              else
+                 const SizedBox(),
+              Text(
+                '$progress%',
+                style: const TextStyle(
+                  color: Colors.white, 
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -1149,27 +1180,43 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
               value: progress / 100,
               backgroundColor: AppColors.background,
               valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              minHeight: 8,
+              minHeight: 6,
             ),
           ),
+        ],
+      ),
+    );
+  }
 
-           const SizedBox(height: 16),
+  Widget _buildDateBadge(DateTime date) {
+    final months = [
+      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
+      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+    ];
+    final formattedDate =
+        '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
 
-           // Target Date
-           Align(
-             alignment: Alignment.centerRight,
-             child: Row(
-               mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.secondaryText),
-                  const SizedBox(width: 6),
-                  Text(
-                    "Alvo: ${goal.targetDate != null ? DateFormat('dd/MM/yyyy').format(goal.targetDate!) : '...'}",
-                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
-                  ),
-                ],
-             ),
-           ),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.calendar_today_outlined,
+              color: AppColors.primary, size: 12),
+          const SizedBox(width: 6),
+          Text(
+            formattedDate,
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );

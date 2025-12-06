@@ -812,6 +812,16 @@ class FirestoreService {
     }
   }
 
+  Stream<Goal> getGoalStream(String userId, String goalId) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('goals')
+        .doc(goalId)
+        .snapshots()
+        .map((doc) => Goal.fromFirestore(doc));
+  }
+
   Stream<List<Goal>> getGoalsStream(String userId) {
     // <-- Mantido Goal
     return _db

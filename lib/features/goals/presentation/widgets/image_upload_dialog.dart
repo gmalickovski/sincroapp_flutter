@@ -155,15 +155,13 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                       _buildDesktopHeader(),
                       
                       // Content
-                      Flexible(
-                        child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
-                          child: _buildContent(),
-                        ),
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
+                        child: _buildContent(),
                       ),
 
                       // Footer spacing
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -241,7 +239,6 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                   width: _imageBytes != null ? 1.5 : 1
               ),
             ),
-            // Use ClipRRect to force content to respect border radius
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: _buildImageContent(),
