@@ -11,6 +11,10 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:image_picker/image_picker.dart'; // Import ImagePicker
+import 'package:sincro_app_flutter/services/storage_service.dart'; // Import StorageService
+import 'dart:io'; // Import File
+import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb
 
 class CreateGoalScreen extends StatefulWidget {
   final UserModel userData;
@@ -33,6 +37,12 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   DateTime? _targetDate;
   bool _isSaving = false;
 
+  // Image Logic
+  final ImagePicker _picker = ImagePicker();
+  XFile? _selectedImage;
+  String? _existingImageUrl;
+  final StorageService _storageService = StorageService();
+
   @override
   void initState() {
     super.initState();
@@ -42,7 +52,46 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       _titleController.text = widget.goalToEdit!.title;
       _descriptionController.text = widget.goalToEdit!.description;
       _targetDate = widget.goalToEdit!.targetDate;
+      _existingImageUrl = widget.goalToEdit!.imageUrl;
     }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920, // Optimization: Limit size
+        maxHeight: 1080,
+        imageQuality: 85, // Optimization: Compress
+      );
+      if (image != null) {
+        setState(() {
+          _selectedImage = image;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao selecionar imagem: $e')),
+        );
+      }
+    }
+  }
+
+  void _clearImage() {
+    setState(() {
+      _selectedImage = null;
+      // If we are editing and have an existing image, we might want to allow deleting it?
+      // For now, clearing selection just reverts to existing (or nothing if we want to support delete).
+      // Assuming "Clear" means "Remove selected new image", or "Remove existing image"?
+      // Let's assume it removes the current selection or the existing image.
+      if (_existingImageUrl != null && _selectedImage == null) {
+         // TODO: Implement delete logic if needed, for now just clear local state
+         // To support deleting existing image, we'd need a flag or set _existingImageUrl = null
+         _existingImageUrl = null;
+      }
+    });
   }
 
   final _firestoreService = FirestoreService();
@@ -131,6 +180,16 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       // Define um tempo limite para a operação de banco de dados
       const Duration firestoreTimeout = Duration(seconds: 15);
 
+      String? finalImageUrl = _existingImageUrl;
+
+      // Upload new image if selected
+      if (_selectedImage != null) {
+        finalImageUrl = await _storageService.uploadGoalImage(
+          file: _selectedImage!,
+          userId: widget.userData.uid,
+        );
+      }
+
       if (widget.goalToEdit != null) {
         // Editando jornada existente
         await _firestoreService
@@ -143,6 +202,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               userId: widget.userData.uid,
               createdAt: widget.goalToEdit!.createdAt,
               subTasks: widget.goalToEdit!.subTasks,
+              imageUrl: finalImageUrl, // Add image URL
             ))
             .timeout(firestoreTimeout); // Adiciona o timeout
       } else {
@@ -155,6 +215,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
           'createdAt': Timestamp.now(),
           'userId': widget.userData.uid,
           'subTasks': [], // Seu fix (correto)
+          'imageUrl': finalImageUrl, // Add image URL
         };
         debugPrint(
             'CreateGoalScreen: Salvando nova meta com targetDate: $_targetDate');
@@ -296,6 +357,72 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                   return null;
                 },
               ),
+              const SizedBox(height: 24),
+
+              // --- Image Picker UI ---
+              GestureDetector(
+                onTap: _pickImage,
+                child: Container(
+                  height: 200,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    image: (_selectedImage != null || _existingImageUrl != null)
+                        ? DecorationImage(
+                            image: _selectedImage != null
+                                ? (kIsWeb
+                                    ? NetworkImage(_selectedImage!.path)
+                                    : FileImage(File(_selectedImage!.path))
+                                        as ImageProvider)
+                                : NetworkImage(_existingImageUrl!),
+                            fit: BoxFit.cover,
+                          )
+                        : null,
+                  ),
+                  child: (_selectedImage == null && _existingImageUrl == null)
+                      ? const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_photo_alternate_outlined,
+                                color: AppColors.primary, size: 40),
+                            SizedBox(height: 12),
+                            Text(
+                              'Adicionar Imagem de Capa (Opcional)',
+                              style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 14),
+                            ),
+                          ],
+                        )
+                      : Stack(
+                          children: [
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: GestureDetector(
+                                onTap: () {
+                                  // Stop propagation to parent
+                                  _clearImage();
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.6),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close,
+                                      color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                ),
+              ),
+              // -----------------------
+
               const SizedBox(height: 24),
               TextFormField(
                 controller: _descriptionController,

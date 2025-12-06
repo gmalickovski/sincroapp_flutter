@@ -83,6 +83,7 @@ class Goal extends Equatable {
   final String userId;
   final String? category;
   final List<SubTask> subTasks;
+  final String? imageUrl; // Added: Optional image URL
 
   const Goal({
     required this.id,
@@ -94,6 +95,7 @@ class Goal extends Equatable {
     required this.userId,
     this.category,
     this.subTasks = const [],
+    this.imageUrl,
   });
 
   // Constrói uma instância de Goal a partir de um documento do Firestore
@@ -139,6 +141,7 @@ class Goal extends Equatable {
       userId: data['userId'] ?? '',
       category: data['category'] as String?,
       subTasks: loadedSubTasks,
+      imageUrl: data['imageUrl'] as String?,
     );
   }
 
@@ -159,6 +162,7 @@ class Goal extends Equatable {
       'userId': userId,
       'category': category,
       'subTasks': subTasks.map((task) => task.toMap()).toList(),
+      'imageUrl': imageUrl,
     };
   }
 
@@ -174,6 +178,7 @@ class Goal extends Equatable {
     String? userId,
     String? category,
     List<SubTask>? subTasks,
+    String? imageUrl,
   }) {
     return Goal(
       id: id ?? this.id,
@@ -185,6 +190,7 @@ class Goal extends Equatable {
       userId: userId ?? this.userId,
       category: category ?? this.category,
       subTasks: subTasks ?? this.subTasks,
+      imageUrl: imageUrl ?? this.imageUrl,
     );
   }
 
@@ -199,5 +205,6 @@ class Goal extends Equatable {
         userId,
         category,
         subTasks,
+        imageUrl,
       ];
 }

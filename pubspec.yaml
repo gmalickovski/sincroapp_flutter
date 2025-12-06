@@ -78,6 +78,8 @@ dependencies:
 
   fl_chart: 0.69.0
   shared_preferences: ^2.5.3
+  firebase_storage: ^12.4.10
+  image_picker: ^1.2.1
 
 dev_dependencies:
   flutter_test:

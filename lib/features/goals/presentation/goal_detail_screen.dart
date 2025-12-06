@@ -21,6 +21,8 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onbo
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart'; // Add
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upload_dialog.dart'; // Add
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -218,7 +220,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  // Função _openAiSuggestions (Sua original)
   void _openAiSuggestions() {
     if (_isLoading) return;
     debugPrint("GoalDetailScreen: Abrindo modal de sugestões da IA...");
@@ -238,6 +239,62 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         );
       },
     );
+  }
+
+  void _handleImageTap() {
+    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: ImageUploadDialog(
+              userData: widget.userData,
+              goal: widget.initialGoal,
+            ),
+          ),
+        ),
+      ).then((_) {
+        // Refresh logic handled by StreamBuilder, but we might need to force rebuild if data isn't streaming for Goal itself?
+        // Actually GoalDetailScreen takes initialGoal. The stream is for tasks.
+        // We need to listen to Goal changes too or update the state manually?
+        // The StreamBuilder only listens to TASKS.
+        // We need to reload the goal or wrap the Screen in a Goal Stream.
+        // For now, let's update state manually if we can fetch it, or just setState.
+        _refreshGoal();
+      });
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => ImageUploadDialog(
+          userData: widget.userData,
+          goal: widget.initialGoal,
+        ),
+        fullscreenDialog: true,
+      )).then((_) => _refreshGoal());
+    }
+  }
+
+  // Reload goal data to update image
+  void _refreshGoal() async {
+    final doc = await _firestoreService.getGoalById(widget.userData.uid, widget.initialGoal.id);
+    if (doc != null && mounted) {
+       // We can't update 'widget.initialGoal' directly, so we might need a local state variable for the goal.
+       // Refactoring to use local _currentGoal.
+       setState(() {
+         _currentGoal = doc;
+       });
+    }
+  }
+
+  late Goal _currentGoal;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentGoal = widget.initialGoal;
   }
 
   // ---
@@ -440,7 +497,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   Widget build(BuildContext context) {
     return StreamBuilder<List<TaskModel>>(
       stream: _firestoreService.getTasksForGoalStream(
-          widget.userData.uid, widget.initialGoal.id),
+          widget.userData.uid, _currentGoal.id),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting &&
             !snapshot.hasData) {
@@ -506,11 +563,20 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                       ConstrainedBox(
                                         constraints: const BoxConstraints(
                                             maxWidth: 350),
-                                        child: _CircularGoalInfoCard(
-                                          goal: widget.initialGoal,
-                                          progress: progress,
-                                          onEdit: _handleEditGoal,
-                                          onDelete: _handleDeleteGoal,
+                                        child: Column(
+                                          children: [
+                                            _CircularGoalInfoCard(
+                                              goal: _currentGoal,
+                                              progress: progress,
+                                              onEdit: _handleEditGoal,
+                                              onDelete: _handleDeleteGoal,
+                                            ),
+                                            const SizedBox(height: 24),
+                                            GoalImageCard(
+                                              goal: _currentGoal,
+                                              onTap: _handleImageTap,
+                                            ),
+                                          ],
                                         ),
                                       ),
                                       const SizedBox(width: 24),
@@ -537,14 +603,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                         else ...[
                           // Mobile Layout
                           SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: horizontalPadding, vertical: 8.0),
-                              child: _CollapsibleGoalInfoCard(
-                                goal: widget.initialGoal,
-                                progress: progress,
-                                onEdit: _handleEditGoal,
-                                onDelete: _handleDeleteGoal,
+                            child: SizedBox(
+                              height: 380, // Height for the carousel
+                              child: PageView(
+                                padEnds: false,
+                                controller: PageController(viewportFraction: 0.92),
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 6.0, vertical: 8.0),
+                                    child: _CollapsibleGoalInfoCard(
+                                      goal: _currentGoal,
+                                      progress: progress,
+                                      onEdit: _handleEditGoal,
+                                      onDelete: _handleDeleteGoal,
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 6.0, vertical: 8.0),
+                                    child: GoalImageCard(
+                                      goal: _currentGoal,
+                                      onTap: _handleImageTap,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -1040,7 +1123,8 @@ class _CircularGoalInfoCard extends StatelessWidget {
         : 'Sem prazo';
 
     return Container(
-      padding: const EdgeInsets.all(24),
+      width: double.infinity, // Garante largura total disponível
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 32), // Padding ajustado
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(24),
@@ -1053,13 +1137,107 @@ class _CircularGoalInfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Stack(
         children: [
-          // Header: Menu Button (if callbacks provided)
+          // Content
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12), // Espaçamento menor no topo
+              // Circular Progress
+              SizedBox(
+                height: 180,
+                width: 180,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: progress / 100.0,
+                      strokeWidth: 12,
+                      backgroundColor: AppColors.background,
+                      color: AppColors.primary,
+                      strokeCap: StrokeCap.round,
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$progress%',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (goal.targetDate != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.calendar_today,
+                                      size: 12, color: AppColors.primary),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    formattedDate,
+                                    style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  goal.title,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              if (goal.description.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Text(
+                    goal.description,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.secondaryText,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          
+          // Menu Button (Absolute Position top-right)
           if (onEdit != null || onDelete != null)
-            Align(
-              alignment: Alignment.topRight,
+            Positioned(
+              top: 0,
+              right: 0,
               child: PopupMenuButton<String>(
                 icon: const Icon(
                   Icons.more_vert,
@@ -1076,7 +1254,8 @@ class _CircularGoalInfoCard extends StatelessWidget {
                       value: 'edit',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 18, color: Colors.white),
+                          Icon(Icons.edit_outlined,
+                              size: 18, color: Colors.white),
                           SizedBox(width: 8),
                           Text('Editar',
                               style: TextStyle(color: Colors.white)),
@@ -1089,7 +1268,8 @@ class _CircularGoalInfoCard extends StatelessWidget {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                          Icon(Icons.delete_outline,
+                              size: 18, color: Colors.redAccent),
                           SizedBox(width: 8),
                           Text('Excluir',
                               style: TextStyle(color: Colors.white)),
@@ -1108,88 +1288,6 @@ class _CircularGoalInfoCard extends StatelessWidget {
                 },
               ),
             ),
-          const SizedBox(height: 16),
-          // Circular Progress
-          SizedBox(
-            height: 180,
-            width: 180,
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                CircularProgressIndicator(
-                  value: progress / 100.0,
-                  strokeWidth: 12,
-                  backgroundColor: AppColors.background,
-                  color: AppColors.primary,
-                  strokeCap: StrokeCap.round,
-                ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '$progress%',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      if (goal.targetDate != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.calendar_today,
-                                  size: 12, color: AppColors.primary),
-                              const SizedBox(width: 4),
-                              Text(
-                                formattedDate,
-                                style: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            goal.title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          if (goal.description.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              goal.description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppColors.secondaryText,
-                fontSize: 14,
-                height: 1.5,
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
         ],
       ),
     );
