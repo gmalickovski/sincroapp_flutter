@@ -5,6 +5,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/material.dart'; // Add this import for debugPrint
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
