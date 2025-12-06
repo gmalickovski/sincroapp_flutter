@@ -395,8 +395,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
               ),
             ],
           ),
-      ]
-     );
+      ],
+    );
+  }
 
   Widget _buildImageContent() {
     if (_imageBytes != null) {
