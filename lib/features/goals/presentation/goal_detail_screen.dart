@@ -617,7 +617,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                               child: Padding(
                                 padding: EdgeInsets.fromLTRB(horizontalPadding,
                                     8.0, horizontalPadding, 16.0),
-                                child: _buildMilestonesHeader(),
+                                child: _buildMilestonesHeader(currentGoal),
                               ),
                             ),
                             
@@ -679,7 +679,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     userData: widget.userData,
                     onSuggestWithAI: widget.userData.subscription.plan ==
                             SubscriptionPlan.premium
-                        ? _openAiSuggestions
+                        ? () => _openAiSuggestions(currentGoal)
                         : null,
                   ),
 
