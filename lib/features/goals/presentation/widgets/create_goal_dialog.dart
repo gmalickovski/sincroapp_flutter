@@ -5,15 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-// IMPORT ADICIONADO
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'package:image_picker/image_picker.dart'; // Import ImagePicker
-import 'package:sincro_app_flutter/services/storage_service.dart'; // Import StorageService
-import 'dart:io'; // Import File
-import 'package:flutter/foundation.dart' show kIsWeb; // Import kIsWeb
 
 class CreateGoalDialog extends StatefulWidget {
   final UserModel userData;
@@ -36,12 +31,6 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
   DateTime? _targetDate;
   bool _isSaving = false;
 
-  // Image Logic
-  final ImagePicker _picker = ImagePicker();
-  XFile? _selectedImage;
-  String? _existingImageUrl;
-  final StorageService _storageService = StorageService();
-
   @override
   void initState() {
     super.initState();
@@ -51,61 +40,19 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       _titleController.text = widget.goalToEdit!.title;
       _descriptionController.text = widget.goalToEdit!.description;
       _targetDate = widget.goalToEdit!.targetDate;
-      _existingImageUrl = widget.goalToEdit!.imageUrl;
     }
   }
 
   final _firestoreService = FirestoreService();
 
-  Future<void> _pickImage() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
-      );
-      if (image != null) {
-        setState(() {
-          _selectedImage = image;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error picking image: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao selecionar imagem: $e')),
-        );
-      }
-    }
-  }
-
-  void _clearImage() {
-    setState(() {
-      _selectedImage = null;
-      if (_existingImageUrl != null && _selectedImage == null) {
-          // TODO: Implement delete logic if strictly needed.
-          // For now, clearing selection of *new* image reverts to existing.
-          // If user wants to remove existing image, we need explicit "remove" action.
-          // For this dialog, let's assume "Clear" removes the *picked* image if any,
-          // or clears the *existing* image from view (and logically) if no new picked image.
-          _existingImageUrl = null;
-      }
-    });
-  }
-
   Future<void> _pickDate() async {
-    // Esconde o teclado antes de abrir o seletor de data
     FocusScope.of(context).unfocus();
 
     final pickedDate = await showDialog<DateTime>(
       context: context,
       builder: (context) {
-        // Chama o seu novo widget de calendário flutuante
         return CustomEndDatePickerDialog(
           userData: widget.userData,
-          // Abrir o seletor focado na data atual por padrão (ou na data alvo
-          // já definida), assim evitamos pular para o mês seguinte.
           initialDate: _targetDate ?? DateTime.now(),
           firstDate: DateTime.now(),
           lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
@@ -117,15 +64,10 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       setState(() {
         _targetDate = pickedDate;
       });
-      debugPrint('CreateGoalDialog: Data selecionada: $_targetDate');
-    } else {
-      debugPrint(
-          'CreateGoalDialog: Nenhuma data selecionada (pickedDate é null)');
     }
   }
 
   Future<void> _handleSave() async {
-    // Remove foco dos campos para evitar heurísticas de formulário do navegador
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate() ||
         _isSaving ||
@@ -168,16 +110,6 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     setState(() => _isSaving = true);
 
     try {
-      String? finalImageUrl = _existingImageUrl;
-
-      // Upload new image if selected
-      if (_selectedImage != null) {
-        finalImageUrl = await _storageService.uploadGoalImage(
-          file: _selectedImage!,
-          userId: widget.userData.uid,
-        );
-      }
-
       String goalId;
       
       if (widget.goalToEdit != null) {
@@ -190,11 +122,11 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           progress: widget.goalToEdit!.progress,
           userId: widget.userData.uid,
           createdAt: widget.goalToEdit!.createdAt,
-          subTasks: widget.goalToEdit!.subTasks, // Mantém subtasks antigas se existirem (legado)
-          imageUrl: finalImageUrl,
+          subTasks: widget.goalToEdit!.subTasks,
+          imageUrl: widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
         ));
       } else {
-        // Gerar ID manualmente para usar nas tasks
+        // Gerar ID manualmente
         final docRef = FirebaseFirestore.instance.collection('users').doc(widget.userData.uid).collection('goals').doc();
         goalId = docRef.id;
         
@@ -205,14 +137,13 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           'userId': widget.userData.uid,
           'progress': 0,
           'createdAt': Timestamp.now(),
-          'subTasks': [], // Não salvamos subtasks internas
-          'imageUrl': finalImageUrl,
+          'subTasks': [],
+          'imageUrl': null, // Sem imagem na criação
         };
         
         await docRef.set(dataToSave);
       }
 
-      // Retorna true para indicar sucesso (útil para a tela anterior)
       if (mounted) Navigator.of(context).pop(true);
     } catch (e) {
       if (mounted) {
@@ -248,22 +179,23 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
       errorText: errorText,
       errorStyle: const TextStyle(color: Colors.redAccent),
       hintStyle: const TextStyle(color: AppColors.tertiaryText),
-      filled: false,
+      filled: true,
+      fillColor: AppColors.background,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.border),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppColors.primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.red.shade400),
       ),
       focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide(color: Colors.red.shade400, width: 2),
       ),
     );
@@ -278,7 +210,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
         constraints: const BoxConstraints(maxWidth: 500),
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(32.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -294,22 +226,18 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                               : 'Criar Nova Jornada',
                           style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 18,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold)),
                       IconButton(
                         icon: const Icon(Icons.close,
                             color: AppColors.secondaryText),
-                        // Retorna false para indicar cancelamento
                         onPressed: () => Navigator.of(context).pop(false),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   TextFormField(
                     controller: _titleController,
-                    autofillHints: null, // Desabilita autofill
-                    enableSuggestions: false,
-                    autocorrect: false,
                     style: const TextStyle(color: Colors.white, fontSize: 16),
                     decoration: _buildInputDecoration(
                       labelText: 'Título da Jornada *',
@@ -329,77 +257,11 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                   ),
                   const SizedBox(height: 16),
                   
-                  // --- Image Picker UI ---
-                  GestureDetector(
-                    onTap: _pickImage,
-                    child: Container(
-                      height: 180,
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: AppColors.cardBackground,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
-                        image: (_selectedImage != null || _existingImageUrl != null)
-                            ? DecorationImage(
-                                image: _selectedImage != null
-                                    ? (kIsWeb
-                                        ? NetworkImage(_selectedImage!.path)
-                                        : FileImage(File(_selectedImage!.path))) as ImageProvider
-                                    : NetworkImage(_existingImageUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: (_selectedImage == null && _existingImageUrl == null)
-                          ? const Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_photo_alternate_outlined,
-                                    color: AppColors.primary, size: 36),
-                                SizedBox(height: 8),
-                                Text(
-                                  'Adicionar Imagem (Opcional)',
-                                  style: TextStyle(
-                                      color: AppColors.secondaryText,
-                                      fontSize: 14),
-                                ),
-                              ],
-                            )
-                          : Stack(
-                              children: [
-                                Positioned(
-                                  top: 8,
-                                  right: 8,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      _clearImage();
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.all(6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(Icons.close,
-                                          color: Colors.white, size: 18),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                  // -----------------------
-                  
-                  const SizedBox(height: 16),
                   TextFormField(
                     controller: _descriptionController,
-                    autofillHints: null, // Desabilita autofill
-                    enableSuggestions: false,
-                    autocorrect: false,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                    maxLines: 4,
-                    minLines: 2,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                    maxLines: 5,
+                    minLines: 3,
                     maxLength: 500,
                     decoration: _buildInputDecoration(
                       labelText: 'Descrição',
@@ -417,7 +279,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     },
                   ),
                   const SizedBox(height: 16),
-                  const SizedBox(height: 16),
+                  
+                  // Clean Date Picker for Desktop
                   GestureDetector(
                     onTap: _pickDate,
                     child: InputDecorator(
@@ -443,37 +306,33 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+
+                  const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _handleSave,
-                      icon: _isSaving
-                          ? Container(
-                              width: 20,
-                              height: 20,
-                              padding: const EdgeInsets.all(2.0),
-                              child: const CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 3,
-                              ),
-                            )
-                          : const Icon(Icons.check, color: Colors.white),
-                      label: Text(
-                          _isSaving
-                              ? "Salvando..."
-                              : (widget.goalToEdit != null
-                                  ? "Atualizar Jornada"
-                                  : "Salvar Jornada"),
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold)),
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _handleSave,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
                         shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8)),
+                            borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
                       ),
+                      child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text(
+                            widget.goalToEdit != null
+                                ? "Atualizar Jornada"
+                                : "Salvar Jornada",
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16),
+                          ),
                     ),
                   )
                 ],
