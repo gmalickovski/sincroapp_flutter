@@ -72,6 +72,10 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
     });
 
     try {
+      debugPrint('[ImageUploadDialog] Starting upload...');
+      debugPrint('[ImageUploadDialog] File: ${_selectedImage!.name}, Bytes: ${_imageBytes!.length}');
+      debugPrint('[ImageUploadDialog] UserId: ${widget.userData.uid}');
+      
       // 1. Upload Image (using bytes)
       final String downloadUrl = await _storageService.uploadGoalImage(
         fileBytes: _imageBytes!,
@@ -79,10 +83,14 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         userId: widget.userData.uid,
       );
 
+      debugPrint('[ImageUploadDialog] Upload successful! URL: $downloadUrl');
+
       // 2. Update Goal in Firestore
       final updatedGoal = widget.goal.copyWith(imageUrl: downloadUrl);
       
+      debugPrint('[ImageUploadDialog] Updating goal ${widget.goal.id} with imageUrl...');
       await _firestoreService.updateGoal(updatedGoal);
+      debugPrint('[ImageUploadDialog] Goal updated successfully!');
 
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate success
@@ -90,7 +98,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
           const SnackBar(content: Text('Imagem atualizada com sucesso!'), backgroundColor: AppColors.primary),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('[ImageUploadDialog] ERROR: $e');
+      debugPrint('[ImageUploadDialog] StackTrace: $stackTrace');
       if (mounted) {
         setState(() {
           _errorMessage = "Erro ao salvar: $e";
@@ -110,10 +120,23 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
           return Scaffold(
             backgroundColor: AppColors.cardBackground,
             appBar: AppBar(
-              title: const Text("Adicionar Imagem", style: TextStyle(color: Colors.white)),
+              title: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.image, color: AppColors.primary, size: 24),
+                  SizedBox(width: 12),
+                  Text("Adicionar Imagem", style: TextStyle(color: Colors.white, fontSize: 18)),
+                ],
+              ),
               backgroundColor: Colors.transparent,
               elevation: 0,
-              iconTheme: const IconThemeData(color: Colors.white),
+              automaticallyImplyLeading: false, // Remove back arrow
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
             ),
             body: SafeArea(
               child: SingleChildScrollView(
