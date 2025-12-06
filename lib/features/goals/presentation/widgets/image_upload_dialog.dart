@@ -151,42 +151,39 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         return Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 500),
-            child: Material( // Material is needed for styling internal components cleanly 
-              color: Colors.transparent,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(24), // 4 Rounded Borders
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 10),
-                    ),
-                  ],
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(24), // 4 Rounded Borders
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.3),
+                  width: 1,
                 ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min, // Shrink to fit content
-                    children: [
-                      // Desktop Header
-                      _buildDesktopHeader(),
-                      
-                      // Content
-                      SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
-                        child: _buildContent(),
-                      ),
-
-                      // Footer spacing
-                      const SizedBox(height: 24),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
                   ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Shrink to fit content
+                  children: [
+                    // Desktop Header
+                    _buildDesktopHeader(),
+                    
+                    // Content
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
+                      child: _buildContent(),
+                    ),
+
+                    // Footer spacing
+                    const SizedBox(height: 24),
+                  ],
                 ),
               ),
             ),
