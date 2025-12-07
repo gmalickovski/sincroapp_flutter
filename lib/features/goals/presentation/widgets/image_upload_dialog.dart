@@ -283,7 +283,8 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
           child: _buildImageContent(),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildInstructions() {
