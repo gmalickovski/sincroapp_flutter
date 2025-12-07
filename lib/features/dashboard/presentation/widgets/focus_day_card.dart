@@ -49,6 +49,51 @@ class _FocusDayCardState extends State<FocusDayCard> {
         : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = _isHovered ? 1.5 : 1.0;
 
+    // --- Lógica de Filtro Movida para o Build ---
+    final nowLocal = DateTime.now().toLocal();
+    final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+    final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
+
+    DateTime? localDateOnly(DateTime? d) {
+      if (d == null) return null;
+      final dl = d.toLocal();
+      return DateTime(dl.year, dl.month, dl.day);
+    }
+
+    // Filtra TODAS as tarefas do Foco do Dia (concluídas ou não)
+    final allFocusDayTasks = widget.tasks.where((task) {
+      final DateTime taskDate = task.dueDate ?? task.createdAt;
+      final taskDateOnly = localDateOnly(taskDate);
+      if (taskDateOnly == null) return false;
+
+      if (!(taskDateOnly.year == todayLocal.year &&
+          taskDateOnly.month == todayLocal.month &&
+          taskDateOnly.day == todayLocal.day)) {
+        return false;
+      }
+
+      final int taskPersonalDay =
+          task.personalDay ?? engine.calculatePersonalDayForDate(taskDateOnly);
+
+      return taskPersonalDay == todayPersonalDay;
+    }).toList();
+
+    final int totalTasks = allFocusDayTasks.length;
+    final int completedTasks =
+        allFocusDayTasks.where((t) => t.completed).length;
+
+    // Para a lista visual, mostramos apenas as não concluídas (ou todas, se preferir, mas o padrão era não-concluídas)
+    // O pedido não especificou mudar a lógica da lista, apenas mover botões.
+    // Mas geralmente "Foco do Dia" mostra o que falta fazer.
+    // Vou manter a lógica de exibir as pendentes para a lista principal.
+    final tasksToDisplay =
+        allFocusDayTasks.where((t) => !t.completed).take(3).toList();
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -81,9 +126,14 @@ class _FocusDayCardState extends State<FocusDayCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildHeader(context),
+                  _buildHeader(context, completedTasks, totalTasks),
                   const SizedBox(height: 16),
-                  _buildTaskList(context),
+                  tasksToDisplay.isEmpty
+                      ? _buildEmptyState()
+                      : _buildTaskList(context, tasksToDisplay),
+                  const SizedBox(height: 16),
+                  // --- Novo Footer com Botões ---
+                  _buildFooter(context),
                 ],
               ),
             ),
@@ -99,7 +149,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, int completed, int total) {
     return Container(
       padding: EdgeInsets.only(right: widget.isEditMode ? 32 : 0),
       child: Row(
@@ -129,35 +179,14 @@ class _FocusDayCardState extends State<FocusDayCard> {
               ],
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!widget.isEditMode)
-                IconButton(
-                  icon: const Icon(Icons.add_circle_outline,
-                      color: AppColors.primary),
-                  tooltip: 'Adicionar Tarefa',
-                  iconSize: 22,
-                  constraints: const BoxConstraints(),
-                  splashRadius: 20,
-                  onPressed: widget.onAddTask,
-                ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4.0),
-                child: TextButton(
-                  onPressed: widget.isEditMode ? null : widget.onViewAll,
-                  style: TextButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: AppColors.secondaryText,
-                    textStyle: const TextStyle(
-                        fontSize: 13, fontWeight: FontWeight.w500),
-                  ),
-                  child: const Text('Ver tudo'),
-                ),
-              ),
-            ],
+          // --- Contador no Header ---
+          Text(
+            '$completed/$total',
+            style: const TextStyle(
+              color: AppColors.secondaryText,
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
         ],
       ),
@@ -169,7 +198,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
       padding: EdgeInsets.symmetric(vertical: 24.0),
       child: Center(
         child: Text(
-          'Nenhuma tarefa para hoje.\nAdicione novas tarefas ou marcos!',
+          'Nenhuma tarefa pendente.\nAdicione novas tarefas ou marcos!',
           textAlign: TextAlign.center,
           style: TextStyle(color: AppColors.secondaryText, height: 1.5),
         ),
@@ -177,69 +206,56 @@ class _FocusDayCardState extends State<FocusDayCard> {
     );
   }
 
-  Widget _buildTaskList(BuildContext context) {
-    final nowLocal = DateTime.now().toLocal();
-    final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-
-    final engine = NumerologyEngine(
-      nomeCompleto: widget.userData.nomeAnalise,
-      dataNascimento: widget.userData.dataNasc,
-    );
-    final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
-
-    DateTime? localDateOnly(DateTime? d) {
-      if (d == null) return null;
-      final dl = d.toLocal();
-      return DateTime(dl.year, dl.month, dl.day);
-    }
-
-    final filtered = widget.tasks.where((task) {
-      if (task.completed) return false;
-
-      final DateTime taskDate = task.dueDate ?? task.createdAt;
-      final taskDateOnly = localDateOnly(taskDate);
-      if (taskDateOnly == null) return false;
-
-      if (!(taskDateOnly.year == todayLocal.year &&
-          taskDateOnly.month == todayLocal.month &&
-          taskDateOnly.day == todayLocal.day)) {
-        return false;
-      }
-
-      final int taskPersonalDay =
-          task.personalDay ?? engine.calculatePersonalDayForDate(taskDateOnly);
-
-      return taskPersonalDay == todayPersonalDay;
-    }).toList();
-
-    final tasksToShow = filtered.take(3).toList();
-
-    if (tasksToShow.isEmpty) {
-      return _buildEmptyState();
-    }
-
+  Widget _buildTaskList(BuildContext context, List<TaskModel> tasks) {
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: tasksToShow.map((task) {
+      children: tasks.map((task) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 8.0),
           child: TaskItem(
-          key: ValueKey(task.id),
-          task: task,
-          showGoalIconFlag: true,
-          showTagsIconFlag: true,
-          showVibrationPillFlag: true,
-          onToggle: (isCompleted) =>
-              widget.onTaskStatusChanged(task, isCompleted),
-          onTap:
-              widget.onTaskTap != null ? () => widget.onTaskTap!(task) : null,
-          verticalPaddingOverride: 6.0,
-          // Callbacks de Swipe
-          onSwipeLeft: widget.onDeleteTask,
-          onSwipeRight: widget.onRescheduleTask,
-        ),
+            key: ValueKey(task.id),
+            task: task,
+            showGoalIconFlag: true,
+            showTagsIconFlag: true,
+            showVibrationPillFlag: true,
+            onToggle: (isCompleted) =>
+                widget.onTaskStatusChanged(task, isCompleted),
+            onTap:
+                widget.onTaskTap != null ? () => widget.onTaskTap!(task) : null,
+            verticalPaddingOverride: 6.0,
+            // Callbacks de Swipe
+            onSwipeLeft: widget.onDeleteTask,
+            onSwipeRight: widget.onRescheduleTask,
+          ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildFooter(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (!widget.isEditMode)
+           IconButton(
+             onPressed: widget.onAddTask,
+             icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
+             tooltip: 'Adicionar Tarefa',
+             padding: EdgeInsets.zero,
+             constraints: const BoxConstraints(),
+           ),
+        const SizedBox(width: 12), // Espaço entre os botões
+        TextButton(
+          onPressed: widget.isEditMode ? null : widget.onViewAll,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            foregroundColor: AppColors.secondaryText,
+            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+          ),
+          child: const Text('Ver tudo'),
+        ),
+      ],
     );
   }
 }
