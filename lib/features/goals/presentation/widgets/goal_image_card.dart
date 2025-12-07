@@ -26,10 +26,6 @@ class GoalImageCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             color: AppColors.cardBackground,
-            image: DecorationImage(
-              image: NetworkImage(goal.imageUrl!),
-              fit: BoxFit.cover,
-            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.15),
@@ -39,8 +35,41 @@ class GoalImageCard extends StatelessWidget {
             ],
           ),
           child: Stack(
+            fit: StackFit.expand,
             children: [
-              // Protect visibility of text/icon if we add any, or just indication it's editable
+              // Image with Error Handling
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.network(
+                  goal.imageUrl!,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: AppColors.cardBackground,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.broken_image, color: AppColors.secondaryText, size: 32),
+                          const SizedBox(height: 8),
+                          Text('Erro ao carregar', style: TextStyle(color: AppColors.secondaryText.withValues(alpha: 0.7), fontSize: 12)),
+                        ],
+                      ),
+                    );
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              // Protect visibility of text/icon
               Positioned(
                 top: 8,
                 right: 8,
