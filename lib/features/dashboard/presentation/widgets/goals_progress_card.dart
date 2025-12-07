@@ -448,30 +448,26 @@ class _FullWidthGoalProgress extends StatelessWidget {
                 const SizedBox(height: 8),
                 Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
+                    color: const Color(0xFF1E1E2C), // Dark pill background
+                    borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(
-                        Icons.calendar_today,
-                        size: 11,
-                        color: AppColors.primary,
+                        Icons.flag,
+                        size: 16,
+                        color: Color(0xFF8B5CF6), // Purple accent
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 8),
                       Text(
                         formattedDate,
                         style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],

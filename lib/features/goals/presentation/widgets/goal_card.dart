@@ -76,148 +76,172 @@ class _GoalCardState extends State<GoalCard> {
             splashColor: AppColors.primary.withValues(alpha: 0.1),
             highlightColor: AppColors.primary.withValues(alpha: 0.1),
             hoverColor: Colors.transparent,
-            child: Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: StreamBuilder<List<TaskModel>>(
-                stream: widget.userId.isNotEmpty
-                    ? firestore.getTasksForGoalStream(
-                        widget.userId, widget.goal.id)
-                    : null,
-                builder: (context, snapshot) {
-                  final tasks = snapshot.data ?? const <TaskModel>[];
-                  final int total = tasks.isNotEmpty
-                      ? tasks.length
-                      : widget.goal.subTasks.length;
-                  final int done = tasks.isNotEmpty
-                      ? tasks.where((t) => t.completed).length
-                      : widget.goal.subTasks.where((t) => t.isCompleted).length;
-                  final double percent = total > 0
-                      ? (done / total).clamp(0.0, 1.0)
-                      : (widget.goal.progress / 100).clamp(0.0, 1.0);
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Slim Header Image (Edge-to-Edge)
+                if (widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty)
+                  SizedBox(
+                    height: 60, // Slim header
+                    width: double.infinity,
+                    child: ClipRRect(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                      child: Image.network(
+                        widget.goal.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (ctx, _, __) => Container(color: AppColors.cardBackground),
+                      ),
+                    ),
+                  ),
 
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Header: Title + Menu
-                      Row(
+                // 2. Content with Padding
+                Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: StreamBuilder<List<TaskModel>>(
+                    stream: widget.userId.isNotEmpty
+                        ? firestore.getTasksForGoalStream(
+                            widget.userId, widget.goal.id)
+                        : null,
+                    builder: (context, snapshot) {
+                      final tasks = snapshot.data ?? const <TaskModel>[];
+                      final int total = tasks.isNotEmpty
+                          ? tasks.length
+                          : widget.goal.subTasks.length;
+                      final int done = tasks.isNotEmpty
+                          ? tasks.where((t) => t.completed).length
+                          : widget.goal.subTasks.where((t) => t.isCompleted).length;
+                      final double percent = total > 0
+                          ? (done / total).clamp(0.0, 1.0)
+                          : (widget.goal.progress / 100).clamp(0.0, 1.0);
+
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.goal.title,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                          // Header: Title + Menu
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      widget.goal.title,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    if (widget.goal.description.isNotEmpty) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        widget.goal.description,
+                                        style: const TextStyle(
+                                          color: AppColors.secondaryText,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
-                                if (widget.goal.description.isNotEmpty) ...[
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    widget.goal.description,
-                                    style: const TextStyle(
-                                      color: AppColors.secondaryText,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          if (widget.onDelete != null || widget.onEdit != null)
-                            PopupMenuButton<String>(
-                              icon: const Icon(
-                                Icons.more_vert,
-                                color: AppColors.secondaryText,
-                                size: 20,
                               ),
-                              tooltip: 'Opções',
-                              color: AppColors.cardBackground,
-                              position: PopupMenuPosition.under,
-                              itemBuilder: (context) {
-                                final items = <PopupMenuEntry<String>>[];
-                                if (widget.onEdit != null) {
-                                  items.add(const PopupMenuItem<String>(
-                                    value: 'edit',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.edit_outlined,
-                                            color: Colors.white, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Editar',
-                                            style:
-                                                TextStyle(color: Colors.white)),
-                                      ],
-                                    ),
-                                  ));
-                                }
-                                if (widget.onDelete != null) {
-                                  items.add(const PopupMenuItem<String>(
-                                    value: 'delete',
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.delete_outline,
-                                            color: Colors.redAccent, size: 18),
-                                        SizedBox(width: 8),
-                                        Text('Excluir',
-                                            style:
-                                                TextStyle(color: Colors.white)),
-                                      ],
-                                    ),
-                                  ));
-                                }
-                                return items;
-                              },
-                              onSelected: (value) {
-                                if (value == 'edit' && widget.onEdit != null) {
-                                  widget.onEdit!();
-                                } else if (value == 'delete' &&
-                                    widget.onDelete != null) {
-                                  widget.onDelete!();
-                                }
-                              },
-                            ),
-                        ],
-                      ),
-                      
-                      const SizedBox(height: 24),
+                              if (widget.onDelete != null || widget.onEdit != null)
+                                PopupMenuButton<String>(
+                                  icon: const Icon(
+                                    Icons.more_vert,
+                                    color: AppColors.secondaryText,
+                                    size: 20,
+                                  ),
+                                  tooltip: 'Opções',
+                                  color: AppColors.cardBackground,
+                                  position: PopupMenuPosition.under,
+                                  itemBuilder: (context) {
+                                    final items = <PopupMenuEntry<String>>[];
+                                    if (widget.onEdit != null) {
+                                      items.add(const PopupMenuItem<String>(
+                                        value: 'edit',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit_outlined,
+                                                color: Colors.white, size: 18),
+                                            SizedBox(width: 8),
+                                            Text('Editar',
+                                                style:
+                                                    TextStyle(color: Colors.white)),
+                                          ],
+                                        ),
+                                      ));
+                                    }
+                                    if (widget.onDelete != null) {
+                                      items.add(const PopupMenuItem<String>(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline,
+                                                color: Colors.redAccent, size: 18),
+                                            SizedBox(width: 8),
+                                            Text('Excluir',
+                                                style:
+                                                    TextStyle(color: Colors.white)),
+                                          ],
+                                        ),
+                                      ));
+                                    }
+                                    return items;
+                                  },
+                                  onSelected: (value) {
+                                    if (value == 'edit' && widget.onEdit != null) {
+                                      widget.onEdit!();
+                                    } else if (value == 'delete' &&
+                                        widget.onDelete != null) {
+                                      widget.onDelete!();
+                                    }
+                                  },
+                                ),
+                            ],
+                          ),
+                          
+                          const SizedBox(height: 24),
 
-                      // Footer: Date + Percent + Progress Bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (widget.goal.targetDate != null)
-                            _buildDateBadge(widget.goal.targetDate!)
-                          else
-                            const SizedBox(),
-                          Text(
-                            '${(percent * 100).round()}%',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
+                          // Footer: Date + Percent + Progress Bar
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              if (widget.goal.targetDate != null)
+                                _buildDateBadge(widget.goal.targetDate!)
+                              else
+                                const SizedBox(),
+                              Text(
+                                '${(percent * 100).round()}%',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: percent,
+                              backgroundColor: AppColors.border.withValues(alpha: 0.3),
+                              color: AppColors.primary,
+                              minHeight: 6,
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: percent,
-                          backgroundColor: AppColors.border.withValues(alpha: 0.3),
-                          color: AppColors.primary,
-                          minHeight: 6,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
           ),
         ),
@@ -234,24 +258,23 @@ class _GoalCardState extends State<GoalCard> {
         '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+        color: const Color(0xFF1E1E2C), // Dark pill background
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.calendar_today_outlined,
-              color: AppColors.primary, size: 12),
-          const SizedBox(width: 6),
+          const Icon(Icons.flag, // Using flag like screenshot
+              color: Color(0xFF8B5CF6), size: 16), // Use a nice purple
+          const SizedBox(width: 8),
           Text(
             formattedDate,
             style: const TextStyle(
-              color: AppColors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],

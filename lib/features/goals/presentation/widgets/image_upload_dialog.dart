@@ -266,9 +266,10 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
   Widget _buildImagePreview() {
     return GestureDetector(
       onTap: _pickImage,
-      child: Container(
-        height: 250,
-        width: double.infinity,
+      child: AspectRatio(
+        aspectRatio: 16 / 9,
+        child: Container(
+          width: double.infinity,
         decoration: BoxDecoration(
           color: AppColors.background,
           borderRadius: BorderRadius.circular(16),

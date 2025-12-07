@@ -1022,21 +1022,21 @@ class _CircularGoalInfoCard extends StatelessWidget {
             ),
           
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.background,
+              color: const Color(0xFF1E1E2C), // Dark pill background
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.flag, color: AppColors.primary, size: 16),
+                const Icon(Icons.flag, color: Color(0xFF8B5CF6), size: 16),
                 const SizedBox(width: 8),
                 Text(
                   goal.targetDate != null
-                      ? DateFormat('dd/MM/yyyy').format(goal.targetDate!)
+                      ? DateFormat('dd MMM yyyy').format(goal.targetDate!)
                       : 'Sem data',
-                  style: const TextStyle(color: Colors.white),
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
