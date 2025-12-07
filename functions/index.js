@@ -9,19 +9,51 @@ admin.initializeApp();
 
 // URL do webhook do n8n
 const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
+const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
 
 /**
  * Função auxiliar para enviar dados ao webhook do n8n.
  */
-const sendToWebhook = async (payload) => {
+const sendToWebhook = async (payload, targetUrl = N8N_WEBHOOK_URL) => {
     try {
-        functions.logger.info("Tentando enviar dados para o n8n:", payload);
-        await axios.post(N8N_WEBHOOK_URL, payload);
+        functions.logger.info(`Tentando enviar dados para o n8n (${targetUrl}):`, payload);
+        await axios.post(targetUrl, payload);
         functions.logger.info("Webhook enviado com sucesso para n8n.");
     } catch (error) {
         functions.logger.error("ERRO AO ENVIAR WEBHOOK:", { errorMessage: error.message });
     }
 };
+
+// ... (existing code) ...
+
+/**
+ * Envia Feedback do usuário para o n8n
+ */
+exports.submitFeedback = functions.https.onCall(async (data, context) => {
+    // Autenticação opcional, mas recomendada se quisermos garantir que é um usuário
+    // if (!context.auth) ...
+
+    try {
+        const { type, description, appVersion, deviceInfo, userId, userEmail } = data;
+
+        // Note: Passing the specific FEEDBACK_WEBHOOK_URL here
+        await sendToWebhook({
+            event: 'user_feedback',
+            type: type, // 'Bug' ou 'Idea'
+            description: description,
+            app_version: appVersion,
+            device_info: deviceInfo,
+            user_id: userId || (context.auth ? context.auth.uid : 'anonymous'),
+            user_email: userEmail || (context.auth ? context.auth.token.email : 'anonymous'),
+            timestamp: new Date().toISOString()
+        }, FEEDBACK_WEBHOOK_URL);
+
+        return { success: true };
+    } catch (error) {
+        console.error("Erro ao enviar feedback:", error);
+        throw new functions.https.HttpsError('internal', 'Erro ao processar feedback.');
+    }
+});
 
 /**
  * Cria uma Assinatura no Stripe
