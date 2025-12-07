@@ -693,8 +693,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                               SubscriptionPlan.premium)
                       ? ExpandingAssistantFab(
                           onPrimary: () => _addMilestone(currentGoal),
-                          primaryIcon: Icons.add,
-                          fabIcon: Icons.place, // Icone de ponto de referência/marco
+                          primaryIcon: Icons.place, // Ação principal: Novo Marco
+                          fabIcon: Icons.add, // Toggle do menu: "+" (Expandir)
                           primaryTooltip: 'Novo Marco',
                           onOpenAssistant: (message) {
                             AssistantPanel.show(context, widget.userData,
@@ -706,7 +706,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           backgroundColor: AppColors.primary,
                           tooltip: 'Novo Marco',
                           heroTag: 'fab_goal_detail',
-                          child: const Icon(Icons.add, color: Colors.white),
+                          child: const Icon(Icons.place, color: Colors.white), // Free: Novo Marco direto
                         ),
                 ),
             );

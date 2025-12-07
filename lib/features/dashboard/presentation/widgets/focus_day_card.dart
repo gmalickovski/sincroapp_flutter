@@ -121,7 +121,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.all(20.0),
+              // Reduced bottom padding to bring footer buttons closer to edge
+              padding: const EdgeInsets.fromLTRB(20.0, 20.0, 20.0, 12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,

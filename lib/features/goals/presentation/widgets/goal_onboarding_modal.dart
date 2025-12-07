@@ -408,58 +408,66 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final milestone = _addedMilestones[index];
-                return Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: AppColors.background,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.check, color: Colors.white, size: 10),
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: AppColors.background,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: AppColors.primary.withValues(alpha: 0.3),
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              milestone['title']!,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (milestone['date'] != null)
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(6), // Slightly larger padding
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.2), // Softer background
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.place, color: AppColors.primary, size: 14), // Milestone icon
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
                               Text(
-                                milestone['date']!,
+                                milestone['title']!,
                                 style: const TextStyle(
-                                  color: AppColors.secondaryText,
-                                  fontSize: 11,
+                                  color: Colors.white,
+                                  fontSize: 14, // Slightly larger text
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                          ],
+                              if (milestone['date'] != null) ...[
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.calendar_today, size: 12, color: AppColors.secondaryText),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      milestone['date']!,
+                                      style: const TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 18),
-                        onPressed: () => _removeMilestone(index),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                    ],
-                  ),
-                );
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                          onPressed: () => _removeMilestone(index),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  );
               },
             ),
           ),
