@@ -570,8 +570,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             // Collapsible Header (Carousel)
                             SliverToBoxAdapter(
                               child: AnimatedCrossFade(
-                                firstChild: SizedBox(
-                                  height: 180, // Compact height to match card content
+                                firstChild: AspectRatio(
+                                  aspectRatio: 16 / 9, // Standardize Aspect Ratio
                                   child: PageView(
                                     padEnds: false,
                                     controller: PageController(viewportFraction: 1.0), // Full width

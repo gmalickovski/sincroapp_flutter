@@ -39,9 +39,8 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
     try {
       final XFile? image = await _picker.pickImage(
         source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+        maxWidth: 1280, // Optimized for heavy images
+        imageQuality: 80, // Good balance of quality/size
       );
       
       if (image != null) {
@@ -76,7 +75,15 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
       debugPrint('[ImageUploadDialog] File: ${_selectedImage!.name}, Bytes: ${_imageBytes!.length}');
       debugPrint('[ImageUploadDialog] UserId: ${widget.userData.uid}');
       
-      // 1. Upload Image (using bytes)
+      debugPrint('[ImageUploadDialog] UserId: ${widget.userData.uid}');
+
+      // 1. Delete Old Image if exists to save storage/costs
+      if (widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty) {
+        debugPrint('[ImageUploadDialog] Deleting old image...');
+        await _storageService.deleteImage(widget.goal.imageUrl!);
+      }
+      
+      // 2. Upload Image (using bytes)
       final String downloadUrl = await _storageService.uploadGoalImage(
         fileBytes: _imageBytes!,
         fileName: _selectedImage!.name,

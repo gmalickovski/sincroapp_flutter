@@ -24,7 +24,6 @@ class GoalImageCard extends StatelessWidget {
         child: AspectRatio(
           aspectRatio: 16 / 9,
           child: Container(
-            width: double.infinity,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               color: AppColors.cardBackground,
@@ -37,37 +36,38 @@ class GoalImageCard extends StatelessWidget {
               ],
             ),
             child: Stack(
-              fit: StackFit.expand,
               children: [
                 // Image with Error Handling
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    goal.imageUrl!,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(
-                        color: AppColors.cardBackground,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.broken_image, color: AppColors.secondaryText, size: 32),
-                            const SizedBox(height: 8),
-                            Text('Erro ao carregar', style: TextStyle(color: AppColors.secondaryText.withValues(alpha: 0.7), fontSize: 12)),
-                          ],
-                        ),
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                              : null,
-                        ),
-                      );
-                    },
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Image.network(
+                      goal.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppColors.cardBackground,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.broken_image, color: AppColors.secondaryText, size: 32),
+                              const SizedBox(height: 8),
+                              Text('Erro ao carregar', style: TextStyle(color: AppColors.secondaryText.withValues(alpha: 0.7), fontSize: 12)),
+                            ],
+                          ),
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
                 
