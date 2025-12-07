@@ -229,6 +229,20 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
   }
 
   Widget _buildCarousel(BuildContext context) {
+    // Se há apenas uma meta, renderiza diretamente sem PageView para evitar excesso de espaço
+    if (widget.goals.length == 1) {
+      final goal = widget.goals.first;
+      return GestureDetector(
+        onTap: widget.isEditMode ? null : () => widget.onGoalSelected(goal),
+        child: Container(
+          color: Colors.transparent,
+          // Remove padding horizontal do PageView item, mas mantém consistência visual
+          padding: const EdgeInsets.symmetric(horizontal: 4.0), 
+          child: _buildGoalItem(goal),
+        ),
+      );
+    }
+
     // Altura do slide ajustada dinamicamente para evitar overflow em mobile
     final bool isMobile = MediaQuery.of(context).size.width < 768.0;
     final double estDiameter = ((MediaQuery.of(context).size.width * 0.6)
@@ -261,7 +275,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
           ),
         ),
         const SizedBox(height: 8),
-        if (widget.goals.length > 1) _buildPageIndicator(),
+        _buildPageIndicator(),
       ],
     );
   }

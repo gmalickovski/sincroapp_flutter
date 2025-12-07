@@ -11,6 +11,7 @@ class ExpandingAssistantFab extends StatefulWidget {
   final IconData? primaryIcon; // ícone da ação principal - opcional
   final String primaryTooltip; // dica da ação principal
   final Function(String?) onOpenAssistant; // abrir chat da IA (agora aceita mensagem opcional)
+  final IconData? fabIcon; // ícone do botão flutuante (opcional, default é add)
 
   const ExpandingAssistantFab({
     super.key,
@@ -18,6 +19,7 @@ class ExpandingAssistantFab extends StatefulWidget {
     this.primaryIcon,
     this.primaryTooltip = 'Ação',
     required this.onOpenAssistant,
+    this.fabIcon,
   });
 
   @override
@@ -410,7 +412,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                     )
                   : RotationTransition(
                       turns: _rotationAnim,
-                      child: const Icon(Icons.add, color: Colors.white, size: 28),
+                      child: Icon(widget.fabIcon ?? Icons.add, color: Colors.white, size: 28),
                     ),
               ),
             ),

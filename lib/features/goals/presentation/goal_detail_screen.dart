@@ -694,6 +694,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       ? ExpandingAssistantFab(
                           onPrimary: () => _addMilestone(currentGoal),
                           primaryIcon: Icons.add,
+                          fabIcon: Icons.place, // Icone de ponto de referência/marco
                           primaryTooltip: 'Novo Marco',
                           onOpenAssistant: (message) {
                             AssistantPanel.show(context, widget.userData,
