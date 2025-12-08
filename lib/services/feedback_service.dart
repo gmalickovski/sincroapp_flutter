@@ -68,18 +68,11 @@ class FeedbackService {
       final fileName = '${timestamp}_feedback.jpg';
       final ref = _storage.ref().child('feedback_uploads/$userId/$fileName');
       
-      UploadTask uploadTask;
-
-      if (kIsWeb) {
-        // Web: Read bytes and upload using putData
-        final bytes = await file.readAsBytes();
-        final metadata = SettableMetadata(contentType: 'image/jpeg'); // Assuming JPEG or similar
-        uploadTask = ref.putData(bytes, metadata);
-      } else {
-        // Mobile: Use putFile with standard File
-        uploadTask = ref.putFile(File(file.path));
-      }
+      // Universal Upload (Web & Mobile) - Reads into memory (acceptable for feedback images)
+      final bytes = await file.readAsBytes();
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
       
+      final uploadTask = ref.putData(bytes, metadata);
       final snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
