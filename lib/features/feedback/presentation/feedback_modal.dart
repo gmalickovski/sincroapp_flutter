@@ -25,7 +25,7 @@ class FeedbackModal extends StatefulWidget {
 class _FeedbackModalState extends State<FeedbackModal> {
   FeedbackType _selectedType = FeedbackType.bug;
   final TextEditingController _descriptionController = TextEditingController();
-  File? _attachment;
+  XFile? _attachment;
   bool _isLoading = false;
   final FeedbackService _service = FeedbackService();
 
@@ -40,7 +40,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       setState(() {
-        _attachment = File(picked.path);
+        _attachment = picked;
       });
     }
   }

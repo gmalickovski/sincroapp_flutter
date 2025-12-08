@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'package:image_picker/image_picker.dart'; // For XFile
 import '../features/feedback/models/feedback_model.dart';
 
 class FeedbackService {
@@ -12,7 +13,7 @@ class FeedbackService {
 
   Future<void> sendFeedback({
     required FeedbackModel feedback,
-    File? attachment,
+    XFile? attachment,
   }) async {
     try {
       // 1. Gather Metadata
@@ -33,10 +34,8 @@ class FeedbackService {
       }
 
       String? attachmentUrl;
-      // 2. Upload Attachment (if present and not web, or handle web bytes if needed)
-      // Note: File? attachment implies Mobile/Desktop IO File.
-      // If we support Web upload later we need XFile or Uint8List. 
-      // Assuming Mobile for now based on 'File' type usage.
+      
+      // 2. Upload Attachment
       if (attachment != null) {
         attachmentUrl = await _uploadFile(attachment, feedback.userId ?? 'anonymous');
       }
@@ -63,15 +62,25 @@ class FeedbackService {
     }
   }
 
-  Future<String> _uploadFile(File file, String userId) async {
+  Future<String> _uploadFile(XFile file, String userId) async {
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = '${timestamp}_feedback.jpg';
       final ref = _storage.ref().child('feedback_uploads/$userId/$fileName');
       
-      final uploadTask = ref.putFile(file);
-      final snapshot = await uploadTask;
+      UploadTask uploadTask;
+
+      if (kIsWeb) {
+        // Web: Read bytes and upload using putData
+        final bytes = await file.readAsBytes();
+        final metadata = SettableMetadata(contentType: 'image/jpeg'); // Assuming JPEG or similar
+        uploadTask = ref.putData(bytes, metadata);
+      } else {
+        // Mobile: Use putFile with standard File
+        uploadTask = ref.putFile(File(file.path));
+      }
       
+      final snapshot = await uploadTask;
       return await snapshot.ref.getDownloadURL();
     } catch (e) {
       print('Error uploading file: $e');
