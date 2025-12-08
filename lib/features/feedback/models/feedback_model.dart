@@ -4,12 +4,6 @@ enum FeedbackType {
 }
 
 class FeedbackModel {
-enum FeedbackType {
-  bug,
-  idea,
-}
-
-class FeedbackModel {
   final FeedbackType type;
   final String description;
   final String? userId;
