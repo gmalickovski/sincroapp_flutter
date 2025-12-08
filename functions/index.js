@@ -34,7 +34,7 @@ exports.submitFeedback = functions.https.onCall(async (data, context) => {
     // if (!context.auth) ...
 
     try {
-        const { type, description, appVersion, deviceInfo, userId, userEmail, attachmentUrl } = data; // Added attachmentUrl
+        const { type, description, app_version: appVersion, device_info: deviceInfo, user_id: userId, user_email: userEmail, attachment_url: attachmentUrl } = data;
 
         // 1. Fetch User Name from Firestore
         let userName = 'Usuário';
