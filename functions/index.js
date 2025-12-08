@@ -34,7 +34,21 @@ exports.submitFeedback = functions.https.onCall(async (data, context) => {
     // if (!context.auth) ...
 
     try {
-        const { type, description, appVersion, deviceInfo, userId, userEmail } = data;
+        const { type, description, appVersion, deviceInfo, userId, userEmail, attachmentUrl } = data; // Added attachmentUrl
+
+        // 1. Fetch User Name from Firestore
+        let userName = 'Usuário';
+        if (userId) {
+            try {
+                const userDoc = await admin.firestore().collection('users').doc(userId).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
+                }
+            } catch (e) {
+                console.warn('Erro ao buscar nome do usuário para feedback:', e);
+            }
+        }
 
         // Note: Passing the specific FEEDBACK_WEBHOOK_URL here
         await sendToWebhook({
@@ -45,6 +59,8 @@ exports.submitFeedback = functions.https.onCall(async (data, context) => {
             device_info: deviceInfo,
             user_id: userId || (context.auth ? context.auth.uid : 'anonymous'),
             user_email: userEmail || (context.auth ? context.auth.token.email : 'anonymous'),
+            name: userName, // Added Name
+            image_url: attachmentUrl || null, // Added Image URL
             timestamp: new Date().toISOString()
         }, FEEDBACK_WEBHOOK_URL);
 
