@@ -12,10 +12,21 @@ class FeedbackModal extends StatefulWidget {
   const FeedbackModal({super.key, required this.userData});
 
   static void show(BuildContext context, UserModel userData) {
-    showDialog(
-      context: context,
-      builder: (context) => FeedbackModal(userData: userData),
-    );
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+    
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (context) => FeedbackModal(userData: userData),
+      );
+    } else {
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true, // Native "Close" button animation feeling
+          builder: (context) => FeedbackModal(userData: userData),
+        ),
+      );
+    }
   }
 
   @override
@@ -98,12 +109,171 @@ class _FeedbackModalState extends State<FeedbackModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 600;
+    return isDesktop ? _buildDesktopLayout() : _buildMobileLayout();
+  }
+
+  Widget _buildMobileLayout() {
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.close, color: AppColors.secondaryText),
+          ),
+        ],
+        title: const Text(
+          'Enviar Feedback',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Type Selector
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTypeButton(
+                            type: FeedbackType.bug,
+                            label: 'Reportar Bug',
+                            icon: Icons.bug_report,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTypeButton(
+                            type: FeedbackType.idea,
+                            label: 'Sugerir Ideia',
+                            icon: Icons.lightbulb,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Description Label
+                    const Text(
+                      'Descrição',
+                      style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Description Input
+                    TextField(
+                      controller: _descriptionController,
+                      maxLines: 8,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: _selectedType == FeedbackType.bug
+                            ? 'Qual o problema? O que você estava fazendo quando aconteceu?'
+                            : 'Compartilhe sua ideia para melhorar o app...',
+                        hintStyle: const TextStyle(color: AppColors.tertiaryText),
+                        filled: true,
+                        fillColor: AppColors.cardBackground,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.all(16),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Footer (Bottom Actions)
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: AppColors.background, // Match background to avoid "floating" feel
+                border: Border(top: BorderSide(color: Colors.white10)),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                   // Attachment Button
+                  OutlinedButton.icon(
+                    onPressed: _pickImage,
+                    icon: Icon(
+                      _attachment == null ? Icons.attach_file : Icons.check_circle, 
+                      color: _attachment == null ? AppColors.secondaryText : Colors.green
+                    ),
+                    label: Text(
+                      _attachment == null ? 'Anexar Captura de Tela' : 'Imagem Anexada',
+                      style: TextStyle(
+                        color: _attachment == null ? AppColors.secondaryText : Colors.green
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: _attachment == null ? AppColors.border : Colors.green
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Submit Button
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _submit,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 0,
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text(
+                            'Enviar Feedback',
+                            style: TextStyle(
+                              color: Colors.white, 
+                              fontSize: 16, 
+                              fontWeight: FontWeight.bold
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
     return Dialog(
       backgroundColor: AppColors.cardBackground,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         padding: const EdgeInsets.all(24),
-        constraints: const BoxConstraints(maxWidth: 500), // Desktop friendly
+        constraints: const BoxConstraints(maxWidth: 500),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,8 +296,6 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ],
             ),
             const SizedBox(height: 24),
-            
-            // Type Selector
             Row(
               children: [
                 Expanded(
@@ -148,8 +316,6 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ],
             ),
             const SizedBox(height: 24),
-
-            // Description
             TextField(
               controller: _descriptionController,
               maxLines: 5,
@@ -168,9 +334,6 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Attachment (Visual only for now if MVP doesn't support upload in logic)
-            // Ideally we'd show a preview here.
             OutlinedButton.icon(
               onPressed: _pickImage,
               icon: Icon(_attachment == null ? Icons.attach_file : Icons.check, color: AppColors.primary),
@@ -183,10 +346,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
-
             const SizedBox(height: 24),
-            
-            // Submit
             ElevatedButton(
               onPressed: _isLoading ? null : _submit,
               style: ElevatedButton.styleFrom(
