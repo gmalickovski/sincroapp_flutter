@@ -37,7 +37,12 @@ class _FeedbackModalState extends State<FeedbackModal> {
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
+    // Optimization: Resize/Compress to solve Mobile Web Timeout with large camera photos
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024, // Reasonable HD width
+      imageQuality: 70, // 70% quality (greatly reduces size)
+    );
     if (picked != null) {
       setState(() {
         _attachment = picked;
