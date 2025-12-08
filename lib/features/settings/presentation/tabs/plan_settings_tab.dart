@@ -182,7 +182,7 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
   }
 
   Widget _buildChangePlanButton(BuildContext context) {
-    return TextButton(
+    return ElevatedButton(
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -190,8 +190,12 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
           ),
         );
       },
-      style: TextButton.styleFrom(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1), // Light background
         foregroundColor: AppColors.primary,
+        elevation: 0,
+        side: const BorderSide(color: AppColors.primary), // Border color
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       ),
       child: const Text('Alterar meu plano'),
     );

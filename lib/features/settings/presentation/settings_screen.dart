@@ -171,16 +171,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       border: Border(bottom: BorderSide(color: Colors.white10)),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        Text(
-                          _settingsPages[_selectedIndex].title,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primaryText,
-                          ),
-                        ),
+                        // Title Removed as per request (redundant with sidebar)
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.secondaryText),
                           onPressed: () => Navigator.of(context).pop(),
