@@ -148,13 +148,17 @@ Future<void> main() async {
     }
   }
 
-  // if (kDebugMode) {
-  //   try {
-  //     await _connectToEmulators();
-  //   } catch (e) {
-  //     // Intencional: ignorar falha ao conectar aos emuladores em debug
-  //   }
-  // }
+  // Emulador: ATIVE ISTO para testar localmente quando o Firebase estiver bloqueado ou para desenvolvimento offline.
+  const bool useEmulators = true; 
+
+  if (kDebugMode && useEmulators) {
+    try {
+      await _connectToEmulators();
+      debugPrint('🔧 Conectado aos emuladores do Firebase (Auth, Firestore, Functions)');
+    } catch (e) {
+      debugPrint('⚠️ Falha ao conectar aos emuladores: $e');
+    }
+  }
 
   runApp(const SincroApp());
 }
