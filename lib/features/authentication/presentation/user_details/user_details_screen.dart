@@ -221,49 +221,50 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     fontWeight: FontWeight.w500,
                     color: AppColors.tertiaryText,
                     height: 1.5)),
-            const SizedBox(height: 24),
-            const Text('Seu nome completo de nascimento',
-                style: TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
+            const SizedBox(height: 32),
             TextField(
                 controller: _nomeAnaliseController,
-                decoration: _buildInputDecoration("Ex: Maria da Silva"),
-                textCapitalization:
-                    TextCapitalization.words, // Capitaliza nomes
+                style: const TextStyle(color: Colors.white),
+                decoration: _buildInputDecoration("Seu nome completo de nascimento", Icons.person_outline),
+                textCapitalization: TextCapitalization.words,
                 onChanged: (_) => setState(() {}) // Para reavaliar o botão
                 ),
-            const Text("Exatamente como está na sua certidão.",
-                style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
-            const SizedBox(height: 16),
-            const Text('Data de Nascimento',
-                style: TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500)),
-            const SizedBox(height: 8),
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0, left: 4.0),
+              child: Text("Exatamente como está na sua certidão.",
+                  style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
+            ),
+            const SizedBox(height: 24),
             TextField(
                 controller: _dataNascController,
-                decoration: _buildInputDecoration("DD/MM/AAAA"),
+                 style: const TextStyle(color: Colors.white),
+                decoration: _buildInputDecoration("Data de Nascimento", Icons.calendar_today_outlined, hint: "DD/MM/AAAA"),
                 keyboardType: TextInputType.datetime,
                 onChanged: (_) => setState(() {}) // Para reavaliar o botão
                 ),
-            const Text("Use o formato dia/mês/ano.",
-                style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
-            const SizedBox(height: 24),
+            const Padding(
+               padding: EdgeInsets.only(top: 8.0, left: 4.0),
+               child: Text("Use o formato dia/mês/ano.",
+                  style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
+            ),
+            const SizedBox(height: 32),
             Row(
               children: [
                 OutlinedButton(
-                    // Desabilita se estiver carregando
                     onPressed:
                         _isLoading ? null : () => setState(() => _step = 1),
+                     style: OutlinedButton.styleFrom(
+                        shape: const StadiumBorder(),
+                        side: const BorderSide(color: AppColors.primary),
+                        foregroundColor: AppColors.primary
+                     ),
                     child: const Text('Voltar')),
                 const SizedBox(width: 16),
                 Expanded(
                     child: ElevatedButton(
-                        // Desabilita se estiver carregando ou se campos vazios
+                        style: ElevatedButton.styleFrom(
+                            shape: const StadiumBorder(),
+                        ),
                         onPressed: _isLoading ||
                                 _nomeAnaliseController.text.isEmpty ||
                                 _dataNascController.text.isEmpty
@@ -286,28 +287,30 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     }
   }
 
-  InputDecoration _buildInputDecoration(String placeholder) {
+  InputDecoration _buildInputDecoration(String label, IconData icon, {String? hint}) {
     return InputDecoration(
-      hintText: placeholder,
+      labelText: label,
+      hintText: hint,
+      labelStyle: const TextStyle(color: AppColors.secondaryText),
       hintStyle: const TextStyle(color: AppColors.tertiaryText),
+      prefixIcon: Icon(icon, color: AppColors.secondaryText),
       filled: true,
       fillColor: AppColors.background,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(12.0),
           borderSide: const BorderSide(color: AppColors.border)),
       enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(12.0),
           borderSide: const BorderSide(color: AppColors.border)),
       focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(12.0),
           borderSide: const BorderSide(color: AppColors.primaryAccent)),
-      // Adiciona borda de erro
       errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(12.0),
           borderSide: BorderSide(color: Colors.red.shade400)),
       focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(12.0),
           borderSide: BorderSide(color: Colors.red.shade700)),
     );
   }

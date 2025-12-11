@@ -104,87 +104,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Widget _buildDesktopLayout() {
     return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1200),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Lado esquerdo - Logo e texto
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SvgPicture.asset(
-                      'assets/images/sincroapp_logo_2.svg',
-                      height: 96,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      'Descubra o propósito oculto\nnos números da sua vida',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.secondaryText,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 48),
-                    const Text(
-                      'Crie sua Conta',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primaryText,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Comece sua jornada de autoconhecimento.',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.tertiaryText,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(vertical: 32.0),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              SvgPicture.asset(
+                'assets/images/sincroapp_logo_2.svg',
+                height: 96,
+                fit: BoxFit.contain,
               ),
-            ),
-            // Lado direito - Formulário
-            Expanded(
-              flex: 1,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(vertical: 48.0),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: Column(
-                      children: [
-                        _buildForm(),
-                        const SizedBox(height: 24),
-                        CustomTextButton(
-                          text: 'Já tenho uma conta',
-                          onPressed: () => Navigator.of(context).pop(),
-                          color: AppColors.tertiaryText,
-                          icon: Icons.arrow_back,
-                        ),
-                      ],
-                    ),
-                  ),
+              const SizedBox(height: 32),
+              const Text(
+                'Crie sua Conta',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText,
                 ),
+                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              const Text(
+                'Comece sua jornada de autoconhecimento.',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.tertiaryText,
+                  height: 1.5,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              _buildForm(),
+              const SizedBox(height: 24),
+              CustomTextButton(
+                text: 'Já tenho uma conta',
+                onPressed: () => Navigator.of(context).pop(),
+                color: AppColors.tertiaryText,
+                icon: Icons.arrow_back,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -250,14 +213,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildTextField(_firstNameController, 'Nome'),
+          TextField(
+            controller: _firstNameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Nome',
+              labelStyle: const TextStyle(color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
-          _buildTextField(_lastNameController, 'Sobrenome'),
+          TextField(
+            controller: _lastNameController,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Sobrenome',
+              labelStyle: const TextStyle(color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
-          _buildTextField(_emailController, 'Email',
-              keyboardType: TextInputType.emailAddress),
+          TextField(
+            controller: _emailController,
+            keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Email',
+              labelStyle: const TextStyle(color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.secondaryText),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
           const SizedBox(height: 16),
-          _buildTextField(_passwordController, 'Senha', isPassword: true),
+          TextField(
+            controller: _passwordController,
+            obscureText: !_showPassword,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              labelText: 'Senha',
+              labelStyle: const TextStyle(color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+              suffixIcon: IconButton(
+                icon: Icon(
+                    _showPassword ? Icons.visibility_off : Icons.visibility,
+                    color: AppColors.tertiaryText),
+                onPressed: () =>
+                    setState(() => _showPassword = !_showPassword),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+          ),
           const SizedBox(height: 24),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -310,7 +345,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0)),
+                  borderRadius: BorderRadius.circular(12.0)), // Updated radius
             ),
             child: _isLoading
                 ? const CustomLoadingSpinner(size: 24)
@@ -323,47 +358,5 @@ class _RegisterScreenState extends State<RegisterScreen> {
     );
   }
 
-  Widget _buildTextField(TextEditingController controller, String label,
-      {bool isPassword = false, TextInputType? keyboardType}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label,
-            style: const TextStyle(
-                color: AppColors.secondaryText,
-                fontSize: 14,
-                fontWeight: FontWeight.w500)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          obscureText: isPassword && !_showPassword,
-          keyboardType: keyboardType,
-          decoration: InputDecoration(
-            filled: true,
-            fillColor: AppColors.background,
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: AppColors.border)),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: AppColors.border)),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8.0),
-                borderSide: const BorderSide(color: AppColors.primaryAccent)),
-            suffixIcon: isPassword
-                ? IconButton(
-                    icon: Icon(
-                        _showPassword ? Icons.visibility_off : Icons.visibility,
-                        color: AppColors.tertiaryText),
-                    onPressed: () =>
-                        setState(() => _showPassword = !_showPassword),
-                  )
-                : null,
-          ),
-        ),
-      ],
-    );
-  }
+  // Helper method removed (inlined)
 }

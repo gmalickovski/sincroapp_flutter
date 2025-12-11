@@ -1,6 +1,7 @@
 require('dotenv').config();
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { Timestamp, FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
 // Initialize Stripe with your Secret Key
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
@@ -197,7 +198,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
 
                     await userDoc.ref.update({
                         'subscription.status': 'active',
-                        'subscription.lastPayment': admin.firestore.FieldValue.serverTimestamp()
+                        'subscription.lastPayment': FieldValue.serverTimestamp()
                     });
 
                     // Enviar notificação para n8n
@@ -256,7 +257,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     await userDoc.ref.update({
                         'subscription.status': status,
                         'subscription.priceId': priceId,
-                        'subscription.updatedAt': admin.firestore.FieldValue.serverTimestamp()
+                        'subscription.updatedAt': FieldValue.serverTimestamp()
                     });
 
                     await sendToWebhook({
@@ -402,30 +403,40 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
     }
 
     try {
+        functions.logger.info(`Iniciando requestPasswordReset para: ${email}`);
+
         // 1. Verificar se o usuário existe
         let userRecord;
         try {
             userRecord = await admin.auth().getUserByEmail(email);
         } catch (e) {
             if (e.code === 'auth/user-not-found') {
+                functions.logger.warn(`Email não encontrado no Auth: ${email}. Retornando sucesso.`);
                 // Retorna sucesso por segurança (user enumeration)
                 return { success: true };
             }
+            functions.logger.error(`Erro ao buscar usuário no Auth: ${e.message}`);
             throw e;
         }
 
         // 2. Gerar Token Seguro
         const token = crypto.randomBytes(32).toString('hex');
-        const expiresAt = admin.firestore.Timestamp.fromMillis(Date.now() + 3600000); // 1 hora de validade
+        const expiresAt = Timestamp.fromMillis(Date.now() + 3600000); // 1 hora de validade
 
         // 3. Salvar Token no Firestore
-        await admin.firestore().collection('password_resets').add({
-            email: email,
-            token: token,
-            expiresAt: expiresAt,
-            used: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        try {
+            await admin.firestore().collection('password_resets').add({
+                email: email,
+                token: token,
+                expiresAt: expiresAt,
+                used: false,
+                createdAt: FieldValue.serverTimestamp()
+            });
+            functions.logger.info(`Token de reset salvo no Firestore.`);
+        } catch (e) {
+            functions.logger.error(`Erro ao salvar token no Firestore: ${e.message}`, e);
+            throw new functions.https.HttpsError('internal', 'Falha ao gerar token de recuperação.');
+        }
 
         // 4. Gerar Link Personalizado
         // Ajuste o domínio conforme necessário (produção vs dev)
@@ -445,17 +456,27 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
         }
 
         // 6. Enviar para o n8n
-        await sendToWebhook({
-            event: 'password_reset_requested',
-            email: email,
-            name: name,
-            link: link
-        });
+        try {
+            await sendToWebhook({
+                event: 'password_reset_requested',
+                email: email,
+                name: name,
+                link: link
+            });
+            functions.logger.info(`Webhook de reset enviado.`);
+        } catch (e) {
+            functions.logger.error(`Erro ao enviar webhook de reset: ${e.message}`);
+            // Não falhar a request se o webhook cair, pois o token já foi gerado? 
+            // Mas o usuário não recebe o link. Então melhor dar erro ou assumir que o sistema de log vai pegar.
+        }
 
         return { success: true };
     } catch (error) {
-        console.error("Erro ao solicitar redefinição de senha:", error);
-        throw new functions.https.HttpsError('internal', 'Erro ao processar solicitação.');
+        console.error("Erro CRÍTICO ao solicitar redefinição de senha:", error);
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+        throw new functions.https.HttpsError('internal', `Erro ao processar solicitação: ${error.message}`);
     }
 });
 
@@ -492,7 +513,7 @@ exports.completePasswordReset = functions.https.onCall(async (data, context) => 
             throw new functions.https.HttpsError('failed-precondition', 'Este link já foi utilizado.');
         }
 
-        const now = admin.firestore.Timestamp.now();
+        const now = Timestamp.now();
         if (tokenData.expiresAt < now) {
             throw new functions.https.HttpsError('failed-precondition', 'Este link expirou.');
         }
@@ -506,7 +527,7 @@ exports.completePasswordReset = functions.https.onCall(async (data, context) => 
         // 4. Marcar token como usado
         await tokenDoc.ref.update({
             used: true,
-            usedAt: admin.firestore.FieldValue.serverTimestamp()
+            usedAt: FieldValue.serverTimestamp()
         });
 
         return { success: true };

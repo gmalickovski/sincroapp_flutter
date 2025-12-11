@@ -197,6 +197,7 @@ class SincroApp extends StatelessWidget {
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryAccent,
             foregroundColor: AppColors.primaryText,
+            shape: const StadiumBorder(),
           ),
         ),
         popupMenuTheme: PopupMenuThemeData(

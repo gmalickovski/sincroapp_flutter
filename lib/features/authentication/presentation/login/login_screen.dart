@@ -86,14 +86,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 96,
                   fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Bem-vindo(a) de volta!',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.secondaryText,
-                  ),
-                ),
                 const SizedBox(height: 32),
                 Container(
                   padding: const EdgeInsets.all(32.0),
@@ -106,39 +98,47 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text(
-                        'Email',
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       TextField(
                         controller: _emailController,
-                        decoration: _buildInputDecoration(),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Email',
+                          labelStyle: const TextStyle(color: AppColors.secondaryText),
+                          prefixIcon: const Icon(Icons.email_outlined, color: AppColors.secondaryText),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
                         keyboardType: TextInputType.emailAddress,
                       ),
                       const SizedBox(height: 20),
-                      const Text(
-                        'Senha',
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                       TextField(
                         controller: _passwordController,
-                        decoration: _buildInputDecoration(),
+                        style: const TextStyle(color: Colors.white),
+                        decoration: InputDecoration(
+                          labelText: 'Senha',
+                          labelStyle: const TextStyle(color: AppColors.secondaryText),
+                          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.border),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: AppColors.primary),
+                          ),
+                        ),
                         obscureText: true,
                       ),
+                      const SizedBox(height: 12),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: CustomTextButton(
-                          text: 'Esqueci minha senha',
+                        child: TextButton(
                           onPressed: () {
                             Navigator.of(context).push(
                               MaterialPageRoute(
@@ -146,7 +146,18 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             );
                           },
-                          color: AppColors.secondaryAccent,
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            minimumSize: const Size(0, 0),
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text(
+                            'Esqueci minha senha',
+                            style: TextStyle(
+                              color: AppColors.secondaryAccent,
+                              fontSize: 12,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -162,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0)),
+                              borderRadius: BorderRadius.circular(12.0)), // Updated radius
                           backgroundColor: AppColors.primaryAccent,
                           disabledBackgroundColor: Colors.grey.shade600,
                         ),
@@ -200,7 +211,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
                 CustomTextButton(
                   text: 'Voltar',
-                  onPressed: () {},
+                  onPressed: () {}, // TODO: Implement back functionality? Or remove if not needed.
                   color: AppColors.tertiaryText,
                   icon: Icons.arrow_back,
                 ),
@@ -208,26 +219,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  InputDecoration _buildInputDecoration() {
-    return InputDecoration(
-      filled: true,
-      fillColor: AppColors.background,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: AppColors.border),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: AppColors.primaryAccent),
       ),
     );
   }
