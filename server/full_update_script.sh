@@ -90,7 +90,7 @@ fi
 
 # Parar PM2 (Novo Backend API)
 if pm2 list | grep -q sincro-backend; then
-    pm2 stop sincro-backend
+    pm2 stop sincroapp-backend
     log_success "Backend API parado"
 fi
 
@@ -255,10 +255,10 @@ if [ -d "$INSTALL_DIR/server" ]; then
     cd "$INSTALL_DIR/server"
     
     # Parar e remover processo antigo (garante atualização do código)
-    pm2 delete sincro-backend 2>/dev/null || true
+    pm2 delete sincroapp-backend 2>/dev/null || true
     
     # Iniciar novo processo
-    pm2 start index.js --name sincro-backend --time
+    pm2 start index.js --name sincroapp-backend --time
     pm2 save
     
     log_success "Backend API reiniciado"

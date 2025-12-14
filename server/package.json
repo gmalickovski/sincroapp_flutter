@@ -1,5 +1,5 @@
 {
-    "name": "sincro-api-server",
+    "name": "sincroapp-backend",
     "version": "1.0.0",
     "description": "Backend API for SincroApp (VPS)",
     "main": "index.js",
