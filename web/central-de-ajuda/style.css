@@ -55,6 +55,12 @@ a {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    max-width: 1400px;
+    /* Wider for header */
+    margin: 0 auto;
+    padding: 0 40px;
+    /* Breathing room on edges */
+    width: 100%;
 }
 
 .logo-link {
@@ -85,7 +91,8 @@ a {
 
 /* Hero */
 .hero {
-    padding: 80px 0 60px;
+    padding: 120px 0 60px;
+    /* Increased top padding for sticky header */
     background: radial-gradient(circle at top, #1f2937 0%, #111827 100%);
     text-align: center;
 }
@@ -139,9 +146,15 @@ a {
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 16px;
-    padding: 24px;
+    padding: 32px 24px;
     cursor: pointer;
-    transition: transform 0.2s, border-color 0.2s;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    /* Align text to left inside card */
+    min-height: 180px;
+    /* Uniform height */
 }
 
 .card:hover {
@@ -150,8 +163,8 @@ a {
 }
 
 .card .icon {
-    font-size: 32px;
-    margin-bottom: 16px;
+    font-size: 40px;
+    margin-bottom: 20px;
 }
 
 .card h3 {
@@ -176,10 +189,12 @@ a {
 
 .faq-item {
     background-color: var(--card-bg);
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
     border: 1px solid var(--border-color);
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
+    margin-bottom: 12px;
+    /* Spacing between items */
 }
 
 .faq-item:hover {

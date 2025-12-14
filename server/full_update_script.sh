@@ -89,10 +89,13 @@ if pm2 list | grep -q sincroapp-notifications; then
 fi
 
 # Parar PM2 (Novo Backend API)
-if pm2 list | grep -q sincro-backend; then
-    pm2 stop sincroapp-backend
-    log_success "Backend API parado"
-fi
+# Parar PM2 (Novo Backend API)
+# Parar PM2 (Novo Backend API)
+log_info "Parando Backend API..."
+# Migração: Parar e remover nome antigo se existir
+pm2 delete sincro-backend 2>/dev/null || true
+# Parar nome novo se existir
+pm2 stop sincroapp-backend 2>/dev/null || true
 
 # 5. ATUALIZAR CÓDIGO DO GITHUB
 log_info "Atualizando código do GitHub (branch: $BRANCH)..."
@@ -304,8 +307,10 @@ else
     log_warning "Serviço de Notificações: Não encontrado"
 fi
 
-if pm2 list | grep -q sincro-backend; then
+if pm2 list | grep -q sincroapp-backend; then
     log_success "Backend API: Ativo ✓"
+elif pm2 list | grep -q sincro-backend; then
+     log_warning "Backend API: Ativo (Nome Antigo: sincro-backend) - Será atualizado no próximo deploy"
 else
     log_warning "Backend API: Não encontrado"
 fi
@@ -343,7 +348,7 @@ echo ""
 log_info "COMANDOS ÚTEIS:"
 echo -e "  ${BLUE}├─${NC} Verificar logs Nginx: ${BLUE}tail -f /var/log/nginx/error.log${NC}"
 echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (Notif): ${BLUE}pm2 logs sincroapp-notifications${NC}"
-echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincro-backend${NC}"
+echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-backend${NC}"
 echo -e "  ${BLUE}├─${NC} Reverter para backup: ${BLUE}cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "  ${BLUE}└─${NC} Monitorar serviços: ${BLUE}pm2 monit${NC}"
 echo ""
@@ -355,7 +360,7 @@ echo -e "     ${BLUE}sudo rm -rf $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo systemctl reload nginx${NC}"
 echo -e "     ${BLUE}sudo pm2 restart sincroapp-notifications${NC}"
-echo -e "     ${BLUE}sudo pm2 restart sincro-backend${NC}"
+echo -e "     ${BLUE}sudo pm2 restart sincroapp-backend${NC}"
 echo ""
 
 log_success "Atualização concluída! Acesse https://$DOMAIN para verificar"
