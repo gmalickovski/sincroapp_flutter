@@ -1,6 +1,8 @@
-// Backend URL (VPS Reverse Proxy)
-// Uses relative path because Nginx will proxy /api to the Node server
-const API_URL = "/api/faq";
+// Backend URL Selection
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+// Local: Points directly to Node server (requires cors)
+// Prod: Points to Nginx proxy (relative path)
+const API_URL = isLocal ? "http://localhost:3000/api/faq" : "/api/faq";
 
 // DOM Elements
 const faqList = document.getElementById('faqList');
