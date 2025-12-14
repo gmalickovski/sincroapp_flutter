@@ -21,6 +21,9 @@ const NOTION_DATABASE_ID = process.env.NOTION_FAQ_DATABASE_ID;
 
 // --- Cloud Function: Get FAQ from Notion ---
 exports.getFaq = functions.https.onRequest(async (req, res) => {
+    console.log("DEBUG: Function started");
+    console.log("DEBUG: API Key exists?", !!process.env.NOTION_API_KEY);
+    console.log("DEBUG: DB ID exists?", !!process.env.NOTION_FAQ_DATABASE_ID);
     // Enable CORS
     res.set('Access-Control-Allow-Origin', '*');
     if (req.method === 'OPTIONS') {
