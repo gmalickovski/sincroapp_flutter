@@ -1,8 +1,8 @@
-// Cloud Function URL (Adjust if using Emulator)
-// For local testing with Emulator:
-// For local testing with Emulator:
-const API_URL = "http://127.0.0.1:5002/sincro-app-69970/us-central1/getFaq";
-// const API_URL = "https://us-central1-sincro-app-69970.cloudfunctions.net/getFaq"; // Production
+// Cloud Function URL (Auto-detect Environment)
+const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const API_URL = isLocal
+    ? "http://127.0.0.1:5002/sincro-app-69970/us-central1/getFaq"  // Emulator
+    : "https://us-central1-sincro-app-69970.cloudfunctions.net/getFaq"; // Production
 
 // DOM Elements
 const faqList = document.getElementById('faqList');
