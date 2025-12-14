@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Falha no Pagamento</title>
+    <style>
+        /* Reset de estilos */
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #111827;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #FFFFFF;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* Estilos específicos */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #1F2937;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            padding: 40px 0;
+            text-align: center;
+            background-color: #1F2937;
+        }
+
+        .content {
+            padding: 0 40px 40px 40px;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 16px 32px;
+            background-color: #DC2626;
+            /* Red 600 for error/urgent */
+            color: #ffffff !important;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #B91C1C;
+        }
+
+        .footer {
+            padding: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #9CA3AF;
+            background-color: #111827;
+        }
+
+        .logo {
+            height: 64px;
+            width: auto;
+        }
+
+        h1 {
+            margin: 0 0 24px 0;
+            font-size: 28px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+
+        p {
+            margin: 0 0 24px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #D1D5DB;
+        }
+
+        /* Responsividade */
+        @media only screen and (max-width: 600px) {
+            .wrapper {
+                width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .container {
+                width: 100% !important;
+                border-radius: 0 !important;
+            }
+
+            .content {
+                padding: 0 20px 40px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #111827;">
+        <tr>
+            <td align="center" class="wrapper" style="padding: 40px 20px;">
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" class="container">
+                    <tr>
+                        <td class="header">
+                            <img src="assets/images/icon-logo-v1.png" alt="SincroApp Logo" class="logo">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="content">
+                            <h1>Pagamento não processado ⚠️</h1>
+                            <p>Olá, <strong>{{name}}</strong>.</p>
+                            <p>Tentamos renovar sua assinatura do SincroApp, mas o pagamento não foi autorizado pelo seu
+                                cartão.</p>
+                            <p>Para evitar a interrupção do seu acesso Premium, por favor, atualize suas informações de
+                                pagamento o quanto antes.</p>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-top: 16px;">
+                                        <a href="https://sincroapp.com.br/pagamento" class="button">Atualizar Forma de
+                                            Pagamento</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin-top: 32px; font-size: 14px; color: #9CA3AF;">
+                                Tentaremos novamente em alguns dias. Se precisar de ajuda, entre em contato com nosso
+                                suporte.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td class="footer">
+                            <p style="margin-bottom: 16px;">
+                                <a href="https://sincroapp.com.br/ajuda"
+                                    style="color: #7C3AED; font-weight: bold; margin: 0 8px;">Central de Ajuda</a> •
+                                <a href="https://sincroapp.com.br/termos"
+                                    style="color: #9CA3AF; margin: 0 8px;">Termos</a> •
+                                <a href="https://sincroapp.com.br/privacidade"
+                                    style="color: #9CA3AF; margin: 0 8px;">Privacidade</a>
+                            </p>
+                            <p style="margin: 0;">&copy; 2025 SincroApp. Todos os direitos reservados.</p>
+                            <p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.7;">
+                                Feito com 💜 por Studio MLK<br>
+                                Você recebeu este email porque houve um problema com seu pagamento.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

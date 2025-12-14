@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conta Excluída</title>
+    <style>
+        /* Reset de estilos para compatibilidade de e-mail */
+        body,
+        table,
+        td,
+        a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table,
+        td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        img {
+            -ms-interpolation-mode: bicubic;
+            border: 0;
+            outline: none;
+            text-decoration: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100% !important;
+            height: 100% !important;
+            background-color: #111827;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            color: #FFFFFF;
+        }
+
+        a {
+            text-decoration: none;
+        }
+
+        /* Estilos específicos */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #1F2937;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .header {
+            padding: 40px 0;
+            text-align: center;
+            background-color: #1F2937;
+        }
+
+        .content {
+            padding: 0 40px 40px 40px;
+            text-align: center;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 16px 32px;
+            background-color: #374151;
+            /* Gray for neutral action */
+            color: #ffffff !important;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 50px;
+            /* Pill shape */
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+
+        .button:hover {
+            background-color: #4B5563;
+        }
+
+        .footer {
+            padding: 32px;
+            text-align: center;
+            font-size: 12px;
+            color: #9CA3AF;
+            background-color: #111827;
+        }
+
+        .logo {
+            height: 64px;
+            width: auto;
+        }
+
+        h1 {
+            margin: 0 0 24px 0;
+            font-size: 28px;
+            font-weight: bold;
+            color: #FFFFFF;
+        }
+
+        p {
+            margin: 0 0 24px 0;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #D1D5DB;
+        }
+
+        /* Responsividade */
+        @media only screen and (max-width: 600px) {
+            .wrapper {
+                width: 100% !important;
+                padding: 0 !important;
+            }
+
+            .container {
+                width: 100% !important;
+                border-radius: 0 !important;
+            }
+
+            .content {
+                padding: 0 20px 40px 20px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #111827;">
+        <tr>
+            <td align="center" class="wrapper" style="padding: 40px 20px;">
+                <!-- Main Container -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%" class="container">
+                    <!-- Header with Logo -->
+                    <tr>
+                        <td class="header">
+                            <!-- Nota: No n8n, substitua 'assets/images/icon-logo-v1.png' pela URL pública da sua imagem -->
+                            <img src="assets/images/icon-logo-v1.png" alt="SincroApp Logo" class="logo">
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td class="content">
+                            <h1>Sentiremos sua falta 😞</h1>
+                            <p>Olá, <strong>{{name}}</strong>.</p>
+                            <p>Confirmamos que sua conta no <strong>SincroApp</strong> foi desconectada e agendada para
+                                exclusão definitiva, conforme sua solicitação.</p>
+                            <p>Seus dados estão sendo removidos dos nossos sistemas de forma segura.</p>
+
+                            <p style="margin-top: 24px;">Esperamos nos cruzar novamente em sua jornada de
+                                autoconhecimento!</p>
+
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="center" style="padding-top: 24px;">
+                                        <a href="https://sincroapp.com.br" class="button">Voltar para SincroApp
+                                            Start</a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="margin-top: 32px; font-size: 14px; color: #9CA3AF;">
+                                Foi um engano? Se você mudou de ideia ou deletou por acidente, entre em contato com
+                                nosso suporte imediatamente.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+                <!-- End Main Container -->
+
+                <!-- Footer -->
+                <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td class="footer">
+                            <p style="margin-bottom: 16px;">
+                                <a href="https://sincroapp.com.br/ajuda"
+                                    style="color: #7C3AED; font-weight: bold; margin: 0 8px;">Central de Ajuda</a> •
+                                <a href="https://sincroapp.com.br/termos"
+                                    style="color: #9CA3AF; margin: 0 8px;">Termos</a> •
+                                <a href="https://sincroapp.com.br/privacidade"
+                                    style="color: #9CA3AF; margin: 0 8px;">Privacidade</a>
+                            </p>
+                            <p style="margin: 0;">&copy; 2025 SincroApp. Todos os direitos reservados.</p>
+                            <p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.7;">
+                                Feito com 💜 por Studio MLK<br>
+                                Você recebeu este email porque sua conta foi excluída.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+
+</html>

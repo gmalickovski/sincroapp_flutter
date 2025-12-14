@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Ajuda - SincroApp</title>
+    <meta name="description"
+        content="Encontre respostas para suas dúvidas sobre o SincroApp. Tutoriais, assinatura, conta e suporte técnico.">
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../favicon.png" />
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-container">
+            <a href="/" class="logo-link">
+                <!-- Using the same logo path structure as email templates for now, assuming relative path -->
+                <img src="../email_templates/assets/images/icon-logo-v1.png" alt="SincroApp" class="logo">
+                <span>Central de Ajuda</span>
+            </a>
+            <a href="https://app.sincroapp.com.br" class="btn-outline">Ir para o App</a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Como podemos ajudar?</h1>
+            <div class="search-box">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="searchInput" placeholder="Busque por dúvidas, ex: Senha, Assinatura...">
+            </div>
+        </div>
+    </section>
+
+    <!-- Categories Grid -->
+    <section class="categories section-padding">
+        <div class="container">
+            <h2>Navegue por Tópicos</h2>
+            <div class="grid">
+                <div class="card" onclick="filterCategory('start')">
+                    <div class="icon">🚀</div>
+                    <h3>Primeiros Passos</h3>
+                    <p>Como começar sua jornada no SincroApp.</p>
+                </div>
+                <div class="card" onclick="filterCategory('subscription')">
+                    <div class="icon">💎</div>
+                    <h3>Assinatura e Planos</h3>
+                    <p>Gerencie seu plano Premium e pagamentos.</p>
+                </div>
+                <div class="card" onclick="filterCategory('account')">
+                    <div class="icon">🔐</div>
+                    <h3>Conta e Segurança</h3>
+                    <p>Login, senha e dados pessoais.</p>
+                </div>
+                <div class="card" onclick="filterCategory('tech')">
+                    <div class="icon">🛠️</div>
+                    <h3>Solução de Problemas</h3>
+                    <p>Bugs, erros e questões técnicas.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="faq section-padding">
+        <div class="container">
+            <h2 id="faq-title">Perguntas Frequentes</h2>
+            <div class="faq-list" id="faqList">
+
+                <!-- Category: Start -->
+                <div class="faq-item" data-category="start">
+                    <button class="faq-question">
+                        O que é o SincroApp?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>O SincroApp é uma plataforma de autoconhecimento e produtividade desenhada para ajudar você a
+                            alinhar seus objetivos com sua verdadeira essência.</p>
+                    </div>
+                </div>
+
+                <!-- Category: Subscription -->
+                <div class="faq-item" data-category="subscription">
+                    <button class="faq-question">
+                        Como cancelar minha assinatura?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Você pode cancelar a qualquer momento indo em <strong>Configurações > Gerenciar
+                                Assinatura</strong> dentro do app. Seu acesso Premium continuará ativo até o fim do
+                            período pago.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-category="subscription">
+                    <button class="faq-question">
+                        Quais as formas de pagamento aceitas?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Atualmente aceitamos cartões de crédito (Visa, Mastercard, Elo) e Pix para assinaturas
+                            anuais.</p>
+                    </div>
+                </div>
+
+                <!-- Category: Account -->
+                <div class="faq-item" data-category="account">
+                    <button class="faq-question">
+                        Esqueci minha senha. Como recuperar?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Na tela de login, clique em "Esqueci minha senha". Enviaremos um link de redefinição para o
+                            seu e-mail cadastrado.</p>
+                    </div>
+                </div>
+
+                <div class="faq-item" data-category="account">
+                    <button class="faq-question">
+                        Como excluir minha conta?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Você pode solicitar a exclusão da conta diretamente no app em <strong>Configurações >
+                                Privacidade > Excluir Conta</strong>. Atenção: essa ação é irreversível.</p>
+                    </div>
+                </div>
+
+                <!-- Category: Tech -->
+                <div class="faq-item" data-category="tech">
+                    <button class="faq-question">
+                        O app funciona offline?
+                        <span class="chevron">⌄</span>
+                    </button>
+                    <div class="faq-answer">
+                        <p>Algumas funcionalidades básicas permitem visualização offline, mas para sincronizar dados e
+                            usar a IA, é necessária uma conexão com a internet.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Support CTA -->
+    <section class="support-cta section-padding">
+        <div class="container text-center">
+            <h2>Ainda precisa de ajuda?</h2>
+            <p>Nossa equipe está pronta para te ouvir.</p>
+            <a href="mailto:suporte@sincroapp.com.br" class="btn-primary">Falar com o Suporte</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container text-center">
+            <p>&copy; 2025 SincroApp. Feito com 💜 por Studio MLK.</p>
+            <div class="links">
+                <a href="#">Termos de Uso</a>
+                <a href="#">Política de Privacidade</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

@@ -103,50 +103,52 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildDesktopLayout() {
-    return Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(vertical: 32.0),
+    return SingleChildScrollView(
+      child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 400),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SvgPicture.asset(
-                'assets/images/sincroapp_logo_2.svg',
-                height: 96,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Crie sua Conta',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primaryText,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 32.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  'assets/images/icon-logo-v1.png',
+                  height: 54,
+                  fit: BoxFit.contain,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Comece sua jornada de autoconhecimento.',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
+                const SizedBox(height: 16),
+                const Text(
+                  'Crie sua Conta',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Comece sua jornada de autoconhecimento.',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.tertiaryText,
+                    height: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                _buildForm(),
+                const SizedBox(height: 24),
+                CustomTextButton(
+                  text: 'Já tenho uma conta',
+                  onPressed: () => Navigator.of(context).pop(),
                   color: AppColors.tertiaryText,
-                  height: 1.5,
+                  icon: Icons.arrow_back,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 32),
-              _buildForm(),
-              const SizedBox(height: 24),
-              CustomTextButton(
-                text: 'Já tenho uma conta',
-                onPressed: () => Navigator.of(context).pop(),
-                color: AppColors.tertiaryText,
-                icon: Icons.arrow_back,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -344,8 +346,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             onPressed: _isLoading ? null : _signUp,
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16.0),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.0)), // Updated radius
             ),
             child: _isLoading
                 ? const CustomLoadingSpinner(size: 24)

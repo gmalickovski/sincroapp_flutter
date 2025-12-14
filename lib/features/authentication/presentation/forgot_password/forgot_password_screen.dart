@@ -86,7 +86,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Icon(Icons.lock_reset, size: 64, color: AppColors.primary),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           const Text(
             'Recuperar Senha',
             textAlign: TextAlign.center,
@@ -136,9 +136,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               backgroundColor: AppColors.primary,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
             ),
             child: _isLoading
                 ? const CustomLoadingSpinner(size: 24)

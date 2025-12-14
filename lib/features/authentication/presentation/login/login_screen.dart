@@ -21,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final AuthRepository _authRepository = AuthRepository();
   String? _errorMessage;
   bool _isLoading = false;
+  bool _isForgotPasswordHovered = false;
 
   Future<void> _signIn() async {
     if (!mounted) return;
@@ -138,24 +139,28 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 12),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordScreen(),
+                        child: MouseRegion(
+                          onEnter: (_) => setState(() => _isForgotPasswordHovered = true),
+                          onExit: (_) => setState(() => _isForgotPasswordHovered = false),
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Esqueci minha senha',
+                              style: TextStyle(
+                                color: AppColors.secondaryAccent,
+                                fontSize: 12,
+                                decoration: _isForgotPasswordHovered 
+                                    ? TextDecoration.underline 
+                                    : TextDecoration.none,
+                                decorationColor: AppColors.secondaryAccent,
                               ),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: const Text(
-                            'Esqueci minha senha',
-                            style: TextStyle(
-                              color: AppColors.secondaryAccent,
-                              fontSize: 12,
                             ),
                           ),
                         ),
@@ -172,8 +177,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: _isLoading ? null : _signIn,
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12.0)), // Updated radius
                           backgroundColor: AppColors.primaryAccent,
                           disabledBackgroundColor: Colors.grey.shade600,
                         ),

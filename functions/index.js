@@ -1,23 +1,98 @@
+
 require('dotenv').config();
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-const { Timestamp, FieldValue } = require("firebase-admin/firestore");
+const { FieldValue } = require("firebase-admin/firestore");
 const axios = require("axios");
+const { Client } = require("@notionhq/client");
 // Initialize Stripe with your Secret Key
 const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 admin.initializeApp();
+const db = admin.firestore();
 
-// URL do webhook do n8n
-const N8N_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
-const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
+// Webhook URLs (n8n)
+const N8N_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
+const FEEDBACK_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/app-feedback";
+
+// Notion Config
+const notion = new Client({ auth: process.env.NOTION_API_KEY });
+const NOTION_DATABASE_ID = process.env.NOTION_FAQ_DATABASE_ID;
+
+// --- Cloud Function: Get FAQ from Notion ---
+exports.getFaq = functions.https.onRequest(async (req, res) => {
+    // Enable CORS
+    res.set('Access-Control-Allow-Origin', '*');
+    if (req.method === 'OPTIONS') {
+        res.set('Access-Control-Allow-Methods', 'GET');
+        res.set('Access-Control-Allow-Headers', 'Content-Type');
+        res.status(204).send('');
+        return;
+    }
+
+    try {
+        // 1. Query Database to get Questions (Title + Category)
+        const response = await notion.databases.query({
+            database_id: NOTION_DATABASE_ID,
+            filter: {
+                property: "Publicado", // Checkbox property
+                checkbox: {
+                    equals: true,
+                },
+            },
+        });
+
+        const items = [];
+
+        // 2. Iterate results and fetch Page Content (The Answer)
+        for (const page of response.results) {
+            const questionTitle = page.properties.Pergunta?.title[0]?.plain_text || "Sem título";
+            // Reading from the new "Tópico" Select property
+            const category = page.properties['Tópico']?.select?.name || "Geral";
+
+            // Fetch blocks (content) of the page
+            const blocks = await notion.blocks.children.list({
+                block_id: page.id,
+            });
+
+            // Convert blocks to simple HTML (simplified for this MVP)
+            let htmlContent = "";
+            for (const block of blocks.results) {
+                if (block.type === 'paragraph') {
+                    const text = block.paragraph.rich_text.map(t => t.plain_text).join("");
+                    if (text) htmlContent += `<p>${text}</p>`;
+                } else if (block.type === 'heading_1') {
+                    htmlContent += `<h3>${block.heading_1.rich_text.map(t => t.plain_text).join("")}</h3>`;
+                } else if (block.type === 'heading_2') {
+                    htmlContent += `<h4>${block.heading_2.rich_text.map(t => t.plain_text).join("")}</h4>`;
+                } else if (block.type === 'bulleted_list_item') {
+                    htmlContent += `<ul><li>${block.bulleted_list_item.rich_text.map(t => t.plain_text).join("")}</li></ul>`;
+                }
+                // Add more block types as needed
+            }
+
+            items.push({
+                id: page.id,
+                question: questionTitle,
+                category: category,
+                answerHtml: htmlContent
+            });
+        }
+
+        res.status(200).json({ faq: items });
+
+    } catch (error) {
+        functions.logger.error("Notion API Error", error);
+        res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
+    }
+});
 
 /**
  * Função auxiliar para enviar dados ao webhook do n8n.
  */
 const sendToWebhook = async (payload, targetUrl = N8N_WEBHOOK_URL) => {
     try {
-        functions.logger.info(`Tentando enviar dados para o n8n (${targetUrl}):`, payload);
+        functions.logger.info(`Tentando enviar dados para o n8n(${targetUrl}): `, payload);
         await axios.post(targetUrl, payload);
         functions.logger.info("Webhook enviado com sucesso para n8n.");
     } catch (error) {
@@ -44,7 +119,7 @@ exports.submitFeedback = functions.https.onCall(async (data, context) => {
                 const userDoc = await admin.firestore().collection('users').doc(userId).get();
                 if (userDoc.exists) {
                     const userData = userDoc.data();
-                    userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
+                    userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim();
                 }
             } catch (e) {
                 console.warn('Erro ao buscar nome do usuário para feedback:', e);
@@ -169,7 +244,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
         event = stripe.webhooks.constructEvent(req.rawBody, sig, endpointSecret);
     } catch (err) {
         console.error(`Falha na verificação da assinatura do webhook.`, err.message);
-        return res.status(400).send(`Erro Webhook: ${err.message}`);
+        return res.status(400).send(`Erro Webhook: ${err.message} `);
     }
 
     const dataObject = event.data.object;
@@ -205,7 +280,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     await sendToWebhook({
                         event: 'subscription_activated',
                         email: userData.email,
-                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim(),
                         userId: userId,
                         amount: amount,
                         currency: currency,
@@ -233,7 +308,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     await sendToWebhook({
                         event: 'subscription_cancelled',
                         email: userData.email,
-                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim(),
                         userId: userId
                     });
                 }
@@ -263,7 +338,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     await sendToWebhook({
                         event: 'subscription_updated',
                         email: userData.email,
-                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim(),
                         userId: userId,
                         status: status,
                         priceId: priceId
@@ -285,7 +360,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
                     await sendToWebhook({
                         event: 'payment_failed',
                         email: userData.email,
-                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+                        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim(),
                         userId: userDoc.id
                     });
                 }
@@ -293,7 +368,7 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
             }
 
             default:
-                console.log(`Tipo de evento não tratado: ${event.type}`);
+                console.log(`Tipo de evento não tratado: ${event.type} `);
         }
     } catch (error) {
         console.error("Erro ao processar webhook:", error);
@@ -314,7 +389,7 @@ exports.onNewUserDocumentCreate = functions.firestore.document("users/{userId}")
     const payload = {
         event: "user_created",
         email: userData.email,
-        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim(),
+        name: `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim(),
         plan: userData.plano || "gratuito",
         userId: userId,
     };
@@ -332,7 +407,7 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
     const userId = user.uid;
     const userEmail = user.email;
     const logger = functions.logger;
-    logger.info(`================ onUserDeleted ACIONADA =================`);
+    logger.info(`================ onUserDeleted ACIONADA ================= `);
 
     const firestore = admin.firestore();
     const userDocRef = firestore.collection("users").doc(userId);
@@ -343,7 +418,7 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
         let userName = '';
         if (userDoc.exists) {
             const userData = userDoc.data();
-            userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''}`.trim();
+            userName = `${userData.primeiroNome || ''} ${userData.sobrenome || ''} `.trim();
         }
 
         // --- PASSO 2: Enviar o webhook de conta deletada ---
@@ -383,7 +458,7 @@ exports.onUserDeleted = functions.auth.user().onDelete(async (user) => {
         return { status: "success", message: `Dados do usuário ${userId} limpos com sucesso.` };
 
     } catch (error) {
-        logger.error(`Erro ao limpar dados ou enviar webhook para o usuário ${userId}:`, error);
+        logger.error(`Erro ao limpar dados ou enviar webhook para o usuário ${userId}: `, error);
         return { status: "error", message: `Falha no processo de exclusão do usuário ${userId}.` };
     }
 });
@@ -403,7 +478,7 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
     }
 
     try {
-        functions.logger.info(`Iniciando requestPasswordReset para: ${email}`);
+        functions.logger.info(`Iniciando requestPasswordReset para: ${email} `);
 
         // 1. Verificar se o usuário existe
         let userRecord;
@@ -415,7 +490,7 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
                 // Retorna sucesso por segurança (user enumeration)
                 return { success: true };
             }
-            functions.logger.error(`Erro ao buscar usuário no Auth: ${e.message}`);
+            functions.logger.error(`Erro ao buscar usuário no Auth: ${e.message} `);
             throw e;
         }
 
@@ -434,7 +509,7 @@ exports.requestPasswordReset = functions.https.onCall(async (data, context) => {
             });
             functions.logger.info(`Token de reset salvo no Firestore.`);
         } catch (e) {
-            functions.logger.error(`Erro ao salvar token no Firestore: ${e.message}`, e);
+            functions.logger.error(`Erro ao salvar token no Firestore: ${e.message} `, e);
             throw new functions.https.HttpsError('internal', 'Falha ao gerar token de recuperação.');
         }
 
