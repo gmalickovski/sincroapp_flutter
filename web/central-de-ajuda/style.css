@@ -55,12 +55,33 @@ a {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1400px;
-    /* Wider for header */
-    margin: 0 auto;
+    max-width: 100%;
+    /* Full Width */
+    margin: 0;
     padding: 0 40px;
-    /* Breathing room on edges */
     width: 100%;
+    position: relative;
+    /* Context for absolute centering */
+}
+
+.logo-svg {
+    height: 48px;
+    /* Bigger logo */
+    width: auto;
+}
+
+.header-title-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-main);
+}
+
+.header-actions.right {
+    margin-left: auto;
+    /* Push to right just in case */
 }
 
 .logo-link {
@@ -179,12 +200,21 @@ a {
 
 /* FAQ */
 .faq-list {
-    max-width: 800px;
-    margin: 0 auto;
+    max-width: 100%;
+    /* Fill container */
+    margin: 0;
     display: flex;
     flex-direction: column;
     gap: 16px;
     /* Space between items */
+}
+
+/* Specific Style for FAQ Title to add spacing */
+.faq h2 {
+    margin-bottom: 32px;
+    /* Fix "glued" title */
+    text-align: left;
+    /* Ensure left align */
 }
 
 .faq-item {
