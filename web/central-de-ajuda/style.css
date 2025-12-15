@@ -65,8 +65,8 @@ a {
 }
 
 .logo-svg {
-    height: 48px;
-    /* Bigger logo */
+    height: 24px;
+    /* Reduced by 50% */
     width: auto;
 }
 
@@ -205,7 +205,8 @@ a {
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
+    /* Reduced gap */
     /* Space between items */
 }
 
@@ -223,8 +224,7 @@ a {
     overflow: hidden;
     border: 1px solid var(--border-color);
     transition: all 0.3s ease;
-    margin-bottom: 12px;
-    /* Spacing between items */
+    /* Removed margin-bottom to rely on gap */
 }
 
 .faq-item:hover {
@@ -365,5 +365,52 @@ a {
 
     .container {
         padding: 0 16px;
+    }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-color);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .header-container {
+        padding: 0 20px;
+    }
+
+    .header-title-center {
+        display: none;
+        /* Hide center title on mobile to prevent overlap */
+    }
+
+    .hero {
+        padding: 100px 0 40px;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .search-box {
+        padding: 12px 16px;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+        /* Stack cards */
     }
 }
