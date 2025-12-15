@@ -154,31 +154,48 @@ a {
     max-width: 600px;
     margin: 0 auto;
     position: relative;
-}
-
-.search-box input {
-    width: 100%;
-    padding: 16px 16px 16px 52px;
-    border-radius: 50px;
-    border: 1px solid var(--border-color);
+    /* Flex Container Refactor */
+    display: flex;
+    align-items: center;
     background-color: var(--card-bg);
-    color: var(--text-main);
-    font-size: 16px;
-    outline: none;
-    transition: border-color 0.2s;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: 0 16px;
+    /* Base padding */
+    transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-.search-box input:focus {
+.search-box:focus-within {
     border-color: var(--primary);
     box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
 }
 
+.search-box input {
+    width: 100%;
+    padding: 16px 16px 16px 12px;
+    /* Inner padding */
+    border: none;
+    background: transparent;
+    color: var(--text-main);
+    font-size: 16px;
+    outline: none;
+    line-height: 1.5;
+}
+
+/* Remove old focus style from input */
+.search-box input:focus {
+    box-shadow: none;
+    border: none;
+}
+
 .search-box svg {
-    position: absolute;
-    left: 20px;
-    top: 50%;
-    transform: translateY(-50%);
+    position: static;
+    /* Static for flex */
+    transform: none;
     color: var(--text-secondary);
+    min-width: 24px;
+    /* Fix size */
+    margin-right: 4px;
 }
 
 /* Categories */
@@ -225,6 +242,16 @@ a {
 }
 
 /* FAQ */
+.faq {
+    background-color: rgba(255, 255, 255, 0.02);
+    /* Subtle bg variation */
+}
+
+/* Support CTA (Keep Dark/Default) */
+.support-cta {
+    background-color: transparent;
+}
+
 .faq-list {
     max-width: 100%;
     /* Fill container */
@@ -479,8 +506,8 @@ a {
     }
 
     .search-box {
-        padding: 12px 24px;
-        /* More breathing room on mobile */
+        padding: 0 24px;
+        /* More breathing room on sides */
     }
 
     .grid {
