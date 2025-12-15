@@ -277,12 +277,16 @@ a {
     line-height: 1.4;
 }
 
-.faq-question .chevron {
-    font-size: 28px;
-    /* Increased icon size */
-    transition: transform 0.3s ease;
-    line-height: 1;
+/* SVG Chevron Style */
+.chevron-icon {
+    width: 28px;
+    height: 28px;
     color: var(--primary);
+    transition: transform 0.3s ease;
+}
+
+.faq-item.active .chevron-icon {
+    transform: rotate(180deg);
 }
 
 .chevron {
@@ -376,8 +380,19 @@ a {
 .footer {
     padding: 40px 0;
     border-top: 1px solid var(--border-color);
+}
+
+.footer p {
     color: var(--text-secondary);
+    margin-bottom: 8px;
+    /* Spacing between lines */
     font-size: 14px;
+}
+
+.footer .love {
+    margin-bottom: 24px;
+    /* More space before links */
+    display: block;
 }
 
 .footer .links {
@@ -445,8 +460,8 @@ a {
 
     /* Keep title visible but larger font */
     .header-title-center {
-        font-size: 16px;
-        /* Increased from 14px */
+        font-size: 18px;
+        /* Increased to 18px */
     }
 
     /* Compact button */
@@ -464,7 +479,8 @@ a {
     }
 
     .search-box {
-        padding: 12px 16px;
+        padding: 12px 24px;
+        /* More breathing room on mobile */
     }
 
     .grid {

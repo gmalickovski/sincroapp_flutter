@@ -47,7 +47,9 @@ function renderFaq(items) {
         div.innerHTML = `
             <button class="faq-question">
                 ${item.question}
-                <span class="chevron">⌄</span>
+                <svg class="chevron-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
             </button>
             <div class="faq-answer">
                 ${item.answerHtml}
@@ -56,7 +58,15 @@ function renderFaq(items) {
 
         faqList.appendChild(div);
 
-        // Add click event (Same logic as before)
+        // Category Names Map
+        const categoryNames = {
+            "start": "Primeiros Passos",
+            "subscription": "Assinatura e Planos",
+            "account": "Conta e Segurança",
+            "tech": "Solução de Problemas"
+        };
+
+        // Add click event
         div.querySelector('.faq-question').addEventListener('click', () => {
             const isActive = div.classList.contains('active');
 
@@ -107,8 +117,40 @@ searchInput.addEventListener('input', (e) => {
 
     faqTitle.innerText = term === '' ? "Perguntas Frequentes" : (hasResults ? "Resultados da busca" : "Nenhum resultado encontrado");
 });
+// Search Logic
+if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('faq-title').scrollIntoView({ behavior: 'smooth' });
+        }
+    });
 
-// Category Filter Logic (Updated)
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        let hasResults = false;
+
+        document.querySelectorAll('.faq-item').forEach(item => {
+            const question = item.querySelector('.faq-question').innerText.toLowerCase();
+            const answer = item.querySelector('.faq-answer').innerText.toLowerCase();
+
+            if (question.includes(term) || answer.includes(term)) {
+                item.style.display = 'block';
+                hasResults = true;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Update Title on Search
+        if (term !== '') {
+            faqTitle.innerText = hasResults ? "Resultados da busca" : "Nenhum resultado encontrado";
+        } else {
+            faqTitle.innerText = "Perguntas Frequentes (FAQ)";
+        }
+    });
+}
+
+// Category Filter Logic (Updated Title)
 function filterCategory(category) {
     document.getElementById('faq-title').scrollIntoView({ behavior: 'smooth' });
     searchInput.value = '';
@@ -122,5 +164,14 @@ function filterCategory(category) {
         }
     });
 
-    faqTitle.innerText = "Tópico Selecionado";
+    // Map category ID to readable name
+    const categoryNames = {
+        "start": "Primeiros Passos",
+        "subscription": "Assinatura e Planos",
+        "account": "Conta e Segurança",
+        "tech": "Solução de Problemas",
+        "general": "Geral"
+    };
+
+    faqTitle.innerText = `Perguntas Frequentes (FAQ) - ${categoryNames[category] || 'Tópico'}`;
 }
