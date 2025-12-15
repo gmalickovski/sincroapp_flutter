@@ -70,6 +70,28 @@ a {
     width: auto;
 }
 
+.logo-icon {
+    height: 32px;
+    width: auto;
+}
+
+/* Visibility Classes */
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+.btn-text-full {
+    display: inline;
+}
+
+.btn-text-short {
+    display: none;
+}
+
 .header-title-center {
     position: absolute;
     left: 50%;
@@ -389,12 +411,35 @@ a {
 /* Responsiveness */
 @media (max-width: 768px) {
     .header-container {
-        padding: 0 20px;
+        padding: 0 16px;
     }
 
+    /* Show mobile elements, hide desktop elements */
+    .desktop-only {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: block !important;
+    }
+
+    .btn-text-full {
+        display: none !important;
+    }
+
+    .btn-text-short {
+        display: inline !important;
+    }
+
+    /* Keep title visible but smaller font */
     .header-title-center {
-        display: none;
-        /* Hide center title on mobile to prevent overlap */
+        font-size: 14px;
+    }
+
+    /* Compact button */
+    .btn-outline {
+        padding: 8px 16px;
+        font-size: 14px;
     }
 
     .hero {
@@ -402,7 +447,7 @@ a {
     }
 
     .hero h1 {
-        font-size: 32px;
+        font-size: 28px;
     }
 
     .search-box {

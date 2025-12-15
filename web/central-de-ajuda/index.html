@@ -30,7 +30,11 @@
         <div class="header-container">
             <!-- Left: Logo -->
             <a href="/" class="logo-link left">
-                <img src="/assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg">
+                <!-- Desktop: Full Logo -->
+                <img src="/assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg desktop-only">
+                <!-- Mobile: Icon Only -->
+                <img src="/email_templates/assets/images/icon-logo-v1.png" alt="SincroApp"
+                    class="logo-icon mobile-only">
             </a>
 
             <!-- Center: Title -->
@@ -40,7 +44,10 @@
 
             <!-- Right: Button -->
             <div class="header-actions right">
-                <a href="https://app.sincroapp.com.br" class="btn-outline">Ir para o App</a>
+                <a href="https://app.sincroapp.com.br" class="btn-outline">
+                    <span class="btn-text-full">Ir para o App</span>
+                    <span class="btn-text-short">App</span>
+                </a>
             </div>
         </div>
     </header>
