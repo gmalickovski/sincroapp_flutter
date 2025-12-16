@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const { Client } = require('@notionhq/client');
 const axios = require('axios');
@@ -10,6 +11,9 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(cors()); // Allow all origins (configured via Nginx in prod)
 app.use(express.json());
+
+// Serve Static Files (Web Help Center)
+app.use('/central-de-ajuda', express.static(path.join(__dirname, '../web/central-de-ajuda')));
 
 // Notion Config
 const notion = new Client({ auth: process.env.NOTION_API_KEY });

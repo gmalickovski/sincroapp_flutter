@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,8 @@ Future<void> _connectToEmulators() async {
 
   FirebaseFunctions.instanceFor(region: 'us-central1')
       .useFunctionsEmulator(host, functionsPort);
+
+  await FirebaseStorage.instance.useStorageEmulator(host, 9199);
 }
 // ========================================
 // FIM DA FUNÇÃO
