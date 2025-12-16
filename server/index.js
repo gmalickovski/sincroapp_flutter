@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { Client } = require('@notionhq/client');
+const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -80,6 +81,39 @@ app.get('/api/faq', async (req, res) => {
     } catch (error) {
         console.error("Notion API Error:", error);
         res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
+    }
+});
+
+const FEEDBACK_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/app-feedback";
+
+// API Route: Submit Feedback
+app.post('/api/feedback', async (req, res) => {
+    try {
+        console.log("Receiving feedback submission...");
+        const { type, description, user_id, user_email, name, device_info, app_version, attachment_url } = req.body;
+
+        const payload = {
+            event: 'user_feedback',
+            type, // 'bug', 'idea', 'account', etc.
+            description,
+            app_version: app_version || 'Web Help Center',
+            device_info: device_info || req.headers['user-agent'],
+            user_id: user_id || 'anonymous_web',
+            user_email: user_email || 'anonymous',
+            name: name || 'Visitante Web',
+            image_url: attachment_url || null,
+            timestamp: new Date().toISOString()
+        };
+
+        console.log("Forwarding to n8n:", payload);
+
+        await axios.post(FEEDBACK_WEBHOOK_URL, payload);
+
+        res.json({ success: true, message: "Feedback sent" });
+
+    } catch (error) {
+        console.error("Feedback Error:", error.message);
+        res.status(500).json({ error: "Failed to submit feedback" });
     }
 });
 

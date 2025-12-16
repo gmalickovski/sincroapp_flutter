@@ -1,6 +1,10 @@
 enum FeedbackType {
   bug,
   idea,
+  account,
+  subscription,
+  tech,
+  general,
 }
 
 class FeedbackModel {

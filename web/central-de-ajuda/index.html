@@ -18,6 +18,7 @@
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../favicon.png" />
@@ -182,9 +183,63 @@
         <div class="container text-center">
             <h2>Ainda precisa de ajuda?</h2>
             <p>Nossa equipe está pronta para te ouvir.</p>
-            <a href="mailto:suporte@sincroapp.com.br" class="btn-primary">Falar com o Suporte</a>
+            <!-- Changed to open modal -->
+            <button onclick="openFeedbackModal()" class="btn-primary">Falar com o Suporte</button>
         </div>
     </section>
+
+    <!-- Feedback Modal -->
+    <div id="feedbackModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Enviar Feedback</h3>
+                <button onclick="closeFeedbackModal()" class="close-btn">
+                    <span class="material-icons">close</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+                <div class="feedback-grid">
+                    <button class="type-btn active" onclick="selectType(this, 'bug')">
+                        <span class="material-icons">bug_report</span>
+                        <span>Reportar Bug</span>
+                    </button>
+                    <button class="type-btn" onclick="selectType(this, 'idea')">
+                        <span class="material-icons">lightbulb</span>
+                        <span>Sugerir Ideia</span>
+                    </button>
+                    <button class="type-btn" onclick="selectType(this, 'account')">
+                        <span class="material-icons">person</span>
+                        <span>Conta</span>
+                    </button>
+                    <button class="type-btn" onclick="selectType(this, 'subscription')">
+                        <span class="material-icons">credit_card</span>
+                        <span>Assinatura</span>
+                    </button>
+                    <button class="type-btn" onclick="selectType(this, 'tech')">
+                        <span class="material-icons">build</span>
+                        <span>Problemas</span>
+                    </button>
+                    <button class="type-btn" onclick="selectType(this, 'general')">
+                        <span class="material-icons">help_outline</span>
+                        <span>Outros</span>
+                    </button>
+                </div>
+
+                <div class="input-group">
+                    <label>Descrição</label>
+                    <textarea id="feedbackDesc" rows="5"
+                        placeholder="Descreva o que aconteceu ou sua ideia..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button onclick="submitFeedback()" class="btn-submit" id="submitBtn">
+                    <span>Enviar</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">

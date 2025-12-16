@@ -144,23 +144,21 @@ class _FeedbackModalState extends State<FeedbackModal> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Type Selector
-                    Row(
+                    // Type Selector (Grid)
+                    GridView.count(
+                      crossAxisCount: 2,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      mainAxisSpacing: 12,
+                      crossAxisSpacing: 12,
+                      childAspectRatio: 2.5, // Adjust for card shape
                       children: [
-                        Expanded(
-                          child: _buildTypeButton(
-                            type: FeedbackType.bug,
-                            label: 'Reportar Bug',
-                            icon: Icons.bug_report,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildTypeButton(
-                            type: FeedbackType.idea,
-                            label: 'Sugerir Ideia',
-                            icon: Icons.lightbulb,
-                          ),
-                        ),
+                        _buildTypeButton(type: FeedbackType.bug, label: 'Reportar Bug', icon: Icons.bug_report),
+                        _buildTypeButton(type: FeedbackType.idea, label: 'Sugerir Ideia', icon: Icons.lightbulb),
+                        _buildTypeButton(type: FeedbackType.account, label: 'Conta', icon: Icons.person),
+                        _buildTypeButton(type: FeedbackType.subscription, label: 'Assinatura', icon: Icons.credit_card),
+                        _buildTypeButton(type: FeedbackType.tech, label: 'Problemas', icon: Icons.build),
+                        _buildTypeButton(type: FeedbackType.general, label: 'Outros', icon: Icons.help_outline),
                       ],
                     ),
                     const SizedBox(height: 32),
@@ -296,23 +294,20 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ],
             ),
             const SizedBox(height: 24),
-            Row(
+            GridView.count(
+              crossAxisCount: 2,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 3, // Wider cards for desktop
               children: [
-                Expanded(
-                  child: _buildTypeButton(
-                    type: FeedbackType.bug,
-                    label: 'Reportar Bug',
-                    icon: Icons.bug_report,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildTypeButton(
-                    type: FeedbackType.idea,
-                    label: 'Sugerir Ideia',
-                    icon: Icons.lightbulb,
-                  ),
-                ),
+                _buildTypeButton(type: FeedbackType.bug, label: 'Reportar Bug', icon: Icons.bug_report),
+                _buildTypeButton(type: FeedbackType.idea, label: 'Sugerir Ideia', icon: Icons.lightbulb),
+                _buildTypeButton(type: FeedbackType.account, label: 'Conta e Segurança', icon: Icons.person),
+                _buildTypeButton(type: FeedbackType.subscription, label: 'Assinatura e Planos', icon: Icons.credit_card),
+                _buildTypeButton(type: FeedbackType.tech, label: 'Solução de Problemas', icon: Icons.build),
+                _buildTypeButton(type: FeedbackType.general, label: 'Primeiros Passos / Outros', icon: Icons.help_outline),
               ],
             ),
             const SizedBox(height: 24),
