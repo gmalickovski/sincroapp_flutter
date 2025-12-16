@@ -177,7 +177,6 @@ function filterCategory(category) {
 }
 
 // --- Feedback Modal Logic ---
-let selectedFeedbackType = 'bug';
 const modal = document.getElementById('feedbackModal');
 
 function openFeedbackModal() {
@@ -190,14 +189,9 @@ function closeFeedbackModal() {
     document.body.style.overflow = '';
 }
 
-function selectType(btn, type) {
-    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedFeedbackType = type;
-}
-
 window.submitFeedback = async function () {
     const desc = document.getElementById('feedbackDesc').value;
+    const type = document.getElementById('feedbackType').value;
     const btn = document.getElementById('submitBtn');
 
     if (!desc.trim()) {
@@ -213,7 +207,7 @@ window.submitFeedback = async function () {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                type: selectedFeedbackType,
+                type: type, // From Select
                 description: desc,
                 // Optional metadata
                 device_info: navigator.userAgent

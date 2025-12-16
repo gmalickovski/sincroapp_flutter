@@ -107,6 +107,19 @@ class _FeedbackModalState extends State<FeedbackModal> {
     }
   }
 
+  // Helper for Dropdown Items
+  List<DropdownMenuItem<FeedbackType>> get _dropdownItems {
+    const style = TextStyle(color: Colors.white);
+    return const [
+      DropdownMenuItem(value: FeedbackType.bug, child: Row(children: [Icon(Icons.bug_report, color: AppColors.secondaryText), SizedBox(width: 8), Text('Reportar Bug', style: style)])),
+      DropdownMenuItem(value: FeedbackType.idea, child: Row(children: [Icon(Icons.lightbulb, color: AppColors.secondaryText), SizedBox(width: 8), Text('Sugerir Ideia', style: style)])),
+      DropdownMenuItem(value: FeedbackType.account, child: Row(children: [Icon(Icons.person, color: AppColors.secondaryText), SizedBox(width: 8), Text('Conta e Segurança', style: style)])),
+      DropdownMenuItem(value: FeedbackType.subscription, child: Row(children: [Icon(Icons.credit_card, color: AppColors.secondaryText), SizedBox(width: 8), Text('Assinatura e Planos', style: style)])),
+      DropdownMenuItem(value: FeedbackType.tech, child: Row(children: [Icon(Icons.build, color: AppColors.secondaryText), SizedBox(width: 8), Text('Solução de Problemas', style: style)])),
+      DropdownMenuItem(value: FeedbackType.general, child: Row(children: [Icon(Icons.help_outline, color: AppColors.secondaryText), SizedBox(width: 8), Text('Outros / Dúvidas', style: style)])),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width >= 600;
@@ -127,7 +140,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
           ),
         ],
         title: const Text(
-          'Enviar Feedback',
+          'Ajuda e Feedback', // Updated Title
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -143,25 +156,33 @@ class _FeedbackModalState extends State<FeedbackModal> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Type Selector
-                    // Type Selector (Grid)
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      mainAxisSpacing: 12,
-                      crossAxisSpacing: 12,
-                      childAspectRatio: 2.5, // Adjust for card shape
-                      children: [
-                        _buildTypeButton(type: FeedbackType.bug, label: 'Reportar Bug', icon: Icons.bug_report),
-                        _buildTypeButton(type: FeedbackType.idea, label: 'Sugerir Ideia', icon: Icons.lightbulb),
-                        _buildTypeButton(type: FeedbackType.account, label: 'Conta', icon: Icons.person),
-                        _buildTypeButton(type: FeedbackType.subscription, label: 'Assinatura', icon: Icons.credit_card),
-                        _buildTypeButton(type: FeedbackType.tech, label: 'Problemas', icon: Icons.build),
-                        _buildTypeButton(type: FeedbackType.general, label: 'Outros', icon: Icons.help_outline),
-                      ],
+                    // Subject Dropdown
+                    const Text(
+                      'Assunto',
+                      style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.transparent),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<FeedbackType>(
+                          value: _selectedType,
+                          dropdownColor: AppColors.cardBackground,
+                          icon: const Icon(Icons.arrow_drop_down, color: AppColors.secondaryText),
+                          isExpanded: true,
+                          items: _dropdownItems,
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedType = val);
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
 
                     // Description Label
                     const Text(
@@ -180,9 +201,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
                       maxLines: 8,
                       style: const TextStyle(color: Colors.white),
                       decoration: InputDecoration(
-                        hintText: _selectedType == FeedbackType.bug
-                            ? 'Qual o problema? O que você estava fazendo quando aconteceu?'
-                            : 'Compartilhe sua ideia para melhorar o app...',
+                        hintText: 'Como podemos ajudar? Descreva sua dúvida ou problema...',
                         hintStyle: const TextStyle(color: AppColors.tertiaryText),
                         filled: true,
                         fillColor: AppColors.cardBackground,
@@ -202,7 +221,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
             Container(
               padding: const EdgeInsets.all(24),
               decoration: const BoxDecoration(
-                color: AppColors.background, // Match background to avoid "floating" feel
+                color: AppColors.background,
                 border: Border(top: BorderSide(color: Colors.white10)),
               ),
               child: Column(
@@ -248,7 +267,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
                             child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
                         : const Text(
-                            'Enviar Feedback',
+                            'Enviar',
                             style: TextStyle(
                               color: Colors.white, 
                               fontSize: 16, 
@@ -280,7 +299,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Enviar Feedback',
+                  'Ajuda e Feedback', // Updated Title
                   style: TextStyle(
                     color: Colors.white, 
                     fontSize: 20, 
@@ -294,31 +313,40 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ],
             ),
             const SizedBox(height: 24),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 3, // Wider cards for desktop
-              children: [
-                _buildTypeButton(type: FeedbackType.bug, label: 'Reportar Bug', icon: Icons.bug_report),
-                _buildTypeButton(type: FeedbackType.idea, label: 'Sugerir Ideia', icon: Icons.lightbulb),
-                _buildTypeButton(type: FeedbackType.account, label: 'Conta e Segurança', icon: Icons.person),
-                _buildTypeButton(type: FeedbackType.subscription, label: 'Assinatura e Planos', icon: Icons.credit_card),
-                _buildTypeButton(type: FeedbackType.tech, label: 'Solução de Problemas', icon: Icons.build),
-                _buildTypeButton(type: FeedbackType.general, label: 'Primeiros Passos / Outros', icon: Icons.help_outline),
-              ],
+            
+            // Dropdown Desktop
+            const Text(
+              'Assunto',
+              style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<FeedbackType>(
+                  value: _selectedType,
+                  dropdownColor: AppColors.background,
+                  icon: const Icon(Icons.arrow_drop_down, color: AppColors.secondaryText),
+                  isExpanded: true,
+                  items: _dropdownItems,
+                  onChanged: (val) {
+                    if (val != null) setState(() => _selectedType = val);
+                  },
+                ),
+              ),
             ),
             const SizedBox(height: 24),
+
             TextField(
               controller: _descriptionController,
               maxLines: 5,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: _selectedType == FeedbackType.bug
-                    ? 'Descreva o que aconteceu, passos para reproduzir...'
-                    : 'Compartilhe sua ideia ou sugestão...',
+                hintText: 'Descreva sua dúvida ou problema...',
                 hintStyle: const TextStyle(color: AppColors.tertiaryText),
                 filled: true,
                 fillColor: AppColors.background,
@@ -365,7 +393,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
       ),
     );
   }
-
+}
   Widget _buildTypeButton({
     required FeedbackType type,
     required String label,

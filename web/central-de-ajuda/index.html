@@ -192,44 +192,32 @@
     <div id="feedbackModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Enviar Feedback</h3>
+                <h3>Ajuda e Feedback</h3>
                 <button onclick="closeFeedbackModal()" class="close-btn">
                     <span class="material-icons">close</span>
                 </button>
             </div>
 
             <div class="modal-body">
-                <div class="feedback-grid">
-                    <button class="type-btn active" onclick="selectType(this, 'bug')">
-                        <span class="material-icons">bug_report</span>
-                        <span>Reportar Bug</span>
-                    </button>
-                    <button class="type-btn" onclick="selectType(this, 'idea')">
-                        <span class="material-icons">lightbulb</span>
-                        <span>Sugerir Ideia</span>
-                    </button>
-                    <button class="type-btn" onclick="selectType(this, 'account')">
-                        <span class="material-icons">person</span>
-                        <span>Conta</span>
-                    </button>
-                    <button class="type-btn" onclick="selectType(this, 'subscription')">
-                        <span class="material-icons">credit_card</span>
-                        <span>Assinatura</span>
-                    </button>
-                    <button class="type-btn" onclick="selectType(this, 'tech')">
-                        <span class="material-icons">build</span>
-                        <span>Problemas</span>
-                    </button>
-                    <button class="type-btn" onclick="selectType(this, 'general')">
-                        <span class="material-icons">help_outline</span>
-                        <span>Outros</span>
-                    </button>
+                <div class="input-group">
+                    <label for="feedbackType">Assunto</label>
+                    <div class="select-wrapper">
+                        <select id="feedbackType" class="feedback-select">
+                            <option value="bug">🐛 Reportar Bug</option>
+                            <option value="idea">💡 Sugerir Ideia</option>
+                            <option value="account">👤 Conta e Segurança</option>
+                            <option value="subscription">💳 Assinatura e Planos</option>
+                            <option value="tech">🛠️ Solução de Problemas</option>
+                            <option value="general">❓ Outros / Dúvidas</option>
+                        </select>
+                        <span class="material-icons select-icon">arrow_drop_down</span>
+                    </div>
                 </div>
 
-                <div class="input-group">
-                    <label>Descrição</label>
+                <div class="input-group" style="margin-top: 16px;">
+                    <label for="feedbackDesc">Descrição</label>
                     <textarea id="feedbackDesc" rows="5"
-                        placeholder="Descreva o que aconteceu ou sua ideia..."></textarea>
+                        placeholder="Como podemos ajudar? Descreva sua dúvida ou problema..."></textarea>
                 </div>
             </div>
 
