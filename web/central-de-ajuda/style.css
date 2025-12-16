@@ -656,40 +656,88 @@ a {
     transition: opacity 0.2s;
 }
 
-cursor: not-allowed;
-}
-
-/* Dropdown Select Styles */
-.select-wrapper {
+/* Custom Select Styles */
+.custom-select {
     position: relative;
+    user-select: none;
+    width: 100%;
 }
 
-.feedback-select {
-    width: 100%;
+.select-trigger {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     background: var(--bg-dark);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     padding: 16px;
-    padding-right: 48px;
-    color: var(--text-main);
-    font-size: 16px;
-    appearance: none;
-    -webkit-appearance: none;
     cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
+    color: var(--text-main);
 }
 
-.feedback-select:focus {
+.select-trigger:hover {
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.custom-select.open .select-trigger {
     border-color: var(--primary);
-    outline: none;
 }
 
-.select-icon {
-    position: absolute;
-    right: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
+.option-content,
+.option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.option .material-icons,
+.option-content .material-icons {
+    font-size: 20px;
     color: var(--text-secondary);
+}
+
+.select-options {
+    position: absolute;
+    display: none;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    margin-top: 8px;
+    z-index: 2000;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.custom-select.open .select-options {
+    display: block;
+    animation: fadeIn 0.1s ease-out;
+}
+
+.option {
+    padding: 12px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: background 0.2s;
+}
+
+.option:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }

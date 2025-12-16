@@ -189,6 +189,31 @@ function closeFeedbackModal() {
     document.body.style.overflow = '';
 }
 
+// Custom Select Logic
+function toggleSelect() {
+    const select = document.getElementById('customSelect');
+    select.classList.toggle('open');
+}
+
+function selectOption(value, icon, label) {
+    document.getElementById('feedbackType').value = value;
+    document.getElementById('selectedOption').innerHTML = `
+        <span class="option-content">
+            <span class="material-icons">${icon}</span> 
+            ${label}
+        </span>
+    `;
+    document.getElementById('customSelect').classList.remove('open');
+}
+
+// Close select when clicking outside
+window.addEventListener('click', function (e) {
+    const select = document.getElementById('customSelect');
+    if (select && !select.contains(e.target)) {
+        select.classList.remove('open');
+    }
+});
+
 window.submitFeedback = async function () {
     const desc = document.getElementById('feedbackDesc').value;
     const type = document.getElementById('feedbackType').value;
@@ -207,15 +232,14 @@ window.submitFeedback = async function () {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                type: type, // From Select
+                type: type,
                 description: desc,
-                // Optional metadata
                 device_info: navigator.userAgent
             })
         });
 
         if (response.ok) {
-            alert('Obrigado! Seu feedback foi enviado.');
+            alert('Obrigado! Seu feedback foi enviado com sucesso.');
             closeFeedbackModal();
             document.getElementById('feedbackDesc').value = '';
         } else {
@@ -223,7 +247,7 @@ window.submitFeedback = async function () {
         }
     } catch (e) {
         console.error(e);
-        alert('Erro de conexão ao enviar feedback.');
+        alert('Erro de conexão. Verifique sua internet.');
     } finally {
         btn.disabled = false;
         btn.innerText = 'Enviar';

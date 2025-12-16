@@ -200,17 +200,40 @@
 
             <div class="modal-body">
                 <div class="input-group">
-                    <label for="feedbackType">Assunto</label>
-                    <div class="select-wrapper">
-                        <select id="feedbackType" class="feedback-select">
-                            <option value="bug">🐛 Reportar Bug</option>
-                            <option value="idea">💡 Sugerir Ideia</option>
-                            <option value="account">👤 Conta e Segurança</option>
-                            <option value="subscription">💳 Assinatura e Planos</option>
-                            <option value="tech">🛠️ Solução de Problemas</option>
-                            <option value="general">❓ Outros / Dúvidas</option>
-                        </select>
-                        <span class="material-icons select-icon">arrow_drop_down</span>
+                    <label>Assunto</label>
+                    <!-- Custom Select Layout -->
+                    <div class="custom-select" id="customSelect">
+                        <div class="select-trigger" onclick="toggleSelect()">
+                            <span id="selectedOption">
+                                <span class="option-content">
+                                    <span class="material-icons">bug_report</span>
+                                    Reportar Bug
+                                </span>
+                            </span>
+                            <span class="material-icons arrow">arrow_drop_down</span>
+                        </div>
+                        <div class="select-options" id="selectOptions">
+                            <div class="option" onclick="selectOption('bug', 'bug_report', 'Reportar Bug')">
+                                <span class="material-icons">bug_report</span> Reportar Bug
+                            </div>
+                            <div class="option" onclick="selectOption('idea', 'lightbulb', 'Sugerir Ideia')">
+                                <span class="material-icons">lightbulb</span> Sugerir Ideia
+                            </div>
+                            <div class="option" onclick="selectOption('account', 'person', 'Conta e Segurança')">
+                                <span class="material-icons">person</span> Conta e Segurança
+                            </div>
+                            <div class="option"
+                                onclick="selectOption('subscription', 'credit_card', 'Assinatura e Planos')">
+                                <span class="material-icons">credit_card</span> Assinatura e Planos
+                            </div>
+                            <div class="option" onclick="selectOption('tech', 'build', 'Solução de Problemas')">
+                                <span class="material-icons">build</span> Solução de Problemas
+                            </div>
+                            <div class="option" onclick="selectOption('general', 'help_outline', 'Outros / Dúvidas')">
+                                <span class="material-icons">help_outline</span> Outros / Dúvidas
+                            </div>
+                        </div>
+                        <input type="hidden" id="feedbackType" value="bug">
                     </div>
                 </div>
 
