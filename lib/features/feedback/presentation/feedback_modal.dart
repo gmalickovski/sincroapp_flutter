@@ -394,39 +394,4 @@ class _FeedbackModalState extends State<FeedbackModal> {
     );
   }
 }
-  Widget _buildTypeButton({
-    required FeedbackType type,
-    required String label,
-    required IconData icon,
-  }) {
-    final isSelected = _selectedType == type;
-    return InkWell(
-      onTap: () => setState(() => _selectedType = type),
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withValues(alpha: 0.2) : AppColors.background,
-          border: Border.all(
-            color: isSelected ? AppColors.primary : Colors.transparent,
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? AppColors.primary : AppColors.secondaryText),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+
