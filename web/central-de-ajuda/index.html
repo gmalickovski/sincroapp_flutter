@@ -15,6 +15,9 @@
         content="Encontre respostas para suas dúvidas sobre o SincroApp. Tutoriais, assinatura e suporte.">
     <meta property="og:image" content="https://sincroapp.com.br/assets/images/og-image.png">
     <meta property="og:url" content="https://sincroapp.com.br/central-de-ajuda/">
+    <!-- Firebase SDK (Compat for simplicity) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,10 +35,9 @@
             <!-- Left: Logo -->
             <a href="/" class="logo-link left">
                 <!-- Desktop: Full Logo -->
-                <img src="/assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg desktop-only">
+                <img src="assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg desktop-only">
                 <!-- Mobile: Icon Only -->
-                <img src="/email_templates/assets/images/icon-logo-v1.png" alt="SincroApp"
-                    class="logo-icon mobile-only">
+                <img src="assets/images/icon-logo-v1.png" alt="SincroApp" class="logo-icon mobile-only">
             </a>
 
             <!-- Center: Title -->
@@ -237,17 +239,19 @@
                     </div>
                 </div>
 
-                <div class="input-group" style="margin-top: 16px;">
-                    <label for="feedbackDesc">Descrição</label>
-                    <textarea id="feedbackDesc" rows="5"
-                        placeholder="Como podemos ajudar? Descreva sua dúvida ou problema..."></textarea>
+                <div class="input-group">
+                    <label for="feedback-desc">Descrição</label>
+                    <textarea id="feedback-desc" rows="4" placeholder="Descreva o que aconteceu..."></textarea>
                 </div>
-            </div>
 
-            <div class="modal-footer">
-                <button onclick="submitFeedback()" class="btn-submit" id="submitBtn">
-                    <span>Enviar</span>
-                </button>
+                <div class="input-group">
+                    <label for="feedback-image">Anexo (Imagem)</label>
+                    <div class="file-upload-wrapper">
+                        <input type="file" id="feedback-image" accept="image/*">
+                    </div>
+                </div>
+
+                <button id="submit-feedback" class="btn-primary" onclick="submitFeedback()">Enviar Feedback</button>
             </div>
         </div>
     </div>

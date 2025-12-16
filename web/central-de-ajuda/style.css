@@ -726,8 +726,40 @@ a {
 }
 
 .option:hover {
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--text-main);
+    background: #334155;
+}
+
+/* File Upload */
+.file-upload-wrapper {
+    margin-top: 8px;
+    padding: 12px;
+    background: #1e293b;
+    border-radius: 8px;
+    border: 1px dashed #4b5563;
+    display: flex;
+    align-items: center;
+}
+
+.file-upload-wrapper input[type="file"] {
+    width: 100%;
+    color: #cbd5e1;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.file-upload-wrapper input[type="file"]::file-selector-button {
+    background: #6200ea;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    margin-right: 12px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.file-upload-wrapper input[type="file"]::file-selector-button:hover {
+    background: #7c4dff;
 }
 
 @keyframes fadeIn {

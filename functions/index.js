@@ -13,7 +13,7 @@ const db = admin.firestore();
 
 // Webhook URLs (n8n)
 const N8N_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
-const FEEDBACK_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/app-feedback";
+const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
 
 // Notion Config
 const notion = new Client({ auth: process.env.NOTION_API_KEY });

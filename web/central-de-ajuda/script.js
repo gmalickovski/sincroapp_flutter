@@ -1,4 +1,49 @@
+// Firebase Configuration (PLACEHOLDER - PLEASE REPLACE WITH YOUR KEYS)
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "sincro-app-flutter.firebaseapp.com",
+    projectId: "sincro-app-flutter",
+    storageBucket: "sincro-app-flutter.firebasestorage.app",
+    messagingSenderId: "1765903179777", // Guessed from context or placeholder
+    appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    const storage = firebase.storage();
+
+    // Connect to Emulator if localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log("Using Firebase Storage Emulator");
+        storage.useEmulator('localhost', 9199);
+    }
+}
+
+// Function to upload image
+async function uploadImage(file) {
+    if (!file) return null;
+    try {
+        const storageRef = firebase.storage().ref();
+        const fileName = `feedback_images/${Date.now()}_${file.name}`;
+        const fileRef = storageRef.child(fileName);
+
+        console.log("Uploading file to:", fileName);
+        const snapshot = await fileRef.put(file);
+        const url = await snapshot.ref.getDownloadURL();
+        console.log("File available at", url);
+        return url;
+    } catch (error) {
+        console.error("Error uploading image:", error);
+        alert("Erro ao fazer upload da imagem. Tente novamente.");
+        return null; // Stop submission? or continue without image?
+    }
+}
+
 // Backend URL Selection
+let API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : '';
 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 // Local: Points directly to Node server (requires cors)
 // Prod: Points to Nginx proxy (relative path)
@@ -78,8 +123,8 @@ function renderFaq(items) {
 
             if (!isActive) {
                 div.classList.add('active');
-                const answer = div.querySelector('.faq-answer');
-                answer.style.maxHeight = answer.scrollHeight + "px";
+                const answerElement = div.querySelector('.faq-answer');
+                answerElement.style.maxHeight = answerElement.scrollHeight + "px";
             }
         });
     });
@@ -214,43 +259,73 @@ window.addEventListener('click', function (e) {
     }
 });
 
-window.submitFeedback = async function () {
-    const desc = document.getElementById('feedbackDesc').value;
-    const type = document.getElementById('feedbackType').value;
-    const btn = document.getElementById('submitBtn');
+window.submitFeedback = async function submitFeedback() {
+    const feedbackType = document.querySelector('.custom-select input[type="hidden"]').value;
+    const feedbackDesc = document.getElementById('feedback-desc').value; // Corrected ID
+    const submitBtn = document.getElementById('submit-feedback'); // Corrected ID
+    const imageInput = document.getElementById('feedback-image');
+    const imageFile = imageInput && imageInput.files[0];
 
-    if (!desc.trim()) {
-        alert('Por favor, descreva seu feedback.');
+    if (!feedbackDesc) {
+        alert('Por favor, descreva o feedback.');
         return;
     }
 
-    btn.disabled = true;
-    btn.innerText = 'Enviando...';
+    submitBtn.textContent = 'Enviando...';
+    submitBtn.disabled = true;
 
     try {
-        // Use root-relative path
-        const response = await fetch('/api/feedback', {
+        let imageUrl = null;
+        if (imageFile) {
+            submitBtn.textContent = 'Enviando Imagem...';
+            imageUrl = await uploadImage(imageFile);
+            if (!imageUrl) {
+                // Upload failed
+                submitBtn.textContent = 'Enviar Feedback';
+                submitBtn.disabled = false;
+                return;
+            }
+        }
+
+        submitBtn.textContent = 'Enviando Dados...';
+
+        const payload = {
+            type: feedbackType || 'general',
+            description: feedbackDesc,
+            image_url: imageUrl, // Consistent with server
+            app_version: 'Web Help Center 1.0',
+            device_info: navigator.userAgent,
+            user_id: 'anonymous_web',
+            user_email: 'anonymous',
+            name: 'Visitante Web',
+            timestamp: new Date().toISOString()
+        };
+
+        const response = await fetch(`${API_BASE_URL}/api/feedback`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                type: type,
-                description: desc,
-                device_info: navigator.userAgent
-            })
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
+        const result = await response.json();
+
         if (response.ok) {
-            alert('Obrigado! Seu feedback foi enviado com sucesso.');
+            alert('Feedback enviado com sucesso!');
             closeFeedbackModal();
-            document.getElementById('feedbackDesc').value = '';
+            document.getElementById('feedback-desc').value = ''; // Clear text
+            if (imageInput) imageInput.value = ''; // Clear file
         } else {
+            console.error('Feedback error:', result);
             alert('Erro ao enviar feedback. Tente novamente.');
         }
-    } catch (e) {
-        console.error(e);
-        alert('Erro de conexão. Verifique sua internet.');
+
+    } catch (error) {
+        console.error('Error submitting feedback:', error);
+        alert('Erro de conexão.');
     } finally {
-        btn.disabled = false;
-        btn.innerText = 'Enviar';
+        submitBtn.textContent = 'Enviar Feedback';
+        submitBtn.disabled = false;
     }
 }

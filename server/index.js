@@ -1,9 +1,32 @@
-require('dotenv').config();
-const express = require('express');
 const path = require('path');
+const dotenv = require('dotenv');
+
+// DEBUG: Load .env from server directory explicitly
+const envPath = path.join(__dirname, '.env');
+console.log(`[DEBUG] Attempting to load.env from: ${envPath} `);
+const result = dotenv.config({ path: envPath });
+
+if (result.error) {
+    console.error(`[DEBUG] Error loading.env: ${result.error.message} `);
+    // Fallback: try default loading (cwd)
+    console.log('[DEBUG] Trying default dotenv load...');
+    dotenv.config();
+} else {
+    console.log(`[DEBUG].env loaded successfully.`);
+}
+
+console.log(`[DEBUG] NOTION_API_KEY available: ${!!process.env.NOTION_API_KEY} `);
+if (process.env.NOTION_API_KEY) {
+    console.log(`[DEBUG] NOTION_API_KEY length: ${process.env.NOTION_API_KEY.length} `);
+    console.log(`[DEBUG] NOTION_API_KEY start: ${process.env.NOTION_API_KEY.substring(0, 4)}...`);
+} else {
+    console.error('[DEBUG] CRITICAL: NOTION_API_KEY is MISSING in process.env');
+}
+
+const express = require('express');
 const cors = require('cors');
-const { Client } = require('@notionhq/client');
 const axios = require('axios');
+const { Client } = require('@notionhq/client');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +41,76 @@ app.use('/central-de-ajuda', express.static(path.join(__dirname, '../web/central
 // Notion Config
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const NOTION_DATABASE_ID = process.env.NOTION_FAQ_DATABASE_ID;
+
+// Helper: Convert Block Children to HTML
+const richText = (textArray) => {
+    if (!textArray) return '';
+    return textArray.map(t => {
+        let content = t.plain_text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+
+        const { bold, italic, strikethrough, underline, code, color } = t.annotations;
+        if (bold) content = `<b>${content}</b>`;
+        if (italic) content = `<i>${content}</i>`;
+        if (strikethrough) content = `<s>${content}</s>`;
+        if (underline) content = `<u>${content}</u>`;
+        if (code) content = `<code>${content}</code>`;
+        // Color could be handled here if needed
+        return content;
+    }).join("");
+};
+
+const notionToHtml = (blocks) => {
+    let html = "";
+    let listType = null;
+
+    for (const block of blocks) {
+        if (listType && block.type !== 'bulleted_list_item' && block.type !== 'numbered_list_item') {
+            html += `</${listType}>`;
+            listType = null;
+        }
+
+        switch (block.type) {
+            case 'paragraph':
+                html += `<p>${richText(block.paragraph.rich_text)}</p>`;
+                break;
+            case 'heading_1':
+                html += `<h3>${richText(block.heading_1.rich_text)}</h3>`;
+                break;
+            case 'heading_2':
+                html += `<h4>${richText(block.heading_2.rich_text)}</h4>`;
+                break;
+            case 'heading_3':
+                html += `<h5>${richText(block.heading_3.rich_text)}</h5>`;
+                break;
+            case 'bulleted_list_item':
+                if (listType !== 'ul') {
+                    if (listType) html += `</${listType}>`;
+                    html += '<ul>';
+                    listType = 'ul';
+                }
+                html += `<li>${richText(block.bulleted_list_item.rich_text)}</li>`;
+                break;
+            case 'numbered_list_item':
+                if (listType !== 'ol') {
+                    if (listType) html += `</${listType}>`;
+                    html += '<ol>';
+                    listType = 'ol';
+                }
+                html += `<li>${richText(block.numbered_list_item.rich_text)}</li>`;
+                break;
+            case 'divider':
+                html += `<hr>`;
+                break;
+            default:
+                break;
+        }
+    }
+    if (listType) html += `</${listType}>`;
+    return html;
+};
 
 // API Route: Get FAQ
 app.get('/api/faq', async (req, res) => {
@@ -53,44 +146,33 @@ app.get('/api/faq', async (req, res) => {
                 block_id: page.id,
             });
 
-            // Convert blocks to simple HTML
-            let htmlContent = "";
-            for (const block of blocks.results) {
-                if (block.type === 'paragraph') {
-                    const text = block.paragraph.rich_text.map(t => t.plain_text).join("");
-                    if (text) htmlContent += `<p>${text}</p>`;
-                } else if (block.type === 'heading_1') {
-                    htmlContent += `<h3>${block.heading_1.rich_text.map(t => t.plain_text).join("")}</h3>`;
-                } else if (block.type === 'heading_2') {
-                    htmlContent += `<h4>${block.heading_2.rich_text.map(t => t.plain_text).join("")}</h4>`;
-                } else if (block.type === 'heading_3') {
-                    htmlContent += `<h5>${block.heading_3.rich_text.map(t => t.plain_text).join("")}</h5>`;
-                } else if (block.type === 'bulleted_list_item') {
-                    htmlContent += `<ul><li>${block.bulleted_list_item.rich_text.map(t => t.plain_text).join("")}</li></ul>`;
-                } else if (block.type === 'numbered_list_item') {
-                    htmlContent += `<ol><li>${block.numbered_list_item.rich_text.map(t => t.plain_text).join("")}</li></ol>`;
-                }
-            }
+        } else if (block.type === 'heading_3') {
+            htmlContent += `< h5 > ${block.heading_3.rich_text.map(t => t.plain_text).join("")}</h5 > `;
+        } else if (block.type === 'bulleted_list_item') {
+            htmlContent += `< ul > <li>${block.bulleted_list_item.rich_text.map(t => t.plain_text).join("")}</li></ul > `;
+        } else if (block.type === 'numbered_list_item') {
+            htmlContent += `< ol > <li>${block.numbered_list_item.rich_text.map(t => t.plain_text).join("")}</li></ol > `;
+        }
+    }
 
             items.push({
-                id: page.id,
-                question: questionTitle,
-                category: category,
-                answerHtml: htmlContent
-            });
-        }
+        id: page.id,
+        question: questionTitle,
+        category: category,
+        answerHtml: htmlContent
+    });
+}
 
         res.json({ faq: items });
 
     } catch (error) {
-        console.error("Notion API Error:", error);
-        res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
-    }
+    console.error("Notion API Error:", error);
+    res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
+}
 });
 
-const FEEDBACK_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/app-feedback";
+const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
 
-// API Route: Submit Feedback
 app.post('/api/feedback', async (req, res) => {
     try {
         console.log("Receiving feedback submission...");
@@ -123,5 +205,5 @@ app.post('/api/feedback', async (req, res) => {
 
 // Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT} `);
 });
