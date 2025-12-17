@@ -14,6 +14,7 @@ const db = admin.firestore();
 // Webhook URLs (n8n)
 const N8N_WEBHOOK_URL = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
 const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
+const TRANSACTION_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp";
 
 // Notion Config
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
@@ -93,7 +94,7 @@ exports.getFaq = functions.https.onRequest(async (req, res) => {
 /**
  * Função auxiliar para enviar dados ao webhook do n8n.
  */
-const sendToWebhook = async (payload, targetUrl = N8N_WEBHOOK_URL) => {
+const sendToWebhook = async (payload, targetUrl = TRANSACTION_WEBHOOK_URL) => {
     try {
         functions.logger.info(`Tentando enviar dados para o n8n(${targetUrl}): `, payload);
         await axios.post(targetUrl, payload);

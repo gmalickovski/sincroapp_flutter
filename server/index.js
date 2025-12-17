@@ -3,21 +3,21 @@ const dotenv = require('dotenv');
 
 // DEBUG: Load .env from server directory explicitly
 const envPath = path.join(__dirname, '.env');
-console.log(`[DEBUG] Attempting to load.env from: ${envPath} `);
+console.log(`[DEBUG] Attempting to load .env from: ${envPath}`);
 const result = dotenv.config({ path: envPath });
 
 if (result.error) {
-    console.error(`[DEBUG] Error loading.env: ${result.error.message} `);
+    console.error(`[DEBUG] Error loading .env: ${result.error.message}`);
     // Fallback: try default loading (cwd)
     console.log('[DEBUG] Trying default dotenv load...');
     dotenv.config();
 } else {
-    console.log(`[DEBUG].env loaded successfully.`);
+    console.log(`[DEBUG] .env loaded successfully.`);
 }
 
-console.log(`[DEBUG] NOTION_API_KEY available: ${!!process.env.NOTION_API_KEY} `);
+console.log(`[DEBUG] NOTION_API_KEY available: ${!!process.env.NOTION_API_KEY}`);
 if (process.env.NOTION_API_KEY) {
-    console.log(`[DEBUG] NOTION_API_KEY length: ${process.env.NOTION_API_KEY.length} `);
+    console.log(`[DEBUG] NOTION_API_KEY length: ${process.env.NOTION_API_KEY.length}`);
     console.log(`[DEBUG] NOTION_API_KEY start: ${process.env.NOTION_API_KEY.substring(0, 4)}...`);
 } else {
     console.error('[DEBUG] CRITICAL: NOTION_API_KEY is MISSING in process.env');
@@ -31,14 +31,21 @@ const { Client } = require('@notionhq/client');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors()); // Allow all origins (configured via Nginx in prod)
-app.use(express.json());
+// Enable CORS
+app.use(cors());
 
-// Serve Static Files (Web Help Center)
+// Serve Static Files for Web Help Center
 app.use('/central-de-ajuda', express.static(path.join(__dirname, '../web/central-de-ajuda')));
 
-// Notion Config
+// Content Security Policy (Optional - preventing errors in browser log)
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com; connect-src 'self' http://localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
+    next();
+});
+
+app.use(express.json());
+
+// Notion Client
 const notion = new Client({ auth: process.env.NOTION_API_KEY });
 const NOTION_DATABASE_ID = process.env.NOTION_FAQ_DATABASE_ID;
 
@@ -57,7 +64,6 @@ const richText = (textArray) => {
         if (strikethrough) content = `<s>${content}</s>`;
         if (underline) content = `<u>${content}</u>`;
         if (code) content = `<code>${content}</code>`;
-        // Color could be handled here if needed
         return content;
     }).join("");
 };
@@ -146,29 +152,22 @@ app.get('/api/faq', async (req, res) => {
                 block_id: page.id,
             });
 
-        } else if (block.type === 'heading_3') {
-            htmlContent += `< h5 > ${block.heading_3.rich_text.map(t => t.plain_text).join("")}</h5 > `;
-        } else if (block.type === 'bulleted_list_item') {
-            htmlContent += `< ul > <li>${block.bulleted_list_item.rich_text.map(t => t.plain_text).join("")}</li></ul > `;
-        } else if (block.type === 'numbered_list_item') {
-            htmlContent += `< ol > <li>${block.numbered_list_item.rich_text.map(t => t.plain_text).join("")}</li></ol > `;
-        }
-    }
+            // Convert Blocks to HTML
+            const answerHtml = notionToHtml(blocks.results);
 
             items.push({
-        id: page.id,
-        question: questionTitle,
-        category: category,
-        answerHtml: htmlContent
-    });
-}
+                question: questionTitle,
+                answer: answerHtml,
+                category: category
+            });
+        }
 
         res.json({ faq: items });
 
     } catch (error) {
-    console.error("Notion API Error:", error);
-    res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
-}
+        console.error("Notion API Error:", error);
+        res.status(500).json({ error: "Failed to fetch FAQ", details: error.message });
+    }
 });
 
 const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
@@ -176,34 +175,23 @@ const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-fee
 app.post('/api/feedback', async (req, res) => {
     try {
         console.log("Receiving feedback submission...");
-        const { type, description, user_id, user_email, name, device_info, app_version, attachment_url } = req.body;
+        const feedbackData = req.body;
 
-        const payload = {
-            event: 'user_feedback',
-            type, // 'bug', 'idea', 'account', etc.
-            description,
-            app_version: app_version || 'Web Help Center',
-            device_info: device_info || req.headers['user-agent'],
-            user_id: user_id || 'anonymous_web',
-            user_email: user_email || 'anonymous',
-            name: name || 'Visitante Web',
-            image_url: attachment_url || null,
-            timestamp: new Date().toISOString()
-        };
+        console.log("Forwarding to n8n:", JSON.stringify(feedbackData, null, 2));
 
-        console.log("Forwarding to n8n:", payload);
+        const response = await axios.post(FEEDBACK_WEBHOOK_URL, feedbackData);
 
-        await axios.post(FEEDBACK_WEBHOOK_URL, payload);
-
-        res.json({ success: true, message: "Feedback sent" });
-
+        console.log("n8n response status:", response.status);
+        res.json({ success: true, n8n_status: response.status });
     } catch (error) {
         console.error("Feedback Error:", error.message);
+        if (error.response) {
+            console.error("n8n Response Data:", error.response.data);
+        }
         res.status(500).json({ error: "Failed to submit feedback" });
     }
 });
 
-// Start Server
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT} `);
+    console.log(`Server running on port ${PORT}`);
 });

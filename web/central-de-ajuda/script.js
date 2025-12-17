@@ -24,6 +24,17 @@ if (typeof firebase !== 'undefined') {
 async function uploadImage(file) {
     if (!file) return null;
     try {
+        const auth = firebase.auth();
+        // Try to sign in anonymously (required for Prod, usually ignored by Emulator if rules are public)
+        if (!auth.currentUser) {
+            console.log("Waiting for auth (or skipping if public)...");
+            try {
+                await auth.signInAnonymously();
+            } catch (e) {
+                console.warn("Auth failed (likely invalid key in test mode). Proceeding to upload assuming public rules.", e);
+            }
+        }
+
         const storageRef = firebase.storage().ref();
         const fileName = `feedback_images/${Date.now()}_${file.name}`;
         const fileRef = storageRef.child(fileName);
@@ -290,9 +301,10 @@ window.submitFeedback = async function submitFeedback() {
         submitBtn.textContent = 'Enviando Dados...';
 
         const payload = {
+            event: 'user_feedback', // Added Event
             type: feedbackType || 'general',
             description: feedbackDesc,
-            image_url: imageUrl, // Consistent with server
+            image_url: imageUrl,
             app_version: 'Web Help Center 1.0',
             device_info: navigator.userAgent,
             user_id: 'anonymous_web',

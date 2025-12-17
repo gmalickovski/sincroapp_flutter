@@ -85,58 +85,68 @@ Future<void> main() async {
   }
 
   // ========================================
-  // APP CHECK - ATIVAR IMEDIATAMENTE APÓS FIREBASE
+  // EMULADOR - DECIDIR E CONECTAR PRIMEIRO
   // ========================================
-  // CRÍTICO: App Check DEVE ser ativado ANTES de qualquer
-  // chamada a Firestore, Auth ou Functions para evitar 400.
-  // Firebase SDK carrega reCAPTCHA v3 automaticamente quando
-  // ReCaptchaV3Provider() é instanciado.
-  // ========================================
-  try {
-    debugPrint(
-        '🔧 Ativando App Check no startup (ANTES de qualquer serviço Firebase)...');
+  // AUTOMÁTICO: Usa emuladores apenas em Debug Mode.
+  // Em Release Mode (flutter build), automaticamente usa Produção.
+  // Você não precisa mais mudar manualmente esta variável!
+  final bool useEmulators = kDebugMode; // Automático: true em debug, false em release
 
-    // IMPORTANTE: App Check no Android com Play Integrity só funciona para apps
-    // distribuídos via Play Store (produção, teste interno/fechado).
-    // Para APKs instalados diretamente (sideload), desabilitamos App Check no Android.
-    if (kIsWeb) {
-      // Web: usa reCAPTCHA v3
-      await FirebaseAppCheck.instance.activate(
-        webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
-      );
-      debugPrint('✅ App Check ativado para WEB (reCAPTCHA v3)');
-    } else if (defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS) {
-      // iOS/macOS: usa App Attest
-      await FirebaseAppCheck.instance.activate(
-        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-      );
-      debugPrint('✅ App Check ativado para iOS/macOS');
-    } else {
-      // Android: Usa Debug Provider para permitir teste em dispositivo físico (sideload)
-      // O Play Integrity só funciona se baixado da Play Store.
-      // Para funcionar agora, usaremos o Debug Provider e você precisará registrar o token no console.
-      await FirebaseAppCheck.instance.activate(
-        androidProvider: AndroidProvider.debug,
-        appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-      );
-      debugPrint('✅ App Check ativado para Android usando DEBUG PROVIDER');
-      debugPrint('⚠️ Procure no log por: "Enter this debug token into the Firebase console"');
+  if (kDebugMode && useEmulators) {
+    try {
+      await _connectToEmulators();
+      debugPrint('🔧 Conectado aos emuladores do Firebase (Auth, Firestore, Functions, Storage)');
+    } catch (e) {
+      debugPrint('⚠️ Falha ao conectar aos emuladores: $e');
     }
+  }
+  // ========================================
+  // FIM EMULADOR
+  // ========================================
 
-    // Aguarda token estar pronto (evita race condition com primeiros requests)
-    if (kIsWeb) {
-      try {
-        await FirebaseAppCheck.instance.getToken();
-        debugPrint('✅ Token App Check obtido com sucesso no startup');
-      } catch (e) {
-        debugPrint('⚠️ Erro ao obter token App Check no startup: $e');
-        debugPrint('   (Token será tentado novamente na primeira requisição)');
+  // ========================================
+  // APP CHECK - APENAS EM PRODUÇÃO (NÃO EMULADOR)
+  // ========================================
+  // App Check só deve ser ativado quando NÃO estamos usando emuladores.
+  // No ambiente de teste/emulador, pulamos completamente o App Check.
+  // ========================================
+  if (!(kDebugMode && useEmulators)) {
+    try {
+      debugPrint('🔧 Ativando App Check (Produção)...');
+
+      if (kIsWeb) {
+        await FirebaseAppCheck.instance.activate(
+          webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
+        );
+        debugPrint('✅ App Check ativado para WEB (reCAPTCHA v3)');
+      } else if (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
+        await FirebaseAppCheck.instance.activate(
+          appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+        );
+        debugPrint('✅ App Check ativado para iOS/macOS');
+      } else {
+        await FirebaseAppCheck.instance.activate(
+          androidProvider: AndroidProvider.debug,
+          appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+        );
+        debugPrint('✅ App Check ativado para Android');
       }
+
+      if (kIsWeb) {
+        try {
+          await FirebaseAppCheck.instance.getToken();
+          debugPrint('✅ Token App Check obtido');
+        } catch (e) {
+          debugPrint('⚠️ Erro ao obter token App Check: $e');
+        }
+      }
+    } catch (e, s) {
+      debugPrint('❌ ERRO ao ativar App Check: $e');
+      debugPrint('Stack trace: $s');
     }
-  } catch (e, s) {
-    debugPrint('❌ ERRO CRÍTICO ao ativar App Check: $e');
-    debugPrint('Stack trace: $s');
+  } else {
+    debugPrint('⏭️ App Check DESATIVADO (usando emuladores)');
   }
   // ========================================
   // FIM APP CHECK
@@ -148,18 +158,6 @@ Future<void> main() async {
       await NotificationService.instance.init();
     } catch (e) {
       debugPrint('❌ Erro ao inicializar Notification Service: $e');
-    }
-  }
-
-  // Emulador: ATIVE ISTO para testar localmente quando o Firebase estiver bloqueado ou para desenvolvimento offline.
-  const bool useEmulators = true; 
-
-  if (kDebugMode && useEmulators) {
-    try {
-      await _connectToEmulators();
-      debugPrint('🔧 Conectado aos emuladores do Firebase (Auth, Firestore, Functions)');
-    } catch (e) {
-      debugPrint('⚠️ Falha ao conectar aos emuladores: $e');
     }
   }
 

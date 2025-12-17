@@ -1,16 +1,19 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Permite que usuários autenticados façam upload apenas em seus próprios diretórios
-    match /users/{userId}/{allPaths=**} {
-      allow read: if true; // Permite leitura pública
-      allow write: if request.auth != null && request.auth.uid == userId;
+    // Public access for Web Help Center feedback images
+    match /feedback_images/{allPaths=**} {
+      allow read, write: if true;
     }
-
-    // Regra para uploads de Feedback (Adicionado)
-    match /feedback_uploads/{userId}/{allPaths=**} {
-      allow read: if true; // Permite leitura pública (para o n8n acessar)
-      allow write: if request.auth != null && (request.auth.uid == userId || userId == 'anonymous');
+    
+    // Public access for Flutter app feedback uploads (using user subfolder)
+    match /feedback_uploads/{allPaths=**} {
+      allow read, write: if true;
+    }
+    
+    // Default: Require authentication for all other paths
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
   }
 }
