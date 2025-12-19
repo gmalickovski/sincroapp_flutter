@@ -61,6 +61,60 @@ class _FeedbackModalState extends State<FeedbackModal> {
     }
   }
 
+  void _removeAttachment() {
+    setState(() {
+      _attachment = null;
+    });
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 400),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green, size: 64),
+                const SizedBox(height: 16),
+                const Text(
+                  'Mensagem Enviada! 🎉',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Vamos analisar seu feedback com carinho e, se necessário, retornaremos uma resposta para seu e-mail.\n\nAgradecemos sua contribuição — ela nos ajuda a melhorar o app cada vez mais!',
+                  style: TextStyle(color: AppColors.secondaryText, fontSize: 14, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('Entendido', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     if (_descriptionController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -86,12 +140,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Obrigado! Seu feedback foi enviado.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _showSuccessDialog();
       }
     } catch (e) {
       if (mounted) {
@@ -111,12 +160,12 @@ class _FeedbackModalState extends State<FeedbackModal> {
   List<DropdownMenuItem<FeedbackType>> get _dropdownItems {
     const style = TextStyle(color: Colors.white);
     return const [
-      DropdownMenuItem(value: FeedbackType.bug, child: Row(children: [Icon(Icons.bug_report, color: AppColors.secondaryText), SizedBox(width: 8), Text('Reportar Bug', style: style)])),
-      DropdownMenuItem(value: FeedbackType.idea, child: Row(children: [Icon(Icons.lightbulb, color: AppColors.secondaryText), SizedBox(width: 8), Text('Sugerir Ideia', style: style)])),
-      DropdownMenuItem(value: FeedbackType.account, child: Row(children: [Icon(Icons.person, color: AppColors.secondaryText), SizedBox(width: 8), Text('Conta e Segurança', style: style)])),
-      DropdownMenuItem(value: FeedbackType.subscription, child: Row(children: [Icon(Icons.credit_card, color: AppColors.secondaryText), SizedBox(width: 8), Text('Assinatura e Planos', style: style)])),
+      DropdownMenuItem(value: FeedbackType.bug, child: Row(children: [Icon(Icons.bug_report, color: AppColors.secondaryText), SizedBox(width: 8), Text('Bug', style: style)])),
+      DropdownMenuItem(value: FeedbackType.idea, child: Row(children: [Icon(Icons.lightbulb, color: AppColors.secondaryText), SizedBox(width: 8), Text('Sugestão', style: style)])),
+      DropdownMenuItem(value: FeedbackType.general, child: Row(children: [Icon(Icons.rocket_launch, color: AppColors.secondaryText), SizedBox(width: 8), Text('Primeiros Passos', style: style)])),
+      DropdownMenuItem(value: FeedbackType.account, child: Row(children: [Icon(Icons.shield, color: AppColors.secondaryText), SizedBox(width: 8), Text('Conta e Segurança', style: style)])),
+      DropdownMenuItem(value: FeedbackType.subscription, child: Row(children: [Icon(Icons.diamond, color: AppColors.secondaryText), SizedBox(width: 8), Text('Assinatura e Planos', style: style)])),
       DropdownMenuItem(value: FeedbackType.tech, child: Row(children: [Icon(Icons.build, color: AppColors.secondaryText), SizedBox(width: 8), Text('Solução de Problemas', style: style)])),
-      DropdownMenuItem(value: FeedbackType.general, child: Row(children: [Icon(Icons.help_outline, color: AppColors.secondaryText), SizedBox(width: 8), Text('Outros / Dúvidas', style: style)])),
     ];
   }
 
@@ -228,27 +277,45 @@ class _FeedbackModalState extends State<FeedbackModal> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                   // Attachment Button
-                  OutlinedButton.icon(
-                    onPressed: _pickImage,
-                    icon: Icon(
-                      _attachment == null ? Icons.attach_file : Icons.check_circle, 
-                      color: _attachment == null ? AppColors.secondaryText : Colors.green
-                    ),
-                    label: Text(
-                      _attachment == null ? 'Anexar Captura de Tela' : 'Imagem Anexada',
-                      style: TextStyle(
-                        color: _attachment == null ? AppColors.secondaryText : Colors.green
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      side: BorderSide(
-                        color: _attachment == null ? AppColors.border : Colors.green
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
+                   // Attachment Button with Remove Option
+                  _attachment == null
+                      ? OutlinedButton.icon(
+                          onPressed: _pickImage,
+                          icon: const Icon(Icons.attach_file, color: AppColors.secondaryText),
+                          label: const Text('Anexar Captura de Tela', style: TextStyle(color: AppColors.secondaryText)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        )
+                      : Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.green.withOpacity(0.3)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Imagem Anexada',
+                                  style: TextStyle(color: Colors.green.shade300, fontWeight: FontWeight.w500),
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: _removeAttachment,
+                                icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                                tooltip: 'Remover anexo',
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                        ),
                   const SizedBox(height: 16),
                   
                   // Submit Button
@@ -357,18 +424,45 @@ class _FeedbackModalState extends State<FeedbackModal> {
               ),
             ),
             const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: _pickImage,
-              icon: Icon(_attachment == null ? Icons.attach_file : Icons.check, color: AppColors.primary),
-              label: Text(
-                _attachment == null ? 'Anexar Print (Opcional)' : 'Imagem Anexada',
-                style: const TextStyle(color: AppColors.primary),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-            ),
+            // Attachment Button with Remove Option (Desktop)
+            _attachment == null
+                ? OutlinedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.attach_file, color: AppColors.primary),
+                    label: const Text('Anexar Print (Opcional)', style: TextStyle(color: AppColors.primary)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: AppColors.primary),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  )
+                : Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.green.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Imagem Anexada',
+                            style: TextStyle(color: Colors.green.shade300, fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: _removeAttachment,
+                          icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                          tooltip: 'Remover anexo',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                  ),
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _isLoading ? null : _submit,

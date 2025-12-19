@@ -93,8 +93,13 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if running on desktop
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: isDesktop
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+          : const EdgeInsets.all(16.0),
       child: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
@@ -121,8 +126,18 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
               TextFormField(
                 controller: _analysisNameController,
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Nome Completo (para análise)',
+                  labelStyle: const TextStyle(color: AppColors.secondaryText),
+                  prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.secondaryText),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
                 ),
                 validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),
@@ -132,10 +147,18 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
                 readOnly: true,
                 onTap: () => _selectDate(context),
                 style: const TextStyle(color: Colors.white),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Data de Nascimento',
-                  suffixIcon: Icon(Icons.calendar_today,
-                      color: AppColors.secondaryText),
+                  labelStyle: const TextStyle(color: AppColors.secondaryText),
+                  prefixIcon: const Icon(Icons.calendar_month_outlined, color: AppColors.secondaryText),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: AppColors.primary),
+                  ),
                 ),
                 validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
               ),

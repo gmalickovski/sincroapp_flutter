@@ -29,8 +29,30 @@ class FeedbackModel {
   });
 
   Map<String, dynamic> toJson() {
+    String typeString;
+    switch (type) {
+      case FeedbackType.bug:
+        typeString = 'Bug';
+        break;
+      case FeedbackType.idea:
+        typeString = 'Sugestão';
+        break;
+      case FeedbackType.account:
+        typeString = 'Conta e Segurança';
+        break;
+      case FeedbackType.subscription:
+        typeString = 'Assinatura e Planos';
+        break;
+      case FeedbackType.tech:
+        typeString = 'Solução de Problemas';
+        break;
+      case FeedbackType.general:
+        typeString = 'Primeiros Passos'; // Mapping General/Other to Primeiros Passos as per UI
+        break;
+    }
+
     return {
-      'type': type.toString().split('.').last, // 'bug' or 'idea'
+      'type': typeString,
       'description': description,
       'user_id': userId,
       'user_email': userEmail,

@@ -140,9 +140,18 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
           controller: passwordController,
           obscureText: true,
           style: const TextStyle(color: Colors.white),
-          decoration: const InputDecoration(
+          decoration: InputDecoration(
             labelText: 'Digite sua senha para confirmar',
-            labelStyle: TextStyle(color: AppColors.secondaryText),
+            labelStyle: const TextStyle(color: AppColors.secondaryText),
+            prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppColors.primary),
+            ),
           ),
         ),
         actions: [
@@ -161,8 +170,13 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if running on desktop (based on SettingsScreen breakpoint)
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
+    
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: isDesktop
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+          : const EdgeInsets.all(16.0),
       child: Column(
         children: [
           // Seção Minha Conta
@@ -175,12 +189,38 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
                 children: [
                   TextFormField(
                     controller: _firstNameController,
-                    decoration: const InputDecoration(labelText: 'Nome'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Nome',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _lastNameController,
-                    decoration: const InputDecoration(labelText: 'Sobrenome'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Sobrenome',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
@@ -210,14 +250,40 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
                   TextFormField(
                     controller: _currentPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Senha Atual'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Senha Atual',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
                     validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _newPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Nova Senha'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Nova Senha',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.key, color: AppColors.secondaryText), // Using key icon to differentiate
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
                     validator: (v) =>
                         (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
                   ),
@@ -225,8 +291,20 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                        labelText: 'Confirmar Nova Senha'),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Confirmar Nova Senha',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.check_circle_outline, color: AppColors.secondaryText),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
                     validator: (v) =>
                         (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
                   ),

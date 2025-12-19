@@ -202,6 +202,37 @@
             </div>
 
             <div class="modal-body">
+                <!-- Name & Email Row -->
+                <div class="form-row">
+                    <!-- Name Field -->
+                    <div class="input-group" id="nameGroup">
+                        <label for="feedback-name">Nome</label>
+                        <div class="input-wrapper">
+                            <span class="material-icons input-icon">person_outline</span>
+                            <input type="text" id="feedback-name" placeholder="Seu nome">
+                        </div>
+                    </div>
+
+                    <!-- Email Field -->
+                    <div class="input-group" id="emailGroup">
+                        <label for="feedback-email">E-mail</label>
+                        <div class="input-wrapper">
+                            <span class="material-icons input-icon">mail_outline</span>
+                            <input type="email" id="feedback-email" placeholder="seu@email.com">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anonymous Checkbox -->
+                <div class="input-group checkbox-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="anonymousCheckbox" onchange="toggleAnonymous()">
+                        <span class="checkmark"></span>
+                        Enviar como anônimo
+                    </label>
+                    <span class="hint-text">Sem retorno por e-mail</span>
+                </div>
+
                 <div class="input-group">
                     <label>Assunto</label>
                     <!-- Custom Select Layout -->
@@ -242,18 +273,44 @@
 
                 <div class="input-group">
                     <label for="feedback-desc">Descrição</label>
-                    <textarea id="feedback-desc" rows="4" placeholder="Descreva o que aconteceu..."></textarea>
+                    <textarea id="feedback-desc" rows="4" placeholder="Descreva sua dúvida ou problema..."></textarea>
                 </div>
 
                 <div class="input-group">
-                    <label for="feedback-image">Anexo (Imagem)</label>
-                    <div class="file-upload-wrapper">
-                        <input type="file" id="feedback-image" accept="image/*">
+                    <div class="file-upload-wrapper" id="fileUploadWrapper">
+                        <input type="file" id="feedback-image" accept="image/*" onchange="onFileSelected()"
+                            style="display: none;">
+                        <label for="feedback-image" class="file-upload-label" id="fileUploadLabel">
+                            <span class="material-icons">attach_file</span>
+                            Anexar Print (Opcional)
+                        </label>
+
+                        <div id="filePreview" class="file-preview" style="display: none;">
+                            <span class="material-icons">check_circle</span>
+                            <span id="fileName">Imagem anexada</span>
+                            <button type="button" class="remove-file-btn" onclick="removeAttachment()">
+                                <span class="material-icons">close</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <button id="submit-feedback" class="btn-primary" onclick="submitFeedback()">Enviar Feedback</button>
+                <button id="submit-feedback" class="btn-primary btn-full-width" onclick="submitFeedback()">Enviar
+                    Feedback</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content success-modal">
+            <div class="success-icon">
+                <span class="material-icons">check_circle</span>
+            </div>
+            <h3 id="successTitle">Mensagem Enviada! 🎉</h3>
+            <p id="successMessage">Vamos analisar seu feedback com carinho e, se necessário, retornaremos uma resposta
+                para seu e-mail.<br><br>Agradecemos sua contribuição — ela nos ajuda a melhorar o app cada vez mais!</p>
+            <button class="btn-primary btn-full-width" onclick="closeSuccessModal()">Entendido</button>
         </div>
     </div>
 

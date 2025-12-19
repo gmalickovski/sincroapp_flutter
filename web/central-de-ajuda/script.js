@@ -243,6 +243,84 @@ function openFeedbackModal() {
 function closeFeedbackModal() {
     modal.classList.remove('open');
     document.body.style.overflow = '';
+    // Reset form
+    document.getElementById('feedback-desc').value = '';
+    document.getElementById('feedback-image').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+    const fileLabel = document.getElementById('fileUploadLabel');
+    if (fileLabel) fileLabel.style.display = 'flex'; // Show label
+
+    const nameInput = document.getElementById('feedback-name');
+    const emailInput = document.getElementById('feedback-email');
+    if (nameInput) nameInput.value = '';
+    if (emailInput) emailInput.value = '';
+    document.getElementById('anonymousCheckbox').checked = false;
+    document.getElementById('nameGroup').classList.remove('disabled');
+    document.getElementById('emailGroup').classList.remove('disabled');
+}
+
+// Toggle Anonymous Checkbox
+function toggleAnonymous() {
+    const isAnonymous = document.getElementById('anonymousCheckbox').checked;
+    const nameGroup = document.getElementById('nameGroup');
+    const emailGroup = document.getElementById('emailGroup');
+
+    if (isAnonymous) {
+        nameGroup.classList.add('disabled');
+        emailGroup.classList.add('disabled');
+    } else {
+        nameGroup.classList.remove('disabled');
+        emailGroup.classList.remove('disabled');
+    }
+}
+
+// File selected handler
+function onFileSelected() {
+    const input = document.getElementById('feedback-image');
+    const preview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const label = document.getElementById('fileUploadLabel');
+
+    if (input.files && input.files[0]) {
+        fileName.textContent = input.files[0].name;
+        preview.style.display = 'flex';
+        // Hide the "Attach" button/label
+        if (label) label.style.display = 'none';
+        // Input is already hidden via CSS/HTML style, but just in case
+        input.style.display = 'none';
+    }
+}
+
+// Remove attachment
+function removeAttachment() {
+    const input = document.getElementById('feedback-image');
+    const preview = document.getElementById('filePreview');
+    const label = document.getElementById('fileUploadLabel');
+
+    input.value = '';
+    preview.style.display = 'none';
+    if (label) label.style.display = 'flex';
+}
+
+// Success Modal
+function showSuccessModal(isAnonymous) {
+    const successModal = document.getElementById('successModal');
+    const successTitle = document.getElementById('successTitle');
+    const successMessage = document.getElementById('successMessage');
+
+    if (isAnonymous) {
+        successTitle.textContent = 'Obrigado pelo seu feedback! 💜';
+        successMessage.textContent = 'Sua mensagem foi recebida e será analisada pela nossa equipe.';
+    } else {
+        successTitle.textContent = 'Mensagem Enviada! 🎉';
+        successMessage.innerHTML = 'Vamos analisar seu feedback com carinho e, se necessário, retornaremos uma resposta para seu e-mail.<br><br>Agradecemos sua contribuição — ela nos ajuda a melhorar o app cada vez mais!';
+    }
+
+    successModal.style.display = 'flex';
+}
+
+function closeSuccessModal() {
+    document.getElementById('successModal').style.display = 'none';
 }
 
 // Custom Select Logic
@@ -272,14 +350,34 @@ window.addEventListener('click', function (e) {
 
 window.submitFeedback = async function submitFeedback() {
     const feedbackType = document.querySelector('.custom-select input[type="hidden"]').value;
-    const feedbackDesc = document.getElementById('feedback-desc').value; // Corrected ID
-    const submitBtn = document.getElementById('submit-feedback'); // Corrected ID
+    const feedbackDesc = document.getElementById('feedback-desc').value;
+    const submitBtn = document.getElementById('submit-feedback');
     const imageInput = document.getElementById('feedback-image');
     const imageFile = imageInput && imageInput.files[0];
+    const isAnonymous = document.getElementById('anonymousCheckbox').checked;
+    const userName = document.getElementById('feedback-name').value.trim();
+    const userEmail = document.getElementById('feedback-email').value.trim();
 
+    // Validation
     if (!feedbackDesc) {
         alert('Por favor, descreva o feedback.');
         return;
+    }
+
+    if (!isAnonymous) {
+        if (!userName) {
+            alert('Por favor, informe seu nome.');
+            return;
+        }
+        if (!userEmail) {
+            alert('Por favor, informe seu e-mail.');
+            return;
+        }
+        // Simple email validation
+        if (!userEmail.includes('@')) {
+            alert('Por favor, informe um e-mail válido.');
+            return;
+        }
     }
 
     submitBtn.textContent = 'Enviando...';
@@ -291,7 +389,6 @@ window.submitFeedback = async function submitFeedback() {
             submitBtn.textContent = 'Enviando Imagem...';
             imageUrl = await uploadImage(imageFile);
             if (!imageUrl) {
-                // Upload failed
                 submitBtn.textContent = 'Enviar Feedback';
                 submitBtn.disabled = false;
                 return;
@@ -301,15 +398,16 @@ window.submitFeedback = async function submitFeedback() {
         submitBtn.textContent = 'Enviando Dados...';
 
         const payload = {
-            event: 'user_feedback', // Added Event
+            event: 'user_feedback',
             type: feedbackType || 'general',
             description: feedbackDesc,
             image_url: imageUrl,
             app_version: 'Web Help Center 1.0',
             device_info: navigator.userAgent,
-            user_id: 'anonymous_web',
-            user_email: 'anonymous',
-            name: 'Visitante Web',
+            user_id: isAnonymous ? 'anonymous_web' : 'web_visitor',
+            user_email: isAnonymous ? 'anônimo' : userEmail,
+            name: isAnonymous ? 'Visitante Anônimo' : userName,
+            is_anonymous: isAnonymous,
             timestamp: new Date().toISOString()
         };
 
@@ -324,10 +422,8 @@ window.submitFeedback = async function submitFeedback() {
         const result = await response.json();
 
         if (response.ok) {
-            alert('Feedback enviado com sucesso!');
             closeFeedbackModal();
-            document.getElementById('feedback-desc').value = ''; // Clear text
-            if (imageInput) imageInput.value = ''; // Clear file
+            showSuccessModal(isAnonymous);
         } else {
             console.error('Feedback error:', result);
             alert('Erro ao enviar feedback. Tente novamente.');

@@ -135,27 +135,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       },
                     ),
                   ),
-                  const Divider(color: Colors.white10),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          FeedbackModal.show(context, widget.userData),
-                      icon: const Icon(Icons.feedback_outlined,
-                          size: 18, color: AppColors.primary),
-                      label: const Text('Enviar Feedback'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.primary,
-                        side: const BorderSide(color: AppColors.primary),
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 18, horizontal: 16),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -166,14 +145,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   // Content Header
                   Container(
-                    padding: const EdgeInsets.fromLTRB(32, 24, 32, 24),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: Colors.white10)),
-                    ),
+                    // Adjusted padding to match sidebar title padding (horizontal 24)
+                    // Reduced vertical padding to 16 to tighten spacing
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    decoration: const BoxDecoration(),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         // Title Removed as per request (redundant with sidebar)
+                        // Support Button
+                        // Support Button
+                        OutlinedButton(
+                          onPressed: () => FeedbackModal.show(context, widget.userData),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.primary, width: 1.5),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                          child: const Text(
+                            'Suporte',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16, // Increased font size
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
                         IconButton(
                           icon: const Icon(Icons.close, color: AppColors.secondaryText),
                           onPressed: () => Navigator.of(context).pop(),
@@ -184,8 +184,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   // Content Body
                   Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: _settingsPages[_selectedIndex].page,
                     ),
                   ),

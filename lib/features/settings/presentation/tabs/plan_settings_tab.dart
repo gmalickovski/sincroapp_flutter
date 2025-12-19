@@ -21,9 +21,14 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
   Widget build(BuildContext context) {
     final currentPlan = widget.userData.subscription.plan;
     final planName = PlanLimits.getPlanName(currentPlan);
+    
+    // Check if running on desktop
+    final isDesktop = MediaQuery.of(context).size.width >= 720;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: isDesktop
+          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
+          : const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

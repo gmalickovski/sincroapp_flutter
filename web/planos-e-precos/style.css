@@ -1,0 +1,575 @@
+/* Import Central de Ajuda Variables if possible, or redefine */
+:root {
+    --bg-color: #111827;
+    --card-bg: #1F2937;
+    --primary: #7C3AED;
+    --primary-hover: #6D28D9;
+    --gold: #F59E0B;
+    --gold-hover: #D97706;
+    --text-main: #FFFFFF;
+    --text-secondary: #9CA3AF;
+    --border-color: #374151;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    line-height: 1.5;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* Wider for 3 cards */
+.section-padding {
+    padding: 40px 0;
+}
+
+.text-center {
+    text-align: center;
+}
+
+/* Header (Copied from Help Center to ensure match) */
+.header {
+    background-color: rgba(17, 24, 39, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 16px 0;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    width: 100%;
+}
+
+.logo-svg {
+    height: 28px;
+    width: auto;
+}
+
+.logo-icon {
+    height: 32px;
+    width: auto;
+}
+
+.desktop-only {
+    display: block;
+}
+
+.mobile-only {
+    display: none;
+}
+
+.header-title-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--text-main);
+}
+
+.btn-outline {
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 14px;
+    transition: all 0.2s;
+    color: var(--text-main);
+}
+
+.btn-outline:hover {
+    background-color: var(--card-bg);
+    border-color: var(--text-secondary);
+}
+
+.btn-text-full {
+    display: inline;
+}
+
+.btn-text-short {
+    display: none;
+}
+
+/* Hero */
+.hero {
+    padding: 80px 0 40px;
+    text-align: center;
+    background: radial-gradient(circle at top, #1f2937 0%, #111827 100%);
+}
+
+.hero h1 {
+    font-size: 42px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+
+.hero-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    margin-bottom: 40px;
+}
+
+/* Toggle */
+.billing-toggle-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.billing-toggle {
+    background-color: var(--card-bg);
+    padding: 4px;
+    border-radius: 50px;
+    border: 1px solid var(--border-color);
+    display: flex;
+    position: relative;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 40px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toggle-btn.active {
+    background-color: var(--primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+}
+
+.badge {
+    background-color: #10B981;
+    /* Green */
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    text-transform: uppercase;
+}
+
+.toggle-btn.active .badge {
+    background-color: white;
+    color: var(--primary);
+}
+
+/* Pricing Grid */
+.pricing-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 24px;
+    align-items: start;
+    /* Align tops */
+}
+
+.pricing-card {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 32px;
+    position: relative;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.pricing-card:hover {
+    transform: translateY(-8px);
+    border-color: var(--text-secondary);
+}
+
+.pricing-card.recommended {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+    /* Scale effect handled by hover mostly, keeping simple here */
+}
+
+.recommended-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--primary);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.card-header {
+    margin-bottom: 24px;
+}
+
+.icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.icon-wrapper .material-icons {
+    font-size: 28px;
+}
+
+.color-gray {
+    background: rgba(156, 163, 175, 0.1);
+    color: #9CA3AF;
+}
+
+.color-primary {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7C3AED;
+}
+
+.color-gold {
+    background: rgba(245, 158, 11, 0.1);
+    color: #F59E0B;
+}
+
+.card-header h3 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.card-header p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.price-container {
+    display: flex;
+    align-items: baseline;
+    margin-bottom: 8px;
+}
+
+.currency {
+    font-size: 20px;
+    font-weight: 600;
+    margin-right: 4px;
+}
+
+.amount {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--text-main);
+}
+
+.period {
+    color: var(--text-secondary);
+    font-size: 16px;
+    margin-left: 4px;
+}
+
+.billing-info {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    height: 18px;
+    /* Fixed height to prevent layout shift */
+}
+
+.btn-action {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 700;
+    margin-bottom: 32px;
+    transition: opacity 0.2s;
+}
+
+.btn-action:hover {
+    opacity: 0.9;
+}
+
+.btn-gray {
+    background: #374151;
+    color: white;
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-gold {
+    background: var(--gold);
+    color: black;
+}
+
+.features-list h4 {
+    font-size: 14px;
+    color: var(--text-main);
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.features-list ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.features-list li {
+    display: flex;
+    align-items: flex-start;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.features-list li::before {
+    content: "check_circle";
+    font-family: 'Material Icons';
+    margin-right: 12px;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Specific Check colors */
+.features-list #list-free li::before {
+    color: #9CA3AF;
+}
+
+.features-list #list-plus li::before {
+    color: var(--primary);
+}
+
+.features-list #list-premium li::before {
+    color: var(--gold);
+}
+
+/* Skeleton Loading */
+.skeleton {
+    height: 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    width: 80%;
+}
+
+.skeleton::before {
+    content: none !important;
+}
+
+/* Comparison Section */
+.comparison {
+    background-color: var(--bg-color);
+    /* Same as body */
+    padding-top: 0;
+}
+
+.section-subtitle {
+    color: var(--text-secondary);
+    margin-bottom: 32px;
+}
+
+.btn-toggle-compare {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    padding: 12px 24px;
+    border-radius: 50px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.btn-toggle-compare:hover {
+    background: var(--card-bg);
+    border-color: var(--text-secondary);
+}
+
+.btn-toggle-compare .material-icons {
+    transition: transform 0.3s;
+}
+
+.btn-toggle-compare.open .material-icons {
+    transform: rotate(180deg);
+}
+
+.comparison-wrapper {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease-out, opacity 0.5s ease;
+    opacity: 0;
+    margin-top: 40px;
+}
+
+.comparison-wrapper.open {
+    opacity: 1;
+    max-height: 2000px;
+    /* Arbitrary large height */
+}
+
+/* Table Styles */
+.table-container {
+    overflow-x: auto;
+    /* Scroll on mobile if needed */
+}
+
+.comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.comparison-table th {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.comparison-table .col-feature {
+    width: 40%;
+    text-align: left;
+}
+
+.comparison-table .col-plan {
+    width: 20%;
+    text-align: center;
+}
+
+.comparison-table td {
+    padding: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.comparison-table td:first-child {
+    color: var(--text-main);
+    font-weight: 500;
+}
+
+.comparison-table td:not(:first-child) {
+    text-align: center;
+}
+
+/* Icons in Table */
+.check-icon {
+    color: #10B981;
+    /* Green */
+    font-size: 24px;
+    vertical-align: middle;
+    font-weight: 700;
+    /* Thicker check */
+}
+
+.dash-icon {
+    color: var(--border-color);
+    font-size: 24px;
+    vertical-align: middle;
+    font-weight: bold;
+}
+
+/* Footer (Copied) */
+.footer {
+    padding: 40px 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 60px;
+}
+
+.footer p {
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.footer .links {
+    margin-top: 16px;
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+}
+
+.footer .links a:hover {
+    color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+
+    .header-container,
+    .container {
+        padding: 0 16px;
+    }
+
+    .desktop-only {
+        display: none;
+    }
+
+    .mobile-only {
+        display: block;
+    }
+
+    .hero h1 {
+        font-size: 32px;
+    }
+
+    .btn-text-full {
+        display: none;
+    }
+
+    .btn-text-short {
+        display: inline;
+    }
+
+    /* Table Mobile */
+    .comparison-table th {
+        font-size: 14px;
+        padding: 12px;
+    }
+
+    .comparison-table td {
+        font-size: 12px;
+        padding: 12px;
+    }
+
+    .col-feature {
+        width: 30%;
+    }
+}

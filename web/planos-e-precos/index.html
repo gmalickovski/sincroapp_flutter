@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planos e Preços - SincroApp</title>
+    <meta name="description"
+        content="Conheça os planos do SincroApp: Essencial, Despertar e Sinergia. Escolha a melhor opção para sua jornada de autoconhecimento.">
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../favicon.png" />
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-container">
+            <!-- Left: Logo -->
+            <a href="/" class="logo-link left">
+                <img src="../central-de-ajuda/assets/images/sincroapp_logo.svg" alt="SincroApp"
+                    class="logo-svg desktop-only">
+                <img src="../central-de-ajuda/assets/images/icon-logo-v1.png" alt="SincroApp"
+                    class="logo-icon mobile-only">
+            </a>
+
+            <!-- Center: Title -->
+            <div class="header-title-center">
+                <span>Planos e Preços</span>
+            </div>
+
+            <!-- Right: Button -->
+            <div class="header-actions right">
+                <a href="/app" class="btn-outline">
+                    <span class="btn-text-full">Ir para o App</span>
+                    <span class="btn-text-short">App</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Escolha a jornada ideal para você</h1>
+            <p class="hero-subtitle">Desbloqueie todo o potencial da sua evolução com recursos exclusivos.</p>
+
+            <!-- Billing Toggle -->
+            <div class="billing-toggle-container">
+                <div class="billing-toggle">
+                    <button class="toggle-btn active" id="btn-monthly" onclick="setBilling('monthly')">Mensal</button>
+                    <button class="toggle-btn" id="btn-annual" onclick="setBilling('annual')">
+                        Anual
+                        <span class="badge">20% OFF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Grid -->
+    <section class="pricing section-padding">
+        <div class="container">
+            <div class="grid pricing-grid">
+
+                <!-- Card 1: Essencial (Free) -->
+                <div class="card pricing-card" id="card-free">
+                    <div class="card-header">
+                        <div class="icon-wrapper color-gray">
+                            <span class="material-icons">spa</span>
+                        </div>
+                        <h3>Essencial</h3>
+                        <p>Para quem está começando.</p>
+                    </div>
+
+                    <div class="price-container">
+                        <span class="currency">R$</span>
+                        <span class="amount">0</span>
+                        <span class="period">/mês</span>
+                    </div>
+
+                    <a href="/app" class="btn-action btn-gray">Começar Grátis</a>
+
+                    <div class="features-list">
+                        <h4>O que está incluído:</h4>
+                        <ul id="list-free">
+                            <!-- Injected by JS -->
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card 2: Despertar (Plus) -->
+                <div class="card pricing-card recommended" id="card-plus">
+                    <div class="recommended-badge">MAIS POPULAR</div>
+                    <div class="card-header">
+                        <div class="icon-wrapper color-primary">
+                            <span class="material-icons">rocket_launch</span>
+                        </div>
+                        <h3>Despertar</h3>
+                        <p>Para quem quer ir além.</p>
+                    </div>
+
+                    <div class="price-container">
+                        <span class="currency">R$</span>
+                        <span class="amount" id="price-plus">29,90</span> <!-- Default Monthly -->
+                        <span class="period">/mês</span>
+                    </div>
+                    <p class="billing-info" id="info-plus">Cobrado mensalmente</p>
+
+                    <a href="/app" class="btn-action btn-primary">Assinar Despertar</a>
+
+                    <div class="features-list">
+                        <h4>Tudo do Essencial, mais:</h4>
+                        <ul id="list-plus">
+                            <!-- Injected by JS -->
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Card 3: Sinergia (Premium) -->
+                <div class="card pricing-card" id="card-premium">
+                    <div class="card-header">
+                        <div class="icon-wrapper color-gold">
+                            <span class="material-icons">diamond</span>
+                        </div>
+                        <h3>Sinergia</h3>
+                        <p>A experiência completa.</p>
+                    </div>
+
+                    <div class="price-container">
+                        <span class="currency">R$</span>
+                        <span class="amount" id="price-premium">59,90</span> <!-- Default Monthly -->
+                        <span class="period">/mês</span>
+                    </div>
+                    <p class="billing-info" id="info-premium">Cobrado mensalmente</p>
+
+                    <a href="/app" class="btn-action btn-gold">Assinar Sinergia</a>
+
+                    <div class="features-list">
+                        <h4>Tudo do Despertar, mais:</h4>
+                        <ul id="list-premium">
+                            <!-- Injected by JS -->
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                            <li class="skeleton"></li>
+                        </ul>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Comparison Section -->
+    <section class="comparison section-padding">
+        <div class="container text-center">
+            <h2>Compare nossos planos</h2>
+            <p class="section-subtitle">Confira os benefícios e o valor de cada plano.</p>
+
+            <button class="btn-toggle-compare" onclick="toggleComparison()">
+                Comparar planos
+                <span class="material-icons" id="compare-icon">keyboard_arrow_down</span>
+            </button>
+
+            <div class="comparison-wrapper" id="comparison-wrapper">
+                <div class="table-container">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th class="col-feature">Recursos principais</th>
+                                <th class="col-plan">Essencial</th>
+                                <th class="col-plan">Despertar</th>
+                                <th class="col-plan">Sinergia</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparison-body">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container text-center">
+            <p>&copy; 2025 SincroApp.</p>
+            <p class="love">Feito com 💜 por Studio MLK.</p>
+            <div class="links">
+                <a href="#">Termos de Uso</a>
+                <a href="#">Política de Privacidade</a>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+
+</html>

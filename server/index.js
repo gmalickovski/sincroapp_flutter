@@ -37,6 +37,9 @@ app.use(cors());
 // Serve Static Files for Web Help Center
 app.use('/central-de-ajuda', express.static(path.join(__dirname, '../web/central-de-ajuda')));
 
+// Serve Static Files for Plans & Pricing (New)
+app.use('/planos-e-precos', express.static(path.join(__dirname, '../web/planos-e-precos')));
+
 // Content Security Policy (Optional - preventing errors in browser log)
 app.use((req, res, next) => {
     res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com; connect-src 'self' http://localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
@@ -147,6 +150,8 @@ app.get('/api/faq', async (req, res) => {
             const questionTitle = page.properties.Pergunta?.title[0]?.plain_text || "Sem título";
             const category = page.properties['Tópico']?.select?.name || "Geral";
 
+
+
             // Fetch Page Content
             const blocks = await notion.blocks.children.list({
                 block_id: page.id,
@@ -189,6 +194,59 @@ app.post('/api/feedback', async (req, res) => {
             console.error("n8n Response Data:", error.response.data);
         }
         res.status(500).json({ error: "Failed to submit feedback" });
+    }
+});
+
+// API Route: Get Plans (Dynamic)
+app.get('/api/plans', async (req, res) => {
+    try {
+        const PLANS_DATABASE_ID = process.env.PLANS_DATABASE_ID || process.env.NOTION_PLANS_DATABASE_ID; // Support both for safety
+        console.log("Fetching Plans from Notion...", PLANS_DATABASE_ID);
+
+        const response = await notion.databases.query({
+            database_id: PLANS_DATABASE_ID,
+            filter: {
+                property: "Publicar",
+                checkbox: { equals: true },
+            },
+            sorts: [
+                { property: "Funcionalidade", direction: "ascending" }
+            ],
+        });
+
+        const cards = {
+            free: [],
+            plus: [],
+            premium: []
+        };
+
+        const comparison = [];
+
+        response.results.forEach(page => {
+            const name = page.properties['Funcionalidade']?.title[0]?.plain_text || "Sem nome";
+            const planTags = page.properties['Plano']?.multi_select?.map(tag => tag.name) || [];
+
+            // 1. Comparison Data (Full Data)
+            comparison.push({
+                name: name,
+                tags: planTags
+            });
+
+            // 2. Cards Data (Cascade Exclusion Logic)
+            if (planTags.includes('Essencial')) {
+                cards.free.push(name);
+            } else if (planTags.includes('Desperta')) {
+                cards.plus.push(name);
+            } else if (planTags.includes('Sinergia')) {
+                cards.premium.push(name);
+            }
+        });
+
+        res.json({ cards, comparison });
+
+    } catch (error) {
+        console.error("Notion Plans API Error:", error);
+        res.status(500).json({ error: "Failed to fetch plans", details: error.message });
     }
 });
 
