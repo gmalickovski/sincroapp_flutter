@@ -96,6 +96,11 @@
                     <h3>Solução de Problemas</h3>
                     <p>Bugs, erros e questões técnicas.</p>
                 </div>
+                <div class="card" onclick="scrollToSupport()">
+                    <div class="icon">💬</div>
+                    <h3>Fale Conosco</h3>
+                    <p>Envie uma mensagem direta para nossa equipe.</p>
+                </div>
             </div>
         </div>
     </section>
@@ -181,125 +186,116 @@
         </div>
     </section>
 
-    <!-- Support CTA -->
-    <section class="support-cta section-padding">
-        <div class="container text-center">
-            <h2>Ainda precisa de ajuda?</h2>
-            <p>Nossa equipe está pronta para te ouvir.</p>
-            <!-- Changed to open modal -->
-            <button onclick="openFeedbackModal()" class="btn-primary">Falar com o Suporte</button>
-        </div>
-    </section>
+    <!-- Support CTA & Feedback Form -->
+    <section class="support-cta section-padding" id="support">
+        <div class="container">
+            <div class="feedback-section">
+                <!-- Header -->
+                <div class="feedback-header">
+                    <h2>Ainda precisa de ajuda?</h2>
+                    <p>Mande uma mensagem pra gente. Nossa equipe está pronta para te ouvir.</p>
+                </div>
 
-    <!-- Feedback Modal -->
-    <div id="feedbackModal" class="modal-overlay">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Ajuda e Feedback</h3>
-                <button onclick="closeFeedbackModal()" class="close-btn">
-                    <span class="material-icons">close</span>
-                </button>
-            </div>
-
-            <div class="modal-body">
-                <!-- Name & Email Row -->
-                <div class="form-row">
-                    <!-- Name Field -->
-                    <div class="input-group" id="nameGroup">
-                        <label for="feedback-name">Nome</label>
-                        <div class="input-wrapper">
-                            <span class="material-icons input-icon">person_outline</span>
+                <!-- Form -->
+                <form class="feedback-form" id="feedbackForm" onsubmit="return false;">
+                    <!-- Row: Name & Email -->
+                    <div class="form-grid">
+                        <div class="form-field" id="nameGroup">
+                            <label for="feedback-name">Nome</label>
                             <input type="text" id="feedback-name" placeholder="Seu nome">
                         </div>
-                    </div>
-
-                    <!-- Email Field -->
-                    <div class="input-group" id="emailGroup">
-                        <label for="feedback-email">E-mail</label>
-                        <div class="input-wrapper">
-                            <span class="material-icons input-icon">mail_outline</span>
+                        <div class="form-field" id="emailGroup">
+                            <label for="feedback-email">E-mail</label>
                             <input type="email" id="feedback-email" placeholder="seu@email.com">
                         </div>
                     </div>
-                </div>
 
-                <!-- Anonymous Checkbox -->
-                <div class="input-group checkbox-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="anonymousCheckbox" onchange="toggleAnonymous()">
-                        <span class="checkmark"></span>
-                        Enviar como anônimo
-                    </label>
-                    <span class="hint-text">Sem retorno por e-mail</span>
-                </div>
-
-                <div class="input-group">
-                    <label>Assunto</label>
-                    <!-- Custom Select Layout -->
-                    <div class="custom-select" id="customSelect">
-                        <div class="select-trigger" onclick="toggleSelect()">
-                            <span id="selectedOption">
-                                <span class="option-content">
-                                    <span class="material-icons">bug_report</span>
-                                    Reportar Bug
-                                </span>
-                            </span>
-                            <span class="material-icons arrow">arrow_drop_down</span>
-                        </div>
-                        <div class="select-options" id="selectOptions">
-                            <div class="option" onclick="selectOption('bug', 'bug_report', 'Reportar Bug')">
-                                <span class="material-icons">bug_report</span> Reportar Bug
-                            </div>
-                            <div class="option" onclick="selectOption('idea', 'lightbulb', 'Sugerir Ideia')">
-                                <span class="material-icons">lightbulb</span> Sugerir Ideia
-                            </div>
-                            <div class="option" onclick="selectOption('account', 'person', 'Conta e Segurança')">
-                                <span class="material-icons">person</span> Conta e Segurança
-                            </div>
-                            <div class="option"
-                                onclick="selectOption('subscription', 'credit_card', 'Assinatura e Planos')">
-                                <span class="material-icons">credit_card</span> Assinatura e Planos
-                            </div>
-                            <div class="option" onclick="selectOption('tech', 'build', 'Solução de Problemas')">
-                                <span class="material-icons">build</span> Solução de Problemas
-                            </div>
-                            <div class="option" onclick="selectOption('general', 'help_outline', 'Outros / Dúvidas')">
-                                <span class="material-icons">help_outline</span> Outros / Dúvidas
-                            </div>
-                        </div>
-                        <input type="hidden" id="feedbackType" value="bug">
-                    </div>
-                </div>
-
-                <div class="input-group">
-                    <label for="feedback-desc">Descrição</label>
-                    <textarea id="feedback-desc" rows="4" placeholder="Descreva sua dúvida ou problema..."></textarea>
-                </div>
-
-                <div class="input-group">
-                    <div class="file-upload-wrapper" id="fileUploadWrapper">
-                        <input type="file" id="feedback-image" accept="image/*" onchange="onFileSelected()"
-                            style="display: none;">
-                        <label for="feedback-image" class="file-upload-label" id="fileUploadLabel">
-                            <span class="material-icons">attach_file</span>
-                            Anexar Print (Opcional)
+                    <!-- Anonymous Toggle -->
+                    <div class="form-field-inline">
+                        <label class="toggle-label">
+                            <input type="checkbox" id="anonymousCheckbox" onchange="toggleAnonymous()">
+                            <span class="toggle-text">Enviar como anônimo</span>
                         </label>
+                        <span class="hint">Sem retorno por e-mail</span>
+                    </div>
 
-                        <div id="filePreview" class="file-preview" style="display: none;">
-                            <span class="material-icons">check_circle</span>
-                            <span id="fileName">Imagem anexada</span>
-                            <button type="button" class="remove-file-btn" onclick="removeAttachment()">
-                                <span class="material-icons">close</span>
-                            </button>
+                    <!-- Subject Select -->
+                    <div class="form-field">
+                        <label>Assunto</label>
+                        <div class="custom-select" id="customSelect">
+                            <div class="select-trigger" onclick="toggleSelect()">
+                                <span id="selectedOption">Selecione um Assunto</span>
+                                <span class="material-icons">expand_more</span>
+                            </div>
+                            <div class="select-options" id="selectOptions">
+                                <div class="option" onclick="selectOption('bug', 'bug_report', 'Reportar Bug')">
+                                    <span class="material-icons">bug_report</span> Reportar Bug
+                                </div>
+                                <div class="option" onclick="selectOption('idea', 'lightbulb', 'Sugerir Ideia')">
+                                    <span class="material-icons">lightbulb</span> Sugerir Ideia
+                                </div>
+                                <div class="option" onclick="selectOption('account', 'person', 'Conta e Segurança')">
+                                    <span class="material-icons">person</span> Conta e Segurança
+                                </div>
+                                <div class="option"
+                                    onclick="selectOption('subscription', 'credit_card', 'Assinatura e Planos')">
+                                    <span class="material-icons">credit_card</span> Assinatura e Planos
+                                </div>
+                                <div class="option" onclick="selectOption('tech', 'build', 'Solução de Problemas')">
+                                    <span class="material-icons">build</span> Solução de Problemas
+                                </div>
+                                <div class="option"
+                                    onclick="selectOption('general', 'help_outline', 'Outros / Dúvidas')">
+                                    <span class="material-icons">help_outline</span> Outros / Dúvidas
+                                </div>
+                            </div>
+                            <input type="hidden" id="feedbackType" value="">
                         </div>
                     </div>
-                </div>
 
-                <button id="submit-feedback" class="btn-primary btn-full-width" onclick="submitFeedback()">Enviar
-                    Feedback</button>
+                    <!-- Description -->
+                    <div class="form-field">
+                        <label for="feedback-desc">Descrição</label>
+                        <textarea id="feedback-desc" rows="5"
+                            placeholder="Descreva sua dúvida ou problema..."></textarea>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="form-field">
+                        <div class="file-upload" id="fileUploadWrapper">
+                            <input type="file" id="feedback-image" accept="image/*" onchange="onFileSelected()">
+                            <label for="feedback-image" class="file-upload-btn" id="fileUploadLabel">
+                                <span class="material-icons">attach_file</span>
+                                <span>Anexar Print (Opcional)</span>
+                            </label>
+                            <div id="filePreview" class="file-preview" style="display: none;">
+                                <span class="material-icons success">check_circle</span>
+                                <span id="fileName">Imagem anexada</span>
+                                <button type="button" class="remove-btn" onclick="removeAttachment()">
+                                    <span class="material-icons">close</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="form-actions">
+                        <button type="button" id="submit-feedback" class="submit-btn" onclick="submitFeedback()">
+                            Enviar Feedback
+                        </button>
+                    </div>
+
+                    <!-- Success Message -->
+                    <div id="inlineSuccessMessage" class="success-message" style="display: none;">
+                        <span class="material-icons success-icon">check_circle</span>
+                        <h3>Mensagem Enviada! 🎉</h3>
+                        <p>Recebemos seu feedback e vamos analisar com atenção.</p>
+                        <button type="button" class="submit-btn secondary" onclick="resetForm()">Enviar outro</button>
+                    </div>
+                </form>
             </div>
         </div>
-    </div>
+    </section>
 
     <!-- Success Modal -->
     <div id="successModal" class="modal-overlay" style="display: none;">

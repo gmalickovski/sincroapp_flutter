@@ -108,7 +108,7 @@ function renderFaq(items) {
                 </svg>
             </button>
             <div class="faq-answer">
-                ${item.answerHtml}
+                ${item.answer}
             </div>
         `;
 
@@ -208,7 +208,16 @@ if (searchInput) {
 
 // Category Filter Logic (Updated Title)
 function filterCategory(category) {
-    document.getElementById('faq-title').scrollIntoView({ behavior: 'smooth' });
+    // Scroll to FAQ section start with offset for sticky header
+    const faqSection = document.querySelector('.faq');
+    const headerHeight = document.querySelector('.header').offsetHeight;
+    const targetPosition = faqSection.offsetTop - headerHeight - 20; // 20px extra padding
+
+    window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+    });
+
     searchInput.value = '';
 
     const items = document.querySelectorAll('.faq-item');
@@ -232,32 +241,21 @@ function filterCategory(category) {
     faqTitle.innerText = `Perguntas Frequentes (FAQ) - ${categoryNames[category] || 'Tópico'}`;
 }
 
-// --- Feedback Modal Logic ---
-const modal = document.getElementById('feedbackModal');
+// Scroll to Support/Feedback Section
+function scrollToSupport() {
+    const supportSection = document.getElementById('support');
+    const headerHeight = document.querySelector('.header').offsetHeight;
+    const targetPosition = supportSection.offsetTop - headerHeight - 20;
 
-function openFeedbackModal() {
-    modal.classList.add('open');
-    document.body.style.overflow = 'hidden';
+    window.scrollTo({
+        top: targetPosition,
+        behavior: 'smooth'
+    });
 }
 
-function closeFeedbackModal() {
-    modal.classList.remove('open');
-    document.body.style.overflow = '';
-    // Reset form
-    document.getElementById('feedback-desc').value = '';
-    document.getElementById('feedback-image').value = '';
-    document.getElementById('filePreview').style.display = 'none';
-    const fileLabel = document.getElementById('fileUploadLabel');
-    if (fileLabel) fileLabel.style.display = 'flex'; // Show label
+// --- Inline Feedback Logic ---
 
-    const nameInput = document.getElementById('feedback-name');
-    const emailInput = document.getElementById('feedback-email');
-    if (nameInput) nameInput.value = '';
-    if (emailInput) emailInput.value = '';
-    document.getElementById('anonymousCheckbox').checked = false;
-    document.getElementById('nameGroup').classList.remove('disabled');
-    document.getElementById('emailGroup').classList.remove('disabled');
-}
+// Removed Modal Open/Close functions
 
 // Toggle Anonymous Checkbox
 function toggleAnonymous() {
@@ -302,25 +300,25 @@ function removeAttachment() {
     if (label) label.style.display = 'flex';
 }
 
-// Success Modal
-function showSuccessModal(isAnonymous) {
-    const successModal = document.getElementById('successModal');
-    const successTitle = document.getElementById('successTitle');
-    const successMessage = document.getElementById('successMessage');
+function resetForm() {
+    // Show form fields
+    const card = document.querySelector('.feedback-form-card');
+    Array.from(card.children).forEach(child => {
+        if (child.id !== 'inlineSuccessMessage') {
+            child.style.display = ''; // Reset to default (flex/block)
+        }
+    });
+    // Hide success message
+    document.getElementById('inlineSuccessMessage').style.display = 'none';
 
-    if (isAnonymous) {
-        successTitle.textContent = 'Obrigado pelo seu feedback! 💜';
-        successMessage.textContent = 'Sua mensagem foi recebida e será analisada pela nossa equipe.';
-    } else {
-        successTitle.textContent = 'Mensagem Enviada! 🎉';
-        successMessage.innerHTML = 'Vamos analisar seu feedback com carinho e, se necessário, retornaremos uma resposta para seu e-mail.<br><br>Agradecemos sua contribuição — ela nos ajuda a melhorar o app cada vez mais!';
-    }
+    // Clear inputs
+    document.getElementById('feedback-desc').value = '';
+    document.getElementById('feedback-image').value = '';
+    removeAttachment();
 
-    successModal.style.display = 'flex';
-}
-
-function closeSuccessModal() {
-    document.getElementById('successModal').style.display = 'none';
+    // Reset anonymous
+    document.getElementById('anonymousCheckbox').checked = false;
+    toggleAnonymous();
 }
 
 // Custom Select Logic
@@ -422,8 +420,19 @@ window.submitFeedback = async function submitFeedback() {
         const result = await response.json();
 
         if (response.ok) {
-            closeFeedbackModal();
-            showSuccessModal(isAnonymous);
+            // Success: Switch to inline success message
+            const card = document.querySelector('.feedback-form-card');
+
+            // Hide all direct children except success message
+            Array.from(card.children).forEach(child => {
+                if (child.id !== 'inlineSuccessMessage') {
+                    child.style.display = 'none';
+                }
+            });
+
+            // Show success message
+            document.getElementById('inlineSuccessMessage').style.display = 'block';
+
         } else {
             console.error('Feedback error:', result);
             alert('Erro ao enviar feedback. Tente novamente.');
@@ -437,3 +446,43 @@ window.submitFeedback = async function submitFeedback() {
         submitBtn.disabled = false;
     }
 }
+
+function resetForm() {
+    document.getElementById('feedback-name').value = '';
+    document.getElementById('feedback-email').value = '';
+    document.getElementById('feedback-desc').value = '';
+    document.getElementById('anonymousCheckbox').checked = false;
+    toggleAnonymous();
+
+    // Reset Dropdown
+    document.getElementById('feedbackType').value = '';
+    document.getElementById('selectedOption').textContent = 'Selecione um Assunto';
+
+    // Reset File
+    removeAttachment();
+
+    // Show Form again
+    document.getElementById('inlineSuccessMessage').style.display = 'none';
+    const formElements = document.getElementById('feedbackForm').children;
+    for (let i = 0; i < formElements.length; i++) {
+        if (formElements[i].id !== 'inlineSuccessMessage') {
+            formElements[i].style.display = '';
+        }
+    }
+}
+
+// Update toggleAnonymous for new structure
+function toggleAnonymous() {
+    const isAnonymous = document.getElementById('anonymousCheckbox').checked;
+    const nameGroup = document.getElementById('nameGroup');
+    const emailGroup = document.getElementById('emailGroup');
+
+    if (isAnonymous) {
+        nameGroup.classList.add('disabled');
+        emailGroup.classList.add('disabled');
+    } else {
+        nameGroup.classList.remove('disabled');
+        emailGroup.classList.remove('disabled');
+    }
+}
+
