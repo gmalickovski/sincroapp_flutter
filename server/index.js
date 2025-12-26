@@ -40,6 +40,15 @@ app.use('/central-de-ajuda', express.static(path.join(__dirname, '../web/central
 // Serve Static Files for Plans & Pricing (New)
 app.use('/planos-e-precos', express.static(path.join(__dirname, '../web/planos-e-precos')));
 
+// Serve Static Files for Features Documentation
+app.use('/funcionalidades', express.static(path.join(__dirname, '../web/funcionalidades')));
+
+// Serve Landing Page (Home) at Root
+app.use(express.static(path.join(__dirname, '../web/home')));
+
+// Serve Global Assets (Images, Fonts, etc.)
+app.use('/assets', express.static(path.join(__dirname, '../web/assets')));
+
 // Content Security Policy (Optional - preventing errors in browser log)
 app.use((req, res, next) => {
     res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com; connect-src 'self' http://localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
@@ -67,6 +76,12 @@ const richText = (textArray) => {
         if (strikethrough) content = `<s>${content}</s>`;
         if (underline) content = `<u>${content}</u>`;
         if (code) content = `<code>${content}</code>`;
+
+        // Handle links
+        if (t.href) {
+            content = `<a href="${t.href}" target="_blank" rel="noopener">${content}</a>`;
+        }
+
         return content;
     }).join("");
 };
@@ -86,13 +101,13 @@ const notionToHtml = (blocks) => {
                 html += `<p>${richText(block.paragraph.rich_text)}</p>`;
                 break;
             case 'heading_1':
-                html += `<h3>${richText(block.heading_1.rich_text)}</h3>`;
+                html += `<h2>${richText(block.heading_1.rich_text)}</h2>`;
                 break;
             case 'heading_2':
-                html += `<h4>${richText(block.heading_2.rich_text)}</h4>`;
+                html += `<h3>${richText(block.heading_2.rich_text)}</h3>`;
                 break;
             case 'heading_3':
-                html += `<h5>${richText(block.heading_3.rich_text)}</h5>`;
+                html += `<h4>${richText(block.heading_3.rich_text)}</h4>`;
                 break;
             case 'bulleted_list_item':
                 if (listType !== 'ul') {
@@ -113,7 +128,36 @@ const notionToHtml = (blocks) => {
             case 'divider':
                 html += `<hr>`;
                 break;
+            case 'quote':
+                html += `<blockquote>${richText(block.quote.rich_text)}</blockquote>`;
+                break;
+            case 'callout':
+                const icon = block.callout.icon?.emoji || '💡';
+                html += `<div class="callout"><span class="callout-icon">${icon}</span><div class="callout-content">${richText(block.callout.rich_text)}</div></div>`;
+                break;
+            case 'code':
+                const lang = block.code.language || 'plaintext';
+                html += `<pre><code class="language-${lang}">${richText(block.code.rich_text)}</code></pre>`;
+                break;
+            case 'image':
+                const imgUrl = block.image.type === 'external'
+                    ? block.image.external.url
+                    : block.image.file.url;
+                const caption = block.image.caption?.length > 0
+                    ? `<figcaption>${richText(block.image.caption)}</figcaption>`
+                    : '';
+                html += `<figure><img src="${imgUrl}" alt="Imagem" loading="lazy">${caption}</figure>`;
+                break;
+            case 'toggle':
+                const toggleContent = richText(block.toggle.rich_text);
+                html += `<details><summary>${toggleContent}</summary><div class="toggle-content"></div></details>`;
+                break;
+            case 'to_do':
+                const checked = block.to_do.checked ? 'checked' : '';
+                html += `<div class="todo-item"><input type="checkbox" ${checked} disabled><span>${richText(block.to_do.rich_text)}</span></div>`;
+                break;
             default:
+                // Skip unsupported block types
                 break;
         }
     }
@@ -247,6 +291,84 @@ app.get('/api/plans', async (req, res) => {
     } catch (error) {
         console.error("Notion Plans API Error:", error);
         res.status(500).json({ error: "Failed to fetch plans", details: error.message });
+    }
+});
+
+// API Route: Get Features List (for documentation page)
+app.get('/api/features', async (req, res) => {
+    try {
+        const FEATURES_DATABASE_ID = process.env.PLANS_DATABASE_ID || process.env.NOTION_PLANS_DATABASE_ID;
+        console.log("Fetching Features from Notion...");
+
+        const response = await notion.databases.query({
+            database_id: FEATURES_DATABASE_ID,
+            filter: {
+                property: "Landing Page",
+                checkbox: { equals: true },
+            },
+            sorts: [
+                { property: "Data de Edição", direction: "descending" }
+            ],
+        });
+
+        const features = response.results.map(page => ({
+            id: page.id,
+            name: page.properties['Funcionalidade']?.title[0]?.plain_text || "Sem nome",
+            shortDescription: page.properties['Descrição Curta']?.rich_text[0]?.plain_text || "",
+            image: page.properties['Imagem']?.files[0]?.file?.url || page.properties['Imagem']?.files[0]?.external?.url || "https://picsum.photos/seed/sincro/1200/800",
+            imgMobile: page.properties['Imagem Mobile']?.files[0]?.file?.url || page.properties['Imagem Mobile']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || "https://picsum.photos/seed/sincro/350/800",
+            imgDesktop: page.properties['Imagem Desktop']?.files[0]?.file?.url || page.properties['Imagem Desktop']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || "https://picsum.photos/seed/sincro/1200/800",
+            plans: page.properties['Plano']?.multi_select?.map(tag => tag.name) || [],
+        }));
+
+        console.log("Loaded Features:", features.length);
+        if (features.length > 0) {
+            console.log("DEBUG: Available Notion Properties:", Object.keys(response.results[0].properties));
+            console.log("Sample Feature Images:", {
+                name: features[0].name,
+                img: features[0].image,
+                mob: features[0].imgMobile,
+                desk: features[0].imgDesktop
+            });
+        }
+
+        res.json({ features });
+
+    } catch (error) {
+        console.error("Notion Features API Error:", error);
+        res.status(500).json({ error: "Failed to fetch features", details: error.message });
+    }
+});
+
+// API Route: Get Single Feature with full content
+app.get('/api/features/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log(`Fetching Feature ${id} from Notion...`);
+
+        // Get page properties
+        const page = await notion.pages.retrieve({ page_id: id });
+
+        // Get page content blocks
+        const blocks = await notion.blocks.children.list({ block_id: id });
+        const contentHtml = notionToHtml(blocks.results);
+
+        const feature = {
+            id: page.id,
+            name: page.properties['Funcionalidade']?.title[0]?.plain_text || "Sem nome",
+            shortDescription: page.properties['Descrição Curta']?.rich_text[0]?.plain_text || "",
+            plans: page.properties['Plano']?.multi_select?.map(tag => tag.name) || [],
+            createdAt: page.properties['Data de Criação']?.date?.start || page.created_time,
+            updatedAt: page.properties['Data de Edição']?.date?.start || page.last_edited_time,
+            version: page.properties['Versão']?.rich_text?.[0]?.plain_text || "1.0",
+            content: contentHtml
+        };
+
+        res.json({ feature });
+
+    } catch (error) {
+        console.error("Notion Feature Detail API Error:", error);
+        res.status(500).json({ error: "Failed to fetch feature", details: error.message });
     }
 });
 

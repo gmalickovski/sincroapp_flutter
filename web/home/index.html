@@ -14,9 +14,6 @@
     <meta name="keywords"
         content="SincroApp, numerologia, produtividade, organização pessoal, guia numerológico, autoconhecimento, metas, energia pessoal, planejamento diário, calendário numerológico, assistente de IA, mapa numerológico, Flutter, Firebase, Vertex AI">
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" href="favicon.png">
-
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
 
@@ -30,262 +27,74 @@
     <!-- Animate on Scroll (AOS) CSS -->
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
 
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
-
-    <!-- Construction Check -->
-    <script src="construction_check.js"></script>
-
-    <style>
-        /* Definição das Cores e Fontes como Variáveis CSS */
-        :root {
-            --bg: #0f172a;
-            /* slate-900 */
-            --card-bg: #1e293b;
-            /* slate-800 */
-            --border: #334155;
-            /* slate-700 */
-            --text-primary: #f8fafc;
-            /* slate-50 */
-            --text-secondary: #cbd5e1;
-            /* slate-300 */
-            --text-tertiary: #94a3b8;
-            /* slate-400 */
-            --accent-primary: #8b5cf6;
-            /* violet-500 */
-            --accent-secondary: #a78bfa;
-            /* violet-400 */
-            --accent-glow: rgba(139, 92, 246, 0.5);
-
-            --marker-task: #3B82F6;
-            /* blue-500 */
-            --marker-goal: #EC4899;
-            /* pink-500 */
-            --marker-journal: #14B8A6;
-            /* teal-500 */
-
-            --font-poppins: 'Poppins', sans-serif;
-            --font-outfit: 'Outfit', sans-serif;
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            font-family: var(--font-poppins);
-            background-color: var(--bg);
-            color: var(--text-primary);
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
-            overflow-x: hidden;
-        }
-
-        .font-outfit {
-            font-family: var(--font-outfit);
-        }
-
-        .font-poppins {
-            font-family: var(--font-poppins);
-        }
-
-        /* Utilitários Visuais */
-        .glass {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .text-gradient {
-            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-primary) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        /* Animações Customizadas */
-        @keyframes float {
-            0% {
-                transform: translateY(0px);
-            }
-
-            50% {
-                transform: translateY(-20px);
-            }
-
-            100% {
-                transform: translateY(0px);
-            }
-        }
-
-        .animate-float {
-            animation: float 6s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-            animation: float 8s ease-in-out infinite;
-            animation-delay: 2s;
-        }
-
-        .animate-float-slow {
-            animation: float 10s ease-in-out infinite;
-            animation-delay: 1s;
-        }
-
-        @keyframes pulse-glow {
-
-            0%,
-            100% {
-                box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
-            }
-
-            50% {
-                box-shadow: 0 0 40px rgba(139, 92, 246, 0.6);
-            }
-        }
-
-        .glow-effect {
-            animation: pulse-glow 4s infinite;
-        }
-
-        /* Estilos para o FAQ */
-        .faq-answer {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-out;
-            background-color: var(--bg);
-            border-radius: 0 0 0.5rem 0.5rem;
-        }
-
-        .faq-question.active+.faq-answer {
-            max-height: 200px;
-            padding: 1.5rem;
-            border-top: 1px solid var(--border);
-        }
-
-        .faq-question .arrow {
-            transition: transform 0.3s ease;
-        }
-
-        .faq-question.active .arrow {
-            transform: rotate(180deg);
-        }
-
-        /* Sticky Scroll Feature Styles */
-        .feature-text-item {
-            opacity: 0.3;
-            transition: opacity 0.5s ease, transform 0.5s ease;
-            transform: translateX(-20px);
-        }
-
-        .feature-text-item.active {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        /* Device Toggle Styles */
-        .device-toggle-btn {
-            @apply p-2 rounded-lg transition-all duration-300;
-        }
-
-        .device-toggle-btn.active {
-            background-color: var(--accent-primary);
-            color: white;
-        }
-
-        .device-toggle-btn:not(.active) {
-            @apply text-gray-400 hover:text-white hover:bg-white/5;
-        }
-    </style>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
     <!-- --- NAVBAR --- -->
-    <header class="sticky top-0 z-50 border-b border-gray-800 glass">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-20">
-                <!-- Logo -->
-                <div class="flex-shrink-0 cursor-pointer flex items-center py-2" onclick="scrollToSection('home')">
-                    <img src="logo.svg" alt="SincroApp Logo" class="h-9 w-auto">
-                </div>
+    <!-- --- NAVBAR --- -->
+    <!-- --- NAVBAR (Standardized) --- -->
+    <header class="header">
+        <div class="header-container">
+            <!-- Left: Logo -->
+            <a href="/" class="logo-link left">
+                <!-- Desktop: Full Logo -->
+                <img src="/assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg desktop-only">
+                <!-- Mobile: Icon Only -->
+                <img src="/assets/images/icon-logo-v1.png" alt="SincroApp" class="logo-icon mobile-only">
+            </a>
 
-                <!-- Navegação Desktop -->
-                <nav class="hidden md:flex space-x-8">
-                    <button id="nav-home" onclick="scrollToSection('home')"
-                        class="nav-button px-3 py-2 rounded-md text-sm font-medium transition-colors hover:text-white"
-                        style="color: var(--text-primary);">
-                        Início
-                    </button>
-                    <button id="nav-features" onclick="scrollToSection('features')"
-                        class="nav-button px-3 py-2 rounded-md text-sm font-medium transition-colors hover:text-white"
-                        style="color: var(--text-secondary);">
-                        Funcionalidades
-                    </button>
-                    <button id="nav-pricing" onclick="scrollToSection('planos')"
-                        class="nav-button px-3 py-2 rounded-md text-sm font-medium transition-colors hover:text-white"
-                        style="color: var(--text-secondary);">
-                        Planos
-                    </button>
-                    <button id="nav-faq" onclick="scrollToSection('faq')"
-                        class="nav-button px-3 py-2 rounded-md text-sm font-medium transition-colors hover:text-white"
-                        style="color: var(--text-secondary);">
-                        FAQ
-                    </button>
-                </nav>
+            <!-- Center: Nav -->
+            <nav class="header-nav-center">
+                <a href="/" class="nav-link active">Início</a>
+                <a href="/funcionalidades/" class="nav-link">Funcionalidades</a>
+                <a href="/planos-e-precos/" class="nav-link">Planos</a>
+                <a href="/central-de-ajuda/" class="nav-link">Central de Ajuda</a>
+            </nav>
 
-                <!-- CTA Desktop -->
-                <div class="hidden md:flex items-center">
-                    <a href="#planos" onclick="scrollToSection('planos')"
-                        class="px-5 py-2.5 rounded-lg font-medium transition-all duration-200 hover:opacity-90 active:scale-95 shadow-lg shadow-violet-900/20"
-                        style="background-color: var(--accent-primary); color: #FFF;">
-                        Acessar Web App
-                    </a>
-                </div>
+            <!-- Right: Button -->
+            <div class="header-actions right">
+                <a href="/app" class="btn-outline">
+                    <span class="btn-text-full">Ir para o App</span>
+                    <span class="btn-text-short">App</span>
+                </a>
 
-                <!-- Botão Menu Mobile -->
-                <div class="md:hidden">
-                    <button id="menu-toggle" class="p-2 rounded-md transition-colors hover:bg-gray-800"
-                        style="color: var(--text-secondary);">
-                        <svg id="menu-icon-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" class="block">
-                            <line x1="4" x2="20" y1="12" y2="12" />
-                            <line x1="4" x2="20" y1="6" y2="6" />
-                            <line x1="4" x2="20" y1="18" y2="18" />
-                        </svg>
-                        <svg id="menu-icon-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round" class="hidden">
-                            <line x1="18" x2="6" y1="6" y2="18" />
-                            <line x1="6" x2="18" y1="6" y2="18" />
-                        </svg>
-                    </button>
-                </div>
+                <!-- Botão Menu Mobile (Existing ID preserved for JS) -->
+                <button id="menu-toggle" class="md:hidden p-2 rounded-md transition-colors hover:bg-gray-800 ml-4"
+                    style="color: var(--text-secondary);">
+                    <svg id="menu-icon-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" class="block">
+                        <line x1="4" x2="20" y1="12" y2="12" />
+                        <line x1="4" x2="20" y1="6" y2="6" />
+                        <line x1="4" x2="20" y1="18" y2="18" />
+                    </svg>
+                    <svg id="menu-icon-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" class="hidden">
+                        <line x1="18" x2="6" y1="6" y2="18" />
+                        <line x1="6" x2="18" y1="6" y2="18" />
+                    </svg>
+                </button>
             </div>
         </div>
 
-        <!-- Menu Mobile Dropdown -->
-        <div id="mobile-menu" class="hidden md:hidden border-b border-gray-800 glass">
+        <!-- Menu Mobile Dropdown (Preserving Tailwind classes for Mobile Menu internal elements as they are handled by JS) -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-800 bg-[#111827]">
             <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                <button onclick="scrollToSection('home')"
-                    class="mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-white/5"
-                    style="color: var(--text-primary);">Início</button>
-                <button onclick="scrollToSection('features')"
-                    class="mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-white/5"
-                    style="color: var(--text-secondary);">Funcionalidades</button>
-                <button onclick="scrollToSection('pricing')"
-                    class="mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-white/5"
-                    style="color: var(--text-secondary);">Planos</button>
-                <button onclick="scrollToSection('faq')"
-                    class="mobile-nav-button block w-full text-left px-3 py-2 rounded-md text-base font-medium hover:bg-white/5"
-                    style="color: var(--text-secondary);">FAQ</button>
+                <a href="/" class="block px-3 py-2 rounded-md text-base font-medium text-white bg-gray-900">Início</a>
+                <a href="/funcionalidades/"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-400 hover:text-white hover:bg-gray-800">Funcionalidades</a>
+                <a href="/planos-e-precos/"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-400 hover:text-white hover:bg-gray-800">Planos</a>
+                <a href="/central-de-ajuda/"
+                    class="block px-3 py-2 rounded-md text-base font-medium text-gray-400 hover:text-white hover:bg-gray-800">Central
+                    de Ajuda</a>
                 <div class="pt-4 pb-2">
-                    <a href="#planos" onclick="scrollToSection('planos')"
-                        class="w-full block px-5 py-3 rounded-lg font-medium text-center"
-                        style="background-color: var(--accent-primary); color: #FFF;">
+                    <a href="/app"
+                        class="block w-full text-center px-5 py-3 rounded-lg border border-gray-600 font-medium text-white hover:bg-gray-800">
                         Acessar Web App
                     </a>
                 </div>
@@ -295,20 +104,21 @@
 
     <!-- --- MAIN CONTENT AREA --- -->
     <main class="flex-grow">
+        <!-- Kept Hero and other sections content as originally provided, but relying on external CSS/JS -->
 
         <!-- ================== -->
         <!-- ===== HERO ===== -->
         <!-- ================== -->
-        <section id="home" class="relative pt-20 pb-32 overflow-hidden">
+        <section id="home" class="relative pt-10 pb-20 overflow-hidden"> <!-- Reduced pt-20 to pt-10, pb-32 to pb-20 -->
             <!-- Background Glow -->
             <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-20 blur-[120px] pointer-events-none"
                 style="background: radial-gradient(circle, var(--accent-primary) 0%, rgba(0,0,0,0) 70%);"></div>
 
             <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                <div class="grid lg:grid-cols-2 gap-12 items-center">
+                <div class="grid lg:grid-cols-2 gap-8 lg:gap-4 items-center"> <!-- Reduced gap-12 to gap-8 -->
                     <!-- Texto Hero -->
-                    <div class="text-center lg:text-left" data-aos="fade-right">
-                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-8 border glass"
+                    <div class="text-center lg:text-left z-20" data-aos="fade-right">
+                        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-6 border glass"
                             style="color: var(--accent-secondary); border-color: rgba(167, 139, 250, 0.2);">
                             <span class="relative flex h-2 w-2">
                                 <span
@@ -318,19 +128,19 @@
                             Inteligência Artificial + Numerologia Pessoal
                         </div>
                         <h1
-                            class="font-outfit text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-8 leading-tight">
+                            class="font-outfit text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
+                            <!-- Reduced text sizes -->
                             Sincronize sua vida com o <br>
                             <span class="text-gradient">ritmo do universo.</span>
                         </h1>
-                        <p class="text-lg md:text-xl mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
-                            style="color: var(--text-secondary);">
+                        <p class="text-base md:text-lg mb-8 max-w-2xl mx-auto lg:mx-0 leading-relaxed"
+                            style="color: var(--text-secondary);"> <!-- Reduced text size -->
                             O SincroApp une organização consciente, IA avançada e numerologia para transformar seu
                             autoconhecimento em ação prática e resultados reais.
                         </p>
-                        <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-12">
+                        <div class="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 mb-8">
                             <button onclick="scrollToSection('planos')"
-                                class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-lg shadow-violet-900/30"
-                                style="background-color: var(--accent-primary); color: #FFF;">
+                                class="btn-primary w-full sm:w-auto flex items-center justify-center gap-2 shadow-lg shadow-violet-900/30">
                                 Começar Jornada Gratuita
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -339,32 +149,19 @@
                                     <polyline points="12 5 19 12 12 19" />
                                 </svg>
                             </button>
-                            <button onclick="scrollToSection('features')"
-                                class="w-full sm:w-auto px-8 py-4 rounded-xl font-bold text-lg border transition-colors hover:bg-white/5"
-                                style="border-color: var(--border); color: var(--text-primary);">
+                            <button onclick="scrollToSection('features')" class="btn-secondary w-full sm:w-auto">
                                 Conhecer Recursos
                             </button>
-                        </div>
-
-                        <!-- Social Proof -->
-                        <div class="flex items-center justify-center lg:justify-start gap-4 text-sm"
-                            style="color: var(--text-tertiary);">
-                            <div class="flex -space-x-2">
-                                <div class="w-8 h-8 rounded-full bg-gray-700 border-2 border-slate-900"></div>
-                                <div class="w-8 h-8 rounded-full bg-gray-600 border-2 border-slate-900"></div>
-                                <div class="w-8 h-8 rounded-full bg-gray-500 border-2 border-slate-900"></div>
-                            </div>
-                            <p>Junte-se a pioneiros da produtividade consciente.</p>
                         </div>
                     </div>
 
                     <!-- App Preview / Visual Hero -->
-                    <div class="relative mt-12 lg:mt-0 flex flex-col items-center" data-aos="fade-left"
-                        data-aos-delay="200">
+                    <div class="relative mt-8 lg:mt-0 flex flex-col items-center w-full max-w-[500px] mx-auto lg:max-w-none lg:scale-90 xl:scale-100 transition-transform duration-500 origin-center lg:origin-right"
+                        data-aos="fade-left" data-aos-delay="200">
 
                         <!-- Device Toggle Controls -->
                         <div
-                            class="flex items-center gap-4 mb-8 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                            class="flex items-center gap-4 mb-6 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm z-30 relative">
                             <button onclick="toggleHeroDevice('mobile')" id="hero-btn-mobile"
                                 class="device-toggle-btn active">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
@@ -386,88 +183,136 @@
                             </button>
                         </div>
 
-                        <div class="relative w-full flex justify-center min-h-[500px] items-center">
+                        <!-- Hero Mockups Container -->
+                        <div
+                            class="relative w-full min-h-[400px] sm:min-h-[450px] grid-stack transform scale-90 sm:scale-90 md:scale-90 lg:scale-90 xl:scale-90 transition-transform duration-500 origin-center">
 
-                            <!-- Floating Elements (Shared) -->
-                            <div class="absolute -top-6 -left-4 lg:-left-10 z-20 animate-float block">
+                            <!-- Cards Flutuantes -->
+                            <div id="hero-card-1"
+                                class="hero-floating-card absolute z-30 animate-float pointer-events-auto cursor-pointer group transition-all duration-700 ease-in-out top-[10%] -left-2 lg:-top-6 lg:-left-8"
+                                data-mobile-img="https://picsum.photos/seed/dash_mob/450/950"
+                                data-desktop-img="https://picsum.photos/seed/dash_desk/1200/800">
                                 <div
-                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 group-hover:bg-white/10 group-hover:scale-105">
                                     <div
                                         class="w-8 h-8 rounded-full bg-teal-500/20 flex items-center justify-center text-teal-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="10" />
-                                            <path d="M12 6v6l4 2" />
+                                            <rect x="3" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="3" width="7" height="7"></rect>
+                                            <rect x="14" y="14" width="7" height="7"></rect>
+                                            <rect x="3" y="14" width="7" height="7"></rect>
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Foco do Dia</p>
-                                        <p class="font-bold text-white text-sm">Produtividade</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Visão Geral</p>
+                                        <p class="font-bold text-white text-sm">Dashboard</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="absolute bottom-12 -right-4 lg:-right-5 z-20 animate-float-delayed block">
+
+                            <div id="hero-card-2"
+                                class="hero-floating-card absolute z-40 animate-float-delayed pointer-events-auto cursor-pointer group transition-all duration-700 ease-in-out top-[30%] -left-2 lg:top-[25%] lg:-left-10"
+                                data-mobile-img="https://picsum.photos/seed/agenda_mob/450/950"
+                                data-desktop-img="https://picsum.photos/seed/agenda_desk/1200/800">
                                 <div
-                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 group-hover:bg-white/10 group-hover:scale-105">
                                     <div
-                                        class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                        class="w-8 h-8 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                                            <line x1="3" y1="10" x2="21" y2="10"></line>
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Sincronia</p>
-                                        <p class="font-bold text-white text-sm">Insight Gerado</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Compromissos</p>
+                                        <p class="font-bold text-white text-sm">Agenda</p>
                                     </div>
                                 </div>
                             </div>
-                            <div class="absolute top-20 -right-8 z-20 animate-float-slow block">
+
+                            <div id="hero-card-3"
+                                class="hero-floating-card absolute z-30 animate-float-slow pointer-events-auto cursor-pointer group transition-all duration-700 ease-in-out bottom-[15%] -left-2 lg:bottom-8 lg:-left-6"
+                                data-mobile-img="https://picsum.photos/seed/diario_mob/450/950"
+                                data-desktop-img="https://picsum.photos/seed/diario_desk/1200/800">
                                 <div
-                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
-                                    <div
-                                        class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="20 6 9 17 4 12" />
-                                        </svg>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Meta</p>
-                                        <p class="font-bold text-white text-sm">Concluída</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="absolute bottom-32 -left-8 z-20 animate-float block"
-                                style="animation-delay: 1.5s;">
-                                <div
-                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3">
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 group-hover:bg-white/10 group-hover:scale-105">
                                     <div
                                         class="w-8 h-8 rounded-full bg-yellow-500/20 flex items-center justify-center text-yellow-400">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
                                             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                             stroke-linecap="round" stroke-linejoin="round">
-                                            <circle cx="12" cy="12" r="5" />
-                                            <path
-                                                d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                                            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                                            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
                                         </svg>
                                     </div>
                                     <div>
-                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Energia</p>
-                                        <p class="font-bold text-white text-sm">Alta</p>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Reflexão</p>
+                                        <p class="font-bold text-white text-sm">Diário</p>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Mobile Mockup -->
+                            <div id="hero-card-4"
+                                class="hero-floating-card absolute z-30 animate-float-fast pointer-events-auto cursor-pointer group transition-all duration-700 ease-in-out top-[15%] -right-2 lg:-top-2 lg:-right-4"
+                                data-mobile-img="https://picsum.photos/seed/tarefas_mob/450/950"
+                                data-desktop-img="https://picsum.photos/seed/tarefas_desk/1200/800">
+                                <div
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 group-hover:bg-white/10 group-hover:scale-105">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path
+                                                d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z">
+                                            </path>
+                                            <path d="m9 12 2 2 4-4"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Ações</p>
+                                        <p class="font-bold text-white text-sm">Tarefas</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="hero-card-5"
+                                class="hero-floating-card absolute z-40 animate-float-medium pointer-events-auto cursor-pointer group transition-all duration-700 ease-in-out bottom-[20%] -right-2 lg:bottom-10 lg:-right-6"
+                                data-mobile-img="https://picsum.photos/seed/metas_mob/450/950"
+                                data-desktop-img="https://picsum.photos/seed/metas_desk/1200/800">
+                                <div
+                                    class="glass p-3 rounded-xl border border-white/10 shadow-xl backdrop-blur-md flex items-center gap-3 transition-all duration-300 group-hover:bg-white/10 group-hover:scale-105">
+                                    <div
+                                        class="w-8 h-8 rounded-full bg-pink-500/20 flex items-center justify-center text-pink-400">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <line x1="12" y1="17" x2="12" y2="3"></line>
+                                            <path d="M5 17h14v4H5z"></path>
+                                            <path d="m15 7-3-3-3 3"></path>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-[10px] text-gray-400 uppercase tracking-wider">Objetivos</p>
+                                        <p class="font-bold text-white text-sm">Metas</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Hero Mobile Mockup -->
+                            <!-- Reduced Width to w-[200px] -->
                             <div id="hero-mockup-mobile"
-                                class="relative w-[240px] md:w-[260px] lg:w-[280px] z-10 transition-all duration-500">
+                                class="relative w-[200px] md:w-[220px] lg:w-[240px] z-20 transition-all duration-700 ease-in-out opacity-100 translate-y-0">
                                 <div
                                     class="aspect-[9/19] w-full bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden relative glow-effect">
-                                    <img src="https://picsum.photos/450/950?random=2" alt="SincroApp Mobile"
+                                    <img id="hero-mockup-mobile-img"
+                                        src="https://picsum.photos/450/950?random=default_mob" alt="SincroApp Mobile"
                                         class="w-full h-full object-cover opacity-80">
                                     <div
                                         class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent">
@@ -475,12 +320,13 @@
                                 </div>
                             </div>
 
-                            <!-- Desktop Mockup (Hidden by default) -->
+                            <!-- Hero Desktop Mockup -->
                             <div id="hero-mockup-desktop"
-                                class="relative w-[500px] md:w-[600px] z-10 hidden transition-all duration-500">
+                                class="relative w-full max-w-[500px] xl:max-w-[550px] z-10 transition-all duration-700 ease-in-out opacity-0 translate-y-4 invisible">
                                 <div
                                     class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 border-b-0 shadow-2xl overflow-hidden relative glow-effect">
-                                    <img src="https://picsum.photos/1200/800?random=3" alt="SincroApp Desktop"
+                                    <img id="hero-mockup-desktop-img"
+                                        src="https://picsum.photos/1200/800?random=default_desk" alt="SincroApp Desktop"
                                         class="w-full h-full object-cover opacity-80">
                                     <div
                                         class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent">
@@ -498,145 +344,165 @@
         <!-- ================== -->
         <!-- == FUNCIONALIDADES (STICKY SCROLL) == -->
         <!-- ================== -->
-        <section id="features" class="relative bg-gray-900 py-24">
+        <!-- ================== -->
+        <!-- == FUNCIONALIDADES (STICKY SCROLL) == -->
+        <!-- ================== -->
+        <section id="features" class="relative bg-gray-900 py-16">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="text-center mb-20" data-aos="fade-up">
-                    <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-6">Funcionalidades</h2>
-                    <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-8">
-                        Explore as ferramentas que transformam sua rotina.
-                    </p>
 
-                    <!-- Features Device Toggle -->
-                    <div
-                        class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
-                        <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile"
-                            class="device-toggle-btn active flex items-center gap-2 px-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                                <line x1="12" y1="18" x2="12.01" y2="18" />
-                            </svg>
-                            <span>Mobile</span>
-                        </button>
-                        <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop"
-                            class="device-toggle-btn flex items-center gap-2 px-4">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round">
-                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                                <line x1="8" y1="21" x2="16" y2="21" />
-                                <line x1="12" y1="17" x2="12" y2="21" />
-                            </svg>
-                            <span>Desktop</span>
-                        </button>
+                <!-- 
+                  MOBILE LAYOUT (Vertical Stack)
+                  Visible only on md:hidden
+                -->
+                <div class="flex flex-col gap-8 md:hidden">
+
+                    <!-- 1. Header (Title + Buttons) -->
+                    <div class="flex flex-col items-center text-center space-y-6" data-aos="fade-up">
+                        <h2 class="font-outfit text-3xl font-bold text-white/90">
+                            Recursos e Funcionalidades
+                        </h2>
+
+                        <!-- Mobile Toggle -->
+                        <div
+                            class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                            <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile-sm"
+                                class="device-toggle-btn active flex items-center gap-2 px-4 py-2 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                    <line x1="12" y1="18" x2="12.01" y2="18" />
+                                </svg>
+                                <span>Mobile</span>
+                            </button>
+                            <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop-sm"
+                                class="device-toggle-btn flex items-center gap-2 px-4 py-2 text-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                    <line x1="8" y1="21" x2="16" y2="21" />
+                                    <line x1="12" y1="17" x2="12" y2="21" />
+                                </svg>
+                                <span>Desktop</span>
+                            </button>
+                        </div>
                     </div>
+
+                    <!-- 2. Mobile Mockup (Centered) -->
+                    <div class="flex justify-center my-4">
+                        <div
+                            class="relative w-[200px] aspect-[9/19.5] bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden">
+                            <img id="feat-img-mobile-sm" src="https://picsum.photos/seed/sincronia/350/800"
+                                alt="Feature Mobile" class="w-full h-full object-cover transition-opacity duration-500">
+                            <!-- Gradient Overlay -->
+                            <div class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Horizontal Slider (Text Items) -->
+                    <!-- snap-x snap-mandatory for slider effect -->
+                    <div id="features-slider-mobile"
+                        class="flex overflow-x-auto snap-x snap-mandatory gap-4 pb-8 -mx-4 px-4 scrollbar-hide">
+                        <!-- Items injected by JS -->
+                    </div>
+
                 </div>
 
-                <div class="flex flex-col md:flex-row gap-12 relative">
-                    <!-- Left Column: Scrollable Text Only -->
-                    <div class="w-full md:w-1/2 py-12">
 
-                        <!-- Feature 1 -->
-                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
-                            data-image-mobile="https://picsum.photos/seed/sincronia/350/800"
-                            data-image-desktop="https://picsum.photos/seed/sincronia/1200/800">
-                            <div class="feature-text-item transition-all duration-500">
-                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Sincronia Diária</h3>
-                                <p class="text-gray-400 text-xl leading-relaxed">
-                                    Alinhe suas ações com a energia do dia. Receba orientações precisas baseadas na sua
-                                    numerologia pessoal.
-                                </p>
-                            </div>
-                        </div>
+                <!-- 
+                  DESKTOP LAYOUT (Sticky Side-by-Side)
+                  Visible only on md:flex
+                -->
+                <div class="hidden md:flex flex-col md:flex-row gap-8 lg:gap-12 items-start relative">
 
-                        <!-- Feature 2 -->
-                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
-                            data-image-mobile="https://picsum.photos/seed/painel/350/800"
-                            data-image-desktop="https://picsum.photos/seed/painel/1200/800">
-                            <div class="feature-text-item transition-all duration-500">
-                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Painel do Destino</h3>
-                                <p class="text-gray-400 text-xl leading-relaxed">
-                                    Visualize sua trajetória de vida com clareza. Entenda seus ciclos, desafios e
-                                    oportunidades.
-                                </p>
-                            </div>
-                        </div>
+                    <!-- Left Column: Sticky Mockups (40%) -->
+                    <div
+                        class="w-full md:w-[40%] sticky top-20 h-[calc(100vh-5rem)] flex items-center justify-center self-start">
+                        <div class="relative w-full grid place-items-center grid-stack">
 
-                        <!-- Feature 3 -->
-                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
-                            data-image-mobile="https://picsum.photos/seed/metas/350/800"
-                            data-image-desktop="https://picsum.photos/seed/metas/1200/800">
-                            <div class="feature-text-item transition-all duration-500">
-                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Gestão de Metas</h3>
-                                <p class="text-gray-400 text-xl leading-relaxed">
-                                    Transforme sonhos em conquistas estruturadas. Defina objetivos claros e acompanhe
-                                    seu progresso.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Feature 4 -->
-                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
-                            data-image-mobile="https://picsum.photos/seed/ia/350/800"
-                            data-image-desktop="https://picsum.photos/seed/ia/1200/800">
-                            <div class="feature-text-item transition-all duration-500">
-                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">SincroIA</h3>
-                                <p class="text-gray-400 text-xl leading-relaxed">
-                                    Seu assistente pessoal de produtividade e sabedoria. Converse com uma IA treinada
-                                    para oferecer insights profundos.
-                                </p>
-                            </div>
-                        </div>
-
-                        <!-- Feature 5 -->
-                        <div class="feature-block min-h-[60vh] flex flex-col justify-center"
-                            data-image-mobile="https://picsum.photos/seed/mapa/350/800"
-                            data-image-desktop="https://picsum.photos/seed/mapa/1200/800">
-                            <div class="feature-text-item transition-all duration-500">
-                                <h3 class="font-outfit text-4xl font-bold mb-4 text-white">Mapa Numerológico</h3>
-                                <p class="text-gray-400 text-xl leading-relaxed">
-                                    Mergulhe no autoconhecimento com um mapa completo. Descubra os números que regem sua
-                                    essência.
-                                </p>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <!-- Right Column: Sticky Mockups -->
-                    <div class="hidden md:block w-1/2 relative">
-                        <div class="sticky top-32 h-[600px] flex items-start justify-center">
-
-                            <!-- Mobile Mockup -->
+                            <!-- Feature Mobile Mockup -->
                             <div id="feat-mockup-mobile"
-                                class="relative w-[260px] aspect-[9/19] bg-black rounded-[2.5rem] border-[6px] border-gray-900 shadow-2xl overflow-hidden transition-all duration-500">
+                                class="relative w-[180px] lg:w-[200px] aspect-[9/19.5] bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden transition-all duration-700 ease-in-out opacity-100 translate-y-0 z-20">
                                 <div class="absolute inset-0 bg-gray-900">
                                     <img id="feat-img-mobile" src="https://picsum.photos/seed/sincronia/350/800"
                                         alt="Feature Mobile"
-                                        class="w-full h-full object-cover transition-opacity duration-500">
+                                        class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
                                     <div
                                         class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Desktop Mockup (Hidden) -->
-                            <div id="feat-mockup-desktop" class="relative w-[500px] hidden transition-all duration-500">
+                            <!-- Feature Desktop Mockup -->
+                            <div id="feat-mockup-desktop"
+                                class="relative w-full max-w-[420px] transition-all duration-700 ease-in-out opacity-0 translate-y-4 invisible z-20">
                                 <div
-                                    class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 border-b-0 shadow-2xl overflow-hidden relative">
+                                    class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 shadow-2xl overflow-hidden relative">
                                     <img id="feat-img-desktop" src="https://picsum.photos/seed/sincronia/1200/800"
                                         alt="Feature Desktop"
-                                        class="w-full h-full object-cover transition-opacity duration-500">
+                                        class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
                                     <div
                                         class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
                                     </div>
                                 </div>
-                                <div class="h-4 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
+                                <div class="h-3 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
                             </div>
 
                         </div>
                     </div>
+
+                    <!-- Right Column: Header + Scrollable Text (60%) -->
+                    <div class="w-full md:w-[60%] flex flex-col relative">
+
+                        <!-- Header: Sticky Title + Toggles -->
+                        <div class="sticky top-20 z-30 pt-8 pb-8 bg-gray-900/95 backdrop-blur-sm shadow-sm mb-0 transition-all duration-300"
+                            data-aos="fade-left"
+                            style="margin-left: -1rem; padding-left: 1rem; margin-right: -1rem; padding-right: 1rem;">
+                            <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-6 text-white/90">
+                                Recursos e Funcionalidades
+                            </h2>
+
+                            <!-- Features Device Toggle -->
+                            <div
+                                class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                                <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile"
+                                    class="device-toggle-btn active flex items-center gap-2 px-4 py-2 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                        <line x1="12" y1="18" x2="12.01" y2="18" />
+                                    </svg>
+                                    <span>Mobile</span>
+                                </button>
+                                <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop"
+                                    class="device-toggle-btn flex items-center gap-2 px-4 py-2 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                        <line x1="8" y1="21" x2="16" y2="21" />
+                                        <line x1="12" y1="17" x2="12" y2="21" />
+                                    </svg>
+                                    <span>Desktop</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Scrollable Content -->
+                        <!-- ADDED MORE BOTTOM PADDING (pb-96) for scroll end ease -->
+                        <div id="features-scroll-container" class="space-y-48 pb-96 pt-24">
+                            <!-- Dynamic Content injected by JS -->
+                            <div class="flex flex-col items-center justify-center min-h-[50vh]">
+                                <div
+                                    class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </section>
@@ -694,7 +560,7 @@
                         </ul>
                         <div class="mt-auto">
                             <button onclick="handleSelectPlan('free')"
-                                class="w-full block text-center py-3 rounded-xl font-bold transition-all hover:bg-white/10"
+                                class="w-full block text-center py-3 rounded-full font-bold transition-all hover:bg-white/10"
                                 style="background-color: transparent; color: var(--text-primary); border: 2px solid var(--border);">
                                 Começar Grátis
                             </button>
@@ -921,14 +787,15 @@
                 <div>
                     <h4 class="font-semibold mb-4">Produto</h4>
                     <ul class="space-y-2 text-sm" style="color: var(--text-tertiary);">
-                        <li><a href="#features" class="hover:text-white transition-colors">Funcionalidades</a></li>
-                        <li><a href="#planos" class="hover:text-white transition-colors">Planos</a></li>
+                        <li><a href="/funcionalidades/" class="hover:text-white transition-colors">Funcionalidades</a>
+                        </li>
+                        <li><a href="/planos-e-precos/" class="hover:text-white transition-colors">Planos</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-semibold mb-4">Suporte</h4>
                     <ul class="space-y-2 text-sm" style="color: var(--text-tertiary);">
-                        <li><a href="#faq" class="hover:text-white transition-colors">FAQ</a></li>
+                        <li><a href="/central-de-ajuda/" class="hover:text-white transition-colors">FAQ</a></li>
                         <li><a href="mailto:contato@sincroapp.com"
                                 class="hover:text-white transition-colors">Contato</a></li>
                     </ul>
@@ -948,114 +815,10 @@
         </div>
     </footer>
 
-    function toggleHeroDevice(device) {
-    const mobileMockup = document.getElementById('hero-mockup-mobile');
-    const desktopMockup = document.getElementById('hero-mockup-desktop');
-    const btnMobile = document.getElementById('hero-btn-mobile');
-    const btnDesktop = document.getElementById('hero-btn-desktop');
+    <!-- --- SCRIPTS ADICIONAIS --- -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="script.js"></script>
 
-    if (device === 'mobile') {
-    mobileMockup.classList.remove('hidden');
-    desktopMockup.classList.add('hidden');
-    btnMobile.classList.add('active');
-    btnDesktop.classList.remove('active');
-    } else {
-    mobileMockup.classList.add('hidden');
-    desktopMockup.classList.remove('hidden');
-    btnMobile.classList.remove('active');
-    btnDesktop.classList.add('active');
-    }
-    }
-
-    function toggleFeaturesDevice(device) {
-    const mobileMockup = document.getElementById('feat-mockup-mobile');
-    const desktopMockup = document.getElementById('feat-mockup-desktop');
-    const btnMobile = document.getElementById('feat-btn-mobile');
-    const btnDesktop = document.getElementById('feat-btn-desktop');
-
-    if (device === 'mobile') {
-    mobileMockup.classList.remove('hidden');
-    desktopMockup.classList.add('hidden');
-    btnMobile.classList.add('active');
-    btnDesktop.classList.remove('active');
-    } else {
-    mobileMockup.classList.add('hidden');
-    desktopMockup.classList.remove('hidden');
-    btnMobile.classList.remove('active');
-    btnDesktop.classList.add('active');
-    }
-    }
-
-    // Sticky Scroll Logic
-    document.addEventListener('DOMContentLoaded', () => {
-    // Inicializa AOS
-    AOS.init({
-    duration: 800,
-    once: true,
-    offset: 50,
-    });
-
-    // Sticky Scroll Observer
-    const blocks = document.querySelectorAll('.feature-block');
-    const phoneImg = document.getElementById('feat-img-mobile');
-    const desktopImg = document.getElementById('feat-img-desktop');
-
-    if (blocks.length > 0) {
-    const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-    const textItem = entry.target.querySelector('.feature-text-item');
-
-    if (entry.isIntersecting) {
-    // Highlight text
-    if (textItem) textItem.classList.add('active');
-
-    // Change Images (Mobile & Desktop)
-    const newSrcMobile = entry.target.getAttribute('data-image-mobile');
-    const newSrcDesktop = entry.target.getAttribute('data-image-desktop');
-
-    if (phoneImg && phoneImg.src !== newSrcMobile) {
-    phoneImg.style.opacity = '0';
-    setTimeout(() => {
-    phoneImg.src = newSrcMobile;
-    phoneImg.style.opacity = '1';
-    }, 200);
-    }
-
-    if (desktopImg && desktopImg.src !== newSrcDesktop) {
-    desktopImg.style.opacity = '0';
-    setTimeout(() => {
-    desktopImg.src = newSrcDesktop;
-    desktopImg.style.opacity = '1';
-    }, 200);
-    }
-
-    } else {
-    // Remove highlight
-    if (textItem) textItem.classList.remove('active');
-    }
-    });
-    }, {
-    threshold: 0.5, // Trigger when 50% of the block is visible
-    rootMargin: "-20% 0px -20% 0px" // Adjust trigger zone
-    });
-
-    blocks.forEach(block => observer.observe(block));
-    }
-
-    // Desregistra o service worker do Flutter ao abrir a landing
-    if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(function (registrations) {
-    for (let registration of registrations) {
-    if (registration.scriptURL && registration.scriptURL.indexOf('flutter_service_worker') !== -1) {
-    registration.unregister().then(function () {
-    console.log('🧹 Service worker do Flutter desregistrado para a landing');
-    });
-    }
-    }
-    });
-    }
-    });
-    </script>
 </body>
 
 </html>

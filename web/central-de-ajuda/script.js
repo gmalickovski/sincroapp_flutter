@@ -1,11 +1,12 @@
 // Firebase Configuration (PLACEHOLDER - PLEASE REPLACE WITH YOUR KEYS)
+// Firebase Configuration
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "sincro-app-flutter.firebaseapp.com",
-    projectId: "sincro-app-flutter",
-    storageBucket: "sincro-app-flutter.firebasestorage.app",
-    messagingSenderId: "1765903179777", // Guessed from context or placeholder
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyCxP5jLEiYyL5hTBqPgawsL4XJ6k_VKHd8",
+    authDomain: "sincroapp-529cc.firebaseapp.com",
+    projectId: "sincroapp-529cc",
+    storageBucket: "sincroapp-529cc.firebasestorage.app",
+    messagingSenderId: "1011842661481",
+    appId: "1:1011842661481:web:e85b3aa24464e12ae2b6f8"
 };
 
 // Initialize Firebase
@@ -31,7 +32,12 @@ async function uploadImage(file) {
             try {
                 await auth.signInAnonymously();
             } catch (e) {
-                console.warn("Auth failed (likely invalid key in test mode). Proceeding to upload assuming public rules.", e);
+                // Suppress verbose error if it's the specific "admin-restricted" one (Anonymous auth disabled)
+                if (e.code === 'auth/admin-restricted-operation' || e.code === 'auth/operation-not-allowed') {
+                    console.warn("Autenticação anônima desativada no console. Tentando upload público (fallback)...");
+                } else {
+                    console.warn("Falha na autenticação (provável chave de teste). Prosseguindo...", e);
+                }
             }
         }
 
@@ -300,16 +306,18 @@ function removeAttachment() {
     if (label) label.style.display = 'flex';
 }
 
+// Close Success Modal and Reset
+window.closeSuccessModal = function () {
+    document.getElementById('successModal').style.display = 'none';
+    resetForm();
+}
+
 function resetForm() {
-    // Show form fields
-    const card = document.querySelector('.feedback-form-card');
-    Array.from(card.children).forEach(child => {
-        if (child.id !== 'inlineSuccessMessage') {
-            child.style.display = ''; // Reset to default (flex/block)
-        }
-    });
-    // Hide success message
-    document.getElementById('inlineSuccessMessage').style.display = 'none';
+    const submitBtn = document.getElementById('submit-feedback');
+    if (submitBtn) {
+        submitBtn.textContent = 'Enviar Feedback';
+        submitBtn.disabled = false;
+    }
 
     // Clear inputs
     document.getElementById('feedback-desc').value = '';
@@ -420,19 +428,8 @@ window.submitFeedback = async function submitFeedback() {
         const result = await response.json();
 
         if (response.ok) {
-            // Success: Switch to inline success message
-            const card = document.querySelector('.feedback-form-card');
-
-            // Hide all direct children except success message
-            Array.from(card.children).forEach(child => {
-                if (child.id !== 'inlineSuccessMessage') {
-                    child.style.display = 'none';
-                }
-            });
-
-            // Show success message
-            document.getElementById('inlineSuccessMessage').style.display = 'block';
-
+            // Success: Show Floating Modal
+            document.getElementById('successModal').style.display = 'flex';
         } else {
             console.error('Feedback error:', result);
             alert('Erro ao enviar feedback. Tente novamente.');
@@ -486,3 +483,34 @@ function toggleAnonymous() {
     }
 }
 
+
+/* Standardized Mobile Menu Logic */
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', () => {
+            const isHidden = mobileMenu.classList.contains('hidden');
+            if (isHidden) {
+                // Open
+                mobileMenu.style.display = 'block';
+                mobileMenu.classList.remove('hidden');
+                iconOpen.classList.add('hidden');
+                iconOpen.style.display = 'none';
+                iconClose.classList.remove('hidden');
+                iconClose.style.display = 'block';
+            } else {
+                // Close
+                mobileMenu.style.display = 'none';
+                mobileMenu.classList.add('hidden');
+                iconOpen.classList.remove('hidden');
+                iconOpen.style.display = 'block';
+                iconClose.classList.add('hidden');
+                iconClose.style.display = 'none';
+            }
+        });
+    }
+});

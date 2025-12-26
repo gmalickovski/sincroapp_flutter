@@ -573,3 +573,137 @@ a {
         width: 30%;
     }
 }
+/* Header Navigation - Added for consistency */
+.header-nav-center {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 32px;
+}
+
+.nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    text-decoration: none;
+}
+
+.nav-link:hover, .nav-link.active {
+    color: var(--text-main);
+}
+
+@media (max-width: 900px) {
+    .header-nav-center {
+        display: none;
+    }
+}
+
+/* FONT STANDARDIZATION */
+/* Overriding body font to match Home */
+body {
+    font-family: 'Poppins', sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Headings should use Outfit */
+h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
+    font-family: 'Outfit', sans-serif !important;
+}
+
+/* Nav links specific font */
+.nav-link {
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* HEADER RESET (To match Tailwind Preflight) */
+.header, .header * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+.header {
+    padding: 16px 0 !important; /* Restore specific padding */
+}
+
+.header-container {
+    padding: 0 40px !important; /* Restore specific padding */
+}
+
+.btn-outline {
+    padding: 8px 16px !important; /* Restore specific padding */
+}
+
+/* Force Hex Colors to match Home exactly */
+:root {
+    --bg-color: #111827 !important;
+    --border-color: #374151 !important;
+    --text-main: #FFFFFF !important;
+    --text-secondary: #9CA3AF !important;
+}
+
+/* FORCE HEADER HEIGHT CONSISTENCY */
+.header-container {
+    height: 48px !important;
+    padding: 0 40px !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.header {
+    padding: 16px 0 !important;
+}
+
+@media (max-width: 600px) {
+    .header-container { padding: 0 20px !important; }
+}
+
+/* BRANDED SCROLLBAR - SincroApp Violet */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px; /* Horizontal scroll support */
+}
+
+::-webkit-scrollbar-track {
+    background: #111827; /* Dark background matching --bg */
+}
+
+::-webkit-scrollbar-thumb {
+    background: #7C3AED; /* Violet Primary */
+    border-radius: 4px;
+    border: 2px solid #111827; /* Border to create padding effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #6D28D9; /* Darker Violet Hover */
+}
+
+/* CORRECTING RESPONSIVE VISIBILITY (Tailwind Emulation) */
+
+/* Hide Mobile Toggle on Desktop */
+@media (min-width: 900px) {
+    #menu-toggle {
+        display: none !important;
+    }
+}
+
+/* Show Mobile Toggle on Mobile */
+@media (max-width: 899px) {
+    #menu-toggle {
+        display: block !important;
+    }
+}
+
+/* Utility class 'hidden' for toggling icons */
+.hidden {
+    display: none !important;
+}
+
+/* Ensure SVG icons have correct size */
+#menu-toggle svg {
+    width: 24px;
+    height: 24px;
+}

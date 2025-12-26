@@ -151,3 +151,34 @@ function renderList(elementId, items) {
         list.appendChild(li);
     });
 }
+
+/* Standardized Mobile Menu Logic */
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const iconOpen = document.getElementById('menu-icon-open');
+    const iconClose = document.getElementById('menu-icon-close');
+
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', () => {
+            const isHidden = mobileMenu.classList.contains('hidden');
+            if (isHidden) {
+                // Open
+                mobileMenu.style.display = 'block';
+                mobileMenu.classList.remove('hidden');
+                iconOpen.classList.add('hidden');
+                iconOpen.style.display = 'none';
+                iconClose.classList.remove('hidden');
+                iconClose.style.display = 'block';
+            } else {
+                // Close
+                mobileMenu.style.display = 'none';
+                mobileMenu.classList.add('hidden');
+                iconOpen.classList.remove('hidden');
+                iconOpen.style.display = 'block';
+                iconClose.classList.add('hidden');
+                iconClose.style.display = 'none';
+            }
+        });
+    }
+});

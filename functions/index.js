@@ -403,6 +403,44 @@ exports.onNewUserDocumentCreate = functions.firestore.document("users/{userId}")
 });
 
 /**
+ * Acionado quando um novo usuário é criado no Firebase Auth.
+ * Garante que o documento do usuário exista no Firestore.
+ * Isso é útil para testes no Emulador (onde a UI cria Auth mas não Doc)
+ * e como fallback de segurança.
+ */
+exports.onAuthUserCreate = functions.auth.user().onCreate(async (user) => {
+    functions.logger.info(`================ onAuthUserCreate ACIONADA: ${user.email} ================= `);
+
+    const db = admin.firestore();
+    const userRef = db.collection('users').doc(user.uid);
+
+    try {
+        const doc = await userRef.get();
+        if (!doc.exists) {
+            functions.logger.info("Documento Firestore não encontrado. Criando documento padrão...");
+
+            // Cria o documento com dados básicos do Auth
+            const userData = {
+                email: user.email,
+                uid: user.uid,
+                primeiroNome: user.displayName ? user.displayName.split(' ')[0] : 'Novo',
+                sobrenome: user.displayName ? user.displayName.split(' ').slice(1).join(' ') : 'Usuário',
+                createdAt: FieldValue.serverTimestamp(),
+                plano: 'gratuito',
+                // Adicione outros campos padrão aqui se necessário
+            };
+
+            await userRef.set(userData);
+            functions.logger.info("Documento criado com sucesso. Isso deve acionar onNewUserDocumentCreate.");
+        } else {
+            functions.logger.info("Documento Firestore já existe. Nenhuma ação necessária.");
+        }
+    } catch (error) {
+        functions.logger.error("Erro ao garantir documento do usuário:", error);
+    }
+});
+
+/**
  * Acionado quando um usuário é excluído do Firebase Authentication.
  * 1. Envia um webhook 'user_deleted' para o n8n.
  * 2. Limpa todos os dados associados a esse usuário no Firestore.

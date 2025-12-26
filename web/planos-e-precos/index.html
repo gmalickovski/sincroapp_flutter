@@ -15,7 +15,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="../favicon.png" />
@@ -28,16 +30,17 @@
         <div class="header-container">
             <!-- Left: Logo -->
             <a href="/" class="logo-link left">
-                <img src="../central-de-ajuda/assets/images/sincroapp_logo.svg" alt="SincroApp"
-                    class="logo-svg desktop-only">
-                <img src="../central-de-ajuda/assets/images/icon-logo-v1.png" alt="SincroApp"
-                    class="logo-icon mobile-only">
+                <img src="/assets/images/sincroapp_logo.svg" alt="SincroApp" class="logo-svg desktop-only">
+                <img src="/assets/images/icon-logo-v1.png" alt="SincroApp" class="logo-icon mobile-only">
             </a>
 
-            <!-- Center: Title -->
-            <div class="header-title-center">
-                <span>Planos e Preços</span>
-            </div>
+            <!-- Center: Nav -->
+            <nav class="header-nav-center">
+                <a href="/" class="nav-link">Início</a>
+                <a href="/funcionalidades/" class="nav-link">Funcionalidades</a>
+                <a href="/planos-e-precos/" class="nav-link active">Planos</a>
+                <a href="/central-de-ajuda/" class="nav-link">Central de Ajuda</a>
+            </nav>
 
             <!-- Right: Button -->
             <div class="header-actions right">
@@ -45,6 +48,44 @@
                     <span class="btn-text-full">Ir para o App</span>
                     <span class="btn-text-short">App</span>
                 </a>
+
+                <!-- Mobile Menu Toggle -->
+                <button id="menu-toggle" class="md:hidden p-2 rounded-md transition-colors hover:bg-gray-800 ml-4"
+                    style="color: var(--text-secondary); background: transparent; border: none; cursor: pointer;">
+                    <svg id="menu-icon-open" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" class="block">
+                        <line x1="4" x2="20" y1="12" y2="12" />
+                        <line x1="4" x2="20" y1="6" y2="6" />
+                        <line x1="4" x2="20" y1="18" y2="18" />
+                    </svg>
+                    <svg id="menu-icon-close" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" class="hidden">
+                        <line x1="18" x2="6" y1="6" y2="18" />
+                        <line x1="6" x2="18" y1="6" y2="18" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Menu Mobile Dropdown -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-gray-800 bg-[#111827]"
+            style="position: absolute; top: 80px; left: 0; width: 100%; z-index: 99; display: none;">
+            <div style="padding: 12px 16px;">
+                <a href="/" style="display: block; padding: 12px; color: #fff; font-weight: 500;">Início</a>
+                <a href="/funcionalidades/"
+                    style="display: block; padding: 12px; color: #9CA3AF; font-weight: 500;">Funcionalidades</a>
+                <a href="/planos-e-precos/"
+                    style="display: block; padding: 12px; color: #9CA3AF; font-weight: 500;">Planos</a>
+                <a href="/central-de-ajuda/"
+                    style="display: block; padding: 12px; color: #9CA3AF; font-weight: 500;">Central de Ajuda</a>
+                <div style="padding-top: 16px; padding-bottom: 8px;">
+                    <a href="/app"
+                        style="display: block; width: 100%; text-align: center; padding: 12px; border: 1px solid #374151; border-radius: 8px; color: #fff; font-weight: 500;">
+                        Acessar Web App
+                    </a>
+                </div>
             </div>
         </div>
     </header>
