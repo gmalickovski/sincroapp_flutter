@@ -27,15 +27,80 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchFeatures();
     }
 
-    // Setup filter buttons
+    // Setup filter buttons (desktop)
     filterButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             currentFilter = btn.dataset.filter;
             filterButtons.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
+            // Sync with dropdown
+            syncDropdownWithFilter(currentFilter);
             renderFeatures();
         });
     });
+
+    // Setup filter dropdown (mobile)
+    const filterDropdownBtn = document.getElementById('filterDropdownBtn');
+    const filterDropdownMenu = document.getElementById('filterDropdownMenu');
+    const filterDropdownLabel = document.getElementById('filterDropdownLabel');
+    const filterDropdownItems = document.querySelectorAll('.filter-dropdown-item');
+
+    if (filterDropdownBtn && filterDropdownMenu) {
+        // Toggle dropdown
+        filterDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            filterDropdownBtn.classList.toggle('open');
+            filterDropdownMenu.classList.toggle('open');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!filterDropdownBtn.contains(e.target) && !filterDropdownMenu.contains(e.target)) {
+                filterDropdownBtn.classList.remove('open');
+                filterDropdownMenu.classList.remove('open');
+            }
+        });
+    }
+
+    // Setup dropdown items
+    filterDropdownItems.forEach(item => {
+        item.addEventListener('click', () => {
+            currentFilter = item.dataset.filter;
+
+            // Update dropdown UI
+            filterDropdownItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+
+            // Update label
+            if (filterDropdownLabel) {
+                filterDropdownLabel.textContent = item.textContent;
+            }
+
+            // Close dropdown
+            if (filterDropdownBtn) filterDropdownBtn.classList.remove('open');
+            if (filterDropdownMenu) filterDropdownMenu.classList.remove('open');
+
+            // Sync with desktop buttons
+            filterButtons.forEach(b => b.classList.remove('active'));
+            const matchingDesktopBtn = Array.from(filterButtons).find(b => b.dataset.filter === currentFilter);
+            if (matchingDesktopBtn) matchingDesktopBtn.classList.add('active');
+
+            renderFeatures();
+        });
+    });
+
+    // Helper function to sync dropdown with desktop filter
+    function syncDropdownWithFilter(filter) {
+        filterDropdownItems.forEach(item => {
+            item.classList.remove('active');
+            if (item.dataset.filter === filter) {
+                item.classList.add('active');
+                if (filterDropdownLabel) {
+                    filterDropdownLabel.textContent = item.textContent;
+                }
+            }
+        });
+    }
 
     // Setup search inputs (hero and compact)
     const compactSearchInput = document.querySelector('.compact-search-input');

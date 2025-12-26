@@ -51,7 +51,28 @@
     <!-- Filter Section (Sticky) -->
     <section class="filters" id="filtersSection">
         <div class="container-wide">
-            <!-- Filter buttons with horizontal scroll on mobile -->
+            <!-- Mobile: Filter dropdown button -->
+            <div class="filter-dropdown-wrapper">
+                <button class="filter-dropdown-btn" id="filterDropdownBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+                    </svg>
+                    <span id="filterDropdownLabel">Filtros</span>
+                    <svg class="dropdown-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                </button>
+                <!-- Dropdown popup menu -->
+                <div class="filter-dropdown-menu" id="filterDropdownMenu">
+                    <button class="filter-dropdown-item active" data-filter="all">Todas</button>
+                    <button class="filter-dropdown-item" data-filter="Essencial">Essencial</button>
+                    <button class="filter-dropdown-item" data-filter="Desperta">Desperta</button>
+                    <button class="filter-dropdown-item" data-filter="Sinergia">Sinergia</button>
+                </div>
+            </div>
+
+            <!-- Desktop: Horizontal filter buttons (hidden on mobile) -->
             <div class="filter-buttons">
                 <button class="filter-btn active" data-filter="all">Todas</button>
                 <button class="filter-btn" data-filter="Essencial">Essencial</button>

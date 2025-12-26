@@ -342,25 +342,39 @@ async function fetchFeatures() {
         }
 
         // Clear loading spinner
-        if (container) container.innerHTML = '';
+        const slider = document.getElementById('features-slider');
+        if (slider) slider.innerHTML = '';
         const mobileContainer = document.getElementById('features-slider-mobile');
         if (mobileContainer) mobileContainer.innerHTML = '';
 
-        data.features.forEach((feature, index) => {
-            // DESKTOP: Vertical Scroll Blocks
-            const block = document.createElement('div');
-            block.className = 'feature-block min-h-[80vh] flex flex-col justify-center';
+        // Store features globally for navigation
+        window.featuresData = data.features;
+        window.currentSlideIndex = 0;
 
-            // Dual Image Support
+        // DESKTOP: Create slides (one per feature)
+        data.features.forEach((feature, index) => {
+            const slide = document.createElement('div');
+            slide.className = `feature-slide absolute inset-0 flex items-center justify-start transition-transform duration-500 ease-in-out`;
+            slide.setAttribute('data-slide-index', index);
+
+            // Initial position: first slide at 0, others below viewport
+            if (index === 0) {
+                slide.style.transform = 'translateY(0)';
+                slide.style.zIndex = '10';
+            } else {
+                slide.style.transform = 'translateY(100%)';
+                slide.style.zIndex = '0';
+            }
+
+            // Image URLs
             const imgMob = feature.imgMobile || feature.image || 'https://picsum.photos/seed/sincro/350/800';
             const imgDesk = feature.imgDesktop || feature.image || 'https://picsum.photos/seed/sincro/1200/800';
+            slide.setAttribute('data-image-mobile', imgMob);
+            slide.setAttribute('data-image-desktop', imgDesk);
 
-            block.setAttribute('data-image-mobile', imgMob);
-            block.setAttribute('data-image-desktop', imgDesk);
-
-            block.innerHTML = `
-                <div class="feature-text-item pl-4 border-l-4 border-purple-500/20 transition-all duration-300 hover:border-purple-500 feature-text-group" data-index="${index}">
-                    <h3 class="font-outfit text-2xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
+            slide.innerHTML = `
+                <div class="pl-6 border-l-4 border-purple-500 max-w-2xl">
+                    <h3 class="font-outfit text-3xl md:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                         ${feature.name}
                     </h3>
                     <p class="text-gray-400 text-lg md:text-xl leading-relaxed">
@@ -368,14 +382,11 @@ async function fetchFeatures() {
                     </p>
                 </div>
             `;
-            if (container) container.appendChild(block);
+            if (slider) slider.appendChild(slide);
 
-
-
-            // MOBILE: Horizontal Slider Cards
+            // MOBILE: Horizontal Slider Cards  
             if (mobileContainer) {
                 const mobileCard = document.createElement('div');
-                // Added border-t-4 and transition classes matching desktop style but top-oriented
                 mobileCard.className = 'mobile-feature-card min-w-[85vw] snap-center px-4 py-8 border-t-4 border-violet-500/20 flex flex-col justify-start text-left transition-colors duration-300';
                 mobileCard.setAttribute('data-image-mobile', imgMob);
                 mobileCard.setAttribute('data-index', index);
@@ -394,13 +405,32 @@ async function fetchFeatures() {
             // MOBILE: Pagination Dots
             const dotsContainer = document.getElementById('features-mobile-dots');
             if (dotsContainer) {
-                if (index === 0) dotsContainer.innerHTML = ''; // Clear on first item
+                if (index === 0) dotsContainer.innerHTML = '';
                 const dot = document.createElement('div');
                 dot.className = 'feature-dot w-2 h-2 rounded-full bg-gray-600 transition-all duration-300';
                 dot.setAttribute('data-index', index);
                 dotsContainer.appendChild(dot);
             }
         });
+
+        // Create vertical bullet indicators
+        const indicatorsContainer = document.getElementById('slide-indicators');
+        if (indicatorsContainer) {
+            indicatorsContainer.innerHTML = '';
+            data.features.forEach((_, index) => {
+                const bullet = document.createElement('button');
+                bullet.className = `w-2 h-2 rounded-full transition-all duration-300 ${index === 0 ? 'bg-purple-500 h-6' : 'bg-white/30'}`;
+                bullet.setAttribute('data-bullet-index', index);
+                bullet.onclick = () => goToSlide(index);
+                indicatorsContainer.appendChild(bullet);
+            });
+        }
+
+        // Set initial image
+        updateSlideImage(0);
+
+        // Add touch and scroll interactions
+        initSliderInteractions();
 
         // Initialize Hero Device
         try {
@@ -410,9 +440,6 @@ async function fetchFeatures() {
                 console.warn('toggleHeroDevice is not defined yet.');
             }
         } catch (e) { console.error(e); }
-
-        // Init Features Observer (Desktop)
-        initFeaturesObserver();
 
         // Init Mobile Slider Observer
         initMobileSliderObserver();
@@ -499,62 +526,7 @@ function initMobileSliderObserver() {
     cards.forEach(card => observer.observe(card));
 }
 
-function initFeaturesObserver() {
-    // Only run if blocks exist
-    const blocks = document.querySelectorAll('.feature-block');
-    const phoneImg = document.getElementById('feat-img-mobile');
-    const desktopImg = document.getElementById('feat-img-desktop');
-
-    if (blocks.length > 0) {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                const textItem = entry.target.querySelector('.feature-text-item');
-
-                if (entry.isIntersecting) {
-                    // Highlight text
-                    if (textItem) {
-                        textItem.classList.add('active');
-                        textItem.classList.remove('border-purple-500/20');
-                        textItem.classList.add('border-purple-500');
-                    }
-
-                    // Change Images (Mobile & Desktop) - Atualiza ambos
-                    const newSrcMobile = entry.target.getAttribute('data-image-mobile');
-                    const newSrcDesktop = entry.target.getAttribute('data-image-desktop');
-
-                    if (phoneImg && phoneImg.src !== newSrcMobile) {
-                        phoneImg.style.opacity = '0';
-                        setTimeout(() => {
-                            phoneImg.src = newSrcMobile;
-                            phoneImg.style.opacity = '1';
-                        }, 200);
-                    }
-
-                    if (desktopImg && desktopImg.src !== newSrcDesktop) {
-                        desktopImg.style.opacity = '0';
-                        setTimeout(() => {
-                            desktopImg.src = newSrcDesktop;
-                            desktopImg.style.opacity = '1';
-                        }, 200);
-                    }
-
-                } else {
-                    // Remove highlight
-                    if (textItem) {
-                        textItem.classList.remove('active');
-                        textItem.classList.add('border-purple-500/20');
-                        textItem.classList.remove('border-purple-500');
-                    }
-                }
-            });
-        }, {
-            threshold: 0.5, // Center trigger
-            rootMargin: "-20% 0px -20% 0px" // Adjusted trigger zone
-        });
-
-        blocks.forEach(block => observer.observe(block));
-    }
-}
+// Features Observer removed - using simple slide navigation now
 
 
 // Mock functions to prevent console errors since firebase/external JS is removed for preview
@@ -566,6 +538,82 @@ function handleRegister() {
 
 function handleSelectPlan(plan) {
     console.log("Plano selecionado:", plan);
-    // Redirect to plans page or app with plan parameters
     window.location.href = '/planos-e-precos';
+}
+
+// ========== SLIDE NAVIGATION ==========
+
+// Navigate to specific slide
+function goToSlide(index) {
+    if (!window.featuresData) return;
+
+    const totalSlides = window.featuresData.length;
+    const previousIndex = window.currentSlideIndex;
+    window.currentSlideIndex = Math.max(0, Math.min(index, totalSlides - 1));
+
+    // Determine slide direction
+    const direction = window.currentSlideIndex > previousIndex ? 'down' : 'up';
+
+    // Animate slides
+    const slides = document.querySelectorAll('.feature-slide');
+    slides.forEach((slide, idx) => {
+        if (idx === window.currentSlideIndex) {
+            // Slide in from top or bottom
+            slide.style.zIndex = '10';
+            slide.style.transform = 'translateY(0)';
+        } else if (idx === previousIndex) {
+            // Slide out to opposite direction
+            slide.style.zIndex = '5';
+            slide.style.transform = direction === 'down' ? 'translateY(-100%)' : 'translateY(100%)';
+        } else {
+            // Hide others offscreen
+            slide.style.zIndex = '0';
+            slide.style.transform = idx < window.currentSlideIndex ? 'translateY(-100%)' : 'translateY(100%)';
+        }
+    });
+
+    // Update bullets
+    updateBullets();
+
+    // Update image
+    updateSlideImage(window.currentSlideIndex);
+}
+
+// Slide prev/next
+function slideFeature(direction) {
+    const newIndex = direction === 'next'
+        ? window.currentSlideIndex + 1
+        : window.currentSlideIndex - 1;
+    goToSlide(newIndex);
+}
+
+// Update bullet indicators
+function updateBullets() {
+    const bullets = document.querySelectorAll('[data-bullet-index]');
+    bullets.forEach((bullet, index) => {
+        if (index === window.currentSlideIndex) {
+            bullet.className = 'w-2 h-6 rounded-full bg-purple-500 transition-all duration-300';
+        } else {
+            bullet.className = 'w-2 h-2 rounded-full bg-white/30 transition-all duration-300';
+        }
+    });
+}
+
+// Update mockup image based on current slide and device
+function updateSlideImage(index) {
+    const currentSlide = document.querySelector(`[data-slide-index="${index}"]`);
+    if (!currentSlide) return;
+
+    const phoneImg = document.getElementById('feat-img-mobile');
+    const desktopImg = document.getElementById('feat-img-desktop');
+    const currentDevice = document.getElementById('feat-btn-mobile')?.classList.contains('active') ? 'mobile' : 'desktop';
+
+    const imgAttr = `data-image-${currentDevice}`;
+    const newImage = currentSlide.getAttribute(imgAttr);
+
+    if (currentDevice === 'mobile' && phoneImg && newImage) {
+        phoneImg.src = newImage;
+    } else if (currentDevice === 'desktop' && desktopImg && newImage) {
+        desktopImg.src = newImage;
+    }
 }

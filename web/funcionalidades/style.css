@@ -314,40 +314,44 @@ a {
     flex-shrink: 0;
 }
 
-/* Mobile: Show toggle button, hide search box by default */
+/* ===== MOBILE SEARCH BAR ===== */
 @media (max-width: 768px) {
-    .search-toggle-btn {
-        display: flex;
+
+    /* Hide toggle and close buttons - we show full bar */
+    .search-toggle-btn,
+    .search-close-btn {
+        display: none !important;
     }
 
-    .search-box {
-        display: none;
-        position: fixed;
-        top: 90px;
-        left: 16px;
-        right: 16px;
-        max-width: none;
-        z-index: 100;
-        padding: 8px 16px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    /* Search wrapper takes remaining space but can shrink */
+    .search-wrapper {
+        flex: 1 1 0%;
+        min-width: 0;
+        /* Critical for flex shrinking */
     }
 
-    .search-box.expanded {
-        display: flex;
+    /* Search box fills wrapper with proper sizing */
+    .filters .search-box {
+        display: flex !important;
+        width: 100%;
+        max-width: 100%;
+        padding: 0 12px;
+        box-sizing: border-box;
     }
 
-    .search-box.expanded .search-close-btn {
-        display: flex;
+    .filters .search-box input {
+        padding: 10px 10px 10px 8px;
+        font-size: 14px;
+        min-width: 0;
+        /* Allows input to shrink */
     }
 }
 
 /* Search Box in Filters */
 .filters .search-box {
     position: relative;
-    width: 400px;
+    width: 500px;
     max-width: 100%;
-    margin-right: 0;
-    /* Ensure it hits the edge */
 }
 
 /* Filter Section */
@@ -355,12 +359,12 @@ a {
     position: -webkit-sticky;
     /* Safari */
     position: sticky;
-    top: 90px;
-    /* Increased to account for fixed header (80px) + extra margin */
+    top: 80px;
+    /* Match fixed header height to eliminate gap */
     z-index: 90;
     /* High z-index to stay above content */
 
-    padding: 12px 0;
+    padding: 16px 0;
     width: 100%;
     background-color: var(--bg-color);
     /* box-shadow removed as requested */
@@ -378,6 +382,107 @@ a {
 /* Left Spacer: Grows to center filters, shrinks to move them left */
 .spacer-left {
     display: none;
+}
+
+/* ===== FILTER DROPDOWN (Mobile only) ===== */
+.filter-dropdown-wrapper {
+    display: none;
+    position: relative;
+}
+
+.filter-dropdown-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.filter-dropdown-btn:hover {
+    border-color: var(--primary);
+}
+
+.filter-dropdown-btn.active {
+    border-color: var(--primary);
+    background-color: rgba(124, 58, 237, 0.1);
+}
+
+.filter-dropdown-btn .dropdown-arrow {
+    transition: transform 0.2s ease;
+}
+
+.filter-dropdown-btn.open .dropdown-arrow {
+    transform: rotate(180deg);
+}
+
+.filter-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 160px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    z-index: 100;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.filter-dropdown-menu.open {
+    display: flex;
+}
+
+.filter-dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.filter-dropdown-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    color: var(--text-main);
+}
+
+.filter-dropdown-item.active {
+    background: linear-gradient(135deg, var(--primary), #8B5CF6);
+    color: white;
+}
+
+/* Mobile: Show dropdown, hide horizontal buttons */
+@media (max-width: 768px) {
+    .filter-dropdown-wrapper {
+        display: block;
+    }
+
+    .filter-buttons {
+        display: none !important;
+    }
+
+    .filters .container-wide {
+        padding: 0 16px;
+        gap: 12px;
+    }
 }
 
 .filter-buttons {
@@ -591,15 +696,25 @@ a {
 
 .detail-header {
     position: sticky;
-    top: 90px;
-    /* Increased to account for fixed header (80px) + extra margin */
-    z-index: 40;
+    top: 80px;
+    /* Account for fixed header */
+    z-index: 50;
     background-color: var(--bg-color);
-    padding: 16px 0;
+    padding: 16px 20px;
 }
 
 .detail-header .back-btn {
     margin-bottom: 0;
+}
+
+/* Mobile adjustments for detail header */
+@media (max-width: 768px) {
+    .detail-header {
+        top: 80px;
+        padding: 12px 16px;
+        margin-left: 0;
+        margin-right: 0;
+    }
 }
 
 .detail-content {

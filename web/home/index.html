@@ -308,7 +308,7 @@
         <!-- ================== -->
         <!-- == FUNCIONALIDADES (STICKY SCROLL) == -->
         <!-- ================== -->
-        <section id="features" class="relative py-16" style="background-color: #0f1420;">
+        <section id="features" class="relative py-8" style="background-color: #0f1420;">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8 max-w-[1400px]">
 
                 <!-- 
@@ -386,93 +386,123 @@
                   DESKTOP LAYOUT (Sticky Side-by-Side)
                   Visible only on md:flex
                 -->
-                <div class="hidden md:flex flex-col md:flex-row gap-8 lg:gap-12 items-start relative">
+                <div class="hidden md:flex flex-col md:flex-row gap-8 lg:gap-12 items-center relative">
 
                     <!-- Left Column: Sticky Mockups (40%) -->
-                    <div
-                        class="w-full md:w-[40%] sticky top-20 h-[calc(100vh-5rem)] flex items-center justify-center self-start">
-                        <div class="relative w-full grid place-items-center grid-stack">
+                    <div class="w-full md:w-[40%] flex items-center justify-center">
+                        <div class="relative w-full max-w-sm">
+                            <!-- Grid Stack: mockups overlay each other -->
+                            <div class="relative grid place-items-center" style="grid-template-areas: 'stack';">
 
-                            <!-- Feature Mobile Mockup -->
-                            <div id="feat-mockup-mobile"
-                                class="relative w-[180px] lg:w-[200px] aspect-[9/19.5] bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden transition-all duration-700 ease-in-out opacity-100 translate-y-0 z-20">
-                                <div class="absolute inset-0 bg-gray-900">
-                                    <img id="feat-img-mobile" src="https://picsum.photos/seed/sincronia/350/800"
-                                        alt="Feature Mobile"
-                                        class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
-                                    <div
-                                        class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                                <!-- Feature Mobile Mockup -->
+                                <div id="feat-mockup-mobile" style="grid-area: stack;"
+                                    class="relative w-[180px] lg:w-[200px] aspect-[9/19.5] bg-gray-900 rounded-[2rem] border-[6px] border-gray-800 shadow-2xl overflow-hidden transition-all duration-700 ease-in-out opacity-100 z-20">
+                                    <div class="absolute inset-0 bg-gray-900">
+                                        <img id="feat-img-mobile" src="https://picsum.photos/seed/sincronia/350/800"
+                                            alt="Feature Mobile"
+                                            class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
 
-                            <!-- Feature Desktop Mockup -->
-                            <div id="feat-mockup-desktop"
-                                class="relative w-full max-w-[420px] transition-all duration-700 ease-in-out opacity-0 translate-y-4 invisible z-20">
-                                <div
-                                    class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 shadow-2xl overflow-hidden relative">
-                                    <img id="feat-img-desktop" src="https://picsum.photos/seed/sincronia/1200/800"
-                                        alt="Feature Desktop"
-                                        class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
+                                <!-- Feature Desktop Mockup -->
+                                <div id="feat-mockup-desktop" style="grid-area: stack;"
+                                    class="relative w-full max-w-[420px] transition-all duration-700 ease-in-out opacity-0 invisible z-20">
                                     <div
-                                        class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                                        class="aspect-[16/10] w-full bg-gray-900 rounded-t-xl border-[6px] border-gray-800 shadow-2xl overflow-hidden relative">
+                                        <img id="feat-img-desktop" src="https://picsum.photos/seed/sincronia/1200/800"
+                                            alt="Feature Desktop"
+                                            class="w-full h-full object-cover transition-opacity duration-500 opacity-80">
+                                        <div
+                                            class="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/50">
+                                        </div>
                                     </div>
+                                    <div class="h-3 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
                                 </div>
-                                <div class="h-3 bg-gray-800 rounded-b-xl w-full shadow-lg"></div>
-                            </div>
 
-                        </div>
-                    </div>
-
-                    <!-- Right Column: Header + Scrollable Text (60%) -->
-                    <div class="w-full md:w-[60%] flex flex-col relative">
-
-                        <!-- Header: Sticky Title + Toggles -->
-                        <div class="sticky top-20 z-30 pt-8 pb-8 mb-0 transition-all duration-300" data-aos="fade-left">
-                            <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-6 text-white/90">
-                                Recursos e Funcionalidades
-                            </h2>
-
-                            <!-- Features Device Toggle -->
-                            <div
-                                class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
-                                <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile"
-                                    class="device-toggle-btn active flex items-center gap-2 px-4 py-2 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                                        <line x1="12" y1="18" x2="12.01" y2="18" />
-                                    </svg>
-                                    <span>Mobile</span>
-                                </button>
-                                <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop"
-                                    class="device-toggle-btn flex items-center gap-2 px-4 py-2 text-sm">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
-                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                        stroke-linejoin="round">
-                                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-                                        <line x1="8" y1="21" x2="16" y2="21" />
-                                        <line x1="12" y1="17" x2="12" y2="21" />
-                                    </svg>
-                                    <span>Desktop</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Scrollable Content -->
-                        <!-- ADDED MORE BOTTOM PADDING (pb-96) for scroll end ease -->
-                        <div id="features-scroll-container" class="space-y-48 pb-96 pt-24 mask-fade-top">
-                            <!-- Dynamic Content injected by JS -->
-                            <div class="flex flex-col items-center justify-center min-h-[50vh]">
-                                <div
-                                    class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500">
-                                </div>
                             </div>
                         </div>
                     </div>
 
+                    <!-- Right Column: Content + Navigation (60%) -->
+                    <div class="w-full md:w-[60%] relative flex gap-6">
+
+                        <!-- Content Area -->
+                        <div class="flex-1 flex flex-col gap-4">
+                            <!-- Header -->
+                            <div>
+                                <h2 class="font-outfit text-3xl md:text-5xl font-bold mb-3 text-white/90">
+                                    Recursos e Funcionalidades
+                                </h2>
+
+                                <!-- Features Device Toggle -->
+                                <div
+                                    class="inline-flex items-center gap-4 bg-white/5 p-1 rounded-xl border border-white/10 backdrop-blur-sm">
+                                    <button onclick="toggleFeaturesDevice('mobile')" id="feat-btn-mobile"
+                                        class="device-toggle-btn active flex items-center gap-2 px-4 py-2 text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+                                            <line x1="12" y1="18" x2="12.01" y2="18" />
+                                        </svg>
+                                        <span>Mobile</span>
+                                    </button>
+                                    <button onclick="toggleFeaturesDevice('desktop')" id="feat-btn-desktop"
+                                        class="device-toggle-btn flex items-center gap-2 px-4 py-2 text-sm">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+                                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                                            <line x1="8" y1="21" x2="16" y2="21" />
+                                            <line x1="12" y1="17" x2="12" y2="21" />
+                                        </svg>
+                                        <span>Desktop</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Feature Slides Container -->
+                            <div id="features-slider" class="relative overflow-hidden" style="height: 220px;">
+                                <!-- Slides will be injected by JS -->
+                                <div class="flex items-center justify-center h-full">
+                                    <div
+                                        class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vertical Navigation (Right Side) -->
+                        <div class="flex flex-col items-center justify-center gap-3">
+                            <!-- Up Arrow -->
+                            <button onclick="slideFeature('prev')"
+                                class="slide-nav-btn opacity-50 hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="18 15 12 9 6 15"></polyline>
+                                </svg>
+                            </button>
+
+                            <!-- Vertical Bullet Indicators -->
+                            <div id="slide-indicators" class="flex flex-col items-center gap-2">
+                                <!-- Bullets injected by JS -->
+                            </div>
+
+                            <!-- Down Arrow -->
+                            <button onclick="slideFeature('next')"
+                                class="slide-nav-btn opacity-50 hover:opacity-100 transition-opacity">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
                 </div>
+
             </div>
         </section>
 
