@@ -43,6 +43,17 @@ app.use('/planos-e-precos', express.static(path.join(__dirname, '../web/planos-e
 // Serve Static Files for Features Documentation
 app.use('/funcionalidades', express.static(path.join(__dirname, '../web/funcionalidades')));
 
+// Serve Maintenance & Construction Files (Root Level)
+app.get('/construction_check.js', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/construction_check.js'));
+});
+app.get('/maintenance.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/maintenance.html'));
+});
+app.get('/under_construction.html', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/under_construction.html'));
+});
+
 // Serve Landing Page (Home) at Root
 app.use(express.static(path.join(__dirname, '../web/home')));
 
