@@ -258,12 +258,15 @@ app.get('/api/plans', async (req, res) => {
         const PLANS_DATABASE_ID = process.env.PLANS_DATABASE_ID || process.env.NOTION_PLANS_DATABASE_ID; // Support both for safety
         console.log("Fetching Plans from Notion...", PLANS_DATABASE_ID);
 
+        const queryFilter = {
+            property: "Planos",
+            checkbox: { equals: true },
+        };
+        // console.log("DEBUG: Querying Notion with Filter:", JSON.stringify(queryFilter, null, 2));
+
         const response = await notion.databases.query({
             database_id: PLANS_DATABASE_ID,
-            filter: {
-                property: "Publicar",
-                checkbox: { equals: true },
-            },
+            filter: queryFilter,
             sorts: [
                 { property: "Funcionalidade", direction: "ascending" }
             ],
