@@ -51,6 +51,7 @@
     <!-- Filter Section (Sticky) -->
     <section class="filters" id="filtersSection">
         <div class="container-wide">
+            <!-- Filter buttons with horizontal scroll on mobile -->
             <div class="filter-buttons">
                 <button class="filter-btn active" data-filter="all">Todas</button>
                 <button class="filter-btn" data-filter="Essencial">Essencial</button>
@@ -58,14 +59,34 @@
                 <button class="filter-btn" data-filter="Sinergia">Sinergia</button>
             </div>
 
-            <!-- Main Search (Always visible in filters bar) -->
-            <div class="search-box">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" id="searchInput" placeholder="Buscar funcionalidades...">
+            <!-- Search: Icon button on mobile, full box on desktop -->
+            <div class="search-wrapper">
+                <!-- Mobile: Toggle button -->
+                <button class="search-toggle-btn" id="searchToggleBtn" aria-label="Buscar">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                </button>
+
+                <!-- Desktop: Full search box / Mobile: Expandable -->
+                <div class="search-box" id="searchBox">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Buscar funcionalidades...">
+                    <!-- Mobile close button -->
+                    <button class="search-close-btn" id="searchCloseBtn" aria-label="Fechar busca">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </section>

@@ -230,17 +230,62 @@ a {
     pointer-events: none;
 }
 
+/* Search Wrapper - Contains toggle button and search box */
+.search-wrapper {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+/* Search Toggle Button - Only visible on mobile */
+.search-toggle-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background-color: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.search-toggle-btn:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+}
+
+/* Search Close Button - Only visible on mobile when expanded */
+.search-close-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.search-close-btn:hover {
+    color: var(--text-main);
+}
+
 /* Search Box */
 .search-box {
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 350px;
     display: flex;
     align-items: center;
     background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 50px;
     padding: 0 16px;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .search-box:focus-within {
@@ -250,11 +295,11 @@ a {
 
 .search-box input {
     width: 100%;
-    padding: 14px 14px 14px 12px;
+    padding: 12px 12px 12px 10px;
     border: none;
     background: transparent;
     color: var(--text-main);
-    font-size: 15px;
+    font-size: 14px;
     outline: none;
     font-family: inherit;
 }
@@ -265,8 +310,35 @@ a {
 
 .search-box svg {
     color: var(--text-secondary);
-    min-width: 24px;
+    min-width: 20px;
     flex-shrink: 0;
+}
+
+/* Mobile: Show toggle button, hide search box by default */
+@media (max-width: 768px) {
+    .search-toggle-btn {
+        display: flex;
+    }
+
+    .search-box {
+        display: none;
+        position: fixed;
+        top: 90px;
+        left: 16px;
+        right: 16px;
+        max-width: none;
+        z-index: 100;
+        padding: 8px 16px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .search-box.expanded {
+        display: flex;
+    }
+
+    .search-box.expanded .search-close-btn {
+        display: flex;
+    }
 }
 
 /* Search Box in Filters */
@@ -283,8 +355,8 @@ a {
     position: -webkit-sticky;
     /* Safari */
     position: sticky;
-    top: 60px;
-    /* Sticks below the main header (which is 60px high) */
+    top: 90px;
+    /* Increased to account for fixed header (80px) + extra margin */
     z-index: 90;
     /* High z-index to stay above content */
 
@@ -519,7 +591,8 @@ a {
 
 .detail-header {
     position: sticky;
-    top: 60px;
+    top: 90px;
+    /* Increased to account for fixed header (80px) + extra margin */
     z-index: 40;
     background-color: var(--bg-color);
     padding: 16px 0;

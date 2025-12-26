@@ -62,6 +62,43 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Mobile search toggle functionality
+    const searchToggleBtn = document.getElementById('searchToggleBtn');
+    const searchCloseBtn = document.getElementById('searchCloseBtn');
+    const searchBox = document.getElementById('searchBox');
+
+    if (searchToggleBtn && searchBox) {
+        searchToggleBtn.addEventListener('click', () => {
+            searchBox.classList.add('expanded');
+            // Focus on input when opened
+            const input = searchBox.querySelector('input');
+            if (input) {
+                setTimeout(() => input.focus(), 100);
+            }
+        });
+    }
+
+    if (searchCloseBtn && searchBox) {
+        searchCloseBtn.addEventListener('click', () => {
+            searchBox.classList.remove('expanded');
+            // Clear search when closed
+            if (searchInput) {
+                searchInput.value = '';
+                searchTerm = '';
+                renderFeatures();
+            }
+        });
+    }
+
+    // Close search box when clicking outside on mobile
+    document.addEventListener('click', (e) => {
+        if (searchBox && searchBox.classList.contains('expanded')) {
+            if (!searchBox.contains(e.target) && !searchToggleBtn.contains(e.target)) {
+                searchBox.classList.remove('expanded');
+            }
+        }
+    });
+
     // Note: Previous scroll animation code was removed in favor of native CSS sticky positioning
     // for better performance and natural scroll feel.
 });
@@ -167,7 +204,10 @@ function openFeature(id) {
 // Load feature detail
 async function loadFeatureDetail(id) {
     // Hide hero and filters
-    document.querySelector('.fixed-top-section').style.display = 'none';
+    const heroSection = document.getElementById('heroSection');
+    const filtersSection = document.getElementById('filtersSection');
+    if (heroSection) heroSection.style.display = 'none';
+    if (filtersSection) filtersSection.style.display = 'none';
     featuresFeed.style.display = 'none';
     featureDetail.style.display = 'block';
 
@@ -242,7 +282,10 @@ function showFeed() {
     window.history.pushState({}, '', window.location.pathname);
     featureDetail.style.display = 'none';
     // Show hero and filters
-    document.querySelector('.fixed-top-section').style.display = '';
+    const heroSection = document.getElementById('heroSection');
+    const filtersSection = document.getElementById('filtersSection');
+    if (heroSection) heroSection.style.display = '';
+    if (filtersSection) filtersSection.style.display = '';
     featuresFeed.style.display = 'block';
 
     if (allFeatures.length === 0) {
