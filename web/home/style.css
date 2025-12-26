@@ -244,6 +244,13 @@ body {
     display: block;
 }
 
+/* New Class to ensure visibility on mobile */
+.logo-svg-main {
+    height: auto;
+    display: block;
+    /* Always block, controlled by Tailwind classes for size */
+}
+
 .logo-icon {
     height: 32px;
     width: auto;
@@ -274,13 +281,29 @@ body {
     font-size: 14px;
     font-weight: 500;
     color: var(--text-secondary);
-    transition: color 0.2s;
+    transition: all 0.3s ease;
     text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    /* Pill shape */
+    position: relative;
 }
 
-.nav-link:hover,
-.nav-link.active {
+.nav-link:hover {
     color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Subtle hover */
+}
+
+.nav-link.active {
+    color: var(--accent-secondary);
+    /* Lighter purple text */
+    background-color: rgba(124, 58, 237, 0.15);
+    /* Purple tint background */
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+    /* Subtle glow */
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    /* Slight border definition */
 }
 
 @media (max-width: 900px) {
@@ -392,3 +415,42 @@ body {
     background: #6D28D9;
     /* Darker Violet Hover */
 }
+
+/* MOBILE HERO ADJUSTMENTS */
+@media (max-width: 768px) {
+
+    /* Scale down cards to be less intrusive */
+    .hero-floating-card .glass {
+        transform: scale(0.85);
+        transform-origin: center;
+    }
+}
+
+/* Scroll Fade Masks - Enhanced for Fluidity */
+.mask-fade-top {
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 85%, transparent 100%);
+    mask-image: linear-gradient(to bottom, transparent 0%, black 25%, black 85%, transparent 100%);
+    /* Top fade for title avoidance, Bottom fade for smooth exit */
+}
+
+/* Feature Text Transitions */
+.feature-text-group {
+    opacity: 0.3;
+    filter: blur(2px);
+    transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: scale(0.95);
+}
+
+.feature-text-group.active {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+}
+
+.mask-fade-x {
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, black 5%, black 95%, transparent 100%);
+}
+
+/* Header styles are now handled by /assets/css/header.css */
+/* This is loaded automatically by main-header.js */

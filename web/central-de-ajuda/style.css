@@ -1,3 +1,68 @@
+/* Header styles are now handled by /assets/css/header.css */
+/* This is loaded automatically by main-header.js */
+
+/* Active Link Indicator in Mobile Menu */
+#mobile-menu .active-link {
+    background-color: rgba(124, 58, 237, 0.15);
+    color: white;
+    position: relative;
+}
+
+#mobile-menu .active-link::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 24px;
+    background-color: var(--accent-primary);
+    border-radius: 0 4px 4px 0;
+}
+
+/* New Class to ensure visibility on mobile */
+.logo-svg-main {
+    height: auto;
+    display: block;
+    /* Always block, controlled by Tailwind classes for size */
+}
+
+/* Nav Link Pill Style */
+.nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    /* Pill shape */
+    position: relative;
+}
+
+.nav-link:hover {
+    color: var(--text-main);
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Subtle hover */
+}
+
+.nav-link.active {
+    color: #a78bfa;
+    /* Lighter purple text */
+    background-color: rgba(124, 58, 237, 0.15);
+    /* Purple tint background */
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+    /* Subtle glow */
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    /* Slight border definition */
+}
+
+@media (max-width: 900px) {
+    .header-nav-center {
+        display: none;
+    }
+}
+
 :root {
     --bg-color: #111827;
     --card-bg: #1F2937;
@@ -1394,6 +1459,7 @@ a {
     opacity: 0.5;
     pointer-events: none;
 }
+
 /* Header Navigation - Added for consistency */
 .header-nav-center {
     position: absolute;
@@ -1412,7 +1478,8 @@ a {
     text-decoration: none;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
     color: var(--text-main);
 }
 
@@ -1430,7 +1497,14 @@ body {
 }
 
 /* Headings should use Outfit */
-h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.header-title-center span,
+.logo-link {
     font-family: 'Outfit', sans-serif !important;
 }
 
@@ -1440,22 +1514,26 @@ h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
 }
 
 /* HEADER RESET (To match Tailwind Preflight) */
-.header, .header * {
+.header,
+.header * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
 .header {
-    padding: 16px 0 !important; /* Restore specific padding */
+    padding: 16px 0 !important;
+    /* Restore specific padding */
 }
 
 .header-container {
-    padding: 0 40px !important; /* Restore specific padding */
+    padding: 0 40px !important;
+    /* Restore specific padding */
 }
 
 .btn-outline {
-    padding: 8px 16px !important; /* Restore specific padding */
+    padding: 8px 16px !important;
+    /* Restore specific padding */
 }
 
 /* Force Hex Colors to match Home exactly */
@@ -1479,52 +1557,34 @@ h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
 }
 
 @media (max-width: 600px) {
-    .header-container { padding: 0 20px !important; }
+    .header-container {
+        padding: 0 20px !important;
+    }
 }
 
 /* BRANDED SCROLLBAR - SincroApp Violet */
 ::-webkit-scrollbar {
     width: 8px;
-    height: 8px; /* Horizontal scroll support */
+    height: 8px;
+    /* Horizontal scroll support */
 }
 
 ::-webkit-scrollbar-track {
-    background: #111827; /* Dark background matching --bg */
+    background: #111827;
+    /* Dark background matching --bg */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #7C3AED; /* Violet Primary */
+    background: #7C3AED;
+    /* Violet Primary */
     border-radius: 4px;
-    border: 2px solid #111827; /* Border to create padding effect */
+    border: 2px solid #111827;
+    /* Border to create padding effect */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #6D28D9; /* Darker Violet Hover */
+    background: #6D28D9;
+    /* Darker Violet Hover */
 }
 
-/* CORRECTING RESPONSIVE VISIBILITY (Tailwind Emulation) */
-
-/* Hide Mobile Toggle on Desktop */
-@media (min-width: 900px) {
-    #menu-toggle {
-        display: none !important;
-    }
-}
-
-/* Show Mobile Toggle on Mobile */
-@media (max-width: 899px) {
-    #menu-toggle {
-        display: block !important;
-    }
-}
-
-/* Utility class 'hidden' for toggling icons */
-.hidden {
-    display: none !important;
-}
-
-/* Ensure SVG icons have correct size */
-#menu-toggle svg {
-    width: 24px;
-    height: 24px;
-}
+/* Mobile menu toggle styles now handled by main-header.js embedded CSS */

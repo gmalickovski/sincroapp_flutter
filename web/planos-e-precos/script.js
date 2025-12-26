@@ -152,33 +152,10 @@ function renderList(elementId, items) {
     });
 }
 
-/* Standardized Mobile Menu Logic */
-document.addEventListener('DOMContentLoaded', () => {
-    const menuToggle = document.getElementById('menu-toggle');
-    const mobileMenu = document.getElementById('mobile-menu');
-    const iconOpen = document.getElementById('menu-icon-open');
-    const iconClose = document.getElementById('menu-icon-close');
+// Mobile Menu Logic with Animated Hamburger & Overlay
+// Mobile Menu Logic moved to main-header.js
 
-    if (menuToggle && mobileMenu) {
-        menuToggle.addEventListener('click', () => {
-            const isHidden = mobileMenu.classList.contains('hidden');
-            if (isHidden) {
-                // Open
-                mobileMenu.style.display = 'block';
-                mobileMenu.classList.remove('hidden');
-                iconOpen.classList.add('hidden');
-                iconOpen.style.display = 'none';
-                iconClose.classList.remove('hidden');
-                iconClose.style.display = 'block';
-            } else {
-                // Close
-                mobileMenu.style.display = 'none';
-                mobileMenu.classList.add('hidden');
-                iconOpen.classList.remove('hidden');
-                iconOpen.style.display = 'block';
-                iconClose.classList.add('hidden');
-                iconClose.style.display = 'none';
-            }
-        });
-    }
-});
+// Initial Call
+document.addEventListener('DOMContentLoaded',    // Mobile Menu Init
+    // Handled by main-header.js
+);

@@ -44,33 +44,13 @@ a {
     text-align: center;
 }
 
-/* Header (Copied from Help Center to ensure match) */
-.header {
-    background-color: rgba(17, 24, 39, 0.9);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: 16px 0;
-}
-
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 40px;
-    width: 100%;
-}
-
-.logo-svg {
-    height: 28px;
-    width: auto;
-}
+/* Header styles are now handled by /assets/css/header.css */
+/* This is loaded automatically by main-header.js */
 
 .logo-icon {
     height: 32px;
     width: auto;
+    display: none;
 }
 
 .desktop-only {
@@ -573,6 +553,7 @@ a {
         width: 30%;
     }
 }
+
 /* Header Navigation - Added for consistency */
 .header-nav-center {
     position: absolute;
@@ -591,14 +572,39 @@ a {
     text-decoration: none;
 }
 
-.nav-link:hover, .nav-link.active {
-    color: var(--text-main);
-}
-
 @media (max-width: 900px) {
     .header-nav-center {
         display: none;
     }
+}
+
+.nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    /* Pill shape */
+    position: relative;
+}
+
+.nav-link:hover {
+    color: var(--text-main);
+    background-color: rgba(255, 255, 255, 0.05);
+    /* Subtle hover */
+}
+
+.nav-link.active {
+    color: #a78bfa;
+    /* Lighter purple text */
+    background-color: rgba(124, 58, 237, 0.15);
+    /* Purple tint background */
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+    /* Subtle glow */
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    /* Slight border definition */
 }
 
 /* FONT STANDARDIZATION */
@@ -609,7 +615,14 @@ body {
 }
 
 /* Headings should use Outfit */
-h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.header-title-center span,
+.logo-link {
     font-family: 'Outfit', sans-serif !important;
 }
 
@@ -619,22 +632,26 @@ h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
 }
 
 /* HEADER RESET (To match Tailwind Preflight) */
-.header, .header * {
+.header,
+.header * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
 .header {
-    padding: 16px 0 !important; /* Restore specific padding */
+    padding: 16px 0 !important;
+    /* Restore specific padding */
 }
 
 .header-container {
-    padding: 0 40px !important; /* Restore specific padding */
+    padding: 0 40px !important;
+    /* Restore specific padding */
 }
 
 .btn-outline {
-    padding: 8px 16px !important; /* Restore specific padding */
+    padding: 8px 16px !important;
+    /* Restore specific padding */
 }
 
 /* Force Hex Colors to match Home exactly */
@@ -658,52 +675,34 @@ h1, h2, h3, h4, h5, h6, .header-title-center span, .logo-link {
 }
 
 @media (max-width: 600px) {
-    .header-container { padding: 0 20px !important; }
+    .header-container {
+        padding: 0 20px !important;
+    }
 }
 
 /* BRANDED SCROLLBAR - SincroApp Violet */
 ::-webkit-scrollbar {
     width: 8px;
-    height: 8px; /* Horizontal scroll support */
+    height: 8px;
+    /* Horizontal scroll support */
 }
 
 ::-webkit-scrollbar-track {
-    background: #111827; /* Dark background matching --bg */
+    background: #111827;
+    /* Dark background matching --bg */
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #7C3AED; /* Violet Primary */
+    background: #7C3AED;
+    /* Violet Primary */
     border-radius: 4px;
-    border: 2px solid #111827; /* Border to create padding effect */
+    border: 2px solid #111827;
+    /* Border to create padding effect */
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #6D28D9; /* Darker Violet Hover */
+    background: #6D28D9;
+    /* Darker Violet Hover */
 }
 
-/* CORRECTING RESPONSIVE VISIBILITY (Tailwind Emulation) */
-
-/* Hide Mobile Toggle on Desktop */
-@media (min-width: 900px) {
-    #menu-toggle {
-        display: none !important;
-    }
-}
-
-/* Show Mobile Toggle on Mobile */
-@media (max-width: 899px) {
-    #menu-toggle {
-        display: block !important;
-    }
-}
-
-/* Utility class 'hidden' for toggling icons */
-.hidden {
-    display: none !important;
-}
-
-/* Ensure SVG icons have correct size */
-#menu-toggle svg {
-    width: 24px;
-    height: 24px;
-}
+/* Mobile menu toggle styles now handled by main-header.js embedded CSS */

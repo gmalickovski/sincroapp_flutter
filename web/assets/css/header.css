@@ -1,0 +1,276 @@
+/* ================================================
+   SHARED HEADER STYLES
+   Injected automatically by main-header.js
+   ================================================ */
+
+/* Header Core */
+.header {
+    background-color: rgba(17, 24, 39, 0.9) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid #374151;
+    /* var(--border) fallback */
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 16px 0;
+    width: 100%;
+}
+
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 100%;
+    margin: 0;
+    padding: 0 40px;
+    width: 100%;
+    position: relative;
+    height: 48px;
+}
+
+/* Logo Sizing & Visibility */
+.logo-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+}
+
+.logo-svg-main {
+    height: auto;
+    display: block;
+    /* Tailwind classes handle sizing: w-32 md:w-auto h-auto md:h-8 */
+}
+
+/* Fallback for logo if Tailwind fails */
+@media (min-width: 768px) {
+    .logo-svg-main {
+        height: 32px;
+        /* md:h-8 */
+        width: auto;
+    }
+}
+
+/* Hamburger Animation */
+.hamburger-btn {
+    position: relative;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    z-index: 60;
+    /* Above mobile menu */
+}
+
+/* CRITICAL: Hide hamburger on desktop (using ID for higher specificity) */
+@media (min-width: 768px) {
+
+    #menu-toggle,
+    .hamburger-btn {
+        display: none !important;
+        visibility: hidden !important;
+    }
+}
+
+.hamburger-line {
+    width: 24px;
+    height: 2px;
+    background-color: white;
+    border-radius: 2px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transform-origin: center;
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(1) {
+    transform: translateY(8px) rotate(45deg);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(2) {
+    opacity: 0;
+    transform: translateX(10px);
+}
+
+.hamburger-btn.active .hamburger-line:nth-child(3) {
+    transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Desktop Navigation */
+.header-nav-center {
+    /* Hidden on mobile, visible on desktop */
+    display: none;
+    align-items: center;
+    gap: 32px;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* CRITICAL: Show nav on desktop */
+@media (min-width: 768px) {
+    .header-nav-center {
+        display: flex !important;
+    }
+}
+
+.nav-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: #9CA3AF;
+    /* var(--text-secondary) */
+    transition: all 0.3s ease;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 9999px;
+    position: relative;
+    font-family: 'Poppins', sans-serif;
+}
+
+.nav-link:hover {
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-link.active {
+    color: #a78bfa;
+    /* var(--accent-secondary) */
+    background-color: rgba(124, 58, 237, 0.15);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+/* Mobile Menu Overlay */
+#mobile-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    background-color: rgba(17, 24, 39, 0.95);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    transform-origin: top;
+    transform: scaleY(0);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 50;
+    overflow: hidden;
+    display: block !important;
+    /* Force display so transform works */
+}
+
+@media (min-width: 768px) {
+    #mobile-menu {
+        display: none !important;
+    }
+}
+
+#mobile-menu.open {
+    transform: scaleY(1);
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Button Outline (Header Actions) */
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1.5rem;
+    border: 1px solid #374151;
+    border-radius: 9999px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #FFFFFF;
+    background-color: transparent;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.btn-outline:hover {
+    border-color: #7C3AED;
+    color: #7C3AED;
+    background-color: rgba(124, 58, 237, 0.1);
+}
+
+/* Responsive Text for Button */
+.btn-text-full {
+    display: inline;
+}
+
+.btn-text-short {
+    display: none;
+}
+
+@media (max-width: 640px) {
+    .btn-text-full {
+        display: none;
+    }
+
+    .btn-text-short {
+        display: inline;
+    }
+
+    .header-container {
+        padding: 0 16px;
+    }
+}
+
+/* ================================================
+   MOBILE-SPECIFIC STYLES
+   ================================================ */
+
+/* Mobile: Center logo absolutely */
+@media (max-width: 767px) {
+    .logo-link {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+
+    .logo-svg-main {
+        height: 28px;
+        width: auto;
+    }
+}
+
+/* Mobile Menu Inner Container */
+.mobile-menu-inner {
+    padding: 12px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Mobile Nav Links */
+.mobile-nav-link {
+    display: block;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #9CA3AF;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.mobile-nav-link:hover {
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-nav-link.active {
+    color: #FFFFFF;
+    background-color: rgba(124, 58, 237, 0.15);
+    border-left: 3px solid #7C3AED;
+}

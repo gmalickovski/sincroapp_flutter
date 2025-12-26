@@ -6,6 +6,18 @@
     const isMaintenancePage = currentPath.includes('maintenance.html');
     const isConstructionPage = currentPath.includes('under_construction.html');
 
+    // 0. Skip check on localhost/dev environment
+    console.log('🔍 Hostname detected:', window.location.hostname);
+
+    if (window.location.hostname.includes('localhost') || window.location.hostname.includes('127.0.0.1')) {
+        console.log('🚧 Maintenance check skipped on localhost');
+        // If we are currently ON the blockage page, send us back home
+        if (isMaintenancePage || isConstructionPage) {
+            window.location.href = '/';
+        }
+        return;
+    }
+
     // 1. Check for bypass token
     const bypassToken = sessionStorage.getItem('sincro_bypass_token');
     const bypassExpiry = sessionStorage.getItem('sincro_bypass_expiry');
