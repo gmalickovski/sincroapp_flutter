@@ -45,7 +45,9 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <div class="container">
+
+
+        <div class="container relative z-10">
             <h1>Como podemos ajudar?</h1>
             <div class="search-box">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -59,10 +61,10 @@
     </section>
 
     <!-- Categories Grid -->
-    <section class="categories section-padding">
+    <section class="categories section-padding relative">
         <div class="container">
             <h2>Navegue por Tópicos</h2>
-            <div class="grid">
+            <div class="topics-grid">
                 <div class="card" onclick="filterCategory('start')">
                     <div class="icon">🚀</div>
                     <h3>Primeiros Passos</h3>
@@ -73,6 +75,7 @@
                     <h3>Assinatura e Planos</h3>
                     <p>Gerencie seu plano Premium e pagamentos.</p>
                 </div>
+                <!-- Card Lock Icon Update -->
                 <div class="card" onclick="filterCategory('account')">
                     <div class="icon">🔐</div>
                     <h3>Conta e Segurança</h3>
@@ -101,71 +104,86 @@
                 <!-- Category: Start -->
                 <div class="faq-item" data-category="start">
                     <button class="faq-question">
-                        O que é o SincroApp?
-                        <span class="chevron">⌄</span>
+                        <span>O que é o SincroApp?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>O SincroApp é uma plataforma de autoconhecimento e produtividade desenhada para ajudar você a
-                            alinhar seus objetivos com sua verdadeira essência.</p>
+                        <div class="faq-content">
+                            <p>O SincroApp é uma plataforma de autoconhecimento e produtividade desenhada para ajudar
+                                você a
+                                alinhar seus objetivos com sua verdadeira essência.</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Category: Subscription -->
                 <div class="faq-item" data-category="subscription">
                     <button class="faq-question">
-                        Como cancelar minha assinatura?
-                        <span class="chevron">⌄</span>
+                        <span>Como cancelar minha assinatura?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>Você pode cancelar a qualquer momento indo em <strong>Configurações > Gerenciar
-                                Assinatura</strong> dentro do app. Seu acesso Premium continuará ativo até o fim do
-                            período pago.</p>
+                        <div class="faq-content">
+                            <p>Você pode cancelar a qualquer momento indo em <strong>Configurações > Gerenciar
+                                    Assinatura</strong> dentro do app. Seu acesso Premium continuará ativo até o fim do
+                                período pago.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="faq-item" data-category="subscription">
                     <button class="faq-question">
-                        Quais as formas de pagamento aceitas?
-                        <span class="chevron">⌄</span>
+                        <span>Quais as formas de pagamento aceitas?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>Atualmente aceitamos cartões de crédito (Visa, Mastercard, Elo) e Pix para assinaturas
-                            anuais.</p>
+                        <div class="faq-content">
+                            <p>Atualmente aceitamos cartões de crédito (Visa, Mastercard, Elo) e Pix para assinaturas
+                                anuais.</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Category: Account -->
                 <div class="faq-item" data-category="account">
                     <button class="faq-question">
-                        Esqueci minha senha. Como recuperar?
-                        <span class="chevron">⌄</span>
+                        <span>Esqueci minha senha. Como recuperar?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>Na tela de login, clique em "Esqueci minha senha". Enviaremos um link de redefinição para o
-                            seu e-mail cadastrado.</p>
+                        <div class="faq-content">
+                            <p>Na tela de login, clique em "Esqueci minha senha". Enviaremos um link de redefinição para
+                                o
+                                seu e-mail cadastrado.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="faq-item" data-category="account">
                     <button class="faq-question">
-                        Como excluir minha conta?
-                        <span class="chevron">⌄</span>
+                        <span>Como excluir minha conta?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>Você pode solicitar a exclusão da conta diretamente no app em <strong>Configurações >
-                                Privacidade > Excluir Conta</strong>. Atenção: essa ação é irreversível.</p>
+                        <div class="faq-content">
+                            <p>Você pode solicitar a exclusão da conta diretamente no app em <strong>Configurações >
+                                    Privacidade > Excluir Conta</strong>. Atenção: essa ação é irreversível.</p>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Category: Tech -->
                 <div class="faq-item" data-category="tech">
                     <button class="faq-question">
-                        O app funciona offline?
-                        <span class="chevron">⌄</span>
+                        <span>O app funciona offline?</span>
+                        <span class="chevron material-icons">expand_more</span>
                     </button>
                     <div class="faq-answer">
-                        <p>Algumas funcionalidades básicas permitem visualização offline, mas para sincronizar dados e
-                            usar a IA, é necessária uma conexão com a internet.</p>
+                        <div class="faq-content">
+                            <p>Algumas funcionalidades básicas permitem visualização offline, mas para sincronizar dados
+                                e
+                                usar a IA, é necessária uma conexão com a internet.</p>
+                        </div>
                     </div>
                 </div>
 

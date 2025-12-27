@@ -354,7 +354,7 @@ async function fetchFeatures() {
         // DESKTOP: Create slides (one per feature)
         data.features.forEach((feature, index) => {
             const slide = document.createElement('div');
-            slide.className = `feature-slide absolute inset-0 flex items-center justify-start transition-transform duration-500 ease-in-out`;
+            slide.className = `feature-slide absolute inset-0 flex items-start justify-start transition-transform duration-500 ease-in-out`;
             slide.setAttribute('data-slide-index', index);
 
             // Initial position: first slide at 0, others below viewport
@@ -373,7 +373,7 @@ async function fetchFeatures() {
             slide.setAttribute('data-image-desktop', imgDesk);
 
             slide.innerHTML = `
-                <div class="pl-6 border-l-4 border-purple-500 max-w-2xl">
+                <div class="pl-6 border-l-4 border-purple-500 max-w-2xl pt-2">
                     <h3 class="font-outfit text-3xl md:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-400">
                         ${feature.name}
                     </h3>
@@ -453,67 +453,50 @@ async function fetchFeatures() {
 
 function initMobileSliderObserver() {
     const slider = document.getElementById('features-slider-mobile');
-    const mobileImg = document.getElementById('feat-img-mobile-sm');
+    const cards = document.querySelectorAll('.mobile-feature-card');
+    const dots = document.querySelectorAll('.feature-dot');
+    const phoneImg = document.getElementById('feat-img-mobile-sm');
 
-    if (!slider || !mobileImg) return;
+    if (!slider || cards.length === 0) return;
 
     // Use Intersection Observer for Horizontal Scroll Snap
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
+                const index = parseInt(entry.target.getAttribute('data-index'));
+
                 // Highlight Card (Active State)
                 const card = entry.target;
 
-                // Reset all other cards
-                slider.querySelectorAll('.mobile-feature-card').forEach(c => {
+                // Reset all cards
+                cards.forEach(c => {
                     c.classList.remove('border-violet-500');
                     c.classList.add('border-violet-500/20');
-
-                    // Reset Title Color
-                    const title = c.querySelector('h3');
-                    if (title) {
-                        title.classList.remove('text-transparent', 'bg-clip-text', 'bg-gradient-to-r', 'from-violet-400', 'to-fuchsia-400');
-                        title.classList.add('text-white');
-                    }
                 });
 
                 // Activate current card
                 card.classList.remove('border-violet-500/20');
                 card.classList.add('border-violet-500');
 
-                // Active Title Color (Match Desktop Gradient)
-                const title = card.querySelector('h3');
-                if (title) {
-                    title.classList.remove('text-white');
-                    title.classList.add('text-transparent', 'bg-clip-text', 'bg-gradient-to-r', 'from-violet-400', 'to-fuchsia-400');
-                }
-
-                // Update Image logic respecting global device state
-                const newSrc = window.currentFeaturesDevice === 'mobile'
-                    ? card.getAttribute('data-image-mobile')
-                    : card.getAttribute('data-image-desktop') || card.getAttribute('data-image-mobile');
-
-                // const newSrc = card.getAttribute('data-image-mobile'); // OLD
-                if (newSrc && mobileImg.src !== newSrc) {
-                    mobileImg.style.opacity = '0';
-                    setTimeout(() => {
-                        mobileImg.src = newSrc;
-                        mobileImg.style.opacity = '1';
-                    }, 200);
-                }
-
                 // Update Dots
-                const index = card.getAttribute('data-index');
-                const dots = document.querySelectorAll('.feature-dot');
-                dots.forEach(d => {
-                    d.classList.remove('w-8', 'bg-violet-500');
-                    d.classList.add('w-2', 'bg-gray-600');
+                dots.forEach((dot, idx) => {
+                    if (idx === index) {
+                        dot.classList.remove('bg-gray-600', 'w-2');
+                        dot.classList.add('bg-purple-500', 'w-6');
+                    } else {
+                        dot.classList.remove('bg-purple-500', 'w-6');
+                        dot.classList.add('bg-gray-600', 'w-2');
+                    }
                 });
 
-                const activeDot = document.querySelector(`.feature-dot[data-index="${index}"]`);
-                if (activeDot) {
-                    activeDot.classList.remove('w-2', 'bg-gray-600');
-                    activeDot.classList.add('w-8', 'bg-violet-500');
+                // Update Image logic
+                const newSrc = entry.target.getAttribute('data-image-mobile');
+                if (newSrc && phoneImg && phoneImg.src !== newSrc) {
+                    phoneImg.style.opacity = '0';
+                    setTimeout(() => {
+                        phoneImg.src = newSrc;
+                        phoneImg.style.opacity = '1';
+                    }, 200);
                 }
             }
         });
@@ -522,8 +505,22 @@ function initMobileSliderObserver() {
         threshold: 0.6 // Trigger when card is 60% visible
     });
 
-    const cards = slider.querySelectorAll('.mobile-feature-card');
     cards.forEach(card => observer.observe(card));
+
+    // Make dots clickable
+    dots.forEach((dot, index) => {
+        dot.style.cursor = 'pointer';
+        dot.onclick = () => {
+            const targetCard = cards[index];
+            if (targetCard) {
+                targetCard.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'center'
+                });
+            }
+        };
+    });
 }
 
 // Features Observer removed - using simple slide navigation now
@@ -616,4 +613,102 @@ function updateSlideImage(index) {
     } else if (currentDevice === 'desktop' && desktopImg && newImage) {
         desktopImg.src = newImage;
     }
+}
+
+// ========== SLIDER INTERACTIONS ==========
+
+let touchStartY = 0;
+let touchEndY = 0;
+
+function initSliderInteractions() {
+    const slider = document.getElementById('features-slider');
+    if (!slider) return;
+
+    // Touch/Swipe Events
+    slider.addEventListener('touchstart', (e) => {
+        touchStartY = e.touches[0].clientY;
+    }, { passive: false });
+
+    slider.addEventListener('touchmove', (e) => {
+        if (e.cancelable) e.preventDefault();
+        touchEndY = e.touches[0].clientY;
+    }, { passive: false });
+
+    slider.addEventListener('touchend', () => {
+        handleSwipe();
+    });
+
+    // Mouse Wheel Event
+    slider.addEventListener('wheel', (e) => {
+        e.preventDefault();
+
+        // Debounce wheel events
+        if (slider.dataset.scrolling === 'true') return;
+        slider.dataset.scrolling = 'true';
+
+        if (e.deltaY > 0) {
+            // Scroll down = next slide
+            slideFeature('next');
+        } else if (e.deltaY < 0) {
+            // Scroll up = previous slide
+            slideFeature('prev');
+        }
+
+        setTimeout(() => {
+            slider.dataset.scrolling = 'false';
+        }, 500);
+    }, { passive: false });
+
+    // Drag Events (for mouse)
+    let isDragging = false;
+    let dragStartY = 0;
+
+    slider.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        dragStartY = e.clientY;
+        slider.style.cursor = 'grabbing';
+    });
+
+    slider.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        touchEndY = e.clientY;
+    });
+
+    slider.addEventListener('mouseup', () => {
+        if (isDragging) {
+            touchStartY = dragStartY;
+            handleSwipe();
+            isDragging = false;
+            slider.style.cursor = 'grab';
+        }
+    });
+
+    slider.addEventListener('mouseleave', () => {
+        if (isDragging) {
+            isDragging = false;
+            slider.style.cursor = 'grab';
+        }
+    });
+
+    // Set initial cursor
+    slider.style.cursor = 'grab';
+}
+
+function handleSwipe() {
+    const swipeThreshold = 50; // minimum distance for swipe
+    const diff = touchStartY - touchEndY;
+
+    if (Math.abs(diff) < swipeThreshold) return;
+
+    if (diff > 0) {
+        // Swiped up = next slide
+        slideFeature('next');
+    } else {
+        // Swiped down = previous slide
+        slideFeature('prev');
+    }
+
+    // Reset
+    touchStartY = 0;
+    touchEndY = 0;
 }
