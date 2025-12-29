@@ -92,7 +92,9 @@
             messagingSenderId: "1026698348026",
             appId: "1:1026698348026:web:0e7a7d3e4c9a0e0e8e0e0e"
         };
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         const db = firebase.firestore();
 
         async function checkPassword() {
