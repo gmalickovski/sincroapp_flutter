@@ -326,6 +326,7 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="/construction_check.js"></script>
 
     <script>
         // Firebase Configuration
@@ -374,7 +375,7 @@
                         sessionStorage.setItem('sincro_bypass_token', token);
                         sessionStorage.setItem('sincro_bypass_expiry', Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
 
-                        window.location.href = '/landing.html';
+                        window.location.href = '/';
                     } else {
                         // Wrong password
                         errorMessage.classList.add('show');

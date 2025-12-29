@@ -233,7 +233,7 @@ function createFeatureCard(feature) {
             <div class="tags">${tags}</div>
             <div class="meta">
                 <span>Atualizado: ${updatedDate}</span>
-                <span class="version">v${feature.version}</span>
+                ${feature.version ? `<span class="version">v${feature.version}</span>` : ''}
             </div>
         </div>
     `;

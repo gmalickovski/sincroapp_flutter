@@ -325,6 +325,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Sticky Scroll Logic (Seção Funcionalidades) ---
     fetchFeatures();
+    fetchPlans();
+    fetchFeaturedFAQ();
 
     // --- Mobile Menu Init ---
     // Handled by main-header.js
@@ -711,4 +713,178 @@ function handleSwipe() {
     // Reset
     touchStartY = 0;
     touchEndY = 0;
+}
+
+// ========== DYNAMIC CONTENT (PLANS & FAQ) ==========
+
+async function fetchPlans() {
+    try {
+        const container = document.getElementById('plans-container');
+        if (!container) return;
+
+        const response = await fetch('/api/plans');
+        const data = await response.json();
+
+        // Data format: { cards: { free: [...], plus: [...], premium: [...] } }
+        const cards = data.cards || data; // Fallback
+
+        container.innerHTML = '';
+
+        // 1. FREE PLAN
+        container.innerHTML += createPlanCard('Sincro Essencial', 'Para quem está começando.', 'Grátis', '/mês', 'free', cards.free, 'teal');
+
+        // 2. PLUS PLAN (Featured)
+        container.innerHTML += createPlanCard('Sincro Despertar', 'O poder total do autoconhecimento.', 'R$ 19,90', '/mês', 'plus', cards.plus, 'purple', true);
+
+        // 3. PREMIUM PLAN
+        container.innerHTML += createPlanCard('Sincro Sinergia', 'Experiência definitiva com IA.', 'R$ 39,90', '/mês', 'premium', cards.premium, 'pink');
+
+        // Refresh AOS to animate new elements
+        setTimeout(() => AOS.refresh(), 500);
+
+    } catch (error) {
+        console.error('Error fetching plans:', error);
+        const container = document.getElementById('plans-container');
+        if (container) container.innerHTML = '<p class="text-center text-red-400 col-span-3">Erro ao carregar planos.</p>';
+    }
+}
+
+function createPlanCard(title, sub, price, period, type, features, color, isFeatured = false) {
+    const listItems = features.map(feat => `
+        <li class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-${color}-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+            </svg>
+            <span class="font-medium text-white text-sm">${feat}</span>
+        </li>
+    `).join('');
+
+    const featuredBadge = isFeatured ? `
+        <span class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-xs font-bold tracking-wider uppercase whitespace-nowrap"
+            style="background-color: var(--accent-primary); color: #FFF;">
+            Mais Popular
+        </span>
+    ` : '';
+
+    const cardStyle = isFeatured
+        ? 'border-color: var(--accent-primary); box-shadow: 0 20px 40px -10px rgba(139, 92, 246, 0.2); transform: translateY(-1rem);'
+        : 'border-color: var(--border);';
+
+    const aosDelay = type === 'free' ? 0 : (type === 'plus' ? 100 : 200);
+
+    // Dynamic button style
+    let btnStyle = `background-color: transparent; color: var(--text-primary); border: 2px solid var(--border); hover:bg-white/10`;
+    if (isFeatured) {
+        btnStyle = `background-color: var(--accent-primary); color: #FFF; border: none; hover:opacity-90`;
+    }
+
+    return `
+    <div class="pricing-card p-8 rounded-2xl border flex flex-col relative transition-all duration-300 hover:border-gray-500 glass z-${isFeatured ? '10' : '0'}"
+        style="${cardStyle}" data-aos="fade-up" data-aos-delay="${aosDelay}">
+        ${featuredBadge}
+        <div class="mb-6">
+            <h3 class="font-outfit text-2xl font-bold mb-2">${title}</h3>
+            <p class="text-sm mb-6 min-h-[40px]" style="color: var(--text-secondary);">${sub}</p>
+            <div class="flex items-baseline gap-1">
+                <span class="font-outfit text-4xl font-bold">${price}</span>
+                ${price !== 'Grátis' ? `<span style="color: var(--text-tertiary);">${period}</span>` : ''}
+            </div>
+        </div>
+        <ul class="space-y-3 mb-8 min-h-[140px]">
+            ${listItems}
+        </ul>
+        <div class="mt-auto">
+            <button onclick="handleSelectPlan('${type}')"
+                class="w-full block text-center py-3 rounded-xl font-bold transition-all"
+                style="${btnStyle}">
+                ${price === 'Grátis' ? 'Começar Grátis' : 'Assinar Agora'}
+            </button>
+        </div>
+    </div>
+    `;
+}
+
+async function fetchFeaturedFAQ() {
+    try {
+        const container = document.getElementById('faq-list');
+        if (!container) return;
+
+        console.log('Fetching featured FAQs...');
+        const response = await fetch('/api/faq?featured=true');
+        const data = await response.json();
+
+        // Server returns { faq: [...] }
+        // We verified server/index.js returns { faq: items }
+        const faqs = data.faq || [];
+
+        container.innerHTML = '';
+
+        if (faqs.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-500">Nenhuma pergunta em destaque.</p>';
+            return;
+        }
+
+        faqs.forEach(faq => {
+            const question = faq.question || 'Pergunta';
+            // The server returns 'answer' as HTML strings (converted from Notion blocks)
+            // or if it was rich text, we need to handle it.
+            // server/index.js line 236: answer: answerHtml (string)
+            const answer = faq.answer || 'Resposta indisponível';
+
+            const html = `
+                <div class="border rounded-lg overflow-hidden glass mb-4" style="border-color: var(--border);">
+                    <button class="faq-question w-full px-6 py-4 text-left flex items-center justify-between hover:bg-white/5 transition-colors">
+                        <span class="font-medium font-outfit text-lg">${question}</span>
+                        <svg class="arrow w-5 h-5 flex-shrink-0 transition-transform duration-300 transform text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    <div class="faq-answer max-h-0 overflow-hidden transition-all duration-300">
+                        <div class="px-2 pt-0 pb-8 [&>*:first-child]:mt-0 prose prose-invert max-w-none text-left leading-relaxed" style="color: var(--text-secondary);">
+                            ${answer}
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.innerHTML += html;
+        });
+
+        // Re-attach listeners
+        attachFaqListeners();
+
+    } catch (error) {
+        console.error('Error fetching FAQ:', error);
+        // Fallback static? Or error msg.
+        const container = document.getElementById('faq-list');
+        if (container) container.innerHTML = '<p class="text-center text-gray-500">Não foi possível carregar as perguntas.</p>';
+    }
+}
+
+function attachFaqListeners() {
+    const questions = document.querySelectorAll('.faq-question');
+    questions.forEach(q => {
+        q.addEventListener('click', () => {
+            // Close others
+            questions.forEach(item => {
+                if (item !== q) {
+                    item.classList.remove('active');
+                    item.nextElementSibling.style.maxHeight = null;
+                    item.querySelector('.arrow').style.transform = 'rotate(0deg)';
+                }
+            });
+
+            // Toggle current
+            q.classList.toggle('active');
+            const answer = q.nextElementSibling;
+            const arrow = q.querySelector('.arrow');
+
+            if (q.classList.contains('active')) {
+                answer.style.maxHeight = answer.scrollHeight + "px";
+                arrow.style.transform = 'rotate(180deg)';
+            } else {
+                answer.style.maxHeight = null;
+                arrow.style.transform = 'rotate(0deg)';
+            }
+        });
+    });
 }

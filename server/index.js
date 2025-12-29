@@ -43,6 +43,9 @@ app.use('/planos-e-precos', express.static(path.join(__dirname, '../web/planos-e
 // Serve Static Files for Features Documentation
 app.use('/funcionalidades', express.static(path.join(__dirname, '../web/funcionalidades')));
 
+// Serve Static Files for About Page
+app.use('/sobre', express.static(path.join(__dirname, '../web/sobre')));
+
 // Serve Maintenance & Construction Files (Root Level)
 app.get('/construction_check.js', (req, res) => {
     res.sendFile(path.join(__dirname, '../web/construction_check.js'));
@@ -62,7 +65,7 @@ app.use('/assets', express.static(path.join(__dirname, '../web/assets')));
 
 // Content Security Policy (Optional - preventing errors in browser log)
 app.use((req, res, next) => {
-    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com; connect-src 'self' http://localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
+    res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com https://placehold.co; connect-src 'self' http://localhost:3000 http://www.localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
     next();
 });
 
@@ -179,16 +182,32 @@ const notionToHtml = (blocks) => {
 // API Route: Get FAQ
 app.get('/api/faq', async (req, res) => {
     try {
-        console.log("Fetching FAQ from Notion...");
+        const { featured } = req.query;
+        console.log(`Fetching FAQ from Notion... (Featured: ${featured})`);
+
+        const andFilters = [
+            {
+                property: "Publicado",
+                checkbox: {
+                    equals: true,
+                },
+            }
+        ];
+
+        if (featured === 'true') {
+            andFilters.push({
+                property: "Destaque",
+                checkbox: {
+                    equals: true,
+                },
+            });
+        }
 
         // 1. Query Database
         const response = await notion.databases.query({
             database_id: NOTION_DATABASE_ID,
             filter: {
-                property: "Publicado",
-                checkbox: {
-                    equals: true,
-                },
+                and: andFilters
             },
             sorts: [
                 {
@@ -383,6 +402,65 @@ app.get('/api/features/:id', async (req, res) => {
     } catch (error) {
         console.error("Notion Feature Detail API Error:", error);
         res.status(500).json({ error: "Failed to fetch feature", details: error.message });
+    }
+});
+
+// API Route: Get About Page Data
+app.get('/api/about', async (req, res) => {
+    try {
+        const ABOUT_DATABASE_ID = process.env.NOTION_ABOUT_DATABASE_ID;
+        console.log("Fetching About Page data from Notion...", ABOUT_DATABASE_ID);
+
+        const response = await notion.databases.query({
+            database_id: ABOUT_DATABASE_ID,
+            filter: {
+                property: "Publicar",
+                checkbox: { equals: true },
+            },
+            sorts: [
+                { timestamp: "created_time", direction: "ascending" }
+            ],
+        });
+
+        const sections = {
+            sincroApp: [],
+            team: []
+        };
+
+        for (const page of response.results) {
+            const title = page.properties['Título']?.title[0]?.plain_text || "Sem título";
+            const sectionTag = page.properties['Seção']?.select?.name || "Geral";
+            const imageUrl = page.properties['Imagem']?.files[0]?.file?.url || page.properties['Imagem']?.files[0]?.external?.url || null;
+
+            // Fetch blocks (content)
+            const blocks = await notion.blocks.children.list({ block_id: page.id });
+            const contentHtml = notionToHtml(blocks.results);
+
+            const item = {
+                id: page.id,
+                title,
+                content: contentHtml,
+                image: imageUrl,
+                section: sectionTag
+            };
+
+            if (sectionTag === 'SincroApp' || sectionTag === 'SincroApp 02') {
+                sections.sincroApp.push(item);
+            } else if (sectionTag === 'Idealizadores' || sectionTag === 'Equipe') {
+                // Handle both new 'Idealizadores' and fallback 'Equipe'
+                sections.team.push(item);
+            } else {
+                // Default fallback
+                console.log(`[DEBUG] Uncategorized section tag: ${sectionTag}`);
+                sections.team.push(item);
+            }
+        }
+
+        res.json(sections);
+
+    } catch (error) {
+        console.error("Notion About API Error:", error);
+        res.status(500).json({ error: "Failed to fetch about data", details: error.message });
     }
 });
 
