@@ -1,9 +1,10 @@
 // lib/main.dart
 import 'dart:async';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
 
 // import 'package:firebase_auth/firebase_auth.dart'; // Removido
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+// import 'package:cloud_functions/cloud_functions.dart'; // Removido
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/foundation.dart';
@@ -48,13 +49,12 @@ Future<void> _connectToEmulators() async {
 
   // await FirebaseAuth.instance.useAuthEmulator(host, authPort); // Removido
 
-  FirebaseFunctions.instanceFor(region: 'us-central1')
-      .useFunctionsEmulator(host, functionsPort);
+  // FirebaseFunctions.instanceFor(region: 'us-central1').useFunctionsEmulator(host, functionsPort); // Removido
 
   await FirebaseStorage.instance.useStorageEmulator(host, 9199);
 }
 
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
+
 
 // ... (imports remain)
 

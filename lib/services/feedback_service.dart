@@ -1,5 +1,5 @@
 import 'dart:io';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // For Supabase Functions
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart'; // For XFile
 import '../features/feedback/models/feedback_model.dart';
 
 class FeedbackService {
-  final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1');
+  // final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1'); // Removed
   final FirebaseStorage _storage = FirebaseStorage.instance;
 
   Future<void> sendFeedback({
@@ -52,9 +52,11 @@ class FeedbackService {
         timestamp: feedback.timestamp,
       );
 
-      // 4. Call Cloud Function
-      final callable = _functions.httpsCallable('submitFeedback');
-      await callable.call(fullFeedback.toJson());
+      // 4. Call Supabase Edge Function
+      await Supabase.instance.client.functions.invoke(
+        'feedback-proxy',
+        body: fullFeedback.toJson(),
+      );
 
     } catch (e) {
       print('Error sending feedback: $e');

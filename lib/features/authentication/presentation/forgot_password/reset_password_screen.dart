@@ -1,4 +1,4 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
@@ -46,13 +46,18 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = functions.httpsCallable('completePasswordReset');
+      // Supabase Migration:
+      // The user should be authenticated via the recovery link (Magic Link) session.
+      // We explicitly update the user's password.
+      final user = Supabase.instance.client.auth.currentUser;
       
-      await callable.call({
-        'token': widget.token,
-        'newPassword': _passwordController.text,
-      });
+      if (user == null) {
+        throw 'Usuário não autenticado. Tente solicitar a redefinição novamente.';
+      }
+
+      await Supabase.instance.client.auth.updateUser(
+        UserAttributes(password: _passwordController.text),
+      );
 
       if (mounted) {
         setState(() {
@@ -62,9 +67,15 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } catch (e) {
       if (mounted) {
         String message = 'Erro ao redefinir senha.';
-        if (e is FirebaseFunctionsException) {
-          message = e.message ?? message;
+        // if (e is FirebaseFunctionsException) ... removed
+        
+        // Supabase specific error handling or generic
+        if (e is AuthException) {
+           message = e.message;
+        } else if (e is String) {
+           message = e;
         }
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(message),
