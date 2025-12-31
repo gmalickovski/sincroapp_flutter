@@ -1,8 +1,10 @@
+// lib/features/admin/presentation/widgets/admin_financial_card.dart
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
 
 class AdminFinancialCard extends StatelessWidget {
   final Map<String, dynamic> stats;
@@ -16,11 +18,11 @@ class AdminFinancialCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FirestoreService firestoreService = FirestoreService();
+    final SupabaseService supabaseService = SupabaseService();
     final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
     return StreamBuilder<Map<String, dynamic>>(
-      stream: firestoreService.getAdminFinancialSettingsStream(),
+      stream: supabaseService.getAdminFinancialSettingsStream(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CustomLoadingSpinner(size: 24));
@@ -55,28 +57,19 @@ class AdminFinancialCard extends StatelessWidget {
 
         // 2. Custos Variáveis
         final double totalAiCost = totalUsers * aiCostPerUser; // Custo IA baseada em todos usuários (ou ajustar para ativos)
-        // CAC: Assumindo que CAC é um custo mensal amortizado ou investimento mensal
-        // O usuário pediu "gasto em market por click por usuario... versos quantos clientes vão me gerar".
-        // Vamos simplificar como: Investimento Marketing Estimado = CAC * Novos Usuários (estimado como 10% da base ou fixo?)
-        // Para simplificar a visualização mensal, vamos usar CAC * (Total Users * 0.1) como "Crescimento" ou apenas mostrar o custo unitário.
-        // O usuário pediu "valor médio gasto por usuario".
-        // Vamos considerar o CAC como um custo operacional mensal diluído ou investimento.
-        // Vou usar: Custo Marketing = CAC * (Total Users * 0.05) (5% churn/growth replacement)
-        // Ou melhor, apenas listar o CAC unitário e não deduzir do MRR a menos que seja "Marketing Budget".
-        // O usuário disse: "gasto em market... e a partir dai aparece o valor liquido previsto".
-        // Então ele quer deduzir. Vamos assumir um budget de marketing baseado no CAC.
-        // Vamos assumir aquisição de 5% da base ao mês.
+        
+        // 3. Marketing
         final double estimatedMarketingCost = (totalUsers * 0.05) * cacPerUser;
 
         // 3. Impostos
         final double taxes = mrr * (taxRate / 100);
 
         // 4. Lucro Líquido
-        final double totalDeductions = totalProcessingFees + totalAiCost + estimatedMarketingCost + fixedCosts + taxes;
-        final double netProfit = mrr - totalDeductions;
+        // final double totalDeductions = totalProcessingFees + totalAiCost + estimatedMarketingCost + fixedCosts + taxes;
+        // final double netProfit = mrr - totalDeductions;
 
         return InkWell(
-          onTap: () => _showEditDialog(context, settings, firestoreService),
+          onTap: () => _showEditDialog(context, settings, supabaseService),
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.all(24),
@@ -128,45 +121,6 @@ class AdminFinancialCard extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildValueCard({
-    required String title,
-    required String value,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: TextStyle(
-              color: color.withValues(alpha: 0.8),
-              fontSize: 13,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -227,7 +181,7 @@ class AdminFinancialCard extends StatelessWidget {
     );
   }
 
-  void _showEditDialog(BuildContext context, Map<String, dynamic> currentSettings, FirestoreService service) {
+  void _showEditDialog(BuildContext context, Map<String, dynamic> currentSettings, SupabaseService service) {
     final stripeFeePercentCtrl = TextEditingController(text: currentSettings['stripeFeePercent']?.toString() ?? '3.99');
     final stripeFixedFeeCtrl = TextEditingController(text: currentSettings['stripeFixedFee']?.toString() ?? '0.39');
     final storeFeePercentCtrl = TextEditingController(text: currentSettings['storeFeePercent']?.toString() ?? '15.0');

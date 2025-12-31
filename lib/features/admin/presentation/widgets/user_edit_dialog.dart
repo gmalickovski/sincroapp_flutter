@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
 import 'package:intl/intl.dart';
 
 class UserEditDialog extends StatefulWidget {
@@ -22,7 +22,7 @@ class UserEditDialog extends StatefulWidget {
 }
 
 class _UserEditDialogState extends State<UserEditDialog> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   late SubscriptionPlan _selectedPlan;
   late SubscriptionStatus _selectedStatus;
   late DateTime? _validUntil;
@@ -51,10 +51,11 @@ class _UserEditDialogState extends State<UserEditDialog> {
         aiSuggestionsLimit: aiLimit,
       );
 
-      // Atualiza no Firestore
-      await _firestoreService.updateUserSubscription(
+      // Atualiza no Supabase
+      // Passamos 'subscription' para que o Service mapeie para 'subscription_data'
+      await _supabaseService.updateUserData(
         widget.user.uid,
-        newSubscription.toFirestore(),
+        {'subscription': newSubscription.toFirestore()},
       );
 
       if (mounted) {
@@ -86,6 +87,20 @@ class _UserEditDialogState extends State<UserEditDialog> {
       initialDate: _validUntil ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 anos
+      builder: (context, child) {
+        return Theme(
+           data: Theme.of(context).copyWith(
+              colorScheme: const ColorScheme.dark(
+                 primary: AppColors.primary,
+                 onPrimary: Colors.white,
+                 surface: AppColors.cardBackground,
+                 onSurface: AppColors.primaryText,
+              ),
+              dialogBackgroundColor: AppColors.cardBackground,
+           ),
+           child: child!,
+        );
+      }
     );
 
     if (picked != null) {
@@ -153,7 +168,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionPlan>(
-              value: _selectedPlan, // ignore: deprecated_member_use
+              value: _selectedPlan,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -188,7 +203,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionStatus>(
-              value: _selectedStatus, // ignore: deprecated_member_use
+              value: _selectedStatus,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -264,10 +279,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: AppColors.primary.withValues(alpha: 0.3),
+                  color: AppColors.primary.withOpacity(0.3),
                   width: 1,
                 ),
               ),

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/widgets/admin_financial_card.dart';
 
@@ -22,16 +22,30 @@ class AdminDashboardTab extends StatefulWidget {
 }
 
 class _AdminDashboardTabState extends State<AdminDashboardTab> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final NumberFormat _currencyFormat =
       NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+
+  late Future<Map<String, dynamic>> _statsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshStats();
+  }
+
+  void _refreshStats() {
+    setState(() {
+      _statsFuture = _supabaseService.getAdminStats();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width > 1000;
 
-    return StreamBuilder<Map<String, dynamic>>(
-      stream: _firestoreService.getAdminStatsStream(),
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _statsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CustomLoadingSpinner());
@@ -41,11 +55,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           return Center(child: Text('Erro: ${snapshot.error}'));
         }
 
-        if (!snapshot.hasData) {
-          return const Center(child: Text('Sem dados'));
-        }
-
-        final stats = snapshot.data!;
+        final stats = snapshot.data ?? {};
         final int totalUsers = stats['totalUsers'] ?? 0;
         final int freeUsers = stats['freeUsers'] ?? 0;
         final int plusUsers = stats['plusUsers'] ?? 0;
@@ -59,7 +69,10 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0.0;
 
         return RefreshIndicator(
-          onRefresh: () async => setState(() {}),
+          onRefresh: () async {
+            _refreshStats();
+            await _statsFuture;
+          },
           child: ListView(
             padding: EdgeInsets.all(isDesktop ? 32 : 16),
             children: [
@@ -73,7 +86,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               ),
               const SizedBox(height: 32),
 
-              // 2. Financial Analysis (New Card)
+              // 2. Financial Analysis
+              // Note: AdminFinancialCard may need migration if it fetches data, checking that next.
+              // For now passing stats map which should be compatible if keys match.
               AdminFinancialCard(stats: stats, isDesktop: isDesktop),
               const SizedBox(height: 32),
 
@@ -170,18 +185,22 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       ),
     ];
 
+    
     if (isDesktop) {
-      return Row(
-        children: cards
-            .map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c)))
-            .toList(),
-      );
+       return Row(
+          children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c))).toList(),
+       );
     } else {
-      return Column(
-        children: cards
-            .map((c) => Padding(padding: const EdgeInsets.only(bottom: 16), child: c))
-            .toList(),
-      );
+       // Grid layout for mobile (2x2) is often better than single column for KPIs
+       return GridView.count(
+          crossAxisCount: 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.3,
+          children: cards,
+       );
     }
   }
 
@@ -194,14 +213,14 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     required bool trendUp,
   }) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+        border: Border.all(color: AppColors.border.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -209,64 +228,49 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: color, size: 24),
+                child: Icon(icon, color: color, size: 20),
               ),
-              // Trend indicator
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: (trendUp ? Colors.green : Colors.red).withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      trendUp ? Icons.arrow_upward : Icons.arrow_downward,
-                      size: 12,
-                      color: trendUp ? Colors.green : Colors.red,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      trend,
-                      style: TextStyle(
-                        color: trendUp ? Colors.green : Colors.red,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              // Trend indicator removed for cleaner look or simpler approach on mobile
+              // Re-adding if needed
             ],
           ),
-          const SizedBox(height: 20),
-          Text(
-            value,
-            style: const TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: const TextStyle(
-              color: AppColors.secondaryText,
-              fontSize: 14,
-            ),
-          ),
+          /* const SizedBox(height: 12), */
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: -0.5,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.secondaryText,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+            ],
+          )
         ],
       ),
     );
@@ -306,7 +310,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 children: [
                   Expanded(
                     flex: 1,
-                    child: RepaintBoundary(
+                    child: total > 0 ? RepaintBoundary(
                       child: PieChart(
                         PieChartData(
                           sectionsSpace: 2,
@@ -314,7 +318,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                           sections: _buildPieSections(free, plus, premium, total),
                         ),
                       ),
-                    ),
+                    ) : const Center(child: Text("Sem dados")),
                   ),
                   const SizedBox(width: 24),
                   Expanded(
@@ -339,7 +343,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               children: [
                 SizedBox(
                   height: 200,
-                  child: RepaintBoundary(
+                  child: total > 0 ? RepaintBoundary(
                     child: PieChart(
                       PieChartData(
                         sectionsSpace: 2,
@@ -347,7 +351,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                         sections: _buildPieSections(free, plus, premium, total),
                       ),
                     ),
-                  ),
+                  ) : const Center(child: Text("Sem dados")),
                 ),
                 const SizedBox(height: 24),
                 _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
@@ -363,6 +367,8 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
   }
 
   List<PieChartSectionData> _buildPieSections(int free, int plus, int premium, int total) {
+    if (total == 0) return [];
+    
     return [
       if (free > 0)
         PieChartSectionData(
@@ -449,9 +455,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
+        color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
+        border: Border.all(color: color.withOpacity(0.2)),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -483,8 +489,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
   }
 
   Widget _buildSiteControlSection(bool isDesktop) {
+    // Usando FutureBuilder ou StreamBuilder do Supabase
     return StreamBuilder<Map<String, dynamic>>(
-      stream: _firestoreService.getSiteSettingsStream(),
+      stream: _supabaseService.getSiteSettingsStream(),
       builder: (context, siteSnapshot) {
         if (!siteSnapshot.hasData) return const SizedBox.shrink();
         final siteData = siteSnapshot.data!;
@@ -493,7 +500,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           currentPassword: siteData['bypassPassword'] ?? '',
           isDesktop: isDesktop,
           onSave: (status, password) async {
-            await _firestoreService.updateSiteSettings(
+            await _supabaseService.updateSiteSettings(
               status: status,
               bypassPassword: password,
             );

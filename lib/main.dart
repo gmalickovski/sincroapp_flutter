@@ -80,16 +80,30 @@ Future<void> main() async {
   // INICIALIZAÇÃO SUPABASE (USANDO .ENV)
   // ========================================
   try {
-    // Tenta pegar do .env, se não existir usa string vazia (que vai dar erro, mas é o esperado se faltar config)
-    final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? const String.fromEnvironment('SUPABASE_URL');
-    final supabaseAnonKey = dotenv.env['ANON_KEY'] ?? const String.fromEnvironment('SUPABASE_ANON_KEY'); // Note: .env usually uses ANON_KEY, flutter uses SUPABASE_ANON_KEY
+    // Tenta pegar do .env
+    final envUrl = dotenv.env['SUPABASE_URL'];
+    final envKey = dotenv.env['ANON_KEY'] ?? dotenv.env['SUPABASE_ANON_KEY']; // Tenta os dois nomes
 
-    // Fallback para hardcoded se ainda estiver vazio (segurança para o usuário não ficar travado agora)
-    // Mas o ideal é vir do .env
+    debugPrint('🔍 DEBUG ENV: URL found? ${envUrl != null}');
+    debugPrint('🔍 DEBUG ENV: KEY found? ${envKey != null}');
+    if (envKey != null) debugPrint('🔍 DEBUG KEY Start: ${envKey.substring(0, 10)}...');
     
+    // Fallback
+    final fallbackUrl = const String.fromEnvironment('SUPABASE_URL');
+    final fallbackKey = const String.fromEnvironment('SUPABASE_ANON_KEY'); // Note: This might be empty if NOT passed in --dart-define. defaultValue was removed? No, defaultValue is in the key below if I put it there.
+    // Wait, I replaced the defaultValue logic with explicit logic.
+    
+    final finalUrl = envUrl ?? fallbackUrl;
+    // Hardcoded fallback for SAFETY if all else fails (Localhost Dev)
+    final finalKey = envKey ?? (fallbackKey.isNotEmpty ? fallbackKey : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3MTYzMTYyLCJleHAiOjIwODI1MjMxNjIsInJlZiI6InNpbmNyb2FwcF9hbm9uIn0.fxAcgzxGZe3ybA1-Ocu2AhvlNPuM2-ysE05IAcgfBaA');
+
+    debugPrint('🚀 Initializing Supabase with:');
+    debugPrint('   URL: $finalUrl');
+    debugPrint('   KEY: ${finalKey.substring(0, 10)}... (Length: ${finalKey.length})');
+
     await Supabase.initialize(
-      url: supabaseUrl ?? 'https://supabase.studiomlk.com.br', 
-      anonKey: supabaseAnonKey ?? 'chave-invalida-se-nao-tiver-no-env',
+      url: finalUrl.isNotEmpty ? finalUrl : 'https://supabase.studiomlk.com.br', 
+      anonKey: finalKey,
     );
     debugPrint('🚀 Supabase inicializado com sucesso usando .env!');
   } catch (e) {

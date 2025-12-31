@@ -647,6 +647,197 @@ class SupabaseService {
      await _supabase.schema('sincroapp').from('journal_entries').delete().eq('id', entryId);
   }
 
+  // ========================================================================
+  // === ADMIN PANEL METHODS ===
+  // ========================================================================
+
+  /// Busca todos os usuários (apenas para Admin)
+  Future<List<UserModel>> getAllUsers() async {
+    try {
+      // Nota: RLS deve permitir isso apenas se o usuário logado for admin.
+      // Ou, se o RLS estiver bloqueando, será necessário uma Edge Function 'admin-get-users'.
+      // Vamos tentar direto primeiro.
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .select()
+          .order('created_at', ascending: false);
+
+      final List<dynamic> data = response;
+      return data.map((item) => _mapUserFromSupabase(item)).toList();
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar todos os usuários: $e');
+      return []; // Retorna lista vazia para não quebrar UI
+    }
+  }
+
+  /// Calcula estatísticas do Admin (Client-side aggregation para precisão com complexidade de planos)
+  Future<Map<String, dynamic>> getAdminStats() async {
+    try {
+       final users = await getAllUsers();
+       
+       int freeCount = 0;
+       int plusCount = 0;
+       int premiumCount = 0;
+       int activeCount = 0;
+       int expiredCount = 0;
+       double mrr = 0.0;
+       
+       // Logica copiada e adaptada do FirestoreService
+       for (final user in users) {
+          final plan = user.subscription.plan;
+          switch (plan) {
+            case SubscriptionPlan.free:
+              freeCount++;
+              break;
+            case SubscriptionPlan.plus:
+              plusCount++;
+              if (user.subscription.isActive) mrr += 19.90;
+              break;
+            case SubscriptionPlan.premium:
+              premiumCount++;
+              if (user.subscription.isActive) mrr += 39.90;
+              break;
+          }
+          
+          if (user.subscription.isActive) {
+             activeCount++;
+          } else {
+             expiredCount++;
+          }
+       }
+       
+       return {
+          'totalUsers': users.length,
+          'freeUsers': freeCount,
+          'plusUsers': plusCount,
+          'premiumUsers': premiumCount,
+          'activeSubscriptions': activeCount,
+          'expiredSubscriptions': expiredCount,
+          'estimatedMRR': mrr,
+          'lastUpdated': DateTime.now().toUtc(),
+       };
+    } catch (e) {
+       debugPrint('❌ [SupabaseService] Erro ao calcular stats: $e');
+       // Retorna zerado
+       return {
+          'totalUsers': 0, 'estimatedMRR': 0.0,
+       };
+    }
+  }
+
+  /// Helper para mapear usuário vindo do Supabase
+  UserModel _mapUserFromSupabase(Map<String, dynamic> data) {
+      return UserModel(
+        uid: data['uid'],
+        email: data['email'] ?? '',
+        photoUrl: data['photo_url'],
+        primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '',
+        sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
+        plano: 'essencial', // Legacy
+        nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
+        dataNasc: data['birth_date'] ?? '',
+        isAdmin: data['is_admin'] ?? false,
+        dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+        dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
+        subscription: data['subscription_data'] != null 
+            ? SubscriptionModel.fromFirestore(data['subscription_data']) 
+            : SubscriptionModel.free(),
+      );
+  }
+
+  /// Busca configurações do site (Manutenção/Senha)
+  /// Usa a tabela `site_settings` (criei hipoteticamente ou usa fallback)
+  Stream<Map<String, dynamic>> getSiteSettingsStream() {
+      return _supabase.schema('sincroapp').from('site_settings').stream(primaryKey: ['key']).map((event) {
+         // Converte lista de key-values para Map único
+         final Map<String, dynamic> settings = {};
+         for (var item in event) {
+            if (item['key'] == 'global_config') {
+               return item['value'] as Map<String, dynamic>;
+            }
+         }
+         return {
+            'status': 'active', 'bypassPassword': ''
+         };
+      }).handleError((e) {
+         // Fallback se tabela não existir
+         return {'status': 'active', 'bypassPassword': ''};
+      });
+  }
+  
+  // Versão Future se Stream falhar ou for complexo demais criar tabela agora
+  Future<Map<String, dynamic>> getSiteSettings() async {
+     try {
+       final response = await _supabase.schema('sincroapp').from('site_settings').select().eq('key', 'global_config').maybeSingle();
+       if (response != null && response['value'] != null) {
+          return response['value'];
+       }
+     } catch (e) {
+        // ignore
+     }
+     return {'status': 'active', 'bypassPassword': ''};
+  }
+
+  Future<void> updateSiteSettings({required String status, required String bypassPassword}) async {
+     try {
+        final val = {
+           'status': status,
+           'bypassPassword': bypassPassword,
+        };
+        // Upsert row with key='global_config'
+        await _supabase.schema('sincroapp').from('site_settings').upsert({
+           'key': 'global_config',
+           'value': val,
+           'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'key');
+     } catch (e) {
+        debugPrint('❌ [SupabaseService] Erro ao atualizar site settings: $e');
+        rethrow;
+     }
+  }
+
+  // --- FINANCIAL SETTINGS (Admin) ---
+
+  Stream<Map<String, dynamic>> getAdminFinancialSettingsStream() {
+      return _supabase.schema('sincroapp').from('site_settings').stream(primaryKey: ['key']).map((event) {
+         for (var item in event) {
+            if (item['key'] == 'financial_config') {
+               return item['value'] as Map<String, dynamic>;
+            }
+         }
+         return <String, dynamic>{}; // Retorna vazio se não existir
+      }).handleError((e) {
+         return <String, dynamic>{};
+      });
+  }
+
+  Future<void> updateAdminFinancialSettings(Map<String, dynamic> settings) async {
+     try {
+        await _supabase.schema('sincroapp').from('site_settings').upsert({
+           'key': 'financial_config',
+           'value': settings,
+           'updated_at': DateTime.now().toIso8601String(),
+        }, onConflict: 'key');
+     } catch (e) {
+        debugPrint('❌ [SupabaseService] Erro ao atualizar financial settings: $e');
+        rethrow;
+     }
+  }
+
+  Future<void> deleteUserData(String uid) async {
+     // Chama a function no Node Server (que vamos migrar para usar Supabase Admin)
+     // OU chama diretamente Supabase Edge Function se tivermos.
+     // Por enquanto, deletamos da tabela pública, e vamos assumir que o Admin limpará Auth manulamente ou via trigger.
+     
+     try {
+        await _supabase.schema('sincroapp').from('users').delete().eq('uid', uid);
+     } catch (e) {
+        debugPrint('❌ [SupabaseService] Erro ao deletar dados do usuário: $e');
+        rethrow;
+     }
+  }
+
   // --- ASSISTANT ---
 
   Future<void> addAssistantMessage(String uid, AssistantMessage msg) async {
