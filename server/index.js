@@ -665,6 +665,27 @@ app.post('/api/webhooks/stripe', async (req, res) => {
     res.json({ received: true });
 });
 
+// --- HELPER: Send Standardized Event to N8N ---
+const sendN8nEvent = async (eventType, dataObject) => {
+    const webhookUrl = "https://n8n.studiomlk.com.br/webhook/sincroapp";
+
+    // Mimic Stripe Structure
+    const payload = {
+        type: eventType,
+        created: Math.floor(Date.now() / 1000), // Unix timestamp in seconds
+        data: {
+            object: dataObject
+        }
+    };
+
+    try {
+        console.log(`[N8N] Sending ${eventType} to ${webhookUrl}`);
+        await axios.post(webhookUrl, payload);
+    } catch (e) {
+        console.error(`[N8N] Failed to send ${eventType}:`, e.message);
+    }
+};
+
 // --- PASSWORD RESET ---
 app.post('/api/auth/reset-password', async (req, res) => {
     const { email } = req.body;
@@ -692,10 +713,10 @@ app.post('/api/auth/reset-password', async (req, res) => {
         const baseUrl = process.env.APP_BASE_URL || "https://sincroapp.com.br";
         const link = `${baseUrl}/reset-password?token=${token}`;
 
-        await axios.post(N8N_PASSWORD_RESET_WEBHOOK, {
-            event: 'password_reset_requested',
+        await sendN8nEvent('auth.password_reset_requested', {
             email,
-            link
+            link,
+            token
         });
 
         res.json({ success: true });
@@ -711,21 +732,16 @@ app.post('/api/auth/signup-notify', async (req, res) => {
     console.log(`New user signup: ${email} (${userId})`);
 
     try {
-        // Send to N8N (using Transaction Webhook as general system event hook)
-        // Or user specific signup webhook if defined
-        const webhookUrl = process.env.N8N_SIGNUP_WEBHOOK || process.env.N8N_TRANSACTION_WEBHOOK || "https://n8n.studiomlk.com.br/webhook/sincroapp-transaction";
-
-        await axios.post(webhookUrl, {
-            event: 'user_created',
+        await sendN8nEvent('auth.user_created', {
+            id: userId,
+            uid: userId,
             email,
-            userId,
             name,
-            createdAt: new Date().toISOString()
+            display_name: name,
+            created_at: new Date().toISOString()
         });
-        console.log(`Signup notification sent to N8N`);
     } catch (e) {
-        console.error("Failed to send signup notification to N8N:", e.message);
-        // Do not fail the request, just log it
+        // Do not fail
     }
 
     res.json({ success: true });
@@ -736,12 +752,11 @@ app.post('/api/auth/delete-user', async (req, res) => {
     const { userId, email } = req.body;
     console.log(`User deletion requested for ${userId}`);
 
-    // N8N hook for offboarding
     try {
-        await axios.post(N8N_TRANSACTION_WEBHOOK, {
-            event: 'user_deleted',
-            email,
-            userId
+        await sendN8nEvent('auth.user_deleted', {
+            id: userId,
+            uid: userId,
+            email
         });
     } catch (e) { }
 
