@@ -51,7 +51,12 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Fail gracefully if keys are missing (for dev)
 let supabase;
 if (supabaseUrl && supabaseServiceKey) {
-    supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // UPDATED: Target 'sincroapp' schema directly
+    supabase = createClient(supabaseUrl, supabaseServiceKey, {
+        db: {
+            schema: 'sincroapp'
+        }
+    });
 } else {
     console.warn('[WARNING] Supabase URL or Service Key missing. Database operations will fail.');
 }

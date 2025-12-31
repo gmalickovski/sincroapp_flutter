@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
 
-class AdminSidebar extends StatelessWidget {
+class AdminSidebar extends StatefulWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
 
@@ -12,10 +13,28 @@ class AdminSidebar extends StatelessWidget {
   });
 
   @override
+  State<AdminSidebar> createState() => _AdminSidebarState();
+}
+
+class _AdminSidebarState extends State<AdminSidebar> {
+  // Admin sidebar is always expanded on desktop for now, matching the requested image 
+  // where it looks like a permanent sidebar. Or we can make it collapsible if desired.
+  // The images show a wide sidebar.
+  final bool _isExpanded = true; 
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       width: 250,
-      color: AppColors.cardBackground,
+      decoration: BoxDecoration(
+        color: const Color(0xff111827), // Dark background matching Dashboard
+        border: Border(
+          right: BorderSide(
+            color: AppColors.border.withValues(alpha: 0.5), 
+            width: 1
+          ),
+        ),
+      ),
       child: Column(
         children: [
           const SizedBox(height: 32),
@@ -27,16 +46,16 @@ class AdminSidebar extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.2),
+                    color: AppColors.primary, // Solid primary color for logo bg
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.admin_panel_settings, color: AppColors.primary),
+                  child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Text(
                   'Sincro Admin',
                   style: TextStyle(
-                    color: AppColors.primaryText,
+                    color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -46,73 +65,162 @@ class AdminSidebar extends StatelessWidget {
           ),
           const SizedBox(height: 48),
           
-          // Menu Items
-          _buildMenuItem(
-            index: 0,
-            icon: Icons.dashboard_outlined,
-            selectedIcon: Icons.dashboard,
-            label: 'Dashboard',
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                _buildNavItem(
+                  icon: Icons.dashboard_outlined,
+                  label: 'Dashboard',
+                  index: 0,
+                  isSelected: widget.selectedIndex == 0,
+                  onTap: () => widget.onItemSelected(0),
+                ),
+                const SizedBox(height: 8),
+                _buildNavItem(
+                  icon: Icons.people_outline,
+                  label: 'Usuários',
+                  index: 1,
+                  isSelected: widget.selectedIndex == 1,
+                  onTap: () => widget.onItemSelected(1),
+                ),
+              ],
+            ),
           ),
-          _buildMenuItem(
-            index: 1,
-            icon: Icons.people_outline,
-            selectedIcon: Icons.people,
-            label: 'Usuários',
-          ),
-          
-          const Spacer(),
           
           // Bottom Actions
-          const Divider(color: AppColors.border),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Sair', style: TextStyle(color: Colors.red)),
-            onTap: () {
-              // Handle logout logic if passed or just pop
-              Navigator.of(context).pop();
-            },
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
+            child: Column(
+              children: [
+                const Divider(color: Color(0x804B5563), height: 1),
+                const SizedBox(height: 16),
+                
+                // Back to App Button
+                _buildNavItem(
+                  icon: Icons.arrow_back,
+                  label: 'Voltar para o App',
+                  index: 98,
+                  isSelected: false,
+                  onTap: () {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+                
+                // Logout Button
+                _buildNavItem(
+                  icon: Icons.logout,
+                  label: 'Sair',
+                  index: 99,
+                  isSelected: false,
+                  isLogout: true,
+                  onTap: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItem({
-    required int index,
+  Widget _buildNavItem({
     required IconData icon,
-    required IconData selectedIcon,
     required String label,
+    required int index,
+    required bool isSelected,
+    required VoidCallback onTap,
+    bool isLogout = false,
   }) {
-    final isSelected = selectedIndex == index;
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => onItemSelected(index),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+    return _SidebarItem(
+      icon: icon,
+      text: label,
+      isSelected: isSelected,
+      isLogout: isLogout,
+      onTap: onTap,
+    );
+  }
+}
+
+// Internal Item Widget (Ported from DashboardSidebar for consistency)
+class _SidebarItem extends StatefulWidget {
+  final VoidCallback onTap;
+  final bool isSelected;
+  final bool isLogout;
+  final IconData icon;
+  final String text;
+
+  const _SidebarItem({
+    required this.onTap,
+    required this.isSelected,
+    this.isLogout = false,
+    required this.icon,
+    required this.text,
+  });
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    Color textColor;
+    Color iconColor;
+    Color? hoverBgColor;
+    Color? hoverTextColor = Colors.white;
+
+    if (widget.isLogout) {
+      textColor = _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
+      iconColor = textColor;
+      hoverBgColor = const Color(0x33ef4444);
+    } else if (widget.isSelected) {
+      textColor = Colors.white;
+      iconColor = Colors.white;
+      hoverBgColor = const Color(0xff7c3aed);
+    } else {
+      textColor = const Color(0xff9ca3af); // Gray text for unselected
+      iconColor = textColor;
+      hoverBgColor = const Color(0xff1f2937); // Dark gray hover
+    }
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
           decoration: BoxDecoration(
-            border: isSelected
-                ? const Border(
-                    right: BorderSide(color: AppColors.primary, width: 3),
-                  )
-                : null,
-            color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : null,
+            color: widget.isSelected
+                ? const Color(0xff7c3aed) // Purple when selected
+                : (_isHovered ? hoverBgColor : Colors.transparent),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
-              Icon(
-                isSelected ? selectedIcon : icon,
-                color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                size: 22,
-              ),
-              const SizedBox(width: 16),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  fontSize: 15,
+              Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.text,
+                  style: TextStyle(
+                    color: _isHovered ? hoverTextColor : textColor,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 14,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
