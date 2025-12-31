@@ -8,15 +8,15 @@ import 'package:sincro_app_flutter/features/assistant/services/assistant_service
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // Supabase
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_compatibility_form.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_screen.dart';
+import 'package:uuid/uuid.dart'; // Uuid
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -70,7 +70,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Controllers & Services ---
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _firestore = FirestoreService();
+  final _supabase = SupabaseService(); // Usando Supabase
   final _speechService = SpeechService();
   final _inputFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {}; // Track messages that have already animated
@@ -193,7 +193,7 @@ class _AssistantPanelState extends State<AssistantPanel>
           AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     });
 
-    _firestore.addAssistantMessage(widget.userData.uid,
+    _supabase.addAssistantMessage(widget.userData.uid,
         AssistantMessage(role: 'user', content: q, time: DateTime.now()));
     _controller.clear();
     _inputFocusNode.unfocus();
@@ -237,10 +237,10 @@ class _AssistantPanelState extends State<AssistantPanel>
               nomeCompleto: 'Indefinido', dataNascimento: '1900-01-01')
           .calcular();
 
-      final tasks = await _firestore.getRecentTasks(user.uid, limit: 30);
-      final goals = await _firestore.getActiveGoals(user.uid);
+      final tasks = await _supabase.getRecentTasks(user.uid, limit: 30);
+      final goals = await _supabase.getActiveGoals(user.uid);
       final recentJournal =
-          await _firestore.getJournalEntriesForMonth(user.uid, DateTime.now());
+          await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
 
       final ans = await AssistantService.ask(
         question: q,
@@ -265,7 +265,7 @@ class _AssistantPanelState extends State<AssistantPanel>
         });
       }
 
-      _firestore.addAssistantMessage(
+      _supabase.addAssistantMessage(
           widget.userData.uid,
           AssistantMessage(
               role: 'assistant',
@@ -403,15 +403,15 @@ class _AssistantPanelState extends State<AssistantPanel>
       {bool fromAuto = false, int messageIndex = -1, int actionIndex = -1}) async {
 
     // 1. Check for Navigation Action
-    if (action.data?['action'] == 'navigate_to_goal') {
-      final goalId = action.data?['goalId'] as String?;
+    if (action.data['action'] == 'navigate_to_goal') {
+      final goalId = action.data['goalId'] as String?;
       if (goalId != null) {
         try {
           // Show loading indicator if needed, or just navigate
           // Ideally we should fetch the goal, but for now let's assume we can fetch it or pass it if available.
           // Since we only have ID, we need to fetch it.
           // Fetch all active goals and find the one with the matching ID
-          final goals = await _firestore.getActiveGoals(widget.userData.uid);
+          final goals = await _supabase.getActiveGoals(widget.userData.uid);
           final goal = goals.cast<Goal?>().firstWhere(
             (g) => g?.id == goalId,
             orElse: () => null,
@@ -462,7 +462,7 @@ class _AssistantPanelState extends State<AssistantPanel>
           dueDate: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
           completed: false,
         );
-        await _firestore.addTask(widget.userData.uid, newTask);
+        await _supabase.addTask(widget.userData.uid, newTask);
       } else if (action.type == AssistantActionType.analyze_harmony) {
         final data = action.data;
         final partnerName = data['partner_name'] ?? action.title ?? '';
@@ -563,8 +563,8 @@ class _AssistantPanelState extends State<AssistantPanel>
         return "❌ Não foi possível calcular a numerologia para a análise. Verifique os dados.";
       }
 
-      final userMissao = userNumerology.numeros['missao'] as int? ?? 0;
-      final partnerMissao = partnerNumerology.numeros['missao'] as int? ?? 0;
+      final userMissao = userNumerology.numeros['missao'] ?? 0;
+      final partnerMissao = partnerNumerology.numeros['missao'] ?? 0;
 
       final userHarmony = userNumerology.estruturas['harmoniaConjugal'] as Map<String, dynamic>? ?? {};
 
@@ -627,22 +627,20 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
 
   Future<void> _handleGoalFormSubmit(Goal goal, int messageIndex) async {
     try {
-      // 1. Gerar ID e Salvar a meta
-      final docRef = FirebaseFirestore.instance.collection('users').doc(widget.userData.uid).collection('goals').doc();
-      final goalId = docRef.id;
+      // 1. Gerar ID e Salvar a meta (Supabase)
+      final goalId = const Uuid().v4(); // Gera UUID localmente
       
       // Cria a meta com o ID gerado e SEM as subtasks internas (pois serão salvas como Tasks externas)
       // Mas mantemos subTasks no objeto local para iterar abaixo
       final goalToSave = goal.copyWith(id: goalId, subTasks: []);
       
-      await docRef.set(goalToSave.toFirestore());
+      await _supabase.addGoal(widget.userData.uid, goalToSave);
 
       // 2. Salvar os marcos como Tarefas
-      final firestoreService = FirestoreService();
       int addedCount = 0;
       for (final subTask in goal.subTasks) {
         final newTask = TaskModel(
-          id: '', // Será gerado pelo addTask
+          id: '', // Será gerado pelo Supabase no insert (ou ignorado)
           text: subTask.title,
           completed: false,
           createdAt: DateTime.now(),
@@ -651,7 +649,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
           journeyTitle: goal.title,
           goalId: goalId,
         );
-        await firestoreService.addTask(widget.userData.uid, newTask);
+        await _supabase.addTask(widget.userData.uid, newTask);
         addedCount++;
       }
 
@@ -787,9 +785,9 @@ INSTRUÇÕES:
 ''';
 
       // 7. Fetch Context
-      final tasks = await _firestore.getRecentTasks(user.uid, limit: 30);
-      final goals = await _firestore.getActiveGoals(user.uid);
-      final recentJournal = await _firestore.getJournalEntriesForMonth(user.uid, DateTime.now());
+      final tasks = await _supabase.getRecentTasks(user.uid, limit: 30);
+      final goals = await _supabase.getActiveGoals(user.uid);
+      final recentJournal = await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
 
       // 8. Ask AI
       final ans = await AssistantService.ask(
@@ -815,7 +813,7 @@ INSTRUÇÕES:
         });
       }
 
-      _firestore.addAssistantMessage(
+      _supabase.addAssistantMessage(
           widget.userData.uid,
           AssistantMessage(
               role: 'assistant',
@@ -847,7 +845,7 @@ INSTRUÇÕES:
   Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
   final isExecuted = action.isExecuted;
   final isExecuting = action.isExecuting;
-  final isNavigationAction = action.data?['action'] == 'navigate_to_goal';
+  final isNavigationAction = action.data['action'] == 'navigate_to_goal';
   final isDisabled = !isNavigationAction && (isExecuted || isExecuting || anyActionExecuted);
 
     String label = action.title ?? 'Ação';

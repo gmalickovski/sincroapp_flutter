@@ -1,7 +1,7 @@
 // lib/main.dart
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:firebase_auth/firebase_auth.dart'; // Removido
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -18,18 +18,17 @@ import 'package:sincro_app_flutter/features/authentication/presentation/user_det
 import 'package:sincro_app_flutter/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
 // --- INÍCIO DAS NOVAS IMPORTAÇÕES ---
 import 'package:sincro_app_flutter/services/notification_service.dart';
 import 'package:sincro_app_flutter/services/payment_service.dart';
-// Removidos imports não utilizados após simplificação do fluxo de autenticação
+import 'package:supabase_flutter/supabase_flutter.dart'; // Import completo (User vem daqui)
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 // --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 // Chave do Site reCAPTCHA v3 para Web
-// Em produção, injete via --dart-define=RECAPTCHA_V3_SITE_KEY=... no build.
 const String kReCaptchaSiteKey = String.fromEnvironment(
   'RECAPTCHA_V3_SITE_KEY',
   defaultValue: '6LfPrg8sAAAAAEM0C6vuU0H9qMlXr89zr553zi_B',
@@ -39,45 +38,30 @@ const String kReCaptchaSiteKey = String.fromEnvironment(
 // FUNÇÃO DE CONEXÃO COM EMULADORES
 // ========================================
 Future<void> _connectToEmulators() async {
-  // Define o host baseado na plataforma
-  String host;
-  if (kIsWeb) {
-    host = 'localhost';
-  } else if (defaultTargetPlatform == TargetPlatform.android) {
-    // Emulador Android acessa host através de 10.0.2.2
-    host = '10.0.2.2';
-  } else {
-    host = 'localhost';
-  }
+  String host = kIsWeb ? 'localhost' : (defaultTargetPlatform == TargetPlatform.android ? '10.0.2.2' : 'localhost');
 
-  // Portas (conforme seu firebase.json)
   const int firestorePort = 8081;
-  const int authPort = 9098;
+  // const int authPort = 9098; // Auth Emulator não usado com Supabase
   const int functionsPort = 5002;
 
   FirebaseFirestore.instance.useFirestoreEmulator(host, firestorePort);
 
-  await FirebaseAuth.instance.useAuthEmulator(host, authPort);
+  // await FirebaseAuth.instance.useAuthEmulator(host, authPort); // Removido
 
   FirebaseFunctions.instanceFor(region: 'us-central1')
       .useFunctionsEmulator(host, functionsPort);
 
   await FirebaseStorage.instance.useStorageEmulator(host, 9199);
 }
-// ========================================
-// FIM DA FUNÇÃO
-// ========================================
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
 
-  // Inicializa Firebase
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inicializa Stripe
   try {
     await PaymentService.initialize();
   } catch (e) {
@@ -85,74 +69,59 @@ Future<void> main() async {
   }
 
   // ========================================
-  // EMULADOR - DECIDIR E CONECTAR PRIMEIRO
+  // INICIALIZAÇÃO SUPABASE
   // ========================================
-  // AUTOMÁTICO: Usa emuladores apenas em Debug Mode.
-  // Em Release Mode (flutter build), automaticamente usa Produção.
-  // Você não precisa mais mudar manualmente esta variável!
-  final bool useEmulators = kDebugMode; // Automático: true em debug, false em release
+  try {
+    await Supabase.initialize(
+      url: const String.fromEnvironment(
+        'SUPABASE_URL', 
+        defaultValue: 'https://supabase.studiomlk.com.br',
+      ),
+      anonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a',
+      ),
+    );
+    debugPrint('🚀 Supabase inicializado com sucesso!');
+  } catch (e) {
+    debugPrint('❌ Erro ao inicializar Supabase: $e');
+  }
+
+  const bool useEmulators = kDebugMode; 
 
   if (kDebugMode && useEmulators) {
     try {
       await _connectToEmulators();
-      debugPrint('🔧 Conectado aos emuladores do Firebase (Auth, Firestore, Functions, Storage)');
+      debugPrint('🔧 Conectado aos emuladores do Firebase (Firestore, Functions, Storage)');
     } catch (e) {
       debugPrint('⚠️ Falha ao conectar aos emuladores: $e');
     }
   }
-  // ========================================
-  // FIM EMULADOR
-  // ========================================
 
-  // ========================================
-  // APP CHECK - APENAS EM PRODUÇÃO (NÃO EMULADOR)
-  // ========================================
-  // App Check só deve ser ativado quando NÃO estamos usando emuladores.
-  // No ambiente de teste/emulador, pulamos completamente o App Check.
-  // ========================================
+  // APP CHECK (Pulo se estiver em emulação, mas mantendo lógica original)
   if (!(kDebugMode && useEmulators)) {
     try {
       debugPrint('🔧 Ativando App Check (Produção)...');
-
       if (kIsWeb) {
         await FirebaseAppCheck.instance.activate(
           webProvider: ReCaptchaV3Provider(kReCaptchaSiteKey),
         );
-        debugPrint('✅ App Check ativado para WEB (reCAPTCHA v3)');
       } else if (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS) {
         await FirebaseAppCheck.instance.activate(
           appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
         );
-        debugPrint('✅ App Check ativado para iOS/macOS');
       } else {
         await FirebaseAppCheck.instance.activate(
           androidProvider: AndroidProvider.debug,
           appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
         );
-        debugPrint('✅ App Check ativado para Android');
-      }
-
-      if (kIsWeb) {
-        try {
-          await FirebaseAppCheck.instance.getToken();
-          debugPrint('✅ Token App Check obtido');
-        } catch (e) {
-          debugPrint('⚠️ Erro ao obter token App Check: $e');
-        }
       }
     } catch (e, s) {
       debugPrint('❌ ERRO ao ativar App Check: $e');
-      debugPrint('Stack trace: $s');
     }
-  } else {
-    debugPrint('⏭️ App Check DESATIVADO (usando emuladores)');
   }
-  // ========================================
-  // FIM APP CHECK
-  // ========================================
 
-  // Inicializa o serviço de notificação (apenas mobile)
   if (!kIsWeb) {
     try {
       await NotificationService.instance.init();
@@ -245,33 +214,29 @@ class AuthCheck extends StatefulWidget {
 class _AuthCheckState extends State<AuthCheck> {
   late final StreamSubscription<User?> _authSubscription;
   final AuthRepository _authRepository = AuthRepository();
-  User? _firebaseUser;
+  User? _user;
   bool _isLoading = true;
-  bool _hasNavigated = false; // Previne navegações múltiplas
-
-  // Removido agendamento de notificações do fluxo inicial web para evitar interferência
+  bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
     _authSubscription = _authRepository.authStateChanges.listen((user) {
       debugPrint('[AuthCheck] ========== authStateChanges EMISSÃO ==========');
-      debugPrint('[AuthCheck] user recebido: ${user?.uid ?? "NULL"}');
+      debugPrint('[AuthCheck] user recebido: ${user?.id ?? "NULL"}');
       debugPrint('[AuthCheck] email: ${user?.email ?? "N/A"}');
       if (mounted) {
         setState(() {
-          _firebaseUser = user;
+          _user = user;
           _isLoading = false;
           _hasNavigated = false; // Reset ao mudar usuário
         });
         debugPrint(
-            '[AuthCheck] setState concluído. _firebaseUser=${_firebaseUser?.uid}, _isLoading=$_isLoading');
+            '[AuthCheck] setState concluído. _user=${_user?.id}, _isLoading=$_isLoading');
       }
       debugPrint(
           '[AuthCheck] ================================================');
     });
-    debugPrint(
-        '[AuthCheck] initState concluído. currentUser inicial=${FirebaseAuth.instance.currentUser?.uid}');
   }
 
   @override
@@ -299,46 +264,40 @@ class _AuthCheckState extends State<AuthCheck> {
     });
   }
 
-  // Removido agendamento antecipado para simplificar fluxo de autenticação
-
   @override
   Widget build(BuildContext context) {
-    final firestoreService = FirestoreService();
+    final supabaseService = SupabaseService();
 
     if (_isLoading) {
-      return Scaffold(
-        key: const ValueKey('loading'),
+      return const Scaffold(
+        key: ValueKey('loading'),
         backgroundColor: AppColors.background,
-        body: const Center(
+        body: Center(
           child: CircularProgressIndicator(color: AppColors.primary),
         ),
       );
     }
 
-    if (_firebaseUser == null) {
+    if (_user == null) {
       debugPrint('[AuthCheck] Nenhum usuário autenticado -> LoginScreen');
-      return LoginScreen(key: const ValueKey('login'));
+      return const LoginScreen(key: ValueKey('login'));
     }
 
     debugPrint(
-        '[AuthCheck] Usuário autenticado: ${_firebaseUser!.uid}, carregando dados Firestore...');
+        '[AuthCheck] Usuário autenticado: ${_user!.id}, carregando dados do Supabase...');
 
     return FutureBuilder<UserModel?>(
-      key: ValueKey(
-          _firebaseUser!.uid), // CRITICAL: força rebuild quando usuário muda
-      future: firestoreService.getUserData(_firebaseUser!.uid),
+      key: ValueKey(_user!.id), 
+      future: supabaseService.getUserData(_user!.id),
       builder: (context, snapshot) {
         debugPrint(
             '[AuthCheck] FutureBuilder - connectionState: ${snapshot.connectionState}');
-        debugPrint(
-            '[AuthCheck] FutureBuilder - hasData: ${snapshot.hasData}, hasError: ${snapshot.hasError}');
-
+        
         if (snapshot.connectionState == ConnectionState.waiting) {
-          debugPrint('[AuthCheck] Aguardando dados do Firestore...');
-          return Scaffold(
-            key: const ValueKey('loading-user'),
+          return const Scaffold(
+            key: ValueKey('loading-user'),
             backgroundColor: AppColors.background,
-            body: const Center(
+            body: Center(
               child: CustomLoadingSpinner(),
             ),
           );
@@ -346,11 +305,14 @@ class _AuthCheckState extends State<AuthCheck> {
         if (snapshot.hasError) {
           debugPrint(
               '[AuthCheck] Erro ao carregar UserModel: ${snapshot.error} -> Dashboard');
+          // Em caso de erro, tentamos ir para Dashboard mesmo assim (pode ser erro temporário)
+          // Ou então redirecionar para Login se for erro de Auth?
+          // Vou manter Dashboard por enquanto.
           _navigateToScreen(const DashboardScreen(), 'DashboardScreen (error)');
-          return Scaffold(
-            key: const ValueKey('navigating'),
+          return const Scaffold(
+            key: ValueKey('navigating'),
             backgroundColor: AppColors.background,
-            body: const Center(
+            body: Center(
               child: CustomLoadingSpinner(),
             ),
           );
@@ -360,51 +322,48 @@ class _AuthCheckState extends State<AuthCheck> {
         if (userModel == null) {
           debugPrint('[AuthCheck] UserModel null -> UserDetails');
           _navigateToScreen(
-            UserDetailsScreen(firebaseUser: _firebaseUser!),
+            UserDetailsScreen(user: _user!),
             'UserDetailsScreen (null)',
           );
-          return Scaffold(
-            key: const ValueKey('navigating'),
+          return const Scaffold(
+            key: ValueKey('navigating'),
             backgroundColor: AppColors.background,
-            body: const Center(
+            body: Center(
               child: CustomLoadingSpinner(),
             ),
           );
         }
 
-        // Valida dados essenciais do usuário para navegação
         final String nomeAnalise = (userModel.nomeAnalise).trim();
         final String dataNasc = (userModel.dataNasc).trim();
         final bool dataValida =
-            RegExp(r'^\d{2}/\d{2}/\d{4} ?$').hasMatch(dataNasc) ||
+            RegExp(r'^\d{2}/\d{2}/\d{4} ?$').hasMatch(dataNasc) ||
                 RegExp(r'^\d{2}/\d{2}/\d{4}$')
-                    .hasMatch(dataNasc); // salvaguarda contra chars estranhos
+                    .hasMatch(dataNasc); 
 
         if (nomeAnalise.isEmpty || dataNasc.isEmpty || !dataValida) {
           debugPrint(
-              '[AuthCheck] Dados incompletos -> UserDetails | nomeAnalise="${nomeAnalise.isEmpty ? 'VAZIO' : nomeAnalise}" dataNasc="${dataNasc.isEmpty ? 'VAZIO' : dataNasc}" dataValida=$dataValida');
+              '[AuthCheck] Dados incompletos -> UserDetails');
           _navigateToScreen(
-            UserDetailsScreen(firebaseUser: _firebaseUser!),
+            UserDetailsScreen(user: _user!),
             'UserDetailsScreen (missing-or-invalid)',
           );
-          return Scaffold(
-            key: const ValueKey('navigating'),
+          return const Scaffold(
+            key: ValueKey('navigating'),
             backgroundColor: AppColors.background,
-            body: const Center(
+            body: Center(
               child: CustomLoadingSpinner(),
             ),
           );
         }
 
         debugPrint('[AuthCheck] UserModel válido -> Dashboard');
-        debugPrint(
-            '[AuthCheck] 🎯 NAVEGANDO para DashboardScreen via Navigator');
         _navigateToScreen(const DashboardScreen(), 'DashboardScreen');
 
-        return Scaffold(
-          key: const ValueKey('navigating'),
+        return const Scaffold(
+          key: ValueKey('navigating'),
           backgroundColor: AppColors.background,
-          body: const Center(
+          body: Center(
             child: CustomLoadingSpinner(),
           ),
         );
@@ -412,5 +371,3 @@ class _AuthCheckState extends State<AuthCheck> {
     );
   }
 }
-
-// Removida extensão auxiliar não utilizada

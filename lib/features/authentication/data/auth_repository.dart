@@ -1,51 +1,54 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'dart:async';
+import 'package:sincro_app_flutter/common/constants/api_constants.dart';
 
 class AuthRepository {
-  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final GoTrueClient _auth = Supabase.instance.client.auth;
 
-  // Stream para o AuthCheck em main.dart
-  Stream<User?> get authStateChanges => _firebaseAuth.authStateChanges();
-
-  // Método para obter o utilizador atual para o Dashboard
-  User? getCurrentUser() {
-    return _firebaseAuth.currentUser;
+  // Stream para o AuthCheck. Mapeia AuthState para User?
+  Stream<User?> get authStateChanges {
+     return _auth.onAuthStateChange.map((state) {
+        return state.session?.user;
+     });
   }
+  
+  User? get currentUser => _auth.currentUser;
 
   // Método para a LoginScreen
-  Future<void> signInWithEmailAndPassword({
+  Future<AuthResponse> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
     try {
       debugPrint('[AuthRepository] Iniciando signIn email=${email.trim()}');
-      await _firebaseAuth.signInWithEmailAndPassword(
+      final response = await _auth.signInWithPassword(
         email: email.trim(),
         password: password.trim(),
       );
-      debugPrint(
-          '[AuthRepository] signIn concluído. currentUser=${_firebaseAuth.currentUser?.uid}');
+      debugPrint('[AuthRepository] signIn concluído. currentUser=${response.user?.id}');
+      return response;
     } catch (e) {
       debugPrint('[AuthRepository] Erro no signIn: $e');
       rethrow;
     }
   }
 
-  // Método para a RegisterScreen (o que estava em falta)
-  Future<void> createUserWithEmailAndPassword({
+  // Método para a RegisterScreen
+  Future<AuthResponse> createUserWithEmailAndPassword({
     required String email,
     required String password,
     required String displayName,
   }) async {
     try {
-      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
+      final response = await _auth.signUp(
         email: email.trim(),
         password: password.trim(),
+        data: {'full_name': displayName.trim()}, 
       );
-      // Atualiza o nome de exibição do utilizador recém-criado
-      await userCredential.user?.updateDisplayName(displayName.trim());
+      return response;
     } catch (e) {
       rethrow;
     }
@@ -53,22 +56,26 @@ class AuthRepository {
 
   // Método para o DashboardScreen
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    await _auth.signOut();
   }
 
   // Envia email de redefinição de senha
   Future<void> sendPasswordResetEmail({required String email}) async {
+    final url = Uri.parse(ApiConstants.resetPassword);
+
     try {
-      // Chama a Cloud Function personalizada para enviar via n8n
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('requestPasswordReset');
-      await callable.call({'email': email.trim()});
+      debugPrint('[AuthRepository] Requesting password reset via REST: $url');
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email.trim()}),
+      );
+
+      if (response.statusCode != 200) {
+        throw 'Falha ao solicitar reset (${response.statusCode}): ${response.body}';
+      }
     } catch (e) {
-      // Fallback: Se a função falhar (ex: offline), tenta o método nativo
-      // Mas idealmente queremos forçar o n8n.
-      debugPrint('Erro na função requestPasswordReset: $e');
-      // Opcional: Descomente abaixo se quiser fallback
-      // await _firebaseAuth.sendPasswordResetEmail(email: email.trim());
+      debugPrint('Erro na função requestPasswordReset (REST): $e');
       rethrow;
     }
   }

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Obrigado! - SincroApp</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/css/style.css">
+    <style>
+        body {
+            background-color: #0F1116;
+            /* AppColors.background */
+            color: #FFFFFF;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 500px;
+            padding: 40px;
+            background: #1C1E26;
+            /* AppColors.cardBackground */
+            border-radius: 24px;
+            border: 1px solid #2D303A;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .icon-wrapper {
+            width: 80px;
+            height: 80px;
+            background: rgba(142, 116, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+        }
+
+        .icon-wrapper span {
+            font-size: 40px;
+            color: #8E74FF;
+        }
+
+        h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+
+        p {
+            color: #A0A0A0;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+
+        .btn {
+            display: inline-block;
+            background: #8E74FF;
+            color: white;
+            text-decoration: none;
+            padding: 16px 32px;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #775de0;
+            transform: translateY(-2px);
+        }
+    </style>
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <div class="icon-wrapper">
+            <span class="material-icons">check_circle</span>
+        </div>
+        <h1>Pagamento Confirmado!</h1>
+        <p>Sua assinatura foi ativada com sucesso.<br>Agora você tem acesso a todos os recursos exclusivos do SincroApp.
+        </p>
+        <a href="/app" class="btn">Voltar para o App</a>
+    </div>
+</body>
+
+</html>

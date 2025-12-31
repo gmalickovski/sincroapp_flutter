@@ -10,7 +10,7 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_go
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_card.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
@@ -25,8 +25,8 @@ class GoalsScreen extends StatefulWidget {
 }
 
 class _GoalsScreenState extends State<GoalsScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
-  final String _userId = AuthRepository().getCurrentUser()?.uid ?? '';
+  final SupabaseService _supabaseService = SupabaseService();
+  final String _userId = AuthRepository().currentUser?.id ?? '';
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
   static const double kDesktopBreakpoint = 768.0;
@@ -144,7 +144,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
     // 2. Se confirmado, deletar do Firestore
     if (confirmDelete == true) {
       try {
-        await _firestoreService.deleteGoal(_userId, goal.id);
+        await _supabaseService.deleteGoal(_userId, goal.id);
         messenger.showSnackBar(
           const SnackBar(
             content: Text('Jornada excluída com sucesso.'),
@@ -193,7 +193,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                   _buildHeader(),
                   Expanded(
                     child: StreamBuilder<List<Goal>>(
-                      stream: _firestoreService.getGoalsStream(_userId),
+                      stream: _supabaseService.getGoalStream(_userId),
                       builder: (context, snapshot) {
                   if (snapshot.connectionState ==
                           ConnectionState.waiting &&

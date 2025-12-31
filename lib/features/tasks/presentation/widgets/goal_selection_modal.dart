@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 // REMOVIDO: Sanitizer não é mais necessário aqui
 // REMOVIDO: Tela de criação não é mais chamada daqui
 
@@ -25,7 +25,7 @@ class GoalSelectionModal extends StatefulWidget {
 
 class _GoalSelectionModalState extends State<GoalSelectionModal> {
   late Future<List<Goal>> _goalsFuture;
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   // --- REMOVIDO: Toda a lógica de criação de meta foi removida daqui ---
   // bool _isCreatingNewGoal = false;
@@ -38,7 +38,7 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
   }
 
   void _loadGoals() {
-    _goalsFuture = _firestoreService.getActiveGoals(widget.userId);
+    _goalsFuture = _supabaseService.getActiveGoals(widget.userId);
   }
 
   // --- REMOVIDO: dispose, _handleCreateGoal ---

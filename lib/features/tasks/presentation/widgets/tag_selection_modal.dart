@@ -1,7 +1,7 @@
 // lib/features/tasks/presentation/widgets/tag_selection_modal.dart
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 
 class TagSelectionModal extends StatefulWidget {
@@ -20,7 +20,7 @@ class TagSelectionModal extends StatefulWidget {
 
 class _TagSelectionModalState extends State<TagSelectionModal> {
   late Future<List<String>> _tagsFuture;
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   final _newTagController = TextEditingController();
   bool _isCreatingNewTag = false;
@@ -34,7 +34,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
 
   void _loadTags() {
     // (Mantida a lógica de buscar tags recentes ou de 'getTags')
-    _tagsFuture = _firestoreService.getRecentTasks(widget.userId).then((tasks) {
+    _tagsFuture = _supabaseService.getRecentTasks(widget.userId).then((tasks) {
       final tagSet = <String>{};
       for (var task in tasks) {
         tagSet.addAll(task.tags);

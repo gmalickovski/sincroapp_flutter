@@ -1,17 +1,17 @@
 // lib/features/authentication/presentation/user_details/user_details_screen.dart
 
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
 
 class UserDetailsScreen extends StatefulWidget {
-  final User firebaseUser;
-  const UserDetailsScreen({super.key, required this.firebaseUser});
+  final User user;
+  const UserDetailsScreen({super.key, required this.user});
 
   @override
   State<UserDetailsScreen> createState() => _UserDetailsScreenState();
@@ -21,7 +21,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   int _step = 1; // 1: Boas-vindas, 2: Formulário, 3: Carregando
   final _nomeAnaliseController = TextEditingController();
   final _dataNascController = TextEditingController();
-  final _firestoreService = FirestoreService();
+  final _supabaseService = SupabaseService();
   bool _isLoading = false; // Usado para desabilitar botão durante o save
 
   @override
@@ -58,12 +58,12 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     });
 
     try {
-      final displayName = widget.firebaseUser.displayName?.trim() ?? '';
+      final displayName = widget.user.userMetadata?['full_name'] ?? '';
       
       // Lógica de Fallback: Se o displayName vier vazio (erro no cadastro),
       // usamos o nome de nascimento inserido pelo usuário.
-      final nameSource = displayName.isNotEmpty 
-          ? displayName 
+      final nameSource = displayName.toString().isNotEmpty 
+          ? displayName.toString() 
           : _nomeAnaliseController.text.trim();
 
       final nameParts = nameSource.split(' ');
@@ -72,20 +72,20 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
 
       final newUser = UserModel(
-        uid: widget.firebaseUser.uid,
-        email: widget.firebaseUser.email ?? '',
-        photoUrl: widget.firebaseUser.photoURL,
+        uid: widget.user.id,
+        email: widget.user.email ?? '',
+        photoUrl: null,
         primeiroNome: primeiroNome,
         sobrenome: sobrenome,
         nomeAnalise: _nomeAnaliseController.text.trim(),
         dataNasc: _dataNascController.text.trim(),
-        plano: 'gratuito',
+        plano: 'essencial',
         isAdmin: false,
         dashboardCardOrder: UserModel.defaultCardOrder,
         subscription: SubscriptionModel.free(), // Plano gratuito padrão
       );
 
-      await _firestoreService.saveUserData(newUser);
+      await _supabaseService.saveUserData(newUser);
       // Navegação direta para o Dashboard após salvar com sucesso.
       // Mantemos o AuthCheck como plano B, mas forçamos a navegação
       // para evitar ficar preso no estado de carregamento em algumas plataformas (web).

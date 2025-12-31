@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class AccountSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -15,7 +15,7 @@ class AccountSettingsTab extends StatefulWidget {
 }
 
 class _AccountSettingsTabState extends State<AccountSettingsTab> {
-  final _firestoreService = FirestoreService();
+  final _supabaseService = SupabaseService();
   final _auth = FirebaseAuth.instance;
   final _formKeyInfo = GlobalKey<FormState>();
   final _formKeyPassword = GlobalKey<FormState>();
@@ -63,7 +63,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
     if (!_formKeyInfo.currentState!.validate()) return;
     setState(() => _isSavingInfo = true);
     try {
-      await _firestoreService.updateUserData(widget.userData.uid, {
+      await _supabaseService.updateUserData(widget.userData.uid, {
         'primeiroNome': _firstNameController.text.trim(),
         'sobrenome': _lastNameController.text.trim(),
       });

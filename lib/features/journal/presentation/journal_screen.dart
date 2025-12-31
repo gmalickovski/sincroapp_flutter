@@ -8,7 +8,7 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'journal_editor_screen.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
@@ -27,7 +27,7 @@ class JournalScreen extends StatefulWidget {
 }
 
 class _JournalScreenState extends State<JournalScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final GlobalKey _filterButtonKey = GlobalKey();
 
   DateTime? _dateFilter;
@@ -126,7 +126,7 @@ class _JournalScreenState extends State<JournalScreen> {
 
     if (confirm == true) {
       try {
-        await _firestoreService.deleteJournalEntry(
+        await _supabaseService.deleteJournalEntry(
             widget.userData.uid, entry.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -210,7 +210,7 @@ class _JournalScreenState extends State<JournalScreen> {
               ),
             Expanded(
               child: StreamBuilder<List<JournalEntry>>(
-                stream: _firestoreService.getJournalEntriesStream(
+                stream: _supabaseService.getJournalEntriesStream(
                   widget.userData.uid,
                   date: _dateFilter,
                   mood: _moodFilter,

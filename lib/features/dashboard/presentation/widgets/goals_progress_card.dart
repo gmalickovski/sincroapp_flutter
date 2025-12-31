@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class GoalsProgressCard extends StatefulWidget {
   final List<Goal> goals;
@@ -237,7 +237,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
         child: Container(
           color: Colors.transparent,
           // Remove padding horizontal do PageView item, mas mantém consistência visual
-          padding: const EdgeInsets.symmetric(horizontal: 4.0), 
+          padding: const EdgeInsets.symmetric(horizontal: 4.0),
           child: _buildGoalItem(goal),
         ),
       );
@@ -286,7 +286,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
         'GoalsProgressCard: Meta "${goal.title}" - targetDate: ${goal.targetDate}');
     // Calcula progresso em tempo real a partir das tasks da meta
     return StreamBuilder<List<TaskModel>>(
-      stream: FirestoreService().getTasksForGoalStream(widget.userId, goal.id),
+      stream: SupabaseService().getTasksForGoalStream(widget.userId, goal.id),
       builder: (context, snapshot) {
         final tasks = snapshot.data ?? const <TaskModel>[];
         int totalMarcos =

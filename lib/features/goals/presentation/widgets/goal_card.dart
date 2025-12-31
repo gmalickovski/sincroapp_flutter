@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 
@@ -30,7 +30,7 @@ class _GoalCardState extends State<GoalCard> {
 
   @override
   Widget build(BuildContext context) {
-    final firestore = FirestoreService();
+    final supabase = SupabaseService();
 
     // *** LÓGICA DA BORDA DE HOVER ***
     final Color borderColor;
@@ -102,7 +102,7 @@ class _GoalCardState extends State<GoalCard> {
                   padding: const EdgeInsets.all(20.0),
                   child: StreamBuilder<List<TaskModel>>(
                     stream: widget.userId.isNotEmpty
-                        ? firestore.getTasksForGoalStream(
+                        ? supabase.getTasksForGoalStream(
                             widget.userId, widget.goal.id)
                         : null,
                     builder: (context, snapshot) {

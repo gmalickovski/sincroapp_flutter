@@ -256,6 +256,22 @@ exports.stripeWebhook = functions.https.onRequest(async (req, res) => {
     try {
         // Manipular o evento
         switch (event.type) {
+            case "checkout.session.completed": {
+                const session = dataObject;
+                const userId = session.client_reference_id;
+                const customerId = session.customer;
+
+                if (userId) {
+                    console.log(`Checkout completo para usuário ${userId}. Atualizando stripeId: ${customerId}`);
+                    await admin.firestore().collection('users').doc(userId).update({
+                        stripeId: customerId
+                    });
+                } else {
+                    console.warn(`Checkout session completed sem client_reference_id. Customer: ${customerId}`);
+                }
+                break;
+            }
+
             case "invoice.payment_succeeded": {
                 const customerId = dataObject.customer;
                 const amount = dataObject.amount_paid / 100; // Valor em reais

@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -33,23 +33,16 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       debugPrint(
           '[LoginScreen] Tentando login para ${_emailController.text.trim()}');
-      debugPrint(
-          '[LoginScreen] currentUser antes=${FirebaseAuth.instance.currentUser?.uid}');
       await _authRepository.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
-      debugPrint(
-          '[LoginScreen] signIn retornou. currentUser depois=${FirebaseAuth.instance.currentUser?.uid}');
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'user-not-found' ||
-          e.code == 'wrong-password' ||
-          e.code == 'invalid-credential') {
+    } on AuthException catch (e) {
+      debugPrint('[LoginScreen] AuthException: ${e.message}');
+      if (e.message.contains('Invalid login credentials')) {
         _errorMessage = 'Email ou senha inválidos.';
-      } else if (e.code == 'invalid-email') {
-        _errorMessage = 'O formato do email é inválido.';
       } else {
-        _errorMessage = 'Ocorreu um erro. Tente novamente.';
+        _errorMessage = e.message;
       }
     } catch (e) {
       _errorMessage = 'Ocorreu um erro. Tente novamente.';
@@ -58,8 +51,6 @@ class _LoginScreenState extends State<LoginScreen> {
         setState(() {
           _isLoading = false;
         });
-        debugPrint(
-            '[LoginScreen] Estado final login: isLoading=false, error=${_errorMessage}');
       }
     }
   }

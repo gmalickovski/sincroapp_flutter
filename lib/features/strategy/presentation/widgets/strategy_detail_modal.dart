@@ -146,7 +146,7 @@ class StrategyDetailModal extends StatelessWidget {
           ),
           child: Text(
             mode.detailedDescription,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.secondaryText,
               fontSize: 16,
               height: 1.6,
@@ -157,10 +157,10 @@ class StrategyDetailModal extends StatelessWidget {
 
         // 2. Análise Estratégica do Dia (IA)
         if (recommendation.aiSuggestions.isNotEmpty) ...[
-          Row(
+          const Row(
             children: [
               Icon(Icons.auto_awesome, color: AppColors.primary, size: 24),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Text(
                 "Análise Estratégica do Dia",
                 style: TextStyle(

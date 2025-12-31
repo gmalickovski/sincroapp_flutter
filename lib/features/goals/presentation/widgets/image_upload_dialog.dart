@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'dart:typed_data'; // Added for Uint8List
+// Added for Uint8List
 
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
@@ -8,8 +7,7 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'package:sincro_app_flutter/services/storage_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class ImageUploadDialog extends StatefulWidget {
   final UserModel userData;
@@ -27,8 +25,7 @@ class ImageUploadDialog extends StatefulWidget {
 
 class _ImageUploadDialogState extends State<ImageUploadDialog> {
   final ImagePicker _picker = ImagePicker();
-  final StorageService _storageService = StorageService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   
   XFile? _selectedImage;
   Uint8List? _imageBytes; // Store bytes for robust upload/preview
@@ -73,30 +70,24 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
     try {
       debugPrint('[ImageUploadDialog] Starting upload...');
       debugPrint('[ImageUploadDialog] File: ${_selectedImage!.name}, Bytes: ${_imageBytes!.length}');
-      debugPrint('[ImageUploadDialog] UserId: ${widget.userData.uid}');
       
-      debugPrint('[ImageUploadDialog] UserId: ${widget.userData.uid}');
-
-      // 1. Delete Old Image if exists to save storage/costs
-      if (widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty) {
-        debugPrint('[ImageUploadDialog] Deleting old image...');
-        await _storageService.deleteImage(widget.goal.imageUrl!);
-      }
-      
-      // 2. Upload Image (using bytes)
-      final String downloadUrl = await _storageService.uploadGoalImage(
-        fileBytes: _imageBytes!,
-        fileName: _selectedImage!.name,
-        userId: widget.userData.uid,
+      // 1. Upload Image (using bytes)
+      final String? downloadUrl = await _supabaseService.uploadGoalImageBytes(
+        widget.userData.uid,
+        widget.goal.id,
+        _imageBytes!,
+        _selectedImage!.name,
       );
+
+      if (downloadUrl == null) throw Exception("Falha no upload da imagem");
 
       debugPrint('[ImageUploadDialog] Upload successful! URL: $downloadUrl');
 
-      // 2. Update Goal in Firestore
+      // 2. Update Goal in Supabase
       final updatedGoal = widget.goal.copyWith(imageUrl: downloadUrl);
       
       debugPrint('[ImageUploadDialog] Updating goal ${widget.goal.id} with imageUrl...');
-      await _firestoreService.updateGoal(updatedGoal);
+      await _supabaseService.updateGoal(updatedGoal);
       debugPrint('[ImageUploadDialog] Goal updated successfully!');
 
       if (mounted) {
@@ -288,9 +279,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
   }
 
   Widget _buildInstructions() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
+      children: [
         Text(
           "Dicas para a imagem:",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),

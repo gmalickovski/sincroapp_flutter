@@ -292,7 +292,7 @@ class StarCometPainter extends CustomPainter {
   Path _createStarPath(double radius) {
     final path = Path();
     const points = 6; // Estrela de 6 pontas (HTML tem 12 vértices = 6 pontas)
-    final angleStep = (2 * math.pi) / points;
+    const angleStep = (2 * math.pi) / points;
     final innerRadius = radius * 0.5;
 
     for (int i = 0; i < points * 2; i++) {

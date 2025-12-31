@@ -302,12 +302,12 @@ class _GoalOnboardingModalState extends State<GoalOnboardingModal> {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppColors.border),
             ),
-            child: Row(
+            child: const Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.info_outline, color: AppColors.primary, size: 20),
-                const SizedBox(width: 12),
-                const Expanded(
+                Icon(Icons.info_outline, color: AppColors.primary, size: 20),
+                SizedBox(width: 12),
+                Expanded(
                   child: Text(
                     'Marcos são etapas fundamentais para você alcançar seu objetivo final. Eles ajudam a manter o foco e celebrar pequenas vitórias ao longo do caminho.',
                     style: TextStyle(

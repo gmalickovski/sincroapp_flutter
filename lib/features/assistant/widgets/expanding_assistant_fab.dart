@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
-import 'package:flutter/foundation.dart';
 
 class ExpandingAssistantFab extends StatefulWidget {
   final VoidCallback? onPrimary; // ação principal (ex.: nova tarefa/anotação/meta) - opcional

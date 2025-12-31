@@ -100,6 +100,21 @@ class AssistantAction {
       data: extraData,
     );
   }
+  Map<String, dynamic> toJson() {
+    return {
+      'type': type.toString().split('.').last,
+      'title': title,
+      'description': description,
+      'date': date?.toIso8601String(),
+      'startDate': startDate?.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
+      'subtasks': subtasks,
+      'isExecuting': isExecuting,
+      'isExecuted': isExecuted,
+      'needsUserInput': needsUserInput,
+      ...data,
+    };
+  }
 }
 
 class AssistantAnswer {

@@ -1,7 +1,7 @@
 // lib/app/routs/app_router.dart
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/forgot_password_screen.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/forgot_password/reset_password_screen.dart';
@@ -50,7 +50,7 @@ class AppRouter {
         final args = settings.arguments;
         if (args is User) {
           return MaterialPageRoute(
-            builder: (_) => UserDetailsScreen(firebaseUser: args),
+            builder: (_) => UserDetailsScreen(user: args),
             settings: settings,
           );
         }
@@ -58,7 +58,7 @@ class AppRouter {
         if (args is Map && args['user'] is User) {
           return MaterialPageRoute(
             builder: (_) =>
-                UserDetailsScreen(firebaseUser: args['user'] as User),
+                UserDetailsScreen(user: args['user'] as User),
             settings: settings,
           );
         }

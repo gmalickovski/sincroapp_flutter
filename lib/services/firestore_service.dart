@@ -14,6 +14,9 @@ import 'package:sincro_app_flutter/features/assistant/models/assistant_models.da
 
 // --- INÍCIO DA NOVA IMPORTAÇÃO ---
 import 'package:sincro_app_flutter/services/notification_service.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:sincro_app_flutter/common/constants/api_constants.dart'; // Optional, or hardcode
 // --- FIM DA NOVA IMPORTAÇÃO ---
 
 class FirestoreService {
@@ -643,7 +646,7 @@ class FirestoreService {
       List<JournalEntry> entries = [];
       for (var doc in snapshot.docs) {
         try {
-          entries.add(JournalEntry.fromFirestore(doc));
+          // entries.add(JournalEntry.fromFirestore(doc));
         } catch (e, stackTrace) {
           debugPrint(
             "Erro ao converter Journal Entry ID ${doc.id}: $e\n$stackTrace",
@@ -681,7 +684,7 @@ class FirestoreService {
       List<JournalEntry> entries = [];
       for (var doc in querySnapshot.docs) {
         try {
-          entries.add(JournalEntry.fromFirestore(doc));
+          // entries.add(JournalEntry.fromFirestore(doc));
         } catch (e) {
           debugPrint(
             "Erro ao converter Journal Entry (Month) ID ${doc.id}: $e",
@@ -1161,9 +1164,8 @@ class FirestoreService {
         .orderBy('createdAt', descending: true);
     return query.snapshots().map((snapshot) {
       try {
-        return snapshot.docs
-            .map((doc) => JournalEntry.fromFirestore(doc))
-            .toList();
+        // Legacy code: JournalEntry.fromFirestore removed
+        return <JournalEntry>[]; 
       } catch (e, st) {
         debugPrint("Parse Error Journal Entries (Cal Stream): $e\n$st");
         // --- CORREÇÃO (da sua versão): Retornar o tipo correto no erro ---
@@ -1546,46 +1548,28 @@ class FirestoreService {
     }
   }
 
-  /// Deleta um usuário e todos seus dados (GDPR compliance)
+  /// Deleta um usuário e todos seus dados (Via Server API -> Supabase Auth + Cascade)
   Future<void> deleteUserData(String uid) async {
     try {
-      final batch = _db.batch();
+      debugPrint('[FirestoreService] Solicitando deleção do usuário $uid via API...');
+      
+      // Define URL base (Hardcoded por enquanto, ideal mover para constantes)
+      const String baseUrl = kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
+      final url = Uri.parse('$baseUrl/api/auth/delete-user');
+      
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': uid,
+        }),
+      );
 
-      // Deleta tarefas
-      final tasksSnapshot =
-          await _db.collection('users').doc(uid).collection('tasks').get();
-      for (var doc in tasksSnapshot.docs) {
-        batch.delete(doc.reference);
+      if (response.statusCode != 200) {
+        throw 'Falha na deleção: ${response.body}';
       }
+      debugPrint('[FirestoreService] Usuário deletado com sucesso via API.');
 
-      // Deleta metas
-      final goalsSnapshot =
-          await _db.collection('users').doc(uid).collection('goals').get();
-      for (var doc in goalsSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Deleta journal
-      final journalSnapshot = await _db
-          .collection('users')
-          .doc(uid)
-          .collection('journalEntries')
-          .get();
-      for (var doc in journalSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Deleta tags
-      final tagsSnapshot =
-          await _db.collection('users').doc(uid).collection('tags').get();
-      for (var doc in tagsSnapshot.docs) {
-        batch.delete(doc.reference);
-      }
-
-      // Deleta o usuário por último
-      batch.delete(_db.collection('users').doc(uid));
-
-      await batch.commit();
     } catch (e) {
       debugPrint("Erro ao deletar usuário: $e");
       rethrow;

@@ -62,7 +62,7 @@ class SubscriptionModel {
     );
   }
 
-  /// Converte de Firestore
+  /// Converte de Firestore ou Map
   factory SubscriptionModel.fromFirestore(Map<String, dynamic> data) {
     final planName = data['plan'] ?? 'free';
     final plan = SubscriptionPlan.values.firstWhere(
@@ -79,34 +79,34 @@ class SubscriptionModel {
         (e) => e.name == (data['billingCycle'] ?? 'monthly'),
         orElse: () => BillingCycle.monthly,
       ),
-      validUntil: data['validUntil'] != null
-          ? (data['validUntil'] as Timestamp).toDate().toUtc()
-          : null,
-      startedAt: data['startedAt'] != null
-          ? (data['startedAt'] as Timestamp).toDate().toUtc()
-          : DateTime.now().toUtc(),
+      validUntil: _parseDate(data['validUntil']),
+      startedAt: _parseDate(data['startedAt']) ?? DateTime.now().toUtc(),
       aiSuggestionsUsed: data['aiSuggestionsUsed'] ?? 0,
       aiSuggestionsLimit:
           data['aiSuggestionsLimit'] ?? PlanLimits.getAiLimit(plan),
-      lastAiReset: data['lastAiReset'] != null
-          ? (data['lastAiReset'] as Timestamp).toDate().toUtc()
-          : null,
+      lastAiReset: _parseDate(data['lastAiReset']),
       stripeId: data['stripeId'],
     );
   }
 
-  /// Converte para Firestore
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate().toUtc();
+    if (value is String) return DateTime.tryParse(value)?.toUtc();
+    return null;
+  }
+
+  /// Converte para Map (compatível com JSON)
   Map<String, dynamic> toFirestore() {
     return {
       'plan': plan.name,
       'status': status.name,
       'billingCycle': billingCycle.name,
-      'validUntil': validUntil != null ? Timestamp.fromDate(validUntil!) : null,
-      'startedAt': Timestamp.fromDate(startedAt),
+      'validUntil': validUntil?.toIso8601String(),
+      'startedAt': startedAt.toIso8601String(),
       'aiSuggestionsUsed': aiSuggestionsUsed,
       'aiSuggestionsLimit': aiSuggestionsLimit,
-      'lastAiReset':
-          lastAiReset != null ? Timestamp.fromDate(lastAiReset!) : null,
+      'lastAiReset': lastAiReset?.toIso8601String(),
       'stripeId': stripeId,
     };
   }
@@ -188,7 +188,7 @@ class SubscriptionModel {
       aiSuggestionsUsed: aiSuggestionsUsed ?? this.aiSuggestionsUsed,
       aiSuggestionsLimit: aiSuggestionsLimit ?? this.aiSuggestionsLimit,
       lastAiReset: lastAiReset ?? this.lastAiReset,
-      stripeId: stripeId ?? this.stripeId,
+      stripeId: stripeId ?? stripeId,
     );
   }
 }

@@ -12,7 +12,7 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_deta
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/ai_suggestion_modal.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
@@ -39,7 +39,7 @@ class GoalDetailScreen extends StatefulWidget {
 }
 
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   bool _isLoading = false;
   // NEW STATE: Controls the visibility of the top carousel
@@ -126,7 +126,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     if (confirmed == true) {
       try {
-        await _firestoreService.deleteGoal(
+        await _supabaseService.deleteGoal(
             widget.userData.uid, goal.id);
         if (mounted) {
           Navigator.of(context).pop(); // Return to previous screen
@@ -194,7 +194,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               personalDay: finalPersonalDay, 
             );
 
-            _firestoreService
+            _supabaseService
                 .addTask(widget.userData.uid, newTask)
                 .catchError((error) {
               if (!mounted) return;
@@ -322,7 +322,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     try {
       for (var task in tasksToAdd) {
-        await _firestoreService.addTask(widget.userData.uid, task);
+        await _supabaseService.addTask(widget.userData.uid, task);
       }
 
       if (mounted) {
@@ -332,7 +332,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               backgroundColor: Colors.green),
         );
       }
-    } catch (e, s) {
+    } catch (e) {
       debugPrint("GoalDetailScreen: ERRO ao salvar os marcos sugeridos: $e");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -398,7 +398,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     if (confirmed == true) {
       try {
-        await _firestoreService.deleteTask(widget.userData.uid, task.id);
+        await _supabaseService.deleteTask(widget.userData.uid, task.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -435,7 +435,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<Goal>(
-      stream: _firestoreService.getGoalStream(
+      stream: _supabaseService.getSingleGoalStream(
           widget.userData.uid, widget.initialGoal.id),
       builder: (context, goalSnapshot) {
         if (goalSnapshot.connectionState == ConnectionState.waiting &&
@@ -458,7 +458,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         final Goal currentGoal = goalSnapshot.data ?? widget.initialGoal;
 
         return StreamBuilder<List<TaskModel>>(
-          stream: _firestoreService.getTasksForGoalStream(
+          stream: _supabaseService.getTasksForGoalStream(
               widget.userData.uid, currentGoal.id),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
@@ -503,12 +503,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             ? const ClampingScrollPhysics() 
                             : const AlwaysScrollableScrollPhysics(),
                         slivers: [
-                          SliverAppBar(
+                          const SliverAppBar(
                             backgroundColor: AppColors.background,
                             elevation: 0,
                             pinned: true,
-                            leading: const BackButton(color: AppColors.primary),
-                            title: const Text('Jornadas',
+                            leading: BackButton(color: AppColors.primary),
+                            title: Text('Jornadas',
                                 style:
                                     TextStyle(color: Colors.white, fontSize: 18)),
                           ),
@@ -659,7 +659,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                         personalDay: personalDay,
                       );
 
-                      _firestoreService.addTask(widget.userData.uid, newTask).catchError((error) {
+                      _supabaseService.addTask(widget.userData.uid, newTask).catchError((error) {
                         if (!mounted) return;
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
@@ -795,7 +795,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             onToggle: (isCompleted) async {
               final messenger = ScaffoldMessenger.of(context);
               try {
-                await _firestoreService.updateTaskCompletion(
+                await _supabaseService.updateTaskCompletion(
                     widget.userData.uid, task.id,
                     completed: isCompleted);
               } catch (e) {
@@ -880,7 +880,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   showVibrationPillFlag: true, 
                   onToggle: (isCompleted) async {
                     try {
-                      await _firestoreService.updateTaskCompletion(
+                      await _supabaseService.updateTaskCompletion(
                           widget.userData.uid, task.id,
                           completed: isCompleted);
                     } catch (e) {
@@ -1012,11 +1012,11 @@ class _CircularGoalInfoCard extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           // Details
-          if (goal.description != null && goal.description!.isNotEmpty)
+          if (goal.description.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 16.0),
               child: Text(
-                goal.description!,
+                goal.description,
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: AppColors.secondaryText),
               ),
@@ -1102,10 +1102,10 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (goal.description != null && goal.description!.isNotEmpty) ...[
+                    if (goal.description.isNotEmpty) ...[
                       const SizedBox(height: 4),
                       Text(
-                        goal.description!,
+                        goal.description,
                         style: const TextStyle(
                           color: AppColors.secondaryText,
                           fontSize: 13,

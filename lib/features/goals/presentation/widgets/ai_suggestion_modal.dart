@@ -9,7 +9,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/ai_service.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 enum AiModalState {
@@ -70,9 +70,9 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
         throw Exception("Usuário não autenticado.");
       }
 
-      final firestoreService = FirestoreService();
-      final userFuture = firestoreService.getUserData(userId);
-      final tasksFuture = firestoreService.getRecentTasks(userId, limit: 20);
+      final supabaseService = SupabaseService();
+      final userFuture = supabaseService.getUserData(userId);
+      final tasksFuture = supabaseService.getRecentTasks(userId, limit: 20);
 
       final user = await userFuture;
       if (user == null) {

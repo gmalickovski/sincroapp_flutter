@@ -2,6 +2,7 @@
 /// 
 /// Este arquivo contém significados, palavras-chave, desafios e características
 /// de cada número na Numerologia Cabalística.
+library;
 
 class NumerologyInterpretations {
   /// Retorna interpretação completa de um número (1-9)

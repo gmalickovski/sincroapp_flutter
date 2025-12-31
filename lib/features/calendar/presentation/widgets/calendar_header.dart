@@ -38,11 +38,11 @@ class CalendarHeader extends StatelessWidget {
                     // Formato curto: "Nov. 2025"
                     // DateFormat('MMM', 'pt_BR') retorna "nov." (com ponto)
                     // Então construímos manualmente para garantir o formato desejado
-                    final monthShort = toBeginningOfSentenceCase(DateFormat('MMM', 'pt_BR').format(focusedDay))!;
+                    final monthShort = toBeginningOfSentenceCase(DateFormat('MMM', 'pt_BR').format(focusedDay));
                     final year = DateFormat('yyyy').format(focusedDay);
                     final shortText = "$monthShort $year";
                     
-                    final fullText = toBeginningOfSentenceCase(fullFormat.format(focusedDay))!;
+                    final fullText = toBeginningOfSentenceCase(fullFormat.format(focusedDay));
 
                     // Define o tamanho da fonte com base no modo (Mobile vs Desktop)
                     final double fontSize = isCompact ? 20.0 : 24.0;

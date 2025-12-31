@@ -840,7 +840,7 @@ async function fetchFeaturedFAQ() {
                         </svg>
                     </button>
                     <div class="faq-answer max-h-0 overflow-hidden transition-all duration-300">
-                        <div class="px-2 pt-0 pb-8 [&>*:first-child]:mt-0 prose prose-invert max-w-none text-left leading-relaxed" style="color: var(--text-secondary);">
+                        <div class="px-6 pt-2 pb-10 prose prose-invert max-w-none text-left leading-relaxed" style="color: var(--text-secondary);">
                             ${answer}
                         </div>
                     </div>

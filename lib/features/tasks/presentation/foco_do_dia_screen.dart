@@ -7,7 +7,7 @@ import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tasks_list_view.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
@@ -36,7 +36,7 @@ class FocoDoDiaScreen extends StatefulWidget {
 }
 
 class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   late final String _userId;
   final Uuid _uuid = const Uuid();
@@ -54,7 +54,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   @override
   void initState() {
     super.initState();
-    _userId = AuthRepository().getCurrentUser()?.uid ?? '';
+    _userId = AuthRepository().currentUser?.id ?? '';
     if (_userId.isEmpty) {
       debugPrint("ERRO: FocoDoDiaScreen acessada sem usuário logado!");
     }
@@ -160,7 +160,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // --- FIM DA MUDANÇA ---
     );
 
-    _firestoreService.addTask(_userId, newTask).catchError((error) {
+    _supabaseService.addTask(_userId, newTask).catchError((error) {
       _showErrorSnackbar("Erro ao salvar tarefa: $error");
     });
   }
@@ -395,7 +395,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await _firestoreService.deleteTasks(_userId, _selectedTaskIds.toList());
+        await _supabaseService.deleteTasks(_userId, _selectedTaskIds.toList());
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -538,7 +538,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     if (confirmed == true) {
       try {
-        await _firestoreService.deleteTask(_userId, task.id);
+        await _supabaseService.deleteTask(_userId, task.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -634,7 +634,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
                   Expanded(
                     child: StreamBuilder<List<TaskModel>>(
-                      stream: _firestoreService.getTasksStream(_userId),
+                      stream: _supabaseService.getTasksStream(_userId),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting &&
@@ -744,16 +744,17 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                                   // Desabilita o toggle de conclusão durante o modo de seleção
                                   if (_isSelectionMode) return;
 
-                                  _firestoreService
-                                      .updateTaskCompletion(
+                                  _supabaseService.updateTaskFields(
                                     _userId,
                                     task.id,
-                                    completed: isCompleted,
-                                  )
-                                      .then((_) {
+                                    {
+                                      'completed': isCompleted,
+                                      'completedAt': isCompleted ? DateTime.now() : null,
+                                    },
+                                  ).then((_) {
                                     if (task.journeyId != null &&
                                         task.journeyId!.isNotEmpty) {
-                                      _firestoreService.updateGoalProgress(
+                                      _supabaseService.updateGoalProgress(
                                           _userId, task.journeyId!);
                                     }
                                   }).catchError((error) {

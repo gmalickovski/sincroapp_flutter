@@ -2,7 +2,6 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
-import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_detail_modal.dart';
 
 class StrategyCard extends StatefulWidget {
@@ -67,9 +66,9 @@ class _StrategyCardState extends State<StrategyCard> {
                       children: [
                         Icon(mode.icon, color: mode.color, size: 24),
                         const SizedBox(width: 12),
-                        Text(
+                        const Text(
                           "Sincro Flow",
-                          style: const TextStyle(
+                          style: TextStyle(
                             color: AppColors.primaryText,
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -77,7 +76,7 @@ class _StrategyCardState extends State<StrategyCard> {
                         ),
                         const Spacer(),
                         if (!widget.isEditMode)
-                          Icon(Icons.info_outline,
+                          const Icon(Icons.info_outline,
                               color: AppColors.tertiaryText, size: 16),
                       ],
                     ),
@@ -133,7 +132,7 @@ class _StrategyCardState extends State<StrategyCard> {
                           padding: const EdgeInsets.only(top: 8.0),
                           child: Text(
                             "+ ${widget.recommendation.aiSuggestions.length - 2} sugestões...",
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: AppColors.tertiaryText,
                               fontSize: 12,
                               fontStyle: FontStyle.italic,

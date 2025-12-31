@@ -1,10 +1,7 @@
-import 'dart:io';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class GoalImageCard extends StatelessWidget {
   final Goal goal;

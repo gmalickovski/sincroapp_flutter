@@ -1,7 +1,6 @@
 // lib/features/goals/presentation/create_goal_screen.dart
 import 'dart:async';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -9,7 +8,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class CreateGoalScreen extends StatefulWidget {
   final UserModel userData;
@@ -44,7 +43,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     }
   }
 
-  final _firestoreService = FirestoreService();
+  final _supabaseService = SupabaseService();
 
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
@@ -84,7 +83,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       if (maxGoals != -1) {
         // Busca número atual de metas do usuário
         final goalsSnapshot =
-            await FirestoreService().getActiveGoals(widget.userData.uid);
+            await _supabaseService.getActiveGoals(widget.userData.uid);
         if (goalsSnapshot.length >= maxGoals) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -121,11 +120,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     bool isSuccessful = false;
 
     try {
-      const Duration firestoreTimeout = Duration(seconds: 15);
-
       if (widget.goalToEdit != null) {
         // Editando jornada existente
-        await _firestoreService
+        await _supabaseService
             .updateGoal(Goal(
               id: widget.goalToEdit!.id,
               title: _titleController.text.trim(),
@@ -136,23 +133,23 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
               createdAt: widget.goalToEdit!.createdAt,
               subTasks: widget.goalToEdit!.subTasks,
               imageUrl: widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
-            ))
-            .timeout(firestoreTimeout);
+              category: widget.goalToEdit!.category,
+            ));
       } else {
         // Criando nova jornada
-        final dataToSave = {
-          'title': _titleController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'targetDate': Timestamp.fromDate(_targetDate!), 
-          'progress': 0,
-          'createdAt': Timestamp.now(),
-          'userId': widget.userData.uid,
-          'subTasks': [],
-          'imageUrl': null, // Sem imagem na criação
-        };
-        await _firestoreService
-            .addGoal(widget.userData.uid, dataToSave)
-            .timeout(firestoreTimeout);
+        final newGoal = Goal(
+          id: '', // Supabase gera ID se vazio
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          targetDate: _targetDate,
+          progress: 0,
+          createdAt: DateTime.now(),
+          userId: widget.userData.uid,
+          subTasks: const [],
+          imageUrl: null,
+          category: '', // Categoria padrão vazia
+        );
+        await _supabaseService.addGoal(widget.userData.uid, newGoal);
       }
 
       // 5. Sucesso
@@ -160,34 +157,14 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       if (mounted) {
         Navigator.of(context).pop();
       }
-    } on FirebaseException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red.shade400,
-            content:
-                Text('Erro de Firebase: ${e.message ?? "Tente novamente."}'),
-          ),
-        );
-      }
-    } on TimeoutException {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            backgroundColor: Colors.red.shade400,
-            content: const Text(
-                'Não foi possível conectar. Verifique sua internet e tente novamente.'),
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: Colors.red.shade400,
             content: Text(widget.goalToEdit != null
-                ? 'Erro ao atualizar a jornada. Tente novamente.'
-                : 'Erro ao criar a jornada. Tente novamente.'),
+                ? 'Erro ao atualizar a jornada: $e'
+                : 'Erro ao criar a jornada: $e'),
           ),
         );
       }
@@ -345,7 +322,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(
+                                      const Text(
                                         'Data Alvo',
                                         style: TextStyle(
                                           color: AppColors.secondaryText,
@@ -386,11 +363,11 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       ),
                       // Error message for date
                       if (_targetDate == null && _isSaving)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 12.0, top: 6.0),
+                        const Padding(
+                          padding: EdgeInsets.only(left: 12.0, top: 6.0),
                           child: Text(
                             'Por favor, defina uma data alvo.',
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: Colors.redAccent,
                               fontSize: 12,
                             ),

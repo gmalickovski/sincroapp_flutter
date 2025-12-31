@@ -15,11 +15,11 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+// FirestoreService REMOVIDO
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/info_card.dart';
 import 'package:sincro_app_flutter/common/widgets/multi_number_card.dart';
-import 'package:sincro_app_flutter/common/widgets/bussola_card.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
@@ -72,7 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   bool _isDesktopSidebarExpanded = false;
   bool _isMobileDrawerOpen = false;
   late AnimationController _menuAnimationController;
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   Key _masonryGridKey = UniqueKey();
   StreamSubscription<List<TaskModel>>? _todayTasksSubscription;
@@ -135,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadInitialData() async {
     if (mounted && _userData == null) setState(() => _isLoading = true);
     final authRepository = AuthRepository();
-    final currentUser = authRepository.getCurrentUser();
+    final currentUser = authRepository.currentUser;
 
     if (currentUser == null) {
       if (mounted) setState(() => _isLoading = false);
@@ -144,8 +144,8 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     try {
       final results = await Future.wait([
-        _firestoreService.getUserData(currentUser.uid),
-        _firestoreService.getActiveGoals(currentUser.uid),
+        _supabaseService.getUserData(currentUser.id),
+        _supabaseService.getActiveGoals(currentUser.id),
       ]);
 
       if (!mounted) return;
@@ -165,9 +165,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       } else {
         _numerologyData = null;
       }
-      _initializeTasksStream(currentUser.uid);
-      _initializeGoalsStream(currentUser.uid);
-      _initializeGoalsStream(currentUser.uid); // ativa stream de metas
+      _initializeTasksStream(currentUser.id);
+      _initializeGoalsStream(currentUser.id);
+      // _initializeGoalsStream(currentUser.id); // Duplicado no original, removendo
       _loadStrategy(); // Load AI strategy
     } catch (e, stackTrace) {
       debugPrint(
@@ -189,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   void _initializeTasksStream(String userId) {
     _todayTasksSubscription?.cancel();
     _todayTasksSubscription =
-        _firestoreService.getTasksStreamForToday(userId).listen(
+        _supabaseService.getTodayTasksStream(userId).listen(
       (tasks) {
         if (mounted) {
           setState(() {
@@ -198,7 +198,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               _isLoading = false;
             }
             _buildCardList();
-            // _loadStrategy(); // REMOVIDO: Evita chamar IA a cada atualização de tarefa. Cache diário é suficiente.
           });
         }
       },
@@ -222,7 +221,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _initializeGoalsStream(String userId) {
     _goalsSubscription?.cancel();
-    _goalsSubscription = _firestoreService.getGoalsStream(userId).listen(
+    _goalsSubscription = _supabaseService.getGoalsStream(userId).listen(
       (goals) {
         if (!mounted) return;
         setState(() {
@@ -238,13 +237,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Future<void> _reloadDataNonStream({bool rebuildCards = true}) async {
     final authRepository = AuthRepository();
-    final currentUser = authRepository.getCurrentUser();
+    final currentUser = authRepository.currentUser;
     if (currentUser == null || !mounted) return;
 
     try {
       final results = await Future.wait([
-        _firestoreService.getUserData(currentUser.uid),
-        _firestoreService.getActiveGoals(currentUser.uid),
+        _supabaseService.getUserData(currentUser.id),
+        _supabaseService.getActiveGoals(currentUser.id),
       ]);
       if (!mounted) return;
 
@@ -269,7 +268,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           _buildCardList();
         });
       }
-      _initializeGoalsStream(currentUser.uid);
+      _initializeGoalsStream(currentUser.id);
     } catch (e, stackTrace) {
       debugPrint("Erro ao recarregar dados (não stream): $e\n$stackTrace");
       if (mounted) {
@@ -284,11 +283,11 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _handleTaskStatusChange(TaskModel task, bool isCompleted) {
     if (!mounted || _userData == null) return;
-    _firestoreService
+    _supabaseService
         .updateTaskCompletion(_userData!.uid, task.id, completed: isCompleted)
         .then((_) {
       if (task.journeyId != null && task.journeyId!.isNotEmpty) {
-        _firestoreService.updateGoalProgress(_userData!.uid, task.journeyId!);
+        _supabaseService.updateGoalProgress(_userData!.uid, task.journeyId!);
       }
     }).catchError((error) {
       debugPrint("Erro ao atualizar status da tarefa: $error");
@@ -304,10 +303,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   void _handleTaskTap(TaskModel task) {}
 
-  // ---
-  // --- ATUALIZAÇÃO NESTA FUNÇÃO ---
-  // ---
-  // --- Swipe Actions ---
   Future<bool?> _handleDeleteTask(TaskModel task) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -335,7 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (confirmed == true && _userData != null) {
       try {
-        await _firestoreService.deleteTask(_userData!.uid, task.id);
+        await _supabaseService.deleteTask(_userData!.uid, task.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -370,7 +365,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       _userData!,
     );
 
-    // Se reagendou com sucesso, remove do card "Foco do Dia" (pois não é mais para hoje)
     return newDate != null;
   }
 
@@ -390,7 +384,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     );
   }
 
-  /// Cria uma única tarefa com cálculo do Dia Pessoal (mesma lógica do FocoDoDiaScreen)
   void _createSingleTaskWithPersonalDay(ParsedTask parsedTask) {
     if (_userData == null) return;
 
@@ -398,19 +391,15 @@ class _DashboardScreenState extends State<DashboardScreen>
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
-      // Se tem data específica, usa ela
       final dateLocal = parsedTask.dueDate!.toLocal();
       finalDueDateUtc =
           DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
       dateForPersonalDay = finalDueDateUtc;
     } else {
-      // Se não tem data específica, usa a data atual para calcular o personalDay
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
     }
 
-    // Calcula o dia pessoal usando a data determinada
     final int? finalPersonalDay = _calculatePersonalDay(dateForPersonalDay);
 
     final newTask = TaskModel(
@@ -428,7 +417,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       personalDay: finalPersonalDay,
     );
 
-    _firestoreService.addTask(_userData!.uid, newTask).catchError((error) {
+    _supabaseService.addTask(_userData!.uid, newTask).catchError((error) {
       debugPrint("Erro ao adicionar tarefa pelo dashboard: $error");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1909,10 +1898,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     final intervaloAtual = momentoAtual?['periodoIdade'] ?? '';
 
     final conteudoMomento = _getMomentoDecisivoContent(regente);
-    final descricaoCurta = (conteudoMomento.descricaoCurta.isNotEmpty
+    final descricaoCurta = '${conteudoMomento.descricaoCurta.isNotEmpty
             ? conteudoMomento.descricaoCurta
-            : 'Momento $regente') +
-        '\n\n$intervaloAtual';
+            : 'Momento $regente'}\n\n$intervaloAtual';
 
     // Modal: todos os momentos decisivos com subtítulos destacados
     final buffer = StringBuffer();

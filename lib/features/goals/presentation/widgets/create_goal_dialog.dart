@@ -1,6 +1,5 @@
 // lib/features/goals/presentation/widgets/create_goal_dialog.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -8,7 +7,7 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class CreateGoalDialog extends StatefulWidget {
   final UserModel userData;
@@ -43,7 +42,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     }
   }
 
-  final _firestoreService = FirestoreService();
+  final _supabaseService = SupabaseService();
 
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
@@ -87,12 +86,12 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     if (widget.goalToEdit == null) {
       final plan = widget.userData.subscription.plan;
       final int maxGoals = PlanLimits.getGoalsLimit(plan);
-      
+
       // Se maxGoals for -1, é ilimitado
       if (maxGoals != -1) {
         final goalsSnapshot =
-            await FirestoreService().getActiveGoals(widget.userData.uid);
-        
+            await _supabaseService.getActiveGoals(widget.userData.uid);
+
         if (goalsSnapshot.length >= maxGoals) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
@@ -110,12 +109,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
     setState(() => _isSaving = true);
 
     try {
-      String goalId;
-      
       if (widget.goalToEdit != null) {
-        goalId = widget.goalToEdit!.id;
-        await _firestoreService.updateGoal(Goal(
-          id: goalId,
+        await _supabaseService.updateGoal(Goal(
+          id: widget.goalToEdit!.id,
           title: _titleController.text.trim(),
           description: _descriptionController.text.trim(),
           targetDate: _targetDate,
@@ -124,24 +120,24 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           createdAt: widget.goalToEdit!.createdAt,
           subTasks: widget.goalToEdit!.subTasks,
           imageUrl: widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
+          category: widget.goalToEdit!.category,
         ));
       } else {
-        // Gerar ID manualmente
-        final docRef = FirebaseFirestore.instance.collection('users').doc(widget.userData.uid).collection('goals').doc();
-        goalId = docRef.id;
-        
-        final dataToSave = {
-          'title': _titleController.text.trim(),
-          'description': _descriptionController.text.trim(),
-          'targetDate': _targetDate != null ? Timestamp.fromDate(_targetDate!) : null,
-          'userId': widget.userData.uid,
-          'progress': 0,
-          'createdAt': Timestamp.now(),
-          'subTasks': [],
-          'imageUrl': null, // Sem imagem na criação
-        };
-        
-        await docRef.set(dataToSave);
+        // Criando nova jornada
+        final newGoal = Goal(
+          id: '', // Supabase gera UUID
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          targetDate: _targetDate,
+          progress: 0,
+          createdAt: DateTime.now(),
+          userId: widget.userData.uid,
+          subTasks: const [],
+          imageUrl: null,
+          category: '',
+        );
+
+        await _supabaseService.addGoal(widget.userData.uid, newGoal);
       }
 
       if (mounted) Navigator.of(context).pop(true);
@@ -152,8 +148,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           SnackBar(
             backgroundColor: Colors.red.shade400,
             content: Text(widget.goalToEdit != null
-                ? 'Erro ao atualizar a jornada. Tente novamente.'
-                : 'Erro ao criar a jornada. Tente novamente.'),
+                ? 'Erro ao atualizar a jornada: $e'
+                : 'Erro ao criar a jornada: $e'),
           ),
         );
       }

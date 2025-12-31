@@ -11,7 +11,7 @@ class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
     switch (personalDay) {
       case 1:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "The One Thing",
           reason: "Dia de novos inícios e liderança. A energia está alta para começar, mas dispersão pode ser fatal.",
@@ -22,7 +22,7 @@ class StrategyEngine {
           ],
         );
       case 2:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Gestão Emocional / Pomodoro Suave",
           reason: "Dia de parcerias e paciência. As coisas podem andar mais devagar. Não force a barra.",
@@ -33,7 +33,7 @@ class StrategyEngine {
           ],
         );
       case 3:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.grounding,
           methodologyName: "GTD (Getting Things Done)",
           reason: "Dia de criatividade e comunicação. Sua mente estará cheia de ideias, o que pode gerar ansiedade.",
@@ -44,7 +44,7 @@ class StrategyEngine {
           ],
         );
       case 4:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "Deep Work (Trabalho Focado)",
           reason: "Dia de trabalho duro, ordem e construção. A energia pede disciplina e rotina.",
@@ -55,7 +55,7 @@ class StrategyEngine {
           ],
         );
       case 5:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.grounding,
           methodologyName: "Gestão de Imprevistos",
           reason: "Dia de mudanças e liberdade. O inesperado vai acontecer. Rigidez vai te quebrar.",
@@ -66,7 +66,7 @@ class StrategyEngine {
           ],
         );
       case 6:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Harmonia & Responsabilidade",
           reason: "Dia voltado para família, casa e responsabilidades. O foco está nas pessoas, não nas tarefas.",
@@ -77,7 +77,7 @@ class StrategyEngine {
           ],
         );
       case 7:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.rescue,
           methodologyName: "Mini Habits (Mini Hábitos)",
           reason: "Dia de introspecção e análise. A energia física pode estar baixa. Não se cobre produtividade excessiva.",
@@ -88,7 +88,7 @@ class StrategyEngine {
           ],
         );
       case 8:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "Execução de Alto Impacto",
           reason: "Dia de poder e resultados materiais. É hora de colher o que plantou e focar no lucro/sucesso.",
@@ -99,7 +99,7 @@ class StrategyEngine {
           ],
         );
       case 9:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Limpeza & Conclusão",
           reason: "Dia de encerramentos. Não comece nada novo. Termine o que está pendente e limpe o terreno.",
@@ -111,7 +111,7 @@ class StrategyEngine {
         );
       case 11:
       case 22:
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.rescue,
           methodologyName: "Gestão de Energia (Mestre)",
           reason: "Dia Mestre. Alta voltagem espiritual e nervosa. Grande potencial, mas risco de burnout.",
@@ -123,7 +123,7 @@ class StrategyEngine {
         );
       default:
         // Fallback para dia 1 se algo der errado
-        return StrategyRecommendation(
+        return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "The One Thing",
           reason: "Dia de focar no essencial.",

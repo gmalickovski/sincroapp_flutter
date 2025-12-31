@@ -1,7 +1,7 @@
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
+import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -24,12 +24,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      final functions = FirebaseFunctions.instanceFor(region: 'us-central1');
-      final callable = functions.httpsCallable('requestPasswordReset');
-      
-      await callable.call({
-        'email': _emailController.text.trim(),
-      });
+      await AuthRepository().sendPasswordResetEmail(email: _emailController.text.trim());
 
       if (mounted) {
         setState(() {

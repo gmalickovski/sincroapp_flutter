@@ -194,7 +194,7 @@ Sua missão é guiar o usuário no autoconhecimento profundo e realização pess
 
 **I - INSTRUÇÕES (Instructions):**
 
-${isFirstMessageOfDay ? '🌅 **SAUDAÇÃO INICIAL:** Inicie com: \"$saudacao\"' : '💬 **CONTINUAÇÃO:** Continue naturalmente, sem repetir saudações'}
+${isFirstMessageOfDay ? '🌅 **SAUDAÇÃO INICIAL:** Inicie com: "$saudacao"' : '💬 **CONTINUAÇÃO:** Continue naturalmente, sem repetir saudações'}
 
 **TOM E PERSONALIDADE:**
 - 🎨 **Caloroso e empático**: Mostre genuíno interesse pelo usuário
@@ -460,9 +460,9 @@ $contextJson
 ❓ PERGUNTA DO USUÁRIO
 ═══════════════════════════════════════════════════════════════════════════════
 
-\"\"\"
+"""
 $question
-\"\"\"
+"""
 
 ═══════════════════════════════════════════════════════════════════════════════
 ''';
@@ -477,7 +477,7 @@ $question
         return "Organização, limpeza de pendências, comunicação.";
       case StrategyMode.rescue:
         return "Autocuidado, mini-hábitos, evitar burnout.";
-    };
+    }
   }
 
   static String buildStrategyPrompt({

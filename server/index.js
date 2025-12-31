@@ -27,8 +27,42 @@ const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
 const { Client } = require('@notionhq/client');
+const { createClient } = require('@supabase/supabase-js');
+console.log(`[DEBUG] STRIPE_SECRET_KEY available: ${!!process.env.STRIPE_SECRET_KEY}`);
+let stripe;
+if (process.env.STRIPE_SECRET_KEY) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+} else {
+    console.warn('[WARNING] STRIPE_SECRET_KEY is missing. Stripe features will not work.');
+    // Mock stripe object to prevent immediate crash, allow server to start for other features
+    stripe = {
+        webhooks: {
+            constructEvent: () => { throw new Error('Stripe Key missing in .env'); }
+        },
+        billingPortal: {
+            sessions: { create: async () => { throw new Error('Stripe Key missing in .env'); } }
+        }
+    };
+}
+
+const crypto = require('crypto');
+// body-parser is needed for specific routes, but express.json() is global.
+// We need raw body for stripe webhook.
 
 const app = express();
+
+// Initialize Supabase Admin Client
+// Ensure these are in .env
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Fail gracefully if keys are missing (for dev)
+let supabase;
+if (supabaseUrl && supabaseServiceKey) {
+    supabase = createClient(supabaseUrl, supabaseServiceKey);
+} else {
+    console.warn('[WARNING] Supabase URL or Service Key missing. Database operations will fail.');
+}
 const PORT = process.env.PORT || 3000;
 
 // Enable CORS
@@ -57,6 +91,14 @@ app.get('/under_construction.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../web/under_construction.html'));
 });
 
+// Serve Thank You Page
+app.get('/thank-you', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/thank-you.html'));
+});
+app.get('/thankyou', (req, res) => {
+    res.sendFile(path.join(__dirname, '../web/thank-you.html'));
+});
+
 // Serve Landing Page (Home) at Root
 app.use(express.static(path.join(__dirname, '../web/home')));
 
@@ -68,6 +110,9 @@ app.use((req, res, next) => {
     res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https://*.firebasealt.com https://firebasestorage.googleapis.com https://placehold.co; connect-src 'self' http://localhost:3000 http://www.localhost:3000 https://n8n.studiomlk.com.br https://firebasestorage.googleapis.com;");
     next();
 });
+
+// Stripe Webhook needs raw body
+app.use('/api/webhooks/stripe', express.raw({ type: 'application/json' }));
 
 app.use(express.json());
 
@@ -349,8 +394,8 @@ app.get('/api/features', async (req, res) => {
             name: page.properties['Funcionalidade']?.title[0]?.plain_text || "Sem nome",
             shortDescription: page.properties['Descrição Curta']?.rich_text[0]?.plain_text || "",
             image: page.properties['Imagem']?.files[0]?.file?.url || page.properties['Imagem']?.files[0]?.external?.url || "https://picsum.photos/seed/sincro/1200/800",
-            imgMobile: page.properties['Imagem Mobile']?.files[0]?.file?.url || page.properties['Imagem Mobile']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || "https://picsum.photos/seed/sincro/350/800",
-            imgDesktop: page.properties['Imagem Desktop']?.files[0]?.file?.url || page.properties['Imagem Desktop']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || "https://picsum.photos/seed/sincro/1200/800",
+            imgMobile: page.properties['Imagem Mobile']?.files[0]?.file?.url || page.properties['Imagem Mobile']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || page.properties['Imagem']?.files[0]?.external?.url || "https://picsum.photos/seed/sincro/350/800",
+            imgDesktop: page.properties['Imagem Desktop']?.files[0]?.file?.url || page.properties['Imagem Desktop']?.files[0]?.external?.url || page.properties['Imagem']?.files[0]?.file?.url || page.properties['Imagem']?.files[0]?.external?.url || "https://picsum.photos/seed/sincro/1200/800",
             plans: page.properties['Plano']?.multi_select?.map(tag => tag.name) || [],
         }));
 
@@ -462,6 +507,222 @@ app.get('/api/about', async (req, res) => {
         console.error("Notion About API Error:", error);
         res.status(500).json({ error: "Failed to fetch about data", details: error.message });
     }
+});
+
+const N8N_PASSWORD_RESET_WEBHOOK = "https://n8n.studiomlk.com.br/webhook/sincroapp-password-reset"; // Replace with actual if different
+const N8N_TRANSACTION_WEBHOOK = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
+
+// --- STRIPE CUSTOMER PORTAL ---
+app.post('/api/stripe/portal-session', async (req, res) => {
+    const { userId, returnUrl } = req.body;
+    if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    try {
+        // 1. Get Customer ID from Supabase
+        if (!supabase) throw new Error("Supabase client not initialized");
+
+        const { data: userData, error } = await supabase
+            .from('users')
+            .select('stripe_id') // Ensure your table has stripe_id
+            .eq('user_id', userId)
+            .single();
+
+        if (error || !userData?.stripe_id) {
+            console.error("User not found or no stripe_id:", error);
+            return res.status(404).json({ error: 'Stripe Customer not found for this user. Please subscribe first.' });
+        }
+
+        // 2. Create Portal Session
+        const portalConfig = process.env.STRIPE_PORTAL_CONFIG_ID;
+        const sessionParams = {
+            customer: userData.stripe_id,
+            return_url: returnUrl || 'https://sincroapp.com.br',
+        };
+
+        if (portalConfig) {
+            sessionParams.configuration = portalConfig;
+        }
+
+        const session = await stripe.billingPortal.sessions.create(sessionParams);
+
+        res.json({ url: session.url });
+    } catch (e) {
+        console.error("Portal Session Error:", e.message);
+        res.status(500).json({ error: 'Failed to create portal session: ' + e.message });
+    }
+});
+
+// --- STRIPE WEBHOOK ---
+
+app.post('/api/webhooks/stripe', async (req, res) => {
+    const sig = req.headers['stripe-signature'];
+    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, endpointSecret);
+    } catch (err) {
+        console.error(`Webhook Error: ${err.message}`);
+        return res.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
+    // Handle the event
+    try {
+        const dataObject = event.data.object;
+
+        switch (event.type) {
+            case "checkout.session.completed": {
+                const session = dataObject;
+                const userId = session.client_reference_id;
+                const customerId = session.customer;
+
+                if (userId && supabase) {
+                    console.log(`Checkout complete for ${userId}. Updating stripe_id: ${customerId}`);
+                    // Note: Update logic might vary depending on table structure (profiles vs users)
+                    // Assuming 'profiles' table or similar where user_id is PK
+                    await supabase.from('users').update({ stripe_id: customerId }).eq('user_id', userId);
+                }
+                break;
+            }
+            case "invoice.payment_succeeded": {
+                const customerId = dataObject.customer;
+                const amount = dataObject.amount_paid / 100;
+                const currency = dataObject.currency;
+
+                if (supabase) {
+                    const { data: userData } = await supabase.from('users').select('*').eq('stripe_id', customerId).single();
+                    if (userData) {
+                        // Update subscription JSONB
+                        const currentSub = userData.subscription || {};
+                        const newSub = { ...currentSub, status: 'active', lastPayment: new Date().toISOString() };
+
+                        await supabase.from('users').update({
+                            subscription: newSub
+                        }).eq('user_id', userData.user_id);
+
+                        // Send to N8N
+                        try {
+                            await axios.post(N8N_TRANSACTION_WEBHOOK, {
+                                event: 'subscription_activated',
+                                email: userData.email,
+                                name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+                                userId: userData.user_id,
+                                amount, currency, stripeCustomerId: customerId
+                            });
+                        } catch (e) { console.error("N8N Error:", e.message); }
+                    }
+                }
+                break;
+            }
+            case "customer.subscription.deleted": {
+                const customerId = dataObject.customer;
+                if (supabase) {
+                    const { data: userData } = await supabase.from('users').select('*').eq('stripe_id', customerId).single();
+                    if (userData) {
+                        const currentSub = userData.subscription || {};
+                        const newSub = { ...currentSub, status: 'cancelled' };
+
+                        await supabase.from('users').update({ subscription: newSub }).eq('user_id', userData.user_id);
+
+                        try {
+                            await axios.post(N8N_TRANSACTION_WEBHOOK, {
+                                event: 'subscription_cancelled',
+                                email: userData.email,
+                                userId: userData.user_id
+                            });
+                        } catch (e) { }
+                    }
+                }
+                break;
+            }
+            case "customer.subscription.updated": {
+                const subscription = dataObject;
+                const customerId = subscription.customer;
+                const status = subscription.status;
+                const priceId = subscription.items.data[0].price.id;
+
+                if (supabase) {
+                    const { data: userData } = await supabase.from('users').select('*').eq('stripe_id', customerId).single();
+                    if (userData) {
+                        const currentSub = userData.subscription || {};
+                        const newSub = {
+                            ...currentSub,
+                            status: status,
+                            priceId: priceId,
+                            updatedAt: new Date().toISOString()
+                        };
+
+                        await supabase.from('users').update({
+                            subscription: newSub
+                        }).eq('user_id', userData.user_id);
+                    }
+                }
+                break;
+            }
+        }
+    } catch (err) {
+        console.error("Error processing webhook:", err);
+    }
+
+    res.json({ received: true });
+});
+
+// --- PASSWORD RESET ---
+app.post('/api/auth/reset-password', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    try {
+        // 1. Generate Token
+        const token = crypto.randomBytes(32).toString('hex');
+        const expiresAt = new Date(Date.now() + 3600000); // 1 hour
+
+        // 2. Save to Supabase (Requires password_resets table)
+        if (supabase) {
+            const { error } = await supabase.from('password_resets').insert({
+                email,
+                token,
+                expires_at: expiresAt.toISOString()
+            });
+            if (error) {
+                console.error("Supabase Error:", error);
+                throw error;
+            }
+        }
+
+        // 3. Send to N8N
+        const baseUrl = process.env.APP_BASE_URL || "https://sincroapp.com.br";
+        const link = `${baseUrl}/reset-password?token=${token}`;
+
+        await axios.post(N8N_PASSWORD_RESET_WEBHOOK, {
+            event: 'password_reset_requested',
+            email,
+            link
+        });
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Reset Password Error:", e);
+        res.status(500).json({ error: "Failed to process request" });
+    }
+});
+
+// --- USER DELETION CLEANUP WEBHOOK (TRIGGER) ---
+app.post('/api/auth/delete-user', async (req, res) => {
+    const { userId, email } = req.body;
+    console.log(`User deletion requested for ${userId}`);
+
+    // N8N hook for offboarding
+    try {
+        await axios.post(N8N_TRANSACTION_WEBHOOK, {
+            event: 'user_deleted',
+            email,
+            userId
+        });
+    } catch (e) { }
+
+    res.json({ success: true });
 });
 
 app.listen(PORT, () => {

@@ -4,12 +4,14 @@
    ================================================ */
 
 /* Header Core */
+/* Header Core */
 .header {
-    background-color: rgba(17, 24, 39, 0.9) !important;
+    background-color: rgba(17, 24, 39, 0.95) !important;
     backdrop-filter: blur(10px);
     border-bottom: 1px solid #374151;
     /* var(--border) fallback */
-    position: sticky;
+    position: fixed;
+    /* Fixed instead of sticky */
     top: 0;
     z-index: 100;
     padding: 16px 0;
@@ -53,18 +55,22 @@
 
 /* Hamburger Animation */
 .hamburger-btn {
-    position: relative;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    z-index: 60;
+    position: relative !important;
+    width: 24px !important;
+    /* Reduced from 32px */
+    height: 24px !important;
+    /* Reduced from 32px */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 5px !important;
+    /* Slightly reduced gap */
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    z-index: 60 !important;
+    padding: 0 !important;
     /* Above mobile menu */
 }
 
@@ -79,25 +85,28 @@
 }
 
 .hamburger-line {
-    width: 24px;
-    height: 2px;
-    background-color: white;
-    border-radius: 2px;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    transform-origin: center;
+    width: 18px !important;
+    /* Reduced from 24px */
+    height: 2px !important;
+    background-color: white !important;
+    border-radius: 2px !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transform-origin: center !important;
+    display: block !important;
+    margin: 0 !important;
 }
 
 .hamburger-btn.active .hamburger-line:nth-child(1) {
-    transform: translateY(8px) rotate(45deg);
+    transform: translateY(7px) rotate(45deg) !important;
 }
 
 .hamburger-btn.active .hamburger-line:nth-child(2) {
-    opacity: 0;
-    transform: translateX(10px);
+    opacity: 0 !important;
+    transform: translateX(10px) !important;
 }
 
 .hamburger-btn.active .hamburger-line:nth-child(3) {
-    transform: translateY(-8px) rotate(-45deg);
+    transform: translateY(-7px) rotate(-45deg) !important;
 }
 
 /* Desktop Navigation */
@@ -146,8 +155,10 @@
 
 /* Mobile Menu Overlay */
 #mobile-menu {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    /* Fixed to match header */
+    top: 80px;
+    /* Height of header approx */
     left: 0;
     width: 100%;
     background-color: rgba(17, 24, 39, 0.95);
@@ -184,16 +195,16 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem 1.5rem;
-    border: 1px solid #374151;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #FFFFFF;
-    background-color: transparent;
-    transition: all 0.3s ease;
-    text-decoration: none;
-    white-space: nowrap;
+    padding: 0.5rem 1.5rem !important;
+    border: 1px solid #374151 !important;
+    border-radius: 9999px !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #FFFFFF !important;
+    background-color: transparent !important;
+    transition: all 0.3s ease !important;
+    text-decoration: none !important;
+    white-space: nowrap !important;
 }
 
 .btn-outline:hover {
@@ -211,7 +222,7 @@
     display: none;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
     .btn-text-full {
         display: none;
     }
@@ -232,14 +243,19 @@
 /* Mobile: Center logo absolutely */
 @media (max-width: 767px) {
     .logo-link {
-        position: absolute;
-        left: 50%;
-        transform: translateX(-50%);
+        position: absolute !important;
+        left: 48% !important;
+        /* Nudge to left from 50% center */
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
     .logo-svg-main {
-        height: 28px;
-        width: auto;
+        height: 28px !important;
+        width: auto !important;
+        display: block !important;
     }
 }
 

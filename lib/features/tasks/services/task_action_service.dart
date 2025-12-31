@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class TaskActionService {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   /// Reagenda uma tarefa para o próximo dia lógico, baseando-se em 3 cenários:
   /// 1. Sem data: Define para Amanhã.
@@ -77,7 +77,7 @@ class TaskActionService {
       }
 
       // Executa a atualização
-      await _firestoreService.updateTaskFields(
+      await _supabaseService.updateTaskFields(
         userData.uid,
         task.id,
         updates,

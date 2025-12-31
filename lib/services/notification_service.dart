@@ -6,7 +6,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart' as
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/firebase_options.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart'; // Para TimeOfDay
 
 // Importa os DADOS de fuso horário (do arquivo 'latest.dart') com um apelido ÚNICO
@@ -21,6 +22,23 @@ import 'package:timezone/timezone.dart' as tz;
 Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
   // Precisamos inicializar o Firebase aqui para acesso em background
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializa Supabase para uso em background
+  try {
+     await Supabase.initialize(
+      url: const String.fromEnvironment(
+        'SUPABASE_URL', 
+        defaultValue: 'https://supabase.studiomlk.com.br',
+      ),
+      anonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a',
+      ),
+    );
+  } catch (e) {
+     debugPrint('Supabase já inicializado ou erro: $e');
+  }
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
@@ -28,8 +46,8 @@ Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
   final String? userId = response.payload;
   if (userId == null || userId.isEmpty) return;
 
-  final firestoreService = FirestoreService();
-  final tasks = await firestoreService.getTasksForToday(userId);
+  final supabaseService = SupabaseService();
+  final tasks = await supabaseService.getTasksForToday(userId);
   final uncompletedCount = tasks.where((t) => !t.completed).length;
 
   if (uncompletedCount > 0) {

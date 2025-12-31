@@ -284,10 +284,10 @@ class _InfoCardState extends State<InfoCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isPeriodTag) ...[
-                      Icon(
+                      const Icon(
                         Icons.access_time,
                         size: 14,
-                        color: const Color(0xffe9d5ff),
+                        color: Color(0xffe9d5ff),
                       ),
                       const SizedBox(width: 4),
                     ],
@@ -392,10 +392,10 @@ class _InfoCardState extends State<InfoCard> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     if (isPeriodTag) ...[
-                      Icon(
+                      const Icon(
                         Icons.access_time,
                         size: 14,
-                        color: const Color(0xffe9d5ff),
+                        color: Color(0xffe9d5ff),
                       ),
                       const SizedBox(width: 4),
                     ],

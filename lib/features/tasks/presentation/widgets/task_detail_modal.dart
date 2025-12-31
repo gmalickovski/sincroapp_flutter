@@ -16,7 +16,7 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_sele
 // --- FIM DA MUDANÇA ---
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class TaskDetailModal extends StatefulWidget {
@@ -35,7 +35,7 @@ class TaskDetailModal extends StatefulWidget {
 
 class _TaskDetailModalState extends State<TaskDetailModal> {
   // --- Variáveis de estado (outras funcionalidades mantidas) ---
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   late TextEditingController _textController;
   Goal? _selectedGoal;
   List<String> _currentTags = [];
@@ -125,7 +125,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     setState(() => _isLoadingGoal = true);
     try {
       final goal =
-          await _firestoreService.getGoalById(widget.userData.uid, goalId);
+          await _supabaseService.getGoalById(widget.userData.uid, goalId);
       if (mounted) {
         setState(() {
           _selectedGoal = goal;
@@ -259,10 +259,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     navigator.pop();
 
     try {
-      await _firestoreService.addTask(widget.userData.uid, duplicatedTask);
+      await _supabaseService.addTask(widget.userData.uid, duplicatedTask);
       if (duplicatedTask.journeyId != null &&
           duplicatedTask.journeyId!.isNotEmpty) {
-        await _firestoreService.updateGoalProgress(
+        await _supabaseService.updateGoalProgress(
             widget.userData.uid, duplicatedTask.journeyId!);
       }
       if (!mounted) return;
@@ -315,9 +315,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     navigator.pop();
 
     try {
-      await _firestoreService.deleteTask(widget.userData.uid, widget.task.id);
+      await _supabaseService.deleteTask(widget.userData.uid, widget.task.id);
       if (goalIdToUpdate != null && goalIdToUpdate.isNotEmpty) {
-        await _firestoreService.updateGoalProgress(
+        await _supabaseService.updateGoalProgress(
             widget.userData.uid, goalIdToUpdate);
       }
       if (!mounted) return;
@@ -393,18 +393,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     navigator.pop();
 
     try {
-      await _firestoreService.updateTaskFields(
+      await _supabaseService.updateTaskFields(
           widget.userData.uid, widget.task.id, updates);
 
       bool goalChanged = originalGoalId != currentGoalId;
       if (goalChanged) {
         if (originalGoalId != null && originalGoalId.isNotEmpty) {
-          await _firestoreService.updateGoalProgress(
+          await _supabaseService.updateGoalProgress(
               widget.userData.uid, originalGoalId);
         }
       }
       if (currentGoalId != null && currentGoalId.isNotEmpty) {
-        await _firestoreService.updateGoalProgress(
+        await _supabaseService.updateGoalProgress(
             widget.userData.uid, currentGoalId);
       }
 

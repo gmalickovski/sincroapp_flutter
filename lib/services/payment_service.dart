@@ -2,19 +2,19 @@
 // ignore_for_file: todo
 
 import 'dart:async';
+import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
-import 'package:cloud_functions/cloud_functions.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/constants/stripe_constants.dart';
 
 /// Serviço centralizado de pagamentos com Stripe
 class PaymentService {
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
 
   /// Inicializa o Stripe (deve ser chamado no main ou splash)
   static Future<void> initialize() async {
@@ -23,83 +23,6 @@ class PaymentService {
     if (!kIsWeb) {
       await Stripe.instance.applySettings();
     }
-  }
-
-  /// Inicia processo de assinatura via Stripe
-  Future<bool> purchaseSubscription({
-    required String userId,
-    required SubscriptionPlan plan,
-    BillingCycle cycle = BillingCycle.monthly,
-  }) async {
-    if (plan == SubscriptionPlan.free) {
-      throw ArgumentError('Plano free não requer compra');
-    }
-
-    try {
-      // 1. Determinar o Price ID correto
-      final priceId = _getPriceId(plan, cycle);
-      if (priceId == null) {
-        throw UnimplementedError('Plano/Ciclo não configurado no StripeConstants');
-      }
-
-      // 2. Criar Assinatura no backend (retorna clientSecret do PaymentIntent da fatura)
-      final paymentData = await _createSubscription(
-        priceId: priceId,
-      );
-
-      // 3. Inicializar Payment Sheet
-      if (paymentData['clientSecret'] == null) {
-        debugPrint('Client Secret é nulo. Assinatura pode não requerer pagamento imediato ou falhou.');
-        // Se não houver clientSecret, talvez seja um trial ou erro. 
-        // Por enquanto, vamos retornar true se houver subscriptionId, assumindo sucesso sem pagamento imediato.
-        if (paymentData['subscriptionId'] != null) {
-             return true;
-        }
-        throw Exception('Falha ao obter segredo de pagamento do Stripe.');
-      }
-
-      await Stripe.instance.initPaymentSheet(
-        paymentSheetParameters: SetupPaymentSheetParameters(
-          customFlow: false,
-          merchantDisplayName: 'Sincro App',
-          paymentIntentClientSecret: paymentData['clientSecret'],
-          customerEphemeralKeySecret: paymentData['ephemeralKey'],
-          customerId: paymentData['customer'],
-          style: ThemeMode.system,
-        ),
-      );
-
-      // 4. Apresentar Payment Sheet
-      await Stripe.instance.presentPaymentSheet();
-
-      // 5. Sucesso!
-      debugPrint('Assinatura realizada com sucesso!');
-      return true;
-
-    } on StripeException catch (e) {
-      debugPrint('Erro do Stripe: ${e.error.localizedMessage}');
-      if (e.error.code == FailureCode.Canceled) {
-        return false; // Usuário cancelou
-      }
-      rethrow;
-    } catch (e) {
-      debugPrint('Erro ao processar assinatura: $e');
-      rethrow;
-    }
-  }
-
-  /// Retorna o Price ID baseado no plano e ciclo
-  String? _getPriceId(SubscriptionPlan plan, BillingCycle cycle) {
-    if (plan == SubscriptionPlan.plus) { // Desperta
-      return cycle == BillingCycle.monthly 
-          ? StripeConstants.priceDespertaMonthly 
-          : StripeConstants.priceDespertaAnnual;
-    } else if (plan == SubscriptionPlan.premium) { // Sinergia
-      return cycle == BillingCycle.monthly 
-          ? StripeConstants.priceSinergiaMonthly 
-          : StripeConstants.priceSinergiaAnnual;
-    }
-    return null;
   }
 
   /// Retorna o Link de Pagamento baseado no plano e ciclo
@@ -116,69 +39,70 @@ class PaymentService {
     return null;
   }
 
-  /// Cria Subscription via Firebase Function
-  Future<Map<String, dynamic>> _createSubscription({
-    required String priceId,
-  }) async {
-    try {
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('createSubscription');
-      
-      final result = await callable.call<Map<String, dynamic>>({
-        'priceId': priceId,
-      });
-
-      return result.data;
-    } catch (e) {
-      debugPrint('Erro ao chamar createSubscription: $e');
-      rethrow;
-    }
-  }
-
   /// Verifica status da assinatura atual
   Future<SubscriptionModel> getSubscriptionStatus(String userId) async {
-    final userData = await _firestoreService.getUserData(userId);
+    final userData = await _supabaseService.getUserData(userId);
     return userData?.subscription ?? SubscriptionModel.free();
   }
 
   Future<void> openCustomerPortal() async {
     try {
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('createPortalSession');
-      
-      // Define a URL de retorno baseada na plataforma
-      // Para mobile, idealmente seria um Deep Link (ex: sincroapp://profile)
-      // Por enquanto, vamos usar o site oficial como fallback
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw 'Usuário não autenticado';
+
       const returnUrl = 'https://sincroapp.com.br'; 
+      // Use local server or production URL
+      const String baseUrl = kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
+      final url = Uri.parse('$baseUrl/api/stripe/portal-session');
 
-      final result = await callable.call({
-        'returnUrl': returnUrl,
-      });
+      debugPrint('SincroApp: Solicitando portal: $url');
 
-      final url = result.data['url'] as String;
-      
-      // Abre a URL no navegador
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(
-          uri, 
-          mode: LaunchMode.externalApplication,
-          webOnlyWindowName: '_self',
-        );
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': user.uid,
+          'email': user.email,
+          'returnUrl': returnUrl,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final portalUrl = data['url'] as String;
+        
+        // Abre a URL no navegador
+        final uri = Uri.parse(portalUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(
+            uri, 
+            mode: LaunchMode.externalApplication,
+            webOnlyWindowName: '_self',
+          );
+        } else {
+          throw 'Não foi possível abrir a URL: $portalUrl';
+        }
+        debugPrint('Portal URL: $portalUrl');
       } else {
-        throw 'Não foi possível abrir a URL: $url';
+         throw 'Erro ao abrir portal (${response.statusCode}): ${response.body}';
       }
-      debugPrint('Portal URL: $url');
+
     } catch (e) {
       debugPrint('Erro ao abrir portal: $e');
       rethrow;
     }
   }
+
   /// Abre o Link de Pagamento no navegador
-  Future<void> launchPaymentLink(SubscriptionPlan plan, BillingCycle cycle) async {
+  Future<void> launchPaymentLink(SubscriptionPlan plan, BillingCycle cycle, String userId) async {
     final url = getPaymentLink(plan, cycle);
     if (url != null) {
-      final uri = Uri.parse(url);
+      // Adiciona client_reference_id para identificar o usuário no webhook
+      // Verifica se a URL já tem query params (Links do Stripe geralmente não têm, mas por garantia)
+      final separator = url.contains('?') ? '&' : '?';
+      final finalUrl = '$url${separator}client_reference_id=$userId';
+
+      final uri = Uri.parse(finalUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(
           uri, 

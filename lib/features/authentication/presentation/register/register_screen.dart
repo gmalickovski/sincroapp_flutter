@@ -1,4 +1,4 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -39,34 +39,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
     try {
       final displayName =
           '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}';
-      await _authRepository.createUserWithEmailAndPassword(
+      final response = await _authRepository.createUserWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
         displayName: displayName,
       );
 
-      final currentUser = FirebaseAuth.instance.currentUser;
-      await currentUser?.reload();
-      final freshUser = FirebaseAuth.instance.currentUser;
+      final freshUser = response.user;
 
       if (mounted && freshUser != null) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-              builder: (context) => UserDetailsScreen(firebaseUser: freshUser)),
+              builder: (context) => UserDetailsScreen(user: freshUser)),
           (route) => false,
         );
       }
-    } on FirebaseAuthException catch (e) {
+    } on AuthException catch (e) {
       if (mounted) {
         setState(() {
-          if (e.code == 'weak-password') {
+          if (e.message.contains('Password should be at least')) {
             _errorMessage = 'A senha é muito fraca (mínimo 6 caracteres).';
-          } else if (e.code == 'email-already-in-use') {
+          } else if (e.code == 'user_already_exists') {
             _errorMessage = 'Este email já está a ser utilizado.';
-          } else if (e.code == 'invalid-email') {
-            _errorMessage = 'O email fornecido é inválido.';
           } else {
-            _errorMessage = 'Ocorreu um erro. Tente novamente.';
+            _errorMessage = e.message;
           }
           _isLoading = false;
         });

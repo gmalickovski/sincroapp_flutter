@@ -1,10 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/app/routs/app_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
-import 'package:sincro_app_flutter/features/subscription/presentation/subscription_screen.dart';
-import 'package:sincro_app_flutter/services/payment_service.dart';
 
 class PlanSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -15,7 +14,7 @@ class PlanSettingsTab extends StatefulWidget {
 }
 
 class _PlanSettingsTabState extends State<PlanSettingsTab> {
-  bool _isLoadingPortal = false;
+  final bool _isLoadingPortal = false;
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +35,8 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
           LayoutBuilder(
             builder: (context, constraints) {
               final isMobile = constraints.maxWidth < 600;
+              final isFree = currentPlan == SubscriptionPlan.free;
+
               return Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -84,15 +85,22 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
                             ],
                           ),
                           const SizedBox(height: 24),
-                          SizedBox(
-                            width: double.infinity,
-                            child: _buildManageButton(),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: _buildChangePlanButton(context),
-                          ),
+                          if (isFree)
+                            SizedBox(
+                              width: double.infinity,
+                              child: _buildSubscribeButton(context),
+                            )
+                          else ...[
+                            SizedBox(
+                              width: double.infinity,
+                              child: _buildManageButton(),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: _buildViewPlansButton(context),
+                            ),
+                          ]
                         ],
                       )
                     : Row(
@@ -132,11 +140,13 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              _buildManageButton(),
-                              const SizedBox(height: 8),
-                              _buildChangePlanButton(context),
-                            ],
+                            children: isFree
+                                ? [_buildSubscribeButton(context)]
+                                : [
+                                    _buildManageButton(),
+                                    const SizedBox(height: 8),
+                                    _buildViewPlansButton(context),
+                                  ],
                           ),
                         ],
                       ),
@@ -150,59 +160,65 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
 
   Widget _buildManageButton() {
     return ElevatedButton(
-      onPressed: _isLoadingPortal
-          ? null
-          : () async {
-              setState(() => _isLoadingPortal = true);
-              try {
-                await PaymentService().openCustomerPortal();
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Erro ao abrir portal: $e')),
-                  );
-                }
-              } finally {
-                if (mounted) setState(() => _isLoadingPortal = false);
-              }
-            },
+      onPressed: () async {
+        final Uri url = Uri.parse(
+            'https://billing.stripe.com/p/login/test_eVq7sN3y5alp4fndNj5c400');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.primaryText,
         elevation: 0,
         side: const BorderSide(color: AppColors.border),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       ),
-      child: _isLoadingPortal
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primaryText,
-              ),
-            )
-          : const Text('Gerenciar Assinatura'),
+      child: const Text('Gerenciar Assinatura'),
     );
   }
 
-  Widget _buildChangePlanButton(BuildContext context) {
+  Widget _buildSubscribeButton(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => SubscriptionScreen(user: widget.userData),
-          ),
-        );
+      onPressed: () async {
+        final Uri url = Uri.parse(kDebugMode
+            ? 'http://localhost:3000/planos-e-precos' // Dev Local
+            : 'https://sincroapp.com.br/planos-e-precos'); // Prod
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
       },
       style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.primary.withValues(alpha: 0.1), // Light background
-        foregroundColor: AppColors.primary,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         elevation: 0,
-        side: const BorderSide(color: AppColors.primary), // Border color
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
       ),
-      child: const Text('Alterar meu plano'),
+      child: const Text('Assinar Agora'),
+    );
+  }
+
+  Widget _buildViewPlansButton(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () async {
+        final Uri url = Uri.parse(kDebugMode
+            ? 'http://localhost:3000/planos-e-precos'
+            : 'https://sincroapp.com.br/planos-e-precos');
+        if (await canLaunchUrl(url)) {
+          await launchUrl(url, mode: LaunchMode.externalApplication);
+        }
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+        foregroundColor: AppColors.primary,
+        elevation: 0,
+        side: const BorderSide(color: AppColors.primary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+      ),
+      child: const Text('Ver Planos'),
     );
   }
 }

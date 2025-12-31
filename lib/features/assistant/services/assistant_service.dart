@@ -1,38 +1,18 @@
 import 'dart:convert';
-import 'package:firebase_ai/firebase_ai.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/services/assistant_prompt_builder.dart';
+import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AssistantService {
-  static GenerativeModel? _model;
   static DateTime? _lastInteractionDate;
-
-  static GenerativeModel _getModel() {
-    if (_model != null) return _model!;
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      throw Exception(
-          'Usuário não autenticado. Faça login para usar o assistente.');
-    }
-    
-    final model = FirebaseAI.vertexAI(
-      auth: FirebaseAuth.instance,
-      appCheck: FirebaseAppCheck.instance,
-    ).generativeModel(model: 'gemini-2.5-flash-lite');
-    
-    _model = model;
-    return model;
-  }
 
   static bool _isFirstMessageOfDay() {
     final now = DateTime.now();
@@ -68,17 +48,17 @@ class AssistantService {
       final estimatedInputTokens = (promptLength / 4).ceil();
       final estimatedOutputTokens = (outputLength / 4).ceil();
       
-      await FirebaseFirestore.instance.collection('ai_usage_logs').add({
-        'userId': userId,
-        'timestamp': FieldValue.serverTimestamp(),
+      await Supabase.instance.client.from('ai_usage_logs').insert({
+        'user_id': userId,
+        'created_at': DateTime.now().toIso8601String(),
         'type': type,
-        'promptLength': promptLength,
-        'outputLength': outputLength,
-        'estimatedInputTokens': estimatedInputTokens,
-        'estimatedOutputTokens': estimatedOutputTokens,
+        'prompt_length': promptLength,
+        'output_length': outputLength,
+        'estimated_input_tokens': estimatedInputTokens,
+        'estimated_output_tokens': estimatedOutputTokens,
       });
     } catch (e) {
-      debugPrint('Erro ao logar uso de IA: $e');
+      debugPrint('Erro ao logar uso de IA no Supabase: $e');
     }
   }
 
@@ -104,8 +84,9 @@ class AssistantService {
       chatHistory: chatHistory,
     );
 
-    final response = await _getModel().generateContent([Content.text(prompt)]);
-    var text = response.text ?? '';
+    final n8n = N8nService();
+    // Chama o n8n passando o prompt completo (incluindo contexto)
+    final text = await n8n.chat(prompt: prompt, userId: user.uid);
     
     // Log Usage AFTER response
     _logUsage(
@@ -115,26 +96,31 @@ class AssistantService {
       outputLength: text.length,
     );
 
-    // Remove markdown code blocks if present
-    text = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
+    // Remove markdown code blocks if present (o n8n pode retornar ```json ...)
+    final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
     
     // Find the first opening brace and the last closing brace
-    final startIndex = text.indexOf('{');
-    final endIndex = text.lastIndexOf('}');
+    final startIndex = cleanText.indexOf('{');
+    final endIndex = cleanText.lastIndexOf('}');
 
     if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) {
+      // Se não achou JSON, tenta retornar como texto simples encapsulado
+      // Isso é útil se o n8n responder apenas texto sem formatação JSON
+      if (cleanText.isNotEmpty) {
+          return AssistantAnswer(answer: cleanText, actions: []);
+      }
       throw Exception('A IA não retornou um objeto JSON válido.');
     }
 
-    final jsonStr = text.substring(startIndex, endIndex + 1);
+    final jsonStr = cleanText.substring(startIndex, endIndex + 1);
 
     Map<String, dynamic> data;
     try {
       data = jsonDecode(jsonStr) as Map<String, dynamic>;
     } catch (e) {
-      // try compute isolate if needed, but decode here for simplicity
-      debugPrint('Erro ao decodificar JSON do assistente: $e');
-      rethrow;
+      debugPrint('Erro ao decodificar JSON do assistente (n8n): $e');
+      // Fallback: tratar como texto corrido se falhar o parse
+      return AssistantAnswer(answer: cleanText, actions: []);
     }
 
     return AssistantAnswer.fromJson(data);
@@ -154,8 +140,8 @@ class AssistantService {
     );
 
     try {
-      final response = await _getModel().generateContent([Content.text(prompt)]);
-      var text = response.text ?? '';
+      final n8n = N8nService();
+      final text = await n8n.chat(prompt: prompt, userId: user.uid);
 
       // Log Usage AFTER response
       _logUsage(
@@ -166,22 +152,22 @@ class AssistantService {
       );
 
       // Clean up markdown
-      text = text
+      final cleanText = text
           .replaceAll(RegExp(r'```json\s*'), '')
           .replaceAll(RegExp(r'```\s*'), '');
 
-      final startIndex = text.indexOf('[');
-      final endIndex = text.lastIndexOf(']');
+      final startIndex = cleanText.indexOf('[');
+      final endIndex = cleanText.lastIndexOf(']');
 
       if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) {
         return [];
       }
 
-      final jsonStr = text.substring(startIndex, endIndex + 1);
+      final jsonStr = cleanText.substring(startIndex, endIndex + 1);
       final List<dynamic> data = jsonDecode(jsonStr);
       return data.map((e) => e.toString()).toList();
     } catch (e) {
-      debugPrint('Erro ao gerar sugestões de estratégia: $e');
+      debugPrint('Erro ao gerar sugestões de estratégia (n8n): $e');
       return [];
     }
   }

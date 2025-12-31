@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -89,7 +88,7 @@ class _FeedbackModalState extends State<FeedbackModal> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   'Vamos analisar seu feedback com carinho e, se necessário, retornaremos uma resposta para seu e-mail.\n\nAgradecemos sua contribuição — ela nos ajuda a melhorar o app cada vez mais!',
                   style: TextStyle(color: AppColors.secondaryText, fontSize: 14, height: 1.5),
                   textAlign: TextAlign.center,

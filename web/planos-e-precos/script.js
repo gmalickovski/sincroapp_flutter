@@ -9,6 +9,17 @@ const PRICES = {
     }
 };
 
+const LINKS = {
+    monthly: {
+        plus: 'https://buy.stripe.com/test_cNidRbb0xdxBcLT10x5c402',
+        premium: 'https://buy.stripe.com/test_eVq7sN3y5alp4fndNj5c400'
+    },
+    annual: {
+        plus: 'https://buy.stripe.com/test_5kQ00l9WtdxB4fngZv5c403',
+        premium: 'https://buy.stripe.com/test_9B614p2u19hl4fn5gN5c401'
+    }
+};
+
 let currentBilling = 'monthly';
 
 // DOM Elements
@@ -39,6 +50,12 @@ function setBilling(cycle) {
     // Update Prices with Animation
     updatePrice(pricePlus, PRICES[cycle].plus);
     updatePrice(pricePremium, PRICES[cycle].premium);
+
+    // Update Links
+    const btnPlus = document.getElementById('btn-subscribe-plus');
+    const btnPremium = document.getElementById('btn-subscribe-premium');
+    if (btnPlus) btnPlus.href = LINKS[cycle].plus;
+    if (btnPremium) btnPremium.href = LINKS[cycle].premium;
 
     // Update Info Text
     const text = cycle === 'monthly' ? 'Cobrado mensalmente' : 'Cobrado anualmente';

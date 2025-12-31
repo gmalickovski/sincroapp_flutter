@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
-import 'package:collection/collection.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
@@ -11,7 +10,7 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
@@ -38,7 +37,7 @@ class CalendarScreen extends StatefulWidget {
 class _CalendarScreenState extends State<CalendarScreen> {
   static const double kTabletBreakpoint = 768.0;
 
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   final AuthRepository _authRepository = AuthRepository();
   final Uuid _uuid = const Uuid();
@@ -59,7 +58,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   int? _personalDayNumber;
   bool _isScreenLoading = true;
-  bool _isChangingMonth = false;
+  final bool _isChangingMonth = false;
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
@@ -82,7 +81,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Esta linha satisfaz o 'late' de _selectedDay
     _selectedDay = DateTime(now.year, now.month, now.day);
     // Garante que userId seja pego com segurança
-    _userId = _authRepository.getCurrentUser()?.uid ?? '';
+    _userId = _authRepository.currentUser?.id ?? '';
     if (_userId.isEmpty) {
       debugPrint("ERRO GRAVE: CalendarScreen iniciada sem userId!");
       // Idealmente, tratar esse caso (ex: mostrar erro, impedir build)
@@ -108,7 +107,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final endOfMonth = DateTime(month.year, month.month + 1, 0);
 
     // Stream de tarefas por data de vencimento (para o mês atual)
-    _tasksDueDateSubscription = _firestoreService
+    _tasksDueDateSubscription = _supabaseService
         .getTasksStreamForRange(_userId, startOfMonth, endOfMonth)
         .listen((tasks) {
       _currentTasksDueDate = tasks;
@@ -308,7 +307,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       personalDay: finalPersonalDay,
     );
 
-    _firestoreService.addTask(_userId, newTask).catchError((error) {
+    _supabaseService.addTask(_userId, newTask).catchError((error) {
       _showErrorSnackbar("Erro ao salvar tarefa: $error");
     });
   }
@@ -424,7 +423,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   
   Future<void> _onToggleTask(TaskModel task, bool newValue) async {
     try {
-      await _firestoreService.updateTaskCompletion(
+      await _supabaseService.updateTaskCompletion(
         _userId,
         task.id,
         completed: newValue,
@@ -464,7 +463,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     if (confirmed == true) {
       try {
-        await _firestoreService.deleteTask(_userId, task.id);
+        await _supabaseService.deleteTask(_userId, task.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -675,7 +674,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           
           // Estima altura do calendário (varia entre ~380-450px dependendo do mês)
           // Usamos um valor conservador para garantir que não sobreponha inicialmente
-          final estimatedCalendarHeight = 450.0;
+          const estimatedCalendarHeight = 450.0;
           final availableHeight = screenHeight - estimatedCalendarHeight;
           
           // Calcula o tamanho inicial como fração da tela

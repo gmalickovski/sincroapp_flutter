@@ -1,14 +1,12 @@
 // lib/features/journal/models/journal_entry_model.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class JournalEntry {
   final String id;
   final String content;
   final DateTime createdAt;
   final DateTime updatedAt;
   final int personalDay;
-  final int? mood; // Mood pode ser nulo
+  final int? mood; // Mood 1-5
 
   JournalEntry({
     required this.id,
@@ -19,28 +17,26 @@ class JournalEntry {
     this.mood,
   });
 
-  // Método factory para criar uma instância a partir de um DocumentSnapshot do Firestore
-  factory JournalEntry.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  factory JournalEntry.fromMap(Map<String, dynamic> map) {
     return JournalEntry(
-      id: doc.id,
-      content: data['content'] ?? '',
-      // Timestamps do Firestore precisam ser convertidos para DateTime
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-      personalDay: data['personalDay'] ?? 0,
-      mood: data['mood'] as int?,
+      id: map['id'] ?? '',
+      content: map['content'] ?? '',
+      createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
+      // Se não tiver updated_at ou entry_date, usa created_at
+      updatedAt: DateTime.tryParse(map['updated_at'] ?? map['entry_date'] ?? '') ?? DateTime.now(),
+      personalDay: map['personal_day'] ?? 0,
+      mood: map['mood'] != null ? int.tryParse(map['mood'].toString()) : null,
     );
   }
 
-  // Método para converter a instância para um Map, útil para salvar no Firestore
   Map<String, dynamic> toMap() {
     return {
       'content': content,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-      'personalDay': personalDay,
-      'mood': mood,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+      'entry_date': createdAt.toIso8601String(), // Sync entry_date with createdAt usually
+      'personal_day': personalDay,
+      'mood': mood?.toString(),
     };
   }
 }

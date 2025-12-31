@@ -1,12 +1,11 @@
 // lib/features/journal/presentation/journal_editor_screen.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class JournalEditorScreen extends StatefulWidget {
@@ -25,7 +24,7 @@ class JournalEditorScreen extends StatefulWidget {
 
 class _JournalEditorScreenState extends State<JournalEditorScreen> {
   final _contentController = TextEditingController();
-  final _firestoreService = FirestoreService();
+  final _supabaseService = SupabaseService();
 
   int? _selectedMood;
   bool _isSaving = false;
@@ -63,18 +62,18 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
     final dataToSave = {
       'content': _contentController.text.trim(),
-      'updatedAt': Timestamp.now(),
+      'updatedAt': DateTime.now(),
       'mood': _selectedMood,
     };
 
     try {
       if (_isEditing) {
-        await _firestoreService.updateJournalEntry(
+        await _supabaseService.updateJournalEntry(
             widget.userData.uid, widget.entry!.id, dataToSave);
       } else {
-        dataToSave['createdAt'] = Timestamp.fromDate(_noteDate);
+        dataToSave['createdAt'] = _noteDate;
         dataToSave['personalDay'] = _personalDay;
-        await _firestoreService.addJournalEntry(
+        await _supabaseService.addJournalEntry(
             widget.userData.uid, dataToSave);
       }
 

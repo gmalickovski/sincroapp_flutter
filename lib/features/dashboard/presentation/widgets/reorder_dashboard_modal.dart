@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 // Mapeia os IDs dos cards para seus nomes de exibição e ícones
 const Map<String, Map<String, dynamic>> _cardDisplayData = {
@@ -116,7 +116,7 @@ class ReorderDashboardModal extends StatefulWidget {
 
 class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
   late List<String> _currentOrder;
-  final FirestoreService _firestoreService = FirestoreService();
+  final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
   late Set<String> _hidden; // controla cards ocultos durante a edição
 
@@ -150,13 +150,14 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
 
     setState(() => _isLoading = true);
     try {
-      debugPrint("ReorderModal: Chamando Firestore update...");
-      await _firestoreService.updateUserDashboardOrder(
-          widget.userId, _currentOrder);
-      // Persiste os cartões ocultos
-      await _firestoreService.updateUserDashboardHiddenCards(
-          widget.userId, _hidden.toList());
-      debugPrint("ReorderModal: Firestore update finalizado com sucesso.");
+      debugPrint("ReorderModal: Chamando Supabase update...");
+      
+      await _supabaseService.updateUserData(widget.userId, {
+        'dashboardCardOrder': _currentOrder,
+        'dashboardHiddenCards': _hidden.toList(),
+      });
+      
+      debugPrint("ReorderModal: Supabase update finalizado com sucesso.");
       if (mounted) {
         debugPrint("ReorderModal: Chamando onSaveComplete(true).");
         widget.onSaveComplete(true);
