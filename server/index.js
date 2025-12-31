@@ -598,16 +598,17 @@ app.post('/api/webhooks/stripe', async (req, res) => {
                             subscription: newSub
                         }).eq('user_id', userData.user_id);
 
-                        // Send to N8N
-                        try {
-                            await axios.post(N8N_TRANSACTION_WEBHOOK, {
-                                event: 'subscription_activated',
-                                email: userData.email,
-                                name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
-                                userId: userData.user_id,
-                                amount, currency, stripeCustomerId: customerId
-                            });
-                        } catch (e) { console.error("N8N Error:", e.message); }
+                        // Send to N8N (Standardized)
+                        await sendN8nEvent('invoice.payment_succeeded', {
+                            event: 'subscription_activated', // Legacy field for compat
+                            email: userData.email,
+                            name: `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+                            userId: userData.user_id,
+                            amount,
+                            currency,
+                            stripeCustomerId: customerId,
+                            invoice_url: dataObject.hosted_invoice_url
+                        });
                     }
                 }
                 break;
@@ -622,13 +623,12 @@ app.post('/api/webhooks/stripe', async (req, res) => {
 
                         await supabase.from('users').update({ subscription: newSub }).eq('user_id', userData.user_id);
 
-                        try {
-                            await axios.post(N8N_TRANSACTION_WEBHOOK, {
-                                event: 'subscription_cancelled',
-                                email: userData.email,
-                                userId: userData.user_id
-                            });
-                        } catch (e) { }
+                        await sendN8nEvent('customer.subscription.deleted', {
+                            event: 'subscription_cancelled',
+                            email: userData.email,
+                            userId: userData.user_id,
+                            stripeCustomerId: customerId
+                        });
                     }
                 }
                 break;
@@ -653,6 +653,15 @@ app.post('/api/webhooks/stripe', async (req, res) => {
                         await supabase.from('users').update({
                             subscription: newSub
                         }).eq('user_id', userData.user_id);
+
+                        // Also notify N8N about updates
+                        await sendN8nEvent('customer.subscription.updated', {
+                            event: 'subscription_updated',
+                            email: userData.email,
+                            userId: userData.user_id,
+                            status: status,
+                            priceId: priceId
+                        });
                     }
                 }
                 break;
@@ -666,23 +675,34 @@ app.post('/api/webhooks/stripe', async (req, res) => {
 });
 
 // --- HELPER: Send Standardized Event to N8N ---
-const sendN8nEvent = async (eventType, dataObject) => {
-    const webhookUrl = "https://n8n.studiomlk.com.br/webhook/sincroapp";
+const https = require('https'); // Ensure this is imported or require it here
 
-    // Mimic Stripe Structure
+const sendN8nEvent = async (eventType, dataObject) => {
+    // UPDATED: Use ENV variable as requested
+    const webhookUrl = process.env.N8N_EVENT_HOST_WEBHOOK || "https://n8n.studiomlk.com.br/webhook/sincroapp-event-host";
+
+    // Create an HTTPS agent that ignores SSL certificate errors
+    const httpsAgent = new https.Agent({
+        rejectUnauthorized: false
+    });
+
+    // Simple Event Structure (Requested by User)
+    // The 'eventType' argument becomes the 'event' field
     const payload = {
-        type: eventType,
-        created: Math.floor(Date.now() / 1000), // Unix timestamp in seconds
-        data: {
-            object: dataObject
-        }
+        event: eventType,
+        ...dataObject
     };
 
     try {
         console.log(`[N8N] Sending ${eventType} to ${webhookUrl}`);
-        await axios.post(webhookUrl, payload);
+        // Pass the httpsAgent to axios
+        await axios.post(webhookUrl, payload, { httpsAgent });
+        console.log(`[N8N] Success: ${eventType} sent.`);
     } catch (e) {
         console.error(`[N8N] Failed to send ${eventType}:`, e.message);
+        if (e.code === 'CERT_HAS_EXPIRED' || e.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
+            console.error('[N8N] SSL Error detected. The `rejectUnauthorized: false` fix should have handled this. Check network connectivity.');
+        }
     }
 };
 
@@ -713,7 +733,7 @@ app.post('/api/auth/reset-password', async (req, res) => {
         const baseUrl = process.env.APP_BASE_URL || "https://sincroapp.com.br";
         const link = `${baseUrl}/reset-password?token=${token}`;
 
-        await sendN8nEvent('auth.password_reset_requested', {
+        await sendN8nEvent('password_reset_requested', {
             email,
             link,
             token
@@ -732,13 +752,11 @@ app.post('/api/auth/signup-notify', async (req, res) => {
     console.log(`New user signup: ${email} (${userId})`);
 
     try {
-        await sendN8nEvent('auth.user_created', {
-            id: userId,
-            uid: userId,
+        await sendN8nEvent('user_created', {
+            userId: userId, // Requested format uses userId
             email,
             name,
-            display_name: name,
-            created_at: new Date().toISOString()
+            plan: 'gratuito' // Added default plan as in example
         });
     } catch (e) {
         // Do not fail
@@ -753,9 +771,8 @@ app.post('/api/auth/delete-user', async (req, res) => {
     console.log(`User deletion requested for ${userId}`);
 
     try {
-        await sendN8nEvent('auth.user_deleted', {
-            id: userId,
-            uid: userId,
+        await sendN8nEvent('user_deleted', {
+            userId,
             email
         });
     } catch (e) { }

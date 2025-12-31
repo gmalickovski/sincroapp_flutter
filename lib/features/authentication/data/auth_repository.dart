@@ -49,14 +49,10 @@ class AuthRepository {
         data: {'full_name': displayName.trim()}, 
       );
       
-      // Notificar N8N sobre novo cadastro
-      if (response.user != null) {
-        _notifySignup(
-          email: email.trim(),
-          userId: response.user!.id,
-          displayName: displayName.trim(),
-        );
-      }
+      // Notificar N8N MOVED: Now handled in UserDetailsScreen after analysis data
+      // if (response.user != null) {
+      //   _notifySignup(...)
+      // }
 
       return response;
     } catch (e) {
@@ -64,7 +60,7 @@ class AuthRepository {
     }
   }
 
-  Future<void> _notifySignup({
+  Future<void> sendSignupWebhook({
     required String email,
     required String userId,
     required String displayName,

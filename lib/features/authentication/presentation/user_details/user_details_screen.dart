@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
+import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart'; // NEW
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -86,6 +87,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
       );
 
       await _supabaseService.saveUserData(newUser);
+
+      // NOVO: Enviar Webhook ao N8N após salvar dados de análise
+      await AuthRepository().sendSignupWebhook(
+        email: newUser.email,
+        userId: newUser.uid,
+        displayName: '${newUser.primeiroNome} ${newUser.sobrenome}'.trim(),
+      );
+
       // Navegação direta para o Dashboard após salvar com sucesso.
       // Mantemos o AuthCheck como plano B, mas forçamos a navegação
       // para evitar ficar preso no estado de carregamento em algumas plataformas (web).
