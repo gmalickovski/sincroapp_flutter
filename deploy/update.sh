@@ -18,6 +18,7 @@ BRANCH="${BRANCH:-main}"
 log_info() { echo -e "\033[0;34m[INFO]\033[0m $1"; }
 log_success() { echo -e "\033[0;32m[SUCCESS]\033[0m $1"; }
 log_error() { echo -e "\033[0;31m[ERROR]\033[0m $1"; }
+log_warning() { echo -e "\033[1;33m[WARNING]\033[0m $1"; }
 
 log_info "STARTING UPDATE (Branch: $BRANCH)..."
 
@@ -96,9 +97,9 @@ fi
 log_info "Restarting PM2 Services..."
 
 # Restart all services (preserves existing config)
-pm2 restart sincro-web-server 2>/dev/null || log_warning "sincro-web-server not found to restart."
-pm2 restart sincroapp-server 2>/dev/null || log_warning "sincroapp-server not found to restart."
-pm2 restart sincroapp-notifications 2>/dev/null || log_warning "sincroapp-notifications not found to restart."
+pm2 restart sincro-web-server --update-env 2>/dev/null || log_warning "sincro-web-server not found to restart."
+pm2 restart sincroapp-server --update-env 2>/dev/null || log_warning "sincroapp-server not found to restart."
+pm2 restart sincroapp-notifications --update-env 2>/dev/null || log_warning "sincroapp-notifications not found to restart."
 
 pm2 save
 
