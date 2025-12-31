@@ -700,6 +700,32 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 });
 
+// --- USER SIGNUP NOTIFICATION WEBHOOK ---
+app.post('/api/auth/signup-notify', async (req, res) => {
+    const { userId, email, name } = req.body;
+    console.log(`New user signup: ${email} (${userId})`);
+
+    try {
+        // Send to N8N (using Transaction Webhook as general system event hook)
+        // Or user specific signup webhook if defined
+        const webhookUrl = process.env.N8N_SIGNUP_WEBHOOK || process.env.N8N_TRANSACTION_WEBHOOK || "https://n8n.studiomlk.com.br/webhook/sincroapp-transaction";
+
+        await axios.post(webhookUrl, {
+            event: 'user_created',
+            email,
+            userId,
+            name,
+            createdAt: new Date().toISOString()
+        });
+        console.log(`Signup notification sent to N8N`);
+    } catch (e) {
+        console.error("Failed to send signup notification to N8N:", e.message);
+        // Do not fail the request, just log it
+    }
+
+    res.json({ success: true });
+});
+
 // --- USER DELETION CLEANUP WEBHOOK (TRIGGER) ---
 app.post('/api/auth/delete-user', async (req, res) => {
     const { userId, email } = req.body;

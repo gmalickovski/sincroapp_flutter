@@ -23,8 +23,7 @@ log_info "STARTING UPDATE (Branch: $BRANCH)..."
 
 # 1. STOP SERVICES (Prevent conflict during update)
 log_info "Stopping Services..."
-pm2 stop sincroapp-server 2>/dev/null || true
-pm2 stop sincroapp-notifications 2>/dev/null || true
+pm2 stop sincro-web-server sincroapp-server sincroapp-notifications 2>/dev/null || true
 log_success "Services stopped."
 
 # 2. AUTO BACKUP
@@ -96,17 +95,11 @@ fi
 # 8. START SERVICES
 log_info "Restarting PM2 Services..."
 
-# Server
-if [ -d "server" ]; then
-    pm2 delete sincroapp-server 2>/dev/null || true
-    (cd server && pm2 start index.js --name sincroapp-server --time)
-fi
+# Restart all services (preserves existing config)
+pm2 restart sincro-web-server 2>/dev/null || log_warning "sincro-web-server not found to restart."
+pm2 restart sincroapp-server 2>/dev/null || log_warning "sincroapp-server not found to restart."
+pm2 restart sincroapp-notifications 2>/dev/null || log_warning "sincroapp-notifications not found to restart."
 
-# Notification Service
-if [ -d "notification-service" ]; then
-    pm2 delete sincroapp-notifications 2>/dev/null || true
-    (cd notification-service && pm2 start index.js --name sincroapp-notifications --time)
-fi
 pm2 save
 
 # Nginx

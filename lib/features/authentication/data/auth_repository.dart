@@ -48,9 +48,41 @@ class AuthRepository {
         password: password.trim(),
         data: {'full_name': displayName.trim()}, 
       );
+      
+      // Notificar N8N sobre novo cadastro
+      if (response.user != null) {
+        _notifySignup(
+          email: email.trim(),
+          userId: response.user!.id,
+          displayName: displayName.trim(),
+        );
+      }
+
       return response;
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<void> _notifySignup({
+    required String email,
+    required String userId,
+    required String displayName,
+  }) async {
+    try {
+      final url = Uri.parse(ApiConstants.signupNotify);
+      await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'userId': userId,
+          'email': email,
+          'name': displayName,
+        }),
+      );
+    } catch (e) {
+      debugPrint('[AuthRepository] Failed to notify signup: $e');
+      // Non-blocking error
     }
   }
 
