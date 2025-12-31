@@ -1,7 +1,4 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-
-const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -9,20 +6,22 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+    // Handling CORS preflight requests
     if (req.method === 'OPTIONS') {
         return new Response('ok', { headers: corsHeaders })
     }
 
     try {
-        const feedbackData = await req.json()
+        const WEBHOOK_URL = Deno.env.get('FEEDBACK_WEBHOOK_URL');
+        if (!WEBHOOK_URL) {
+            throw new Error('Missing configuration: FEEDBACK_WEBHOOK_URL');
+        }
 
-        // Optionally: validate user auth here using Supabase Auth context if needed
-        // const authHeader = req.headers.get('Authorization')
-        // ...
+        const feedbackData = await req.json()
 
         console.log("Forwarding feedback to n8n:", JSON.stringify(feedbackData));
 
-        const response = await fetch(FEEDBACK_WEBHOOK_URL, {
+        const response = await fetch(WEBHOOK_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(feedbackData)
@@ -36,8 +35,9 @@ serve(async (req) => {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 200,
         })
-    } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+    } catch (error: any) {
+        console.error("Feedback Proxy Error:", error);
+        return new Response(JSON.stringify({ error: error.message || 'Internal Server Error' }), {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
             status: 500,
         })

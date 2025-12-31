@@ -15,7 +15,7 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider()
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? ''
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const N8N_TRANSACTION_WEBHOOK = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events"
+const N8N_TRANSACTION_WEBHOOK = Deno.env.get('N8N_TRANSACTION_WEBHOOK') ?? "https://n8n.studiomlk.com.br/webhook/sincroapp-transaction"
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
