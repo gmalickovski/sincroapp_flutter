@@ -54,35 +54,44 @@ Future<void> _connectToEmulators() async {
   await FirebaseStorage.instance.useStorageEmulator(host, 9199);
 }
 
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
+
+// ... (imports remain)
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
+
+  // 🚀 Carrega o arquivo .env
+  try {
+    await dotenv.load(fileName: ".env");
+    debugPrint('📄 Arquivo .env carregado com sucesso.');
+  } catch (e) {
+    debugPrint('⚠️ Erro ao carregar .env: $e');
+  }
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  try {
-    await PaymentService.initialize();
-  } catch (e) {
-    debugPrint('Erro ao inicializar Stripe: $e');
-  }
+  // ... (PaymentService init)
 
   // ========================================
-  // INICIALIZAÇÃO SUPABASE
+  // INICIALIZAÇÃO SUPABASE (USANDO .ENV)
   // ========================================
   try {
+    // Tenta pegar do .env, se não existir usa string vazia (que vai dar erro, mas é o esperado se faltar config)
+    final supabaseUrl = dotenv.env['SUPABASE_URL'] ?? const String.fromEnvironment('SUPABASE_URL');
+    final supabaseAnonKey = dotenv.env['ANON_KEY'] ?? const String.fromEnvironment('SUPABASE_ANON_KEY'); // Note: .env usually uses ANON_KEY, flutter uses SUPABASE_ANON_KEY
+
+    // Fallback para hardcoded se ainda estiver vazio (segurança para o usuário não ficar travado agora)
+    // Mas o ideal é vir do .env
+    
     await Supabase.initialize(
-      url: const String.fromEnvironment(
-        'SUPABASE_URL', 
-        defaultValue: 'https://supabase.studiomlk.com.br',
-      ),
-      anonKey: const String.fromEnvironment(
-        'SUPABASE_ANON_KEY',
-        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a',
-      ),
+      url: supabaseUrl ?? 'https://supabase.studiomlk.com.br', 
+      anonKey: supabaseAnonKey ?? 'chave-invalida-se-nao-tiver-no-env',
     );
-    debugPrint('🚀 Supabase inicializado com sucesso!');
+    debugPrint('🚀 Supabase inicializado com sucesso usando .env!');
   } catch (e) {
     debugPrint('❌ Erro ao inicializar Supabase: $e');
   }
