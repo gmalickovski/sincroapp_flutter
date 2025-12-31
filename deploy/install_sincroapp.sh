@@ -2,14 +2,19 @@
 
 ###############################################################################
 # SincroApp - INSTALLATION SCRIPT (install_sincroapp.sh)
-# Description: Downloads code, installs dependencies, builds app, prepares deployment.
-# DOES NOT start the servers (use start_sincroapp.sh for that).
+# Description: Clean Install with Backup Persistence.
+# 1. Backs up ROOT .env file to BACKUP_STORAGE
+# 2. Deletes existing app directory
+# 3. Fresh clones from GitHub
+# 4. Restores .env file to root and copies to services
+# 5. Installs dependencies & Builds
 ###############################################################################
 
 set -e
 
 # --- CONFIG ---
 INSTALL_DIR="${INSTALL_DIR:-/var/www/webapp/sincroapp_flutter}"
+BACKUP_STORAGE="${BACKUP_STORAGE:-/var/www/webapp/backup_sincroapp}"
 GITHUB_REPO="${GITHUB_REPO:-https://github.com/gmalickovski/sincroapp_flutter.git}"
 BRANCH="${BRANCH:-main}"
 SUPABASE_DOCKER_DIR="${SUPABASE_DOCKER_DIR:-/root/supabase}" 
@@ -18,33 +23,61 @@ SUPABASE_DOCKER_DIR="${SUPABASE_DOCKER_DIR:-/root/supabase}"
 log_info() { echo -e "\033[0;34m[INFO]\033[0m $1"; }
 log_success() { echo -e "\033[0;32m[SUCCESS]\033[0m $1"; }
 log_error() { echo -e "\033[0;31m[ERROR]\033[0m $1"; }
+log_warning() { echo -e "\033[1;33m[WARNING]\033[0m $1"; }
 
-log_info "STARTING INSTALLATION SCRIPT..."
+log_info "STARTING CLEAN INSTALLATION (UNIFIED ENV)..."
 log_info "Target Directory: $INSTALL_DIR"
-log_info "Branch: $BRANCH"
+log_info "Backup Storage: $BACKUP_STORAGE"
 
-# 1. GIT CLONE / PULL
-if [ -d "$INSTALL_DIR" ]; then
-    log_info "Directory exists. Pulling latest changes..."
-    cd "$INSTALL_DIR"
-    git fetch origin
-    git checkout "$BRANCH"
-    git pull origin "$BRANCH"
-else
-    log_info "Directory does not exist. Cloning repo..."
-    mkdir -p "$(dirname "$INSTALL_DIR")"
-    git clone -b "$BRANCH" "$GITHUB_REPO" "$INSTALL_DIR"
-    cd "$INSTALL_DIR"
+# 1. PRE-INSTALL BACKUP (PERSIST CREDENTIALS)
+log_info "Persisting ROOT .env to backup storage..."
+mkdir -p "$BACKUP_STORAGE"
+
+if [ -f "$INSTALL_DIR/.env" ]; then
+    cp "$INSTALL_DIR/.env" "$BACKUP_STORAGE/root.env.bak"
+    log_success "Saved root .env"
+elif [ -f "$INSTALL_DIR/server/.env" ]; then
+    # Fallback for migration: if root .env missing, try saving server .env
+    cp "$INSTALL_DIR/server/.env" "$BACKUP_STORAGE/root.env.bak"
+    log_warning "Root .env missing. Saved server/.env as backup instead."
 fi
-log_success "Codebase updated."
 
-# 2. FLUTTER WEB BUILD
-log_info "Preparing Flutter Web..."
+# 2. WIPE & CLONE
+if [ -d "$INSTALL_DIR" ]; then
+    log_warning "Deleting old installation directory..."
+    rm -rf "$INSTALL_DIR"
+fi
 
-# Pubspec Fixes (VPS Compatibility)
+log_info "Cloning fresh repository (Branch: $BRANCH)..."
+mkdir -p "$(dirname "$INSTALL_DIR")"
+git clone -b "$BRANCH" "$GITHUB_REPO" "$INSTALL_DIR"
+
+if [ ! -d "$INSTALL_DIR" ]; then
+    log_error "Git Clone Failed!"
+    exit 1
+fi
+cd "$INSTALL_DIR"
+log_success "Repository cloned."
+
+# 3. RESTORE CREDENTIALS & DISTRIBUTE
+log_info "Restoring credentials..."
+
+if [ -f "$BACKUP_STORAGE/root.env.bak" ]; then
+    cp "$BACKUP_STORAGE/root.env.bak" ".env"
+    log_success "Restored .env to root."
+else
+    log_warning "No key backup found! You must create .env manually in $INSTALL_DIR"
+fi
+
+# Distribute .env to services
+log_info "Distributing .env to sub-services..."
+[ -f ".env" ] && cp ".env" "server/.env" && log_success "Copied .env to server/"
+[ -f ".env" ] && cp ".env" "notification-service/.env" && log_success "Copied .env to notification-service/"
+
+# 4. FLUTTER WEB BUILD
+log_info "Building Flutter Web..."
 sed -i 's/intl: \^0\.20\.2/intl: ^0.19.0/' pubspec.yaml
 sed -i 's/collection: \^1\.19\.1/collection: ^1.18.0/' pubspec.yaml
-# Add other seds from previous script if strictly necessary
 
 flutter pub get
 flutter clean
@@ -56,59 +89,32 @@ if [ ! -d "build/web" ]; then
 fi
 log_success "Flutter Web Built."
 
-# 3. PUBLISH STATIC FILES
-log_info "Copying static files to build/web..."
-cp -f web/landing.html build/web/landing.html
-cp -f web/landing.js build/web/landing.js
-cp -f web/firebase-config.js build/web/firebase-config.js
+# 5. PUBLISH STATIC FILES
+log_info "Copying static files..."
+cp -f web/firebase-config.js build/web/firebase-config.js 2>/dev/null || true
 cp -f web/favicon.png build/web/favicon.png 2>/dev/null || true
 if [ -d "web/icons" ]; then cp -rf web/icons build/web/; fi
 
-# Permissions
 chown -R www-data:www-data build/web
 chmod -R 755 build/web
 
-# 4. INSTALL BACKEND DEPENDENCIES (SERVER)
-log_info "Installing Node Server dependencies..."
-if [ -d "server" ]; then
-    cd server
-    npm install
-    cd ..
-else
-    log_error "server/ directory missing!"
-fi
+# 6. INSTALL SERVER DEPENDENCIES
+log_info "Installing Dependencies..."
+if [ -d "server" ]; then cd server && npm install && cd ..; fi
+if [ -d "notification-service" ]; then cd notification-service && npm install && cd ..; fi
+# functions deprecated/migrating, but installing just in case
+if [ -d "functions" ]; then cd functions && npm install && cd ..; fi
 
-# 5. INSTALL NOTIFICATION SERVICE DEPENDENCIES
-log_info "Installing Notification Service dependencies..."
-if [ -d "notification-service" ]; then
-    cd notification-service
-    npm install
-    cd ..
-else
-    log_error "notification-service/ directory missing!"
-fi
-
-# 6. INSTALL FIREBASE FUNCTIONS DEPENDENCIES (Legacy support)
-log_info "Installing Firebase Functions dependencies..."
-if [ -d "functions" ]; then
-    cd functions
-    npm install
-    cd ..
-fi
-
-# 7. DEPLOY SUPABASE FUNCTIONS (Copy to Docker Volume)
-log_info "Deploying Supabase Edge Functions to Docker..."
+# 7. DEPLOY SUPABASE FUNCTIONS
+log_info "Deploying Supabase Functions..."
 if [ -d "$SUPABASE_DOCKER_DIR" ]; then
     DEST_FUNCTIONS="$SUPABASE_DOCKER_DIR/volumes/functions"
     mkdir -p "$DEST_FUNCTIONS"
-    
-    # Copy generic functions folder content
     cp -r supabase/functions/* "$DEST_FUNCTIONS/"
-    log_success "Supabase Functions files copied to $DEST_FUNCTIONS"
+    log_success "Functions copied to Docker volume."
 else
-    log_warning "Supabase Docker Directory ($SUPABASE_DOCKER_DIR) NOT FOUND."
-    log_warning "Skipping function deployment. Copy 'supabase/functions' manually."
+    log_warning "Supabase Docker Path ($SUPABASE_DOCKER_DIR) not found on host."
+    log_warning "SKIPPING function copy. Update SUPABASE_DOCKER_DIR in script if needed."
 fi
 
-log_success "INSTALLATION SCRIPT COMPLETED SUCCESSFULLY."
-log_info "Now run: ./deploy/start_sincroapp.sh"
+log_success "INSTALLATION COMPLETE. Run ./deploy/start_sincroapp.sh to start services."

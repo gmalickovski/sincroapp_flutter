@@ -11,7 +11,8 @@
  * MIGRADO PARA SUPABASE (Dados) + FIREBASE (Messaging)
  */
 
-require('dotenv').config(); // Carrega variáveis de ambiente (.env)
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const admin = require('firebase-admin');
 const cron = require('node-cron');
 const axios = require('axios');

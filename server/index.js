@@ -1,19 +1,11 @@
 const path = require('path');
 const dotenv = require('dotenv');
 
-// DEBUG: Load .env from server directory explicitly
-const envPath = path.join(__dirname, '.env');
-console.log(`[DEBUG] Attempting to load .env from: ${envPath}`);
-const result = dotenv.config({ path: envPath });
-
-if (result.error) {
-    console.error(`[DEBUG] Error loading .env: ${result.error.message}`);
-    // Fallback: try default loading (cwd)
-    console.log('[DEBUG] Trying default dotenv load...');
-    dotenv.config();
-} else {
-    console.log(`[DEBUG] .env loaded successfully.`);
-}
+// Load .env from ROOT of the project (one level up)
+// This ensures we use the unified .env file used by install/deploy scripts.
+const envPath = path.resolve(__dirname, '../.env');
+console.log(`[SERVER] Loading .env from: ${envPath}`);
+dotenv.config({ path: envPath });
 
 console.log(`[DEBUG] NOTION_API_KEY available: ${!!process.env.NOTION_API_KEY}`);
 if (process.env.NOTION_API_KEY) {
