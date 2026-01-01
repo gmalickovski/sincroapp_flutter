@@ -700,6 +700,9 @@ const sendN8nEvent = async (eventType, dataObject) => {
         console.log(`[N8N] Success: ${eventType} sent.`);
     } catch (e) {
         console.error(`[N8N] Failed to send ${eventType}:`, e.message);
+        if (e.response && e.response.data) {
+            console.error('[N8N] Response Body:', JSON.stringify(e.response.data, null, 2));
+        }
         if (e.code === 'CERT_HAS_EXPIRED' || e.code === 'DEPTH_ZERO_SELF_SIGNED_CERT') {
             console.error('[N8N] SSL Error detected. The `rejectUnauthorized: false` fix should have handled this. Check network connectivity.');
         }
