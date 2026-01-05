@@ -88,6 +88,11 @@ class DayDetailPanel extends StatelessWidget {
                              padding: const EdgeInsets.only(left: 4.0), // Reduzido
                              child: VibrationPill(vibrationNumber: personalDayNumber!),
                            ),
+                           
+                         // Espaçamento entre pílula e botão (se ambos existirem)
+                         if (!isDesktop && onToggleCalendar != null && personalDayNumber != null && personalDayNumber! > 0)
+                            const SizedBox(width: 8),
+
                          // Ícone de expandir/recolher calendário (Apenas mobile)
                          if (!isDesktop && onToggleCalendar != null)
                            IconButton(
