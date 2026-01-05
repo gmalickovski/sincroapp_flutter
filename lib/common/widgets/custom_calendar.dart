@@ -290,38 +290,41 @@ class _DayCellState extends State<_DayCell> {
     final isPast = widget.isPastDayOverride ?? _isPastDay(); // Dias passados
 
     // --- LÓGICA DE CORES (Baseada no CustomDatePickerModal) ---
-    Color borderColor = AppColors.border.withValues(alpha: 0.5);
-    Color cellFillColor = Colors.transparent;
-    double borderWidth = 0.8;
+    // Padrão (Card Desativado/Não Selecionado)
+    Color cellFillColor = AppColors.cardBackground; // Fundo escuro (card)
+    Color borderColor = Colors.black.withValues(alpha: 0.1); // Borda sutil
+    double borderWidth = 1.0;
     
     // Texto
-    Color baseDayTextColor = AppColors.secondaryText;
+    Color baseDayTextColor = const Color(0xFFD1D5DB); // Gray-300
     
     // Hover (Desktop)
     if (_isHovered && widget.isDesktop && !isPast && !widget.isSelected) {
-       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.5);
+       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.8); // Leve destaque
+       borderColor = Colors.white.withValues(alpha: 0.2);
     }
 
     // Hoje (não selecionado)
     if (widget.isToday && !widget.isSelected) {
-      borderColor = AppColors.primary.withValues(alpha: 0.6);
+      cellFillColor = AppColors.cardBackground;
+      borderColor = AppColors.primary; // Borda roxa
       borderWidth = 1.5;
-      baseDayTextColor = AppColors.primary;
+      baseDayTextColor = AppColors.primary; // Texto roxo
     }
 
     // Selecionado
     if (widget.isSelected) {
       cellFillColor = AppColors.primary; // Fundo Roxo Sólido
       borderColor = AppColors.primary;
-      borderWidth = 2.0;
+      borderWidth = 0.0; // Sem borda ou borda da mesma cor
       baseDayTextColor = Colors.white; // Texto Branco
     }
 
     // Dia Passado (e não selecionado, não hoje)
     if (isPast && !widget.isSelected && !widget.isToday) {
-       borderColor = AppColors.border.withValues(alpha: 0.3); // Borda mais fraca
-       // Opacidade será aplicada no wrapper se necessário, ou via alpha na cor
-       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.5);
+       cellFillColor = Colors.transparent; // Sem fundo de card
+       borderColor = Colors.transparent; 
+       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.3); // Bem apagado
     } 
 
     FontWeight dayFontWeight = (widget.isSelected || widget.isToday) 
@@ -338,10 +341,10 @@ class _DayCellState extends State<_DayCell> {
       },
       cursor: isPast ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: Container(
-        margin: const EdgeInsets.all(2.0),
+        margin: const EdgeInsets.all(4.0), // Margem para efeito de card separado
         decoration: BoxDecoration(
           color: cellFillColor,
-          borderRadius: BorderRadius.circular(8.0),
+          borderRadius: BorderRadius.circular(8.0), // Cantos arredondados
           border: Border.all(
             color: borderColor,
             width: borderWidth,
@@ -353,7 +356,7 @@ class _DayCellState extends State<_DayCell> {
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
-                padding: const EdgeInsets.all(6.0),
+                padding: const EdgeInsets.only(top: 6.0, left: 8.0),
                 child: Text(
                   '${widget.day.day}',
                   style: TextStyle(
@@ -368,9 +371,9 @@ class _DayCellState extends State<_DayCell> {
              // Marcadores (Eventos)
              if (widget.events.isNotEmpty)
               Positioned(
-                bottom: widget.isDesktop ? 8 : 4,
-                left: widget.isDesktop ? 8 : 0, 
-                right: widget.isDesktop ? 8 : 0,
+                bottom: widget.isDesktop ? 8 : 6,
+                left: widget.isDesktop ? 8 : 4, 
+                right: widget.isDesktop ? 8 : 4,
                 child: widget.isDesktop 
                     ? _buildDesktopMarkers() 
                     : _buildMobileMarkers(),

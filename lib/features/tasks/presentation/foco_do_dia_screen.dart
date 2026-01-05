@@ -799,6 +799,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   tooltip: 'Adicionar Tarefa',
                   heroTag: 'foco_fab',
                   child: const Icon(Icons.add, color: Colors.white),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
                 ),
       // --- FIM DA MUDANÇA ---
     );

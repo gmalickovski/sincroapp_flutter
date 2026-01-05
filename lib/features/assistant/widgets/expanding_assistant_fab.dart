@@ -361,32 +361,36 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
               padding: const EdgeInsets.only(right: _kFabHeight, left: _kOuterPad),
               child: Align(
                 alignment: Alignment.centerRight,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (widget.onPrimary != null && widget.primaryIcon != null) ...[
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.onPrimary != null && widget.primaryIcon != null) ...[
+                        _AnimatedActionSlot(
+                          controller: _controller,
+                          tooltip: widget.primaryTooltip,
+                          icon: widget.primaryIcon!,
+                          onPressed: () {
+                            _toggleMenu();
+                            widget.onPrimary!();
+                          },
+                        ),
+                        const SizedBox(width: _kGap),
+                      ],
                       _AnimatedActionSlot(
                         controller: _controller,
-                        tooltip: widget.primaryTooltip,
-                        icon: widget.primaryIcon!,
-                        onPressed: () {
-                          _toggleMenu();
-                          widget.onPrimary!();
-                        },
+                        tooltip: 'Assistente IA',
+                        iconWidget: SvgPicture.asset(
+                          'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                          width: 24,
+                          height: 24,
+                        ),
+                        onPressed: _openInputMode,
                       ),
-                      const SizedBox(width: _kGap),
                     ],
-                    _AnimatedActionSlot(
-                      controller: _controller,
-                      tooltip: 'Assistente IA',
-                      iconWidget: SvgPicture.asset(
-                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                        width: 24,
-                        height: 24,
-                      ),
-                      onPressed: _openInputMode,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
