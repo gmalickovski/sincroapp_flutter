@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/calendar/models/event_model.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 
 class CustomCalendar extends StatelessWidget {
   final DateTime focusedDay;
@@ -95,26 +96,25 @@ class CustomCalendar extends StatelessWidget {
         onPageChanged: onPageChanged,
 
         // Usa builders de célula (_DayCell desenha marcadores)
-        enabledDayPredicate: (day) {
-          // Desabilita a seleção de dias passados
-          final now = DateTime.now();
-          final today = DateTime(now.year, now.month, now.day);
-          final checkDay = DateTime(day.year, day.month, day.day);
-          return !checkDay.isBefore(today);
-        },
+        // Past day selection agora é permitida
+        // enabledDayPredicate removido para permitir seleção de qualquer dia
         calendarBuilders: CalendarBuilders(
           // --- INÍCIO DA CORREÇÃO (Refatoração) ---
           // Lógica 'isPastDay' removida pois 'enabledDayPredicate' garante
           // que este builder só rode para dias futuros (ou hoje).
           defaultBuilder: (context, day, focusedDay) {
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final checkDay = DateTime(day.year, day.month, day.day);
+            final isPastDay = checkDay.isBefore(today);
+            
             return _DayCell(
               day: day,
               isDesktop: isDesktop,
               isSelected: false,
               events: _getEventsForDay(day),
-              isPastDayOverride: false, // Explícito que não é passado
-              personalDayNumber:
-                  null, // Necessário para manter consistência visual
+              isPastDayOverride: isPastDay, // Calcula dinamicamente
+              personalDayNumber: null,
             );
           },
           // --- FIM DA CORREÇÃO ---
@@ -128,8 +128,8 @@ class CustomCalendar extends StatelessWidget {
             return _DayCell(
               day: day,
               isDesktop: isDesktop,
-              isSelected: !isPastDay, // Só permite seleção de dias futuros
-              personalDayNumber: isPastDay ? null : personalDayNumber,
+              isSelected: true, // Permite seleção de qualquer dia
+              personalDayNumber: personalDayNumber, // Sempre mostra cor do dia pessoal
               events: _getEventsForDay(day),
               isPastDayOverride: isPastDay,
             );
@@ -292,16 +292,18 @@ class _DayCellState extends State<_DayCell> {
     // --- LÓGICA DE CORES (Baseada no CustomDatePickerModal) ---
     // Padrão (Card Desativado/Não Selecionado)
     Color cellFillColor = AppColors.cardBackground; // Fundo escuro (card)
-    Color borderColor = Colors.black.withValues(alpha: 0.1); // Borda sutil
+    // --- LÓGICA DE BORDA AJUSTADA ---
+    // A borda agora deve ser visível (sutil) em todos os estados por padrão
+    Color borderColor = AppColors.border.withValues(alpha: 0.3); 
     double borderWidth = 1.0;
     
     // Texto
     Color baseDayTextColor = const Color(0xFFD1D5DB); // Gray-300
     
-    // Hover (Desktop)
-    if (_isHovered && widget.isDesktop && !isPast && !widget.isSelected) {
-       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.8); // Leve destaque
-       borderColor = Colors.white.withValues(alpha: 0.2);
+    // Hover (Desktop) - Agora inclui dias passados
+    if (_isHovered && widget.isDesktop && !widget.isSelected) {
+       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.8);
+       borderColor = Colors.white.withValues(alpha: 0.5); // Borda mais visível no hover
     }
 
     // Hoje (não selecionado)
@@ -312,19 +314,32 @@ class _DayCellState extends State<_DayCell> {
       baseDayTextColor = AppColors.primary; // Texto roxo
     }
 
+
+
     // Selecionado
     if (widget.isSelected) {
-      cellFillColor = AppColors.primary; // Fundo Roxo Sólido
-      borderColor = AppColors.primary;
-      borderWidth = 0.0; // Sem borda ou borda da mesma cor
-      baseDayTextColor = Colors.white; // Texto Branco
+      // --- MUDANÇA: Manter fundo do card, apenas destacar borda ---
+      cellFillColor = AppColors.cardBackground; // Sem fundo roxo
+      
+      // Lógica de Borda Dinâmica (Dia Pessoal)
+      if (widget.personalDayNumber != null && widget.personalDayNumber! > 0) {
+         final vibrationColors = getColorsForVibration(widget.personalDayNumber!);
+         borderColor = vibrationColors.background; // Cor do dia pessoal
+      } else {
+         borderColor = AppColors.primary; // Fallback roxo
+      }
+      
+      borderWidth = 2.0; // Borda visível
+      baseDayTextColor = Colors.white; // Texto Branco para contraste
     }
 
     // Dia Passado (e não selecionado, não hoje)
     if (isPast && !widget.isSelected && !widget.isToday) {
-       cellFillColor = Colors.transparent; // Sem fundo de card
-       borderColor = Colors.transparent; 
-       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.3); // Bem apagado
+       // --- CORREÇÃO SOLICITADA ---
+       // Mantém o fundo do card (agora sólido) e apenas esmaece o texto
+       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.5); // Fundo levemente mais transparente (opcional) ou igual
+       borderColor = AppColors.border.withValues(alpha: 0.2); // Borda bem sutil
+       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.3); // Texto apagado
     } 
 
     FontWeight dayFontWeight = (widget.isSelected || widget.isToday) 
@@ -334,12 +349,12 @@ class _DayCellState extends State<_DayCell> {
 
     return MouseRegion(
       onEnter: (_) {
-        if (widget.isDesktop && !isPast) setState(() => _isHovered = true);
+        if (widget.isDesktop) setState(() => _isHovered = true); // Permite hover em dias passados
       },
       onExit: (_) {
-        if (widget.isDesktop && !isPast) setState(() => _isHovered = false);
+        if (widget.isDesktop) setState(() => _isHovered = false);
       },
-      cursor: isPast ? SystemMouseCursors.basic : SystemMouseCursors.click,
+      cursor: SystemMouseCursors.click, // Permite clique em todos os dias
       child: Container(
         margin: const EdgeInsets.all(4.0), // Margem para efeito de card separado
         decoration: BoxDecoration(

@@ -630,6 +630,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           onRightArrowTap: () => _onPageChanged(DateTime(
                               _focusedDay.year, _focusedDay.month + 1)),
                           isCompact: true,
+                          isDesktop: false, // Mobile landscape should keep mobile header
                         ),
                         const SizedBox(height: 8),
                         Stack(
@@ -794,6 +795,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       DateTime(_focusedDay.year, _focusedDay.month - 1)),
                   onRightArrowTap: () => _onPageChanged(
                       DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                  isDesktop: true, // Enable desktop layout
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
@@ -836,17 +838,20 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   ),
                 ],
               ),
-              child: DayDetailPanel(
-                selectedDay: _selectedDay,
-                personalDayNumber: _personalDayNumber,
-                events: _getRawEventsForDay(_selectedDay),
-                isDesktop: true,
-                onAddTask: _openAddTaskModal,
-                onToggleTask: _onToggleTask,
-                onTaskTap: _handleTaskTap,
-                // Callbacks de Swipe
-                onDeleteTask: _handleDeleteTask,
-                onRescheduleTask: _handleRescheduleTask,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: DayDetailPanel(
+                  selectedDay: _selectedDay,
+                  personalDayNumber: _personalDayNumber,
+                  events: _getRawEventsForDay(_selectedDay),
+                  isDesktop: true,
+                  onAddTask: _openAddTaskModal,
+                  onToggleTask: _onToggleTask,
+                  onTaskTap: _handleTaskTap,
+                  // Callbacks de Swipe
+                  onDeleteTask: _handleDeleteTask,
+                  onRescheduleTask: _handleRescheduleTask,
+                ),
               ),
             ),
           ),

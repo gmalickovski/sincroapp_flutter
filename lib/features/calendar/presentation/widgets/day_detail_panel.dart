@@ -123,7 +123,7 @@ class DayDetailPanel extends StatelessWidget {
                           onTap: () => onTaskTap(event),
                           showGoalIconFlag: true,
                           showTagsIconFlag: true,
-                          showVibrationPillFlag: true,
+                          showVibrationPillFlag: false, // Oculta pois já aparece no header
                           verticalPaddingOverride: 4.0,
                           onSwipeLeft: onDeleteTask,
                           onSwipeRight: onRescheduleTask,
