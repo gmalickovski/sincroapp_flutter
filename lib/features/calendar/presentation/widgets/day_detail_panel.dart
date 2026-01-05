@@ -65,14 +65,14 @@ class DayDetailPanel extends StatelessWidget {
                children: [
                  Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                   crossAxisAlignment: CrossAxisAlignment.start, // Alinha ao topo para wrap
+                   crossAxisAlignment: CrossAxisAlignment.center, // Alinha ao centro (Pill vs Texto)
                    children: [
                      Expanded(
                        child: Text(
                          formattedDate,
                          style: TextStyle(
                              color: Colors.white,
-                             fontSize: isDesktop ? 24.0 : 16.0,
+                             fontSize: isDesktop ? 20.0 : 16.0,
                              fontWeight: FontWeight.bold),
                          // Permite quebra de linha
                          maxLines: 2,

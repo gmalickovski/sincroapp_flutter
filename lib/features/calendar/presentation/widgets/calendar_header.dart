@@ -35,7 +35,7 @@ class CalendarHeader extends StatelessWidget {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
+          padding: EdgeInsets.fromLTRB(4.0, isDesktop ? 16.0 : 8.0, 4.0, 8.0),
           child: isDesktop 
               // --- LAYOUT DESKTOP ---
               ? Row(
