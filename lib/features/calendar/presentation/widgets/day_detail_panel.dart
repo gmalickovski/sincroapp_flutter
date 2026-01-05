@@ -70,7 +70,7 @@ class DayDetailPanel extends StatelessWidget {
                      Expanded(
                        child: Text(
                          formattedDate,
-                         style: const TextStyle(
+                         style: TextStyle(
                              color: Colors.white,
                              fontSize: isDesktop ? 24.0 : 16.0,
                              fontWeight: FontWeight.bold),
