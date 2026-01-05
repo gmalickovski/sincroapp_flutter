@@ -208,41 +208,11 @@ class _DayCellState extends State<_DayCell> {
   bool _isHovered = false;
 
   Color _getColorForEventType(EventType type) {
-    if (type == EventType.task) return AppColors.primary; // Roxo/Magenta (Normal)
-    if (type == EventType.goalTask) return Colors.cyanAccent; // Ciano (Metas)
-    if (type == EventType.scheduledTask) return Colors.orangeAccent; // Laranja (Agendado)
+    if (type == EventType.task) return AppColors.primary;
+    if (type == EventType.goalTask) return Colors.cyanAccent;
+    if (type == EventType.scheduledTask) return Colors.orangeAccent;
     if (type == EventType.journal) return AppColors.journalMarker;
     throw StateError('Unhandled EventType: $type');
-  }
-
-  Color _getPersonalDayColor() {
-    if (!widget.isSelected) return Colors.transparent;
-    switch (widget.personalDayNumber) {
-      case 1:
-        return Colors.red.shade400;
-      case 2:
-        return Colors.orange.shade400;
-      case 3:
-        return Colors.yellow.shade400;
-      case 4:
-        return Colors.lime.shade400;
-      case 5:
-        return Colors.cyan.shade400;
-      case 6:
-        return Colors.blue.shade400;
-      case 7:
-        return Colors.purple.shade400;
-      case 8:
-        return Colors.pink.shade400;
-      case 9:
-        return Colors.teal.shade400;
-      case 11:
-        return Colors.purple.shade300;
-      case 22:
-        return Colors.indigo.shade300;
-      default:
-        return AppColors.primary;
-    }
   }
 
   bool _isPastDay() {
@@ -252,35 +222,41 @@ class _DayCellState extends State<_DayCell> {
     return cellDay.isBefore(today);
   }
 
-  // --- INÍCIO DA CORREÇÃO (Request 2) ---
-  /// Constrói os marcadores de evento (círculos) para a visualização mobile.
   Widget _buildMobileMarkers() {
+    // Marcadores para mobile: pontos coloridos
     final isPast = widget.isPastDayOverride ?? _isPastDay();
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: widget.events
           .map((e) => e.type)
-          .toSet() // Tipos únicos
+          .toSet()
           .map((type) {
             const markerSize = 5.0;
+            // No modo selecionado (fill roxo), marcadores brancos ou claros?
+            // Se selected, marcadores devem ter contraste.
+            // O estilo do Picker usa texto branco. Vamos usar cores originais ou branco?
+            // Vamos manter cores originais por enquanto.
             final markerColor = _getColorForEventType(type)
                 .withValues(alpha: isPast ? 0.9 : 1.0);
+            
+            // Ajuste para contraste em background roxo
+            final effectiveColor = widget.isSelected ? Colors.white : markerColor;
+
             return Container(
               width: markerSize,
               height: markerSize,
               margin: const EdgeInsets.symmetric(horizontal: 1.5),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: markerColor,
+                color: effectiveColor,
               ),
             );
           })
-          .take(3) // Limita a 3 marcadores no mobile
+          .take(3)
           .toList(),
     );
   }
 
-  /// Constrói os marcadores de evento (barras) para a visualização desktop.
   Widget _buildDesktopMarkers() {
     final isPast = widget.isPastDayOverride ?? _isPastDay();
     return Column(
@@ -288,76 +264,70 @@ class _DayCellState extends State<_DayCell> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: widget.events
           .map((e) => e.type)
-          .toSet() // Tipos únicos
+          .toSet()
           .map((type) {
             final markerColor = _getColorForEventType(type)
                 .withValues(alpha: isPast ? 0.9 : 1.0);
+             // Ajuste para contraste em background roxo
+            final effectiveColor = widget.isSelected ? Colors.white : markerColor;
+            
             return Container(
-              height: 4, // Altura da barra
-              margin: const EdgeInsets.only(top: 2), // Espaçamento entre barras
+              height: 4,
+              margin: const EdgeInsets.only(top: 2),
               decoration: BoxDecoration(
-                color: markerColor,
+                color: effectiveColor,
                 borderRadius: BorderRadius.circular(2),
               ),
             );
           })
-          .take(3) // Limita a 3 barras para não estourar a célula
+          .take(3)
           .toList(),
     );
   }
-  // --- FIM DA CORREÇÃO (Request 2) ---
 
   @override
   Widget build(BuildContext context) {
-    final isPast = widget.isPastDayOverride ?? _isPastDay();
+    final isPast = widget.isPastDayOverride ?? _isPastDay(); // Dias passados
 
-    // --- INÍCIO DA CORREÇÃO (Ajuste Fino de UI) ---
-    // Lógica de cores baseada na sua versão anterior (dias passados visíveis)
-    // + ajuste de dias futuros (mais destaque)
-
-    Color backgroundColor;
-    Color borderColor;
-    Color textColor;
-
-    // 1. DIAS PASSADOS (Opacos, como você gostava)
-    if (isPast) {
-      backgroundColor =
-          AppColors.cardBackground.withValues(alpha: 0.15); // Base
-      borderColor = AppColors.border.withValues(alpha: 0.4); // Base
-      textColor = AppColors.tertiaryText.withValues(alpha: 0.85); // Texto opaco
+    // --- LÓGICA DE CORES (Baseada no CustomDatePickerModal) ---
+    Color borderColor = AppColors.border.withValues(alpha: 0.5);
+    Color cellFillColor = Colors.transparent;
+    double borderWidth = 0.8;
+    
+    // Texto
+    Color baseDayTextColor = AppColors.secondaryText;
+    
+    // Hover (Desktop)
+    if (_isHovered && widget.isDesktop && !isPast && !widget.isSelected) {
+       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.5);
     }
-    // 2. DIAS FUTUROS (Mais destaque)
-    else {
-      // Começa com os valores de destaque pedidos
-      backgroundColor =
-          AppColors.cardBackground.withValues(alpha: 0.3); // MAIS DESTAQUE
-      borderColor = AppColors.border.withValues(alpha: 0.7); // MAIS DESTAQUE
-      textColor = AppColors.secondaryText; // Texto normal
 
-      // Sobrescreve para HOVER
-      if (_isHovered && widget.isDesktop) {
-        backgroundColor = AppColors.cardBackground.withValues(alpha: 0.6);
-      }
-
-      // Sobrescreve para HOJE (não selecionado)
-      if (widget.isToday && !widget.isSelected) {
-        backgroundColor = AppColors.cardBackground.withValues(alpha: 0.8);
-        borderColor = AppColors.primary.withValues(alpha: 0.7);
-        textColor = AppColors.primary;
-      }
-
-      // --- INÍCIO DA CORREÇÃO (Request 1) ---
-      // Sobrescreve para SELECIONADO (borda colorida, fundo neutro)
-      if (widget.isSelected) {
-        backgroundColor =
-            AppColors.cardBackground.withValues(alpha: 0.8); // Fundo neutro
-        borderColor = _getPersonalDayColor(); // Borda na cor do dia
-        textColor =
-            AppColors.primary; // Texto com cor de destaque (ficará bold)
-      }
-      // --- FIM DA CORREÇÃO (Request 1) ---
+    // Hoje (não selecionado)
+    if (widget.isToday && !widget.isSelected) {
+      borderColor = AppColors.primary.withValues(alpha: 0.6);
+      borderWidth = 1.5;
+      baseDayTextColor = AppColors.primary;
     }
-    // --- FIM DA CORREÇÃO ---
+
+    // Selecionado
+    if (widget.isSelected) {
+      cellFillColor = AppColors.primary; // Fundo Roxo Sólido
+      borderColor = AppColors.primary;
+      borderWidth = 2.0;
+      baseDayTextColor = Colors.white; // Texto Branco
+    }
+
+    // Dia Passado (e não selecionado, não hoje)
+    if (isPast && !widget.isSelected && !widget.isToday) {
+       borderColor = AppColors.border.withValues(alpha: 0.3); // Borda mais fraca
+       // Opacidade será aplicada no wrapper se necessário, ou via alpha na cor
+       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.5);
+    } 
+
+    FontWeight dayFontWeight = (widget.isSelected || widget.isToday) 
+        ? FontWeight.bold 
+        : FontWeight.normal;
+
 
     return MouseRegion(
       onEnter: (_) {
@@ -370,16 +340,16 @@ class _DayCellState extends State<_DayCell> {
       child: Container(
         margin: const EdgeInsets.all(2.0),
         decoration: BoxDecoration(
-          color: backgroundColor, // Fundo da célula
+          color: cellFillColor,
           borderRadius: BorderRadius.circular(8.0),
           border: Border.all(
-            color: borderColor, // Borda da célula
-            width: widget.isSelected ? 2.0 : (widget.isToday ? 1.0 : 0.5),
+            color: borderColor,
+            width: borderWidth,
           ),
         ),
         child: Stack(
           children: [
-            // Número do dia
+             // Número do dia
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
@@ -387,28 +357,24 @@ class _DayCellState extends State<_DayCell> {
                 child: Text(
                   '${widget.day.day}',
                   style: TextStyle(
-                    color: textColor, // Cor do número
-                    fontWeight: widget.isSelected || widget.isToday
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    color: baseDayTextColor,
+                    fontWeight: dayFontWeight,
                     fontSize: widget.isDesktop ? 14 : 12,
                   ),
                 ),
               ),
             ),
-
-            // --- INÍCIO DA CORREÇÃO (Request 2) ---
-            // Marcadores (condicionais desktop/mobile)
-            if (widget.events.isNotEmpty)
+            
+             // Marcadores (Eventos)
+             if (widget.events.isNotEmpty)
               Positioned(
                 bottom: widget.isDesktop ? 8 : 4,
-                left: widget.isDesktop ? 8 : 0, // Padding para barras desktop
-                right: widget.isDesktop ? 8 : 0, // Padding para barras desktop
-                child: widget.isDesktop
-                    ? _buildDesktopMarkers()
+                left: widget.isDesktop ? 8 : 0, 
+                right: widget.isDesktop ? 8 : 0,
+                child: widget.isDesktop 
+                    ? _buildDesktopMarkers() 
                     : _buildMobileMarkers(),
               ),
-            // --- FIM DA CORREÇÃO (Request 2) ---
           ],
         ),
       ),

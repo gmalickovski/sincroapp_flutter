@@ -191,7 +191,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               journeyId: goal.id, 
               journeyTitle: goal.title, 
               tags: parsedTask.tags,
-              personalDay: finalPersonalDay, 
+              reminderTime: parsedTask.reminderTime,
+              reminderAt: parsedTask.reminderAt,
+              personalDay: finalPersonalDay,  
             );
 
             _supabaseService

@@ -62,12 +62,15 @@ class DashboardSidebar extends StatelessWidget {
               ),
             ),
             // Divisor e itens inferiores
+            // Divisor e itens inferiores
             Padding(
               padding: EdgeInsets.symmetric(
-                  horizontal: isExpanded ? 12.0 : 8.0), // Padding condicional
-              child: const Divider(color: Color(0x804B5563), height: 1),
-            ),
-            const SizedBox(height: 8),
+                  horizontal: isExpanded ? 12.0 : 8.0), // Padding padronizado
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch, // Garante que respeita o padding
+                children: [
+                   const Divider(color: Color(0x804B5563), height: 1),
+                   const SizedBox(height: 8),
             // Admin - apenas se for admin
             if (userData.isAdmin)
               _buildNavItem(
@@ -160,6 +163,9 @@ class DashboardSidebar extends StatelessWidget {
                 }
               },
             ),
+                ],
+              ),
+            ),
             const SizedBox(height: 20),
           ],
         ),
@@ -224,7 +230,8 @@ class _SidebarItemState extends State<_SidebarItem> {
       textColor =
           _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
       iconColor = textColor;
-      hoverBgColor = const Color(0x33ef4444);
+      // Padroniza o background do hover/seleção mesmo para Logout
+      hoverBgColor = const Color(0xff1f2937);
     } else if (widget.isSelected) {
       textColor = Colors.white;
       iconColor = Colors.white;

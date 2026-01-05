@@ -411,6 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       journeyTitle: parsedTask.journeyTitle,
       tags: parsedTask.tags,
       reminderTime: parsedTask.reminderTime,
+      reminderAt: parsedTask.reminderAt,
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),

@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:postgrest/postgrest.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
@@ -141,6 +141,7 @@ class SupabaseService {
         'recurrence_end_date': task.recurrenceEndDate?.toIso8601String(),
         'reminder_hour': task.reminderTime?.hour,
         'reminder_minute': task.reminderTime?.minute,
+        'reminder_at': task.reminderAt?.toIso8601String(),
         'recurrence_id': task.recurrenceId,
         'goal_id': task.goalId,
         'completed_at': task.completedAt?.toIso8601String(),
@@ -198,6 +199,7 @@ class SupabaseService {
         'recurrence_end_date': task.recurrenceEndDate?.toIso8601String(),
         'reminder_hour': task.reminderTime?.hour,
         'reminder_minute': task.reminderTime?.minute,
+        'reminder_at': task.reminderAt?.toIso8601String(),
         'personal_day': task.personalDay,
         'completed_at': task.completedAt?.toIso8601String(),
       };
@@ -241,6 +243,7 @@ class SupabaseService {
            case 'recurrenceType': mappedUpdates['recurrence_type'] = value.toString(); break;
            case 'recurrenceDaysOfWeek': mappedUpdates['recurrence_days_of_week'] = value; break;
            case 'recurrenceEndDate': mappedUpdates['recurrence_end_date'] = value; break;
+           case 'reminderAt': mappedUpdates['reminder_at'] = value; break;
            case 'personalDay': mappedUpdates['personal_day'] = value; break;
            default: mappedUpdates[key] = value; 
          }
@@ -303,21 +306,51 @@ class SupabaseService {
     }
   }
 
+  /// Helper para garantir que a data seja interpretada como DATA LOCAL (Dia/Mês/Ano)
+  /// ignorando o deslocamento de fuso horário que pode vir do banco (UTC).
+  /// Ex: 2023-01-03T00:00:00Z -> Parse -> 2023-01-02 21:00 (Local) -> Fix -> 2023-01-03 00:00 (Local)
+  DateTime? _parseDateAsLocal(String? dateString) {
+    if (dateString == null) return null;
+    try {
+      // Parse original (pode vir com fuso Z)
+      final parsed = DateTime.parse(dateString);
+      
+      // Se a string original tinha "T", tentamos pegar a data antes dele para garantir o dia.
+      // Mas o DateTime.parse já ajusta para UTC se tiver Z.
+      // O problema é q queremos o ANO-MES-DIA literal da string ou ajustado?
+      // O Supabase salva como UTC 00:00.
+      // Se salvamos 03/01, vai ser 03/01 00:00 UTC.
+      // Ao ler aqui (Brasil -3), DateTime.parse("...Z").toLocal() vira 02/01 21:00.
+      // O widget de calendário vê 02/01.
+      
+      // O que queremos: Se o banco diz 03/01 (UTC), queremos 03/01 (Local).
+      // Então pegamos os componentes do UTC e criamos um Local.
+      
+      // Se o parse resultar em UTC (isUtc=true), usamos seus componentes para criar um Local.
+      if (parsed.isUtc) {
+         return DateTime(parsed.year, parsed.month, parsed.day);
+      } else {
+         return DateTime(parsed.year, parsed.month, parsed.day);
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
   Goal _mapGoalFromSupabase(Map<String, dynamic> data) {
     return Goal(
       id: data['id'],
       userId: data['user_id'],
       title: data['title'],
       description: data['description'] ?? '',
-      targetDate: data['target_date'] != null ? DateTime.parse(data['target_date']) : null,
+      targetDate: _parseDateAsLocal(data['target_date']), // FIX
       progress: (data['progress'] as num?)?.toDouble().toInt() ?? 0,
       category: data['category'] ?? '',
       imageUrl: data['image_url'],
       subTasks: (data['sub_tasks'] as List?)?.map((e) => SubTask.fromMap(e as Map<String,dynamic>,'')).toList() ?? [],
-      createdAt: data['created_at'] != null ? DateTime.parse(data['created_at']) : DateTime.now(),
+      createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(), // CreatedAt pode manter o horário real
     );
   }
-
 
   TaskModel _mapTaskFromSupabase(Map<String, dynamic> data) {
     // Helper para mapear JSON do Supabase para TaskModel
@@ -339,15 +372,16 @@ class SupabaseService {
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
       createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
-      dueDate: data['due_date'] != null ? DateTime.tryParse(data['due_date']) : null,
+      dueDate: _parseDateAsLocal(data['due_date']), // FIX
       tags: List<String>.from(data['tags'] ?? []),
       journeyId: data['journey_id'],
       journeyTitle: data['journey_title'],
       personalDay: data['personal_day'],
       recurrenceType: recType,
       recurrenceDaysOfWeek: List<int>.from(data['recurrence_days_of_week'] ?? []),
-      recurrenceEndDate: data['recurrence_end_date'] != null ? DateTime.tryParse(data['recurrence_end_date']) : null,
+      recurrenceEndDate: _parseDateAsLocal(data['recurrence_end_date']), // FIX
       reminderTime: reminder,
+      reminderAt: data['reminder_at'] != null ? DateTime.tryParse(data['reminder_at']) : null,
       recurrenceId: data['recurrence_id'],
       goalId: data['goal_id'],
       completedAt: data['completed_at'] != null ? DateTime.tryParse(data['completed_at']) : null,

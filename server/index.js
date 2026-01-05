@@ -783,6 +783,71 @@ app.post('/api/auth/delete-user', async (req, res) => {
     res.json({ success: true });
 });
 
+// --- REMINDER SCHEDULER ---
+const checkReminders = async () => {
+    if (!supabase) return;
+
+    try {
+        const now = new Date().toISOString();
+        // Check for reminders due in the last hour that haven't been sent
+        // (Avoid sending reminders for very old tasks if server was down)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+        const { data: tasks, error } = await supabase
+            .from('tasks')
+            .select('*')
+            .lte('reminder_at', now)
+            .gt('reminder_at', oneHourAgo)
+            .is('reminder_sent', false) // Use .is for null/false check if needed, or .eq
+            .eq('completed', false);
+
+        if (error) {
+            console.error('[REMINDER] Error fetching due tasks:', error.message);
+            return;
+        }
+
+        if (tasks && tasks.length > 0) {
+            console.log(`[REMINDER] Found ${tasks.length} due reminders.`);
+
+            for (const task of tasks) {
+                // Fetch user logic (safer than join if FK not strict)
+                const { data: user } = await supabase
+                    .from('users')
+                    .select('email, first_name, uid')
+                    .eq('uid', task.user_id)
+                    .single();
+
+                if (user) {
+                    // Send to N8N
+                    await sendN8nEvent('task_reminder', {
+                        email: user.email,
+                        name: user.first_name,
+                        userId: user.uid,
+                        taskText: task.text,
+                        taskId: task.id,
+                        journeyTitle: task.journey_title,
+                        reminderAt: task.reminder_at
+                    });
+
+                    // Mark as sent
+                    await supabase
+                        .from('tasks')
+                        .update({ reminder_sent: true })
+                        .eq('id', task.id);
+
+                    console.log(`[REMINDER] Sent for task: ${task.id}`);
+                }
+            }
+        }
+    } catch (e) {
+        console.error('[REMINDER] Unexpected error:', e);
+    }
+};
+
+// Start Polling (every 60 seconds)
+setInterval(checkReminders, 60000);
+console.log('[SERVER] Reminder polling started (60s interval).');
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

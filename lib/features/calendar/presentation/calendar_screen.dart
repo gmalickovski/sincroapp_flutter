@@ -13,7 +13,7 @@ import 'package:sincro_app_flutter/features/tasks/services/task_action_service.d
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
@@ -97,6 +97,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
     _tasksCreatedAtSubscription?.cancel();
     _fabOpacityController.dispose();
     super.dispose();
+  }
+
+  // --- Estado de Expansão do Calendário (Mobile) ---
+  bool _isCalendarExpanded = true;
+
+  void _toggleCalendar() {
+    setState(() {
+      _isCalendarExpanded = !_isCalendarExpanded;
+    });
   }
 
   void _initializeStreams(DateTime month, {bool isInitialLoad = false}) {
@@ -300,6 +309,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       journeyTitle: parsedTask.journeyTitle,
       tags: parsedTask.tags,
       reminderTime: parsedTask.reminderTime,
+      reminderAt: parsedTask.reminderAt,
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
@@ -667,28 +677,21 @@ class _CalendarScreenState extends State<CalendarScreen> {
         ],
       );
     } else {
-          // Layout Retrato - Stack com painel arrastável
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final screenHeight = constraints.maxHeight;
-          
-          // Estima altura do calendário (varia entre ~380-450px dependendo do mês)
-          // Usamos um valor conservador para garantir que não sobreponha inicialmente
-          const estimatedCalendarHeight = 450.0;
-          final availableHeight = screenHeight - estimatedCalendarHeight;
-          
-          // Calcula o tamanho inicial como fração da tela
-          // Limitamos entre 0.25 (25%) e 0.45 (45%) da tela
-          final initialSize = (availableHeight / screenHeight).clamp(0.25, 0.45);
-          
-          return Stack(
-            children: [
-              // Calendário fixo no topo
-              Column(
+      // --- Layout Mobile Novo (Sem sobreposição) ---
+      return Column(
+        children: [
+          // 1. Calendário (Animado)
+          AnimatedCrossFade(
+            firstChild: Container(
+             color: AppColors.background, // Fundo correto (não scaffoldBackground)
+             padding: const EdgeInsets.only(bottom: 8.0), // Espaço pro painel não colar
+             child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Padding(
+                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         CalendarHeader(
                           focusedDay: _focusedDay,
@@ -699,58 +702,65 @@ class _CalendarScreenState extends State<CalendarScreen> {
                               DateTime(_focusedDay.year, _focusedDay.month + 1)),
                           isCompact: true,
                         ),
-                        const SizedBox(height: 8),
-                        Stack(
-                          alignment: Alignment.topCenter,
-                          children: [
-                            CustomCalendar(
-                              focusedDay: _focusedDay,
-                              selectedDay: _selectedDay,
-                              onDaySelected: _onDaySelected,
-                              onPageChanged: _onPageChanged,
-                              isDesktop: false,
-                              events: eventsMapUtc,
-                              personalDayNumber: _personalDayNumber,
-                            ),
-                          ],
+                        // Removido SizedBox(height: 8) fixo
+                        CustomCalendar(
+                          focusedDay: _focusedDay,
+                          selectedDay: _selectedDay,
+                          onDaySelected: _onDaySelected,
+                          onPageChanged: _onPageChanged,
+                          isDesktop: false,
+                          events: eventsMapUtc,
+                          personalDayNumber: _personalDayNumber,
                         ),
                       ],
                     ),
                   ),
                 ],
               ),
-              
-              // Painel arrastável
-              // Wrap in MediaQuery to force viewInsets.bottom to 0
-              // This prevents the sheet from moving up when the keyboard opens
-              MediaQuery(
-                data: MediaQuery.of(context).copyWith(viewInsets: EdgeInsets.zero),
-                child: DraggableScrollableSheet(
-                  initialChildSize: initialSize,
-                  minChildSize: initialSize,
-                  maxChildSize: 0.95,
-                  snap: true,
-                  snapSizes: [initialSize, 0.7, 0.95],
-                  builder: (context, scrollController) {
-                    return DayDetailPanel(
-                      scrollController: scrollController,
-                      selectedDay: _selectedDay,
-                      personalDayNumber: _personalDayNumber,
-                      events: _getRawEventsForDay(_selectedDay),
-                      isDesktop: false,
-                      onAddTask: _openAddTaskModal,
-                      onToggleTask: _onToggleTask,
-                      onTaskTap: _handleTaskTap,
-                      // Callbacks de Swipe
-                      onDeleteTask: _handleDeleteTask,
-                      onRescheduleTask: _handleRescheduleTask,
-                    );
-                  },
-                ),
+            ),
+            secondChild: const SizedBox(width: double.infinity, height: 0), // Estado colapsado
+            crossFadeState: _isCalendarExpanded
+                ? CrossFadeState.showFirst
+                : CrossFadeState.showSecond,
+            duration: const Duration(milliseconds: 300),
+            sizeCurve: Curves.easeInOut,
+          ),
+
+          // 2. Painel de Detalhes (Ocupa o resto)
+          Expanded(
+            child: GestureDetector(
+              // Gesto na *área do cabeçalho* é tratado dentro do painel se necessário, 
+              // mas podemos adicionar detecção global de swipe vertical
+              onVerticalDragEnd: (details) {
+                // Swipe rápido para cima = fechar calendário
+                if (details.primaryVelocity! < -500 && _isCalendarExpanded) {
+                  _toggleCalendar();
+                }
+                // Swipe rápido para baixo = abrir calendário (se estiver no topo da lista)
+                // Isso é complexo pois conflita com scroll da lista. 
+                // Melhor deixar apenas o botão por enquanto ou swipe apenas no header
+                else if (details.primaryVelocity! > 500 && !_isCalendarExpanded) {
+                  _toggleCalendar();
+                }
+              },
+              child: DayDetailPanel(
+                selectedDay: _selectedDay,
+                personalDayNumber: _personalDayNumber,
+                events: _getRawEventsForDay(_selectedDay),
+                isDesktop: false,
+                onAddTask: _openAddTaskModal,
+                onToggleTask: _onToggleTask,
+                onTaskTap: _handleTaskTap,
+                // Callbacks de Swipe
+                onDeleteTask: _handleDeleteTask,
+                onRescheduleTask: _handleRescheduleTask,
+                // Controle de Expansão
+                onToggleCalendar: _toggleCalendar,
+                isCalendarExpanded: _isCalendarExpanded,
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ],
       );
     }
   }

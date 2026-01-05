@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
+import 'package:sincro_app_flutter/models/date_picker_result.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
@@ -54,7 +56,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
   String? _selectedGoalId;
   String? _selectedGoalTitle;
   DateTime? _selectedDate; // Novo estado para a data
+
   List<String> _selectedTags = []; // Novo estado para as tags
+  Duration? _selectedReminderOffset; // Novo estado para o offset do lembrete
 
   bool get _isEditing => widget.taskToEdit != null;
 
@@ -312,10 +316,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CustomDatePickerModal(
+      builder: (context) => ScheduleTaskSheet(
         initialDate: initialPickerDate,
+        initialTime: _selectedTime,
+        initialRecurrence: ruleToPass,
         userData: widget.userData!,
-        initialRecurrenceRule: ruleToPass,
       ),
     ).then((result) {
       if (result != null) {
@@ -323,16 +328,23 @@ class _TaskInputModalState extends State<TaskInputModal> {
         final selectedDateMidnight = DateTime(selectedDateTime.year,
             selectedDateTime.month, selectedDateTime.day);
 
-        // --- REMOVIDO: Lógica de adicionar ao _textController ---
-
         // Atualiza a pílula de vibração
         _updateVibrationForDate(selectedDateMidnight);
 
         // Atualiza o estado
         setState(() {
-          _selectedDate = selectedDateMidnight; // Armazena a data selecionada
-          _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+          _selectedDate = selectedDateMidnight; // Armazena a data (meia-noite) para pílulas e lógica
+          
+          // Se o usuário selecionou um horário, extraímos dele.
+          // Se não (Dia Inteiro), fica null.
+          if (result.hasTime) {
+             _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+          } else {
+             _selectedTime = null;
+          }
+          
           _selectedRecurrenceRule = result.recurrenceRule;
+          _selectedReminderOffset = result.reminderOffset; // Captura offset
         });
       }
     });
@@ -370,6 +382,18 @@ class _TaskInputModalState extends State<TaskInputModal> {
       journeyId: _selectedGoalId, // Envia o ID da meta
       journeyTitle: _selectedGoalTitle, // Envia o Título da meta
       // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
+    ).copyWith(
+        reminderAt: () {
+            // Calculate numeric reminderAt
+            if (_selectedDate == null) return null;
+            if (_selectedReminderOffset == null) return null;
+            
+            DateTime base = _selectedDate!; // Midnight
+            if (_selectedTime != null) {
+                base = DateTime(base.year, base.month, base.day, _selectedTime!.hour, _selectedTime!.minute);
+            }
+            return base.subtract(_selectedReminderOffset!);
+        }()
     );
 
     widget.onAddTask(finalParsedTask);
@@ -633,7 +657,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       dateStr = '$day de $month de ${date.year}';
     }
 
-    // Adiciona horário se houver
+    // Adiciona horário se houver (e se não for nulo)
     if (_selectedTime != null) {
       final hh = _selectedTime!.hour.toString().padLeft(2, '0');
       final mm = _selectedTime!.minute.toString().padLeft(2, '0');

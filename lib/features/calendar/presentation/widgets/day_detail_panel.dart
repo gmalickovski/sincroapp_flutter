@@ -27,156 +27,113 @@ class DayDetailPanel extends StatelessWidget {
   // --- FIM MUDANÇA ---
   final ScrollController? scrollController;
 
+  final Future<bool?> Function(TaskModel)? onDeleteTask;
+  final Future<bool?> Function(TaskModel)? onRescheduleTask;
+  final VoidCallback? onToggleCalendar; 
+  final bool isCalendarExpanded;
+
   const DayDetailPanel({
     super.key,
-    // --- INÍCIO DA CORREÇÃO (Refatoração) ---
-    // 'selectedDay' agora é obrigatório (required) e não-nulo.
     required this.selectedDay,
-    // --- FIM DA CORREÇÃO ---
     this.personalDayNumber,
     required this.events,
     this.isDesktop = false,
     required this.onAddTask,
     required this.onToggleTask,
-    // --- MUDANÇA: Tornou-se o callback principal ---
     required this.onTaskTap,
-    // --- FIM MUDANÇA ---
-    // --- MUDANÇA (TAREFA 3): Callback removido ---
-    // required this.onJournalTap,
-    // --- FIM MUDANÇA ---
     this.scrollController,
-    // Callbacks de Swipe
     this.onDeleteTask,
     this.onRescheduleTask,
+    this.onToggleCalendar,
+    this.isCalendarExpanded = true,
   });
-
-  final Future<bool?> Function(TaskModel)? onDeleteTask;
-  final Future<bool?> Function(TaskModel)? onRescheduleTask;
 
   @override
   Widget build(BuildContext context) {
-    // --- INÍCIO DA CORREÇÃO (Refatoração) ---
-    // A verificação "if (selectedDay == null)" foi REMOVIDA.
-    // O widget agora pressupõe que 'selectedDay' é válido.
-    // --- FIM DA CORREÇÃO ---
     final formattedDate = toBeginningOfSentenceCase(
         DateFormat("EEEE, 'dia' d", 'pt_BR').format(selectedDay));
 
-    // --- INÍCIO DA MUDANÇA: Adiciona Container para o "Sheet" ---
-    // Envolvemos o conteúdo em um Container para dar a ele uma aparência
-    // de "gaveta" com cantos arredondados no topo.
     return Container(
-      decoration: isDesktop
-          ? null // Decoração aplicada no parent (calendar_screen)
-          : const BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 10,
-                  offset: Offset(0, -5),
-                ),
-              ],
-            ),
-      // --- INÍCIO DA MUDANÇA: CustomScrollView para permitir arrastar pelo cabeçalho ---
-      // Usamos CustomScrollView para que o cabeçalho faça parte da área rolável,
-      // permitindo que o DraggableScrollableSheet responda ao arrasto no cabeçalho.
-      child: CustomScrollView(
-        controller: scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Drag handle - apenas no mobile
-                if (!isDesktop)
-                  GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
-                      child: Center(
-                        child: Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: AppColors.border.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(2),
+      // Removido decoração de sombra/bordas arredondadas (User request: "sem sobreado", "mesma cor")
+      color: AppColors.background, 
+      child: Column(
+        children: [
+           // Cabeçalho da Lista
+           Container(
+             padding: EdgeInsets.fromLTRB(16, isDesktop ? 16 : 8, 16, 0),
+             child: Column(
+               children: [
+                 Row(
+                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   children: [
+                     Expanded(
+                       child: Text(
+                         formattedDate,
+                         style: const TextStyle(
+                             color: Colors.white,
+                             fontSize: 20,
+                             fontWeight: FontWeight.bold),
+                         overflow: TextOverflow.ellipsis,
+                       ),
+                     ),
+                     // Pill de vibração
+                     if (personalDayNumber != null && personalDayNumber! > 0)
+                       Padding(
+                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                         child: VibrationPill(vibrationNumber: personalDayNumber!),
+                       ),
+                      
+                      // Ícone de expandir/recolher calendário (Apenas mobile)
+                      if (!isDesktop && onToggleCalendar != null)
+                        IconButton(
+                          icon: Icon(
+                            isCalendarExpanded 
+                              ? Icons.keyboard_arrow_up 
+                              : Icons.keyboard_arrow_down,
+                            color: AppColors.secondaryText,
                           ),
+                          onPressed: onToggleCalendar,
                         ),
-                      ),
-                    ),
-                  ),
-                Padding(
-                  padding: EdgeInsets.fromLTRB(
-                      16, isDesktop ? 16 : 0, 16, 0), // Padding superior no desktop
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        // Garante que a data não estoure
-                        child: Text(
-                          formattedDate, // Removido '!' desnecessário
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold),
-                          overflow: TextOverflow
-                              .ellipsis, // Evita quebra se muito longo
-                        ),
-                      ),
-                      if (personalDayNumber != null && personalDayNumber! > 0)
-                        Padding(
-                          // Adiciona padding para não colar no botão add
-                          padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                          child: VibrationPill(
-                              vibrationNumber: personalDayNumber!),
-                        ),
-                    ],
-                  ),
-                ),
-                const Divider(height: 32, color: AppColors.border),
-              ],
-            ),
-          ),
-          if (events.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: _buildEmptyStateMobile(),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
+                   ],
+                 ),
+                 const Divider(height: 24, color: AppColors.border),
+               ],
+             ),
+           ),
+           
+           // Lista de Tarefas (Sliver ou ListView)
+           // Como removemos o DraggableScrollableSheet, podemos usar Expanded + ListView
+           // OU manter CustomScrollView se o pai for um Column/Expanded
+           Expanded(
+            child: events.isEmpty 
+              ? _buildEmptyStateMobile()
+              : ListView.builder(
+                  controller: scrollController, // Pode ser nulo agora
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: events.length,
+                  itemBuilder: (context, index) {
                     final event = events[index];
                     if (event is TaskModel) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8.0),
                         child: TaskItem(
-                        key: ValueKey('task_${event.id}'),
-                        task: event,
-                        onToggle: (isCompleted) =>
-                            onToggleTask(event, isCompleted),
-                        onTap: () =>
-                            onTaskTap(event), // Chama o callback principal
-                        showGoalIconFlag: true,
-                        showTagsIconFlag: true,
-                        showVibrationPillFlag: true,
-                        verticalPaddingOverride: 4.0,
-                        // Callbacks de Swipe
-                        onSwipeLeft: onDeleteTask,
-                        onSwipeRight: onRescheduleTask,
-                      ),
+                          key: ValueKey('task_${event.id}'),
+                          task: event,
+                          onToggle: (isCompleted) => onToggleTask(event, isCompleted),
+                          onTap: () => onTaskTap(event),
+                          showGoalIconFlag: true,
+                          showTagsIconFlag: true,
+                          showVibrationPillFlag: true,
+                          verticalPaddingOverride: 4.0,
+                          onSwipeLeft: onDeleteTask,
+                          onSwipeRight: onRescheduleTask,
+                        ),
                       );
                     }
                     return const SizedBox.shrink();
                   },
-                  childCount: events.length,
                 ),
-              ),
-            ),
+           ),
         ],
       ),
     );

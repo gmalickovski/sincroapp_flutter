@@ -5,15 +5,14 @@ import 'package:collection/collection.dart'; // Para DeepCollectionEquality
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/date_picker_result.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-// --- INÍCIO DA MUDANÇA: Imports para seleção de meta ---
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
-// --- FIM DA MUDANÇA ---
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -34,7 +33,6 @@ class TaskDetailModal extends StatefulWidget {
 }
 
 class _TaskDetailModalState extends State<TaskDetailModal> {
-  // --- Variáveis de estado (outras funcionalidades mantidas) ---
   final SupabaseService _supabaseService = SupabaseService();
   late TextEditingController _textController;
   Goal? _selectedGoal;
@@ -45,28 +43,22 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   bool _isLoading = false;
   bool _isLoadingGoal = false;
 
-  // Estados originais para comparação (mantidos)
+  // Estados originais para comparação
   late String _originalText;
   late String? _originalGoalId;
   late List<String> _originalTags;
   late DateTime? _originalDateTime;
   late RecurrenceRule _originalRecurrenceRule;
+  late Duration? _originalReminderOffset; // Novo
 
-  // Estados para data/hora/recorrência (mantidos)
+  // Estados para data/hora/recorrência/lembrete
   late DateTime? _selectedDateTime;
   late RecurrenceRule _recurrenceRule;
+  Duration? _reminderOffset; // Novo
 
-  // Estados para UI de Tags (mantidos)
   final TextEditingController _tagInputController = TextEditingController();
   final FocusNode _tagFocusNode = FocusNode();
   final DeepCollectionEquality _listEquality = const DeepCollectionEquality();
-
-  // --- REMOVIDO: Lógica de Overlay de Meta ---
-  // OverlayEntry? _overlayEntry;
-  // final LayerLink _layerLink = LayerLink();
-  // List<Goal> _allGoals = [];
-  // bool _isLoadingGoalsList = false;
-  // --- FIM DA REMOÇÃO ---
 
   @override
   void initState() {
@@ -84,6 +76,37 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       _selectedDateTime = null;
     }
 
+    // Calcula offset inicial do lembrete
+    if (widget.task.reminderAt != null && widget.task.dueDate != null) {
+        // DueDate no DB é UTC? TaskModel usa UTC.
+        // Se reminderAt é UTC 13:50 e DueDate é UTC 14:00 -> 10min.
+        // O Date Picker Result usa um Offset (Duration).
+        // Aqui tentamos recuperar esse offset.
+        // Assumindo que o reminderAt é relativo ao DateTime COMPLETO (com hora).
+        // Se a tarefa não tem hora (All Day), o reminderAt é relativo à meia-noite?
+        // Sim, conforme TaskInputModal: base = DateTime(y,m,d) ou DateTime(y,m,d,h,m).
+        
+        DateTime base = widget.task.dueDate!.toLocal();
+        // Ajuste para base: se user tinha definido hora, base usa hora. Se não, meia noite.
+        // TaskModel dueDate tem hora? Sim, sempre tem 00:00 se for all day, ou H:M se tiver hora.
+        // Mas a gente precisa saber se 'tem hora' ou não? 
+        // O TaskModel armazena reminderTime (TimeOfDay) que é usado quando TEM HORA.
+        // Se não tem hora, reminderTime costuma ser null?
+        // O widget.task.reminderTime armazena a hora da tarefa (Due Time).
+        
+        if (widget.task.reminderTime != null) {
+             base = DateTime(base.year, base.month, base.day, widget.task.reminderTime!.hour, widget.task.reminderTime!.minute);
+        } else {
+             base = DateTime(base.year, base.month, base.day);
+        }
+        
+        _reminderOffset = base.difference(widget.task.reminderAt!.toLocal());
+        if (_reminderOffset!.isNegative) _reminderOffset = null; // Safety
+    } else {
+        _reminderOffset = null;
+    }
+
+
     _recurrenceRule = RecurrenceRule(
       type: widget.task.recurrenceType,
       daysOfWeek: widget.task.recurrenceDaysOfWeek,
@@ -98,6 +121,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _originalTags = List.from(widget.task.tags);
     _originalDateTime = _selectedDateTime;
     _originalRecurrenceRule = _recurrenceRule.copyWith();
+    _originalReminderOffset = _reminderOffset;
 
     _textController.addListener(_checkForChanges);
 
@@ -105,7 +129,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       _loadGoalDetails(widget.task.journeyId!);
     }
     _updateVibrationInfo(_personalDay);
-    // --- REMOVIDO: _loadGoalsList(); ---
   }
 
   @override
@@ -114,11 +137,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _textController.dispose();
     _tagInputController.dispose();
     _tagFocusNode.dispose();
-    // --- REMOVIDO: _removeAutocompleteOverlay(); ---
     super.dispose();
   }
-
-  // --- Funções Helper (Inalteradas) ---
 
   Future<void> _loadGoalDetails(String goalId) async {
     if (!mounted) return;
@@ -180,12 +200,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     bool dateTimeChanged =
         !_compareDateTimes(_selectedDateTime, _originalDateTime);
     bool recurrenceChanged = _recurrenceRule != _originalRecurrenceRule;
+    bool reminderChanged = _reminderOffset != _originalReminderOffset;
 
     bool changes = textChanged ||
         goalChanged ||
         tagsChanged ||
         dateTimeChanged ||
-        recurrenceChanged;
+        recurrenceChanged ||
+        reminderChanged;
 
     if (changes != _hasChanges && mounted) {
       setState(() {
@@ -215,26 +237,25 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         localA.day == localB.day;
   }
 
-  // --- Ações Principais (Inalteradas) ---
   Future<void> _duplicateTask() async {
-    // ... (Lógica inalterada) ...
     if (_isLoading || !mounted) return;
     setState(() => _isLoading = true);
-    // _removeAutocompleteOverlay(); // Removido
 
     final dateForCalc = _selectedDateTime ?? DateTime.now();
     int? personalDayForDuplicated = _calculatePersonalDayForDate(dateForCalc);
     if (personalDayForDuplicated == 0) personalDayForDuplicated = null;
 
     DateTime? finalDueDate;
-    TimeOfDay? finalReminderTime;
+    // TimeOfDay? finalReminderTime; // Não precisamos separar
     if (_selectedDateTime != null) {
-      final localSelected = _selectedDateTime!.toLocal();
-      finalDueDate =
-          DateTime(localSelected.year, localSelected.month, localSelected.day);
-      if (localSelected.hour != 0 || localSelected.minute != 0) {
-        finalReminderTime = TimeOfDay.fromDateTime(localSelected);
-      }
+      finalDueDate = _selectedDateTime!.toUtc();
+    }
+
+    // Calcula reminderAt para a nova tarefa
+    DateTime? reminderAt;
+    if (finalDueDate != null && _reminderOffset != null) {
+        // finalDueDate já é UTC e contém a hora completa se definida
+        reminderAt = finalDueDate.subtract(_reminderOffset!); 
     }
 
     final duplicatedTask = TaskModel(
@@ -250,7 +271,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       recurrenceType: _recurrenceRule.type,
       recurrenceDaysOfWeek: _recurrenceRule.daysOfWeek,
       recurrenceEndDate: _recurrenceRule.endDate?.toUtc(),
-      reminderTime: finalReminderTime,
+      // reminderTime: finalReminderTime, // Removido
+      reminderAt: reminderAt, // Usa o reminderAt calculado
       recurrenceId: null,
     );
 
@@ -281,9 +303,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   Future<void> _deleteTask() async {
-    // ... (Lógica inalterada) ...
     if (_isLoading || !mounted) return;
-    // _removeAutocompleteOverlay(); // Removido
     final navigator = Navigator.of(context);
     final messenger = ScaffoldMessenger.of(context);
 
@@ -335,7 +355,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   Future<void> _saveChanges() async {
-    // ... (Lógica inalterada) ...
     if (!_hasChanges || _isLoading || !mounted) return;
 
     final newText = _textController.text.trim();
@@ -349,7 +368,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     setState(() => _isLoading = true);
-    // _removeAutocompleteOverlay(); // Removido
 
     int? newPersonalDay = widget.task.personalDay;
     if (!_compareDateTimes(_selectedDateTime, _originalDateTime)) {
@@ -359,21 +377,24 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     DateTime? finalDueDateUtc;
-    TimeOfDay? finalReminderTime;
     if (_selectedDateTime != null) {
-      final localSelected = _selectedDateTime!.toLocal();
-      finalDueDateUtc = DateTime.utc(
-          localSelected.year, localSelected.month, localSelected.day);
-      if (localSelected.hour != 0 || localSelected.minute != 0) {
-        finalReminderTime = TimeOfDay.fromDateTime(localSelected);
-      }
+      // Salva o Datetime completo com hora, convertido para UTC
+      finalDueDateUtc = _selectedDateTime!.toUtc();
+    }
+
+    DateTime? reminderAt;
+    if (finalDueDateUtc != null && _reminderOffset != null) {
+        DateTime base = _selectedDateTime!.toLocal(); // Usa selecionada com hora (se houver)
+        // Se selectedDateTime não tiver hora mas reminderTime tiver... espera, selectedDateTime CONTÉM a hora se definida
+        reminderAt = base.subtract(_reminderOffset!).toUtc();
     }
 
     final Map<String, dynamic> updates = {
       'text': newText,
       'dueDate': finalDueDateUtc,
-      'reminderHour': finalReminderTime?.hour,
-      'reminderMinute': finalReminderTime?.minute,
+      // 'reminderHour': finalReminderTime?.hour, // Removido
+      // 'reminderMinute': finalReminderTime?.minute, // Removido
+      'reminder_at': reminderAt?.toIso8601String(), // Envia data calculada
       'tags': _currentTags,
       'journeyId': _selectedGoal?.id,
       'journeyTitle': _selectedGoal?.title,
@@ -423,9 +444,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   Future<void> _selectDateAndTimeRecurrence() async {
-    // ... (Lógica inalterada) ...
     if (!mounted) return;
-    // _removeAutocompleteOverlay(); // Removido
     FocusScope.of(context).unfocus();
 
     final DateTime initialPickerDate =
@@ -436,9 +455,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (modalContext) => CustomDatePickerModal(
+      builder: (modalContext) => ScheduleTaskSheet(
         initialDate: initialPickerDate,
-        initialRecurrenceRule: _recurrenceRule,
+        initialRecurrence: _recurrenceRule,
+        initialTime: _selectedDateTime != null 
+            ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
+            : null,
+        initialReminderOffset: _reminderOffset, // Passa o offset atual
         userData: widget.userData,
       ),
     );
@@ -447,11 +470,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       bool dateTimeChanged = !_compareDateTimes(
           result.dateTime.toLocal(), _selectedDateTime?.toLocal());
       bool recurrenceChanged = result.recurrenceRule != _recurrenceRule;
+      final newOffset = result.reminderOffset;
+      bool reminderChanged = newOffset != _reminderOffset;
 
-      if (dateTimeChanged || recurrenceChanged) {
+      if (dateTimeChanged || recurrenceChanged || reminderChanged) {
         setState(() {
           _selectedDateTime = result.dateTime.toLocal();
           _recurrenceRule = result.recurrenceRule;
+          _reminderOffset = newOffset; // Atualiza offset
           _personalDay = _calculatePersonalDayForDate(_selectedDateTime!);
           _updateVibrationInfo(_personalDay);
           _checkForChanges();
@@ -460,9 +486,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-  // --- Funções de Tag (Inalteradas) ---
   void _addTag() {
-    // _removeAutocompleteOverlay(); // Removido
     final String tagText = _tagInputController.text
         .trim()
         .replaceAll(RegExp(r'\s+'), '-')
@@ -510,7 +534,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   void _removeTag(String tagToRemove) {
-    // _removeAutocompleteOverlay(); // Removido
     if (mounted) {
       setState(() {
         _currentTags.remove(tagToRemove);
@@ -524,17 +547,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-  // --- INÍCIO DA MUDANÇA: Lógica de seleção de meta ---
-
-  // --- REMOVIDO: _loadGoalsList, _removeAutocompleteOverlay, _showGoalSelectionOverlay, _createGoalOverlayEntry, _buildGoalSuggestionItem ---
-  // (Toda a lógica de overlay foi removida)
-
-  // --- FUNÇÃO _selectGoal ATUALIZADA ---
   void _selectGoal() async {
     if (!mounted) return;
     FocusScope.of(context).unfocus();
 
-    // 1. Abre o GoalSelectionModal (o mesmo do task_input_modal)
     final result = await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -542,31 +558,23 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       builder: (context) {
         return GoalSelectionModal(
           userId: widget.userData.uid,
-          // O modal agora retorna o valor via Navigator.pop()
         );
       },
     );
 
-    if (result == null) {
-      // Modal foi dispensado
-      return;
-    }
+    if (result == null) return;
 
     if (result is Goal) {
-      // 2. Usuário SELECIONOU uma meta
       setState(() {
         _selectedGoal = result;
         _checkForChanges();
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
-      // 3. Usuário clicou em "CRIAR NOVA JORNADA"
       _openCreateGoalWidget();
     }
   }
 
-  // --- NOVA FUNÇÃO: Chama a tela/dialog de criação de meta ---
   void _openCreateGoalWidget() async {
-    // Esta função é idêntica à do task_input_modal
     final screenWidth = MediaQuery.of(context).size.width;
     bool isMobile = screenWidth < 600;
 
@@ -588,7 +596,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       );
     }
 
-    // Se a criação foi bem-sucedida, reabre o seletor de metas
     if (creationSuccess == true) {
       await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
@@ -596,12 +603,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
     }
   }
-  // --- FIM DA MUDANÇA ---
 
-  // --- Build Principal ---
   @override
   Widget build(BuildContext context) {
-    bool isModalLayout = MediaQuery.of(context).size.width > 600;
+    // UNIFICANDO O LAYOUT: Sempre usar estilo "Card" (Dialog-like)
+    // Se for mobile, usamos constraints menores ou adaptáveis
     final int currentPersonalDay =
         _calculatePersonalDayForDate(_selectedDateTime ?? DateTime.now());
 
@@ -620,19 +626,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     const borderOpacity = 0.6;
     const borderWidth = 1.5;
 
-    // bottom padding smaller on desktop modal to avoid large empty area
-    final double bottomPadding = isModalLayout ? 24.0 : 80.0;
-
     Widget contentBody = GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
-        // _removeAutocompleteOverlay(); // Removido
       },
       behavior: HitTestBehavior.opaque,
-      child: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(24.0, 16.0, 24.0, bottomPadding),
+      child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
@@ -641,7 +641,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: TextFormField(
                     controller: _textController,
-                    // onTap: _removeAutocompleteOverlay, // Removido
                     style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 18,
@@ -662,7 +661,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 _buildDetailRow(
                   icon: Icons.calendar_month_outlined,
                   valueWidget:
-                      _buildDateTimeRecurrenceSummaryWidget(), // --- ATUALIZADO ---
+                      _buildDateTimeRecurrenceSummaryWidget(),
                   onTap: _selectDateAndTimeRecurrence,
                   valueColor: (_selectedDateTime != null ||
                           _recurrenceRule.type != RecurrenceType.none)
@@ -677,11 +676,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            // _removeAutocompleteOverlay(); // Removido
                             if (mounted) {
                               setState(() {
                                 _selectedDateTime = null;
                                 _recurrenceRule = RecurrenceRule();
+                                _reminderOffset = null; // Remove lembrete tb
                                 _personalDay = _calculatePersonalDayForDate(
                                     DateTime.now());
                                 _updateVibrationInfo(_personalDay);
@@ -693,7 +692,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       : null,
                 ),
                 const SizedBox(height: 8),
-                // --- REMOVIDO: CompositedTransformTarget ---
                 _buildDetailRow(
                   icon: Icons.flag_outlined,
                   valueWidget: _isLoadingGoal
@@ -704,7 +702,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   value: _isLoadingGoal
                       ? null
                       : (_selectedGoal?.title ?? 'Adicionar à jornada'),
-                  onTap: _selectGoal, // --- ATUALIZADO ---
+                  onTap: _selectGoal,
                   valueColor: _selectedGoal != null
                       ? AppColors.primaryText
                       : AppColors.secondaryText,
@@ -716,7 +714,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           onPressed: () {
-                            // _removeAutocompleteOverlay(); // Removido
                             if (mounted) {
                               setState(() {
                                 _selectedGoal = null;
@@ -736,40 +733,36 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ],
             ),
           ),
-          if (_isLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.5),
-              child: const Center(child: CustomLoadingSpinner()),
-            ),
-        ],
-      ),
-    );
+      );
 
-    if (isModalLayout) {
-      // Desktop dialog: use a Column (not Scaffold) so height adapts to content
+      // Layout Unificado: Style like a centered Dialog/Card
+      // Isso funciona tanto em desktop (Dialog) quanto mobile (dentro de Scaffold ou Dialog)
+      // Ajuste: usar Dialog widget sempre, mas com insetPadding ajustado?
+      // O usuário quer "parecido com desktop". O desktop é um Dialog flutuante.
+      // Se retornamos Dialog, ele deve ser renderizado como filho de showDialog OU como filho de um Page route.
+      // Se for Page Route, Dialog fica centralizado.
+      
       return Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.all(24.0),
+        backgroundColor: Colors.transparent, // Transparente para usar o container
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0), // Margens no mobile
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700),
+          constraints: const BoxConstraints(maxWidth: 700), // Max width para desktop
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(20.0),
+            borderRadius: BorderRadius.circular(24.0), // Bordas arredondadas (como na imagem)
             child: Container(
               decoration: BoxDecoration(
                   color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(20.0),
+                  borderRadius: BorderRadius.circular(24.0),
                   border: Border.all(
                       color: vibrationColor.withValues(alpha: borderOpacity),
                       width: borderWidth)),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // AppBar as PreferredSize so it doesn't force full scaffold layout
                   PreferredSize(
                     preferredSize: const Size.fromHeight(kToolbarHeight),
                     child: _buildAppBar(),
                   ),
-                  // Content (scrolls if too large)
                   Flexible(child: contentBody),
                 ],
               ),
@@ -777,23 +770,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           ),
         ),
       );
-    } else {
-      // ... (Layout de Scaffold inalterado) ...
-      return Scaffold(
-        backgroundColor: AppColors.cardBackground,
-        appBar: _buildAppBar(),
-        body: Container(
-            decoration: BoxDecoration(
-                border: Border(
-                    top: BorderSide(
-                        color: vibrationColor.withValues(alpha: borderOpacity),
-                        width: borderWidth + 1))),
-            child: contentBody),
-      );
-    }
   }
-
-  // --- Helpers de Build (AppBar e Menus inalterados) ---
 
   AppBar _buildAppBar() {
     return AppBar(
@@ -803,7 +780,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
           tooltip: 'Fechar',
           onPressed: () {
-            // _removeAutocompleteOverlay(); // Removido
             Navigator.maybePop(context);
           }),
       actions: [
@@ -852,7 +828,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 borderRadius: BorderRadius.circular(12.0)),
             tooltip: "Mais opções",
             onSelected: (value) {
-              // _removeAutocompleteOverlay(); // Removido
               if (value == 'duplicate') {
                 _duplicateTask();
               } else if (value == 'delete') {
@@ -877,9 +852,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-  // --- INÍCIO DA MUDANÇA: Refatoração do Sumário de Data/Hora ---
-
-  /// Constrói um widget de ícone + texto para o sumário.
   Widget _buildIconText(
       IconData icon, String text, Color textColor, Color iconColor) {
     return Row(
@@ -898,7 +870,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-  /// Retorna o texto curto para a data (Hoje, Amanhã, dd/MM/yy).
   String _buildDateSummaryText() {
     if (_selectedDateTime == null) return '';
     final now = DateTime.now();
@@ -916,13 +887,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     return DateFormat('dd/MM/yy', 'pt_BR').format(localSelectedDate);
   }
 
-  /// Retorna o texto curto para a recorrência.
   String _getShortRecurrenceText(RecurrenceRule rule) {
     switch (rule.type) {
       case RecurrenceType.daily:
         return 'Diariamente';
       case RecurrenceType.weekly:
-        // Se todos os 7 dias estiverem marcados, é o mesmo que "Diariamente"
         if (rule.daysOfWeek.length == 7) return 'Diariamente';
         return 'Semanalmente';
       case RecurrenceType.monthly:
@@ -932,18 +901,31 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-  /// NOVO WIDGET: Constrói o sumário de data/hora/recorrência com ícones.
+  String _getReminderText(Duration offset) {
+      // Ex: 00:10:00 -> "10 min antes"
+      if (offset.inMinutes == 0) return "No horário do evento"; // ou "Em ponto"
+      
+      if (offset.inMinutes < 60) {
+          return "${offset.inMinutes} min antes";
+      }
+      if (offset.inHours < 24) {
+          return "${offset.inHours}h antes";
+      }
+      return "${offset.inDays} dias antes";
+  }
+
   Widget _buildDateTimeRecurrenceSummaryWidget() {
     final bool hasDateTime = _selectedDateTime != null;
     final bool hasRecurrence = _recurrenceRule.type != RecurrenceType.none;
-    final Color color = (hasDateTime || hasRecurrence)
+    final bool hasReminder = _reminderOffset != null;
+    
+    final Color color = (hasDateTime || hasRecurrence || hasReminder)
         ? AppColors.primaryText
         : AppColors.secondaryText;
-    final Color iconColor = (hasDateTime || hasRecurrence)
+    final Color iconColor = (hasDateTime || hasRecurrence || hasReminder)
         ? AppColors.secondaryText
         : AppColors.tertiaryText;
 
-    // Caso 1: Nada definido
     if (!hasDateTime && !hasRecurrence) {
       return Text(
         "Adicionar data",
@@ -953,15 +935,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     List<Widget> children = [];
 
-    // Caso 2: Data definida
     if (hasDateTime) {
       children.add(_buildIconText(
         Icons.calendar_today_outlined,
-        _buildDateSummaryText(), // "Hoje", "Amanhã", "dd/MM/yy"
+        _buildDateSummaryText(),
         color,
         iconColor,
       ));
-      // Adiciona hora apenas se não for meia-noite
       if (_selectedDateTime!.hour != 0 || _selectedDateTime!.minute != 0) {
         children.add(_buildIconText(
           Icons.alarm,
@@ -972,30 +952,33 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
     }
 
-    // Caso 3: Recorrência definida
     if (hasRecurrence) {
       children.add(_buildIconText(
         Icons.repeat,
-        _getShortRecurrenceText(_recurrenceRule), // "Diário", "Semanal", etc.
+        _getShortRecurrenceText(_recurrenceRule),
         color,
         iconColor,
       ));
     }
+    
+    // Mostra o lembrete
+    if (hasReminder) {
+        children.add(_buildIconText(
+            Icons.notifications_active_outlined,
+            _getReminderText(_reminderOffset!),
+            AppColors.primary, // Destaque na cor
+            AppColors.primary,
+        ));
+    }
 
-    // Usa Wrap para quebrar a linha em telas menores se necessário
     return Wrap(
-      spacing: 12.0, // Espaço horizontal entre os ícones
-      runSpacing: 4.0, // Espaço vertical se quebrar a linha
+      spacing: 12.0,
+      runSpacing: 4.0,
       crossAxisAlignment: WrapCrossAlignment.center,
       children: children,
     );
   }
 
-  // --- REMOVIDO: _buildDateTimeRecurrenceSummary() (o antigo, de texto longo) ---
-
-  // --- FIM DA MUDANÇA: Refatoração do Sumário de Data/Hora ---
-
-  // _buildDetailRow (Inalterado)
   Widget _buildDetailRow({
     required IconData icon,
     String? value,
@@ -1025,9 +1008,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           trailingAction
         else if (onTap != null)
           Icon(
-            icon == Icons.flag_outlined
-                ? Icons.arrow_drop_down_rounded
-                : Icons.chevron_right_rounded,
+            Icons.chevron_right_rounded,
             color: AppColors.secondaryText,
             size: 24,
           ),
@@ -1055,7 +1036,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-  // _buildTagsSection (Inalterado)
   Widget _buildTagsSection() {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -1063,7 +1043,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            // Align icon closer to the top so the tags/input align vertically
             padding: EdgeInsets.only(top: 4.0, right: 16.0),
             child: Icon(Icons.label_outline,
                 color: AppColors.secondaryText, size: 20),
@@ -1104,9 +1083,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                           .toList(),
                     ),
                   ),
-                // Make the tag input align to the top of the column and the text start at top-left
                 SizedBox(
-                  // a slightly taller field to fit top-aligned text comfortably
                   height: 48,
                   child: TextField(
                     controller: _tagInputController,
@@ -1136,7 +1113,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-  // _buildPersonalDaySection (Inalterado)
   Widget _buildPersonalDaySection() {
     if (_dayInfo == null) return const SizedBox.shrink();
     final colors = getColorsForVibration(_personalDay);
@@ -1181,7 +1157,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-  // _buildPopupMenuItem (Inalterado)
   PopupMenuItem<String> _buildPopupMenuItem({
     required IconData icon,
     required String text,
@@ -1206,4 +1181,5 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       ),
     );
   }
-} // Fim da classe _TaskDetailModalState
+}
+

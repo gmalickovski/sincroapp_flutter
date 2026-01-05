@@ -1,7 +1,7 @@
 // lib/features/tasks/utils/task_parser.dart
 import 'package:flutter/material.dart'; // Necessário para TimeOfDay
 // REMOVIDO: import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 // REMOVIDO: import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 // REMOVIDO: import 'package:sincro_app_flutter/services/firestore_service.dart';
 
@@ -13,6 +13,7 @@ class ParsedTask {
   final DateTime? dueDate;
 
   final TimeOfDay? reminderTime;
+  final DateTime? reminderAt; // Precise reminder timestamp
   final RecurrenceRule recurrenceRule;
 
   ParsedTask({
@@ -22,6 +23,7 @@ class ParsedTask {
     this.journeyTitle,
     this.dueDate,
     this.reminderTime,
+    this.reminderAt,
     RecurrenceRule? recurrenceRule,
   }) : recurrenceRule =
             recurrenceRule ?? RecurrenceRule(); // Garante que nunca seja nulo
@@ -33,6 +35,7 @@ class ParsedTask {
     String? journeyTitle,
     DateTime? dueDate,
     TimeOfDay? reminderTime,
+    DateTime? reminderAt,
     RecurrenceRule? recurrenceRule,
   }) {
     return ParsedTask(
@@ -42,6 +45,7 @@ class ParsedTask {
       journeyTitle: journeyTitle ?? this.journeyTitle,
       dueDate: dueDate ?? this.dueDate,
       reminderTime: reminderTime ?? this.reminderTime,
+      reminderAt: reminderAt ?? this.reminderAt,
       recurrenceRule: recurrenceRule ?? this.recurrenceRule,
     );
   }

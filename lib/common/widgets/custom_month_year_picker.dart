@@ -1,8 +1,8 @@
-// lib/common/widgets/custom_month_year_picker.dart
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+
+enum _PickerMode { month, year }
 
 class CustomMonthYearPicker extends StatefulWidget {
   final DateTime initialDate;
@@ -21,325 +21,287 @@ class CustomMonthYearPicker extends StatefulWidget {
 }
 
 class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
-  late int _selectedYear;
-  late int _selectedMonth;
-  late List<int> _years;
-  late List<String> _months;
-  late FixedExtentScrollController _yearController;
-  late FixedExtentScrollController _monthController;
-
-  // --- ALTERAÇÃO: Variáveis para rastrear os índices atuais ---
-  late int _currentYearIndex;
-  late int _currentMonthIndex;
-  // --- FIM DA ALTERAÇÃO ---
-
-  final double _itemHeight = 60.0;
-  // --- ALTERAÇÃO: Reduzido o wheelHeight para dar espaço para os botões ---
-  final double _wheelHeight = 60.0 * 3; // Eram 5 itens
-  // --- FIM DA ALTERAÇÃO ---
+  late DateTime _selectedDate;
+  _PickerMode _mode = _PickerMode.month;
+  
+  // For Year Pagination (viewing a page of years)
+  late int _yearPageStart;
+  static const int _yearsPerPage = 12;
 
   @override
   void initState() {
     super.initState();
-    _selectedYear = widget.initialDate.year;
-    _selectedMonth = widget.initialDate.month;
+    _selectedDate = widget.initialDate;
+    // Align year page to the selected year
+    _yearPageStart = (_selectedDate.year ~/ _yearsPerPage) * _yearsPerPage;
+  }
 
-    _years = List<int>.generate(
-      widget.lastDate.year - widget.firstDate.year + 1,
-      (index) => widget.firstDate.year + index,
-    );
-
-    _months = List.generate(12, (index) {
-      return DateFormat('MMM', 'pt_BR')
-          .format(DateTime(2000, index + 1))
-          .toUpperCase();
+  void _handleMonthChanged(int month) {
+    setState(() {
+      // Clamp day to max days in new month
+      final daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, month);
+      int day = _selectedDate.day;
+      if (day > daysInMonth) day = daysInMonth;
+      
+      _selectedDate = DateTime(_selectedDate.year, month, day);
     });
-
-    // --- ALTERAÇÃO: Define os índices iniciais ---
-    _currentYearIndex =
-        _years.indexOf(_selectedYear).clamp(0, _years.length - 1);
-    _currentMonthIndex = (_selectedMonth - 1).clamp(0, 11);
-
-    _yearController =
-        FixedExtentScrollController(initialItem: _currentYearIndex);
-    _monthController =
-        FixedExtentScrollController(initialItem: _currentMonthIndex);
-    // --- FIM DA ALTERAÇÃO ---
   }
 
-  /// Função helper para animar a roda
-  void _animateWheel(
-      FixedExtentScrollController controller, int jump, int itemCount) {
-    if (!controller.hasClients) return;
+  void _handleYearChanged(int year) {
+    setState(() {
+      final daysInMonth = DateUtils.getDaysInMonth(year, _selectedDate.month);
+      int day = _selectedDate.day;
+      if (day > daysInMonth) day = daysInMonth;
 
-    final int newIndex =
-        (controller.selectedItem + jump).clamp(0, itemCount - 1);
-
-    if (newIndex != controller.selectedItem) {
-      controller.animateToItem(
-        newIndex,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
+      _selectedDate = DateTime(year, _selectedDate.month, day);
+      // Optional: Switch back to month? Or stay in year?
+      // Keeping user in year mode is safer for browsing.
+      
+      // Update page if jumped
+      _yearPageStart = (year ~/ _yearsPerPage) * _yearsPerPage;
+      _mode = _PickerMode.month; // Auto-switch back to month often feels natural after picking year
+    });
   }
-
-  void _scrollToIndex(FixedExtentScrollController controller, int index) {
-    if (controller.hasClients) {
-      controller.animateToItem(
-        index,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _yearController.dispose();
-    _monthController.dispose();
-    super.dispose();
+  
+  void _changeYearPage(int delta) {
+    setState(() {
+       _yearPageStart += (delta * _yearsPerPage);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      // --- ALTERAÇÃO: Altura ajustada para o novo layout ---
-      height: 480,
-      // --- FIM DA ALTERAÇÃO ---
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(24.0),
-          topRight: Radius.circular(24.0),
+    return Dialog(
+      backgroundColor: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: Container(
+        width: 320,
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 24),
+            _buildDisplay(),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 300,
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _mode == _PickerMode.month 
+                    ? _buildMonthGrid()
+                    : _buildYearGrid(),
+              ),
+            ),
+             const SizedBox(height: 8),
+          ],
         ),
       ),
-      child: Column(
-        children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12.0),
-            decoration: BoxDecoration(
-              color: AppColors.tertiaryText,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          // Título
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              "Selecionar Mês e Ano",
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.primaryText, fontWeight: FontWeight.bold),
-            ),
-          ),
-          const Divider(color: AppColors.border, height: 1),
-
-          // Layout de Duas Colunas com Rodas
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Coluna Esquerda: Meses
-                  Expanded(
-                    child: _buildWheel(
-                      controller: _monthController,
-                      itemCount: _months.length,
-                      items: _months,
-                      // --- ALTERAÇÃO: Passa o índice atual ---
-                      currentIndex: _currentMonthIndex,
-                      onSelectedItemChanged: (index) {
-                        setState(() {
-                          _selectedMonth = index + 1;
-                          _currentMonthIndex = index; // Atualiza o índice
-                          HapticFeedback.lightImpact();
-                        });
-                        _scrollToIndex(
-                            _monthController, index); // Centraliza ao mudar
-                      },
-                      isMonth: true,
-                    ),
-                  ),
-
-                  // Coluna Direita: Anos
-                  Expanded(
-                    child: _buildWheel(
-                      controller: _yearController,
-                      itemCount: _years.length,
-                      items: _years.map((y) => y.toString()).toList(),
-                      // --- ALTERAÇÃO: Passa o índice atual ---
-                      currentIndex: _currentYearIndex,
-                      onSelectedItemChanged: (index) {
-                        setState(() {
-                          _selectedYear = _years[index];
-                          _currentYearIndex = index; // Atualiza o índice
-                          HapticFeedback.lightImpact();
-                        });
-                        _scrollToIndex(
-                            _yearController, index); // Centraliza ao mudar
-                      },
-                      isMonth: false,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const Divider(color: AppColors.border, height: 1),
-          // Botões de Ação
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 12.0 + 16.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text(
-                      "Cancelar",
-                      style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                    onPressed: () {
-                      final selectedDate =
-                          DateTime(_selectedYear, _selectedMonth, 1);
-                      Navigator.pop(context, selectedDate);
-                    },
-                    child: const Text(
-                      "OK",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: MediaQuery.of(context).padding.bottom)
-        ],
-      ),
     );
   }
 
-  // --- ALTERAÇÃO GERAL: _buildWheel agora inclui setas ---
-  Widget _buildWheel({
-    required FixedExtentScrollController controller,
-    required int itemCount,
-    required List<String> items,
-    required ValueChanged<int> onSelectedItemChanged,
-    required int currentIndex, // Índice atual para lógica de UI
-    required bool isMonth,
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.close, color: AppColors.secondaryText),
+          onPressed: () => Navigator.pop(context),
+        ),
+        const Text(
+          "Selecione Mês e Ano",
+          style: TextStyle(
+            color: AppColors.primaryText,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.check, color: AppColors.primary),
+          onPressed: () => Navigator.pop(context, _selectedDate),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDisplay() {
+    final monthStr = DateFormat('MMM', 'pt_BR').format(_selectedDate).toUpperCase();
+    final yearStr = DateFormat('yyyy').format(_selectedDate);
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildDisplayItem(
+             text: monthStr, 
+             isSelected: _mode == _PickerMode.month,
+             onTap: () => setState(() => _mode = _PickerMode.month),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
+          child: Text(
+            "/",
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primaryText.withOpacity(0.4),
+            ),
+          ),
+        ),
+        _buildDisplayItem(
+             text: yearStr, 
+             isSelected: _mode == _PickerMode.year,
+             onTap: () => setState(() {
+               _mode = _PickerMode.year;
+               // Ensure page matches current year when switching
+               _yearPageStart = (_selectedDate.year ~/ _yearsPerPage) * _yearsPerPage;
+             }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDisplayItem({
+    required String text, 
+    required bool isSelected, 
+    required VoidCallback onTap
   }) {
-    // Define se os botões de seta estão habilitados
-    final bool isAtStart = currentIndex == 0;
-    final bool isAtEnd = currentIndex == (itemCount - 1);
-
-    return SizedBox(
-      width: isMonth ? 130 : 100, // Largura da coluna
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Seta para Cima
-          IconButton(
-            icon: const Icon(Icons.keyboard_arrow_up_rounded),
-            iconSize: 32.0,
-            color: isAtStart
-                ? AppColors.tertiaryText // Cor desabilitada
-                : AppColors.primaryText, // Cor habilitada
-            onPressed: isAtStart
-                ? null // Desabilita o botão
-                : () => _animateWheel(controller, -1, itemCount),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? AppColors.primary : AppColors.primaryText,
           ),
-
-          // A Roda (Spinner)
-          SizedBox(
-            width: isMonth ? 130 : 100, // Largura da coluna
-            height: _wheelHeight, // Altura da área de scroll
-            child: ListWheelScrollView.useDelegate(
-              controller: controller,
-              itemExtent: _itemHeight, // Altura de cada item
-              physics: const FixedExtentScrollPhysics(),
-              onSelectedItemChanged: onSelectedItemChanged,
-              childDelegate: ListWheelChildBuilderDelegate(
-                builder: (context, index) {
-                  final String text = items[index];
-                  bool isSelected = (index == currentIndex);
-
-                  return Container(
-                    height: _itemHeight,
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: isMonth
-                          ? 100
-                          : 65, // Largura do fundo (maior para meses)
-                      height: _itemHeight *
-                          0.8, // Altura um pouco menor que o itemExtent
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : Colors.transparent, // Fundo roxo
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        text,
-                        style: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.primaryText
-                                  .withValues(alpha: 0.6), // Texto branco ou opaco
-                          fontSize: isSelected ? 20 : 18, // Tamanho da fonte
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                childCount: itemCount,
-              ),
-            ),
-          ),
-
-          // Seta para Baixo
-          IconButton(
-            icon: const Icon(Icons.keyboard_arrow_down_rounded),
-            iconSize: 32.0,
-            color: isAtEnd
-                ? AppColors.tertiaryText // Cor desabilitada
-                : AppColors.primaryText, // Cor habilitada
-            onPressed: isAtEnd
-                ? null // Desabilita o botão
-                : () => _animateWheel(controller, 1, itemCount),
-          ),
-        ],
+        ),
       ),
     );
   }
-  // --- FIM DA ALTERAÇÃO ---
+
+  Widget _buildMonthGrid() {
+    return GridView.builder(
+      key: const ValueKey('OffsetMonthGrid'),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 1.5,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+      ),
+      itemCount: 12,
+      itemBuilder: (context, index) {
+        final monthIndex = index + 1;
+        final monthName = DateFormat('MMM', 'pt_BR')
+            .format(DateTime(2000, monthIndex))
+            .toUpperCase();
+        final isSelected = _selectedDate.month == monthIndex;
+
+        return _buildGridItem(
+           label: monthName, 
+           isSelected: isSelected, 
+           onTap: () => _handleMonthChanged(monthIndex)
+        );
+      },
+    );
+  }
+
+  Widget _buildYearGrid() {
+    // Determine viewable range
+    final int startYear = _yearPageStart;
+    final int endYear = startYear + _yearsPerPage - 1;
+    
+    // Check bounds
+    // We want to show a grid of years.
+    
+    return Column(
+      key: const ValueKey('OffsetYearGrid'),
+      children: [
+        // Pagination Header
+        Row(
+           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+           children: [
+             IconButton(
+               icon: const Icon(Icons.chevron_left, color: AppColors.primaryText),
+               onPressed: startYear > widget.firstDate.year 
+                   ? () => _changeYearPage(-1) 
+                   : null,
+             ),
+             Text(
+               "$startYear - $endYear",
+               style: const TextStyle(
+                 color: AppColors.primaryText,
+                 fontWeight: FontWeight.bold,
+                 fontSize: 14
+               ),
+             ),
+             IconButton(
+               icon: const Icon(Icons.chevron_right, color: AppColors.primaryText),
+               onPressed: endYear < widget.lastDate.year
+                   ? () => _changeYearPage(1)
+                   : null,
+             ),
+           ],
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: GridView.builder(
+             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                childAspectRatio: 1.5,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+             ),
+             itemCount: _yearsPerPage,
+             itemBuilder: (context, index) {
+                final year = startYear + index;
+                if (year < widget.firstDate.year || year > widget.lastDate.year) {
+                   return const SizedBox.shrink();
+                }
+                
+                final isSelected = _selectedDate.year == year;
+                return _buildGridItem(
+                  label: year.toString(),
+                  isSelected: isSelected,
+                  onTap: () => _handleYearChanged(year),
+                );
+             },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGridItem({
+    required String label, 
+    required bool isSelected, 
+    required VoidCallback onTap
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          border: isSelected ? null : Border.all(color: AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.secondaryText,
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
 }

@@ -23,86 +23,75 @@ class CalendarHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final fullFormat = DateFormat('MMMM yyyy', 'pt_BR');
+    final titleText = toBeginningOfSentenceCase(fullFormat.format(focusedDay));
+    final double fontSize = isCompact ? 16.0 : 18.0;
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.only(bottom: 16.0, top: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
+              // Left Arrow
+              IconButton(
+                icon: const Icon(Icons.chevron_left, color: AppColors.primaryText),
+                onPressed: onLeftArrowTap,
+                iconSize: 24,
+                splashRadius: 24,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+
+              // Title + Dropdown + Today
+              // Usamos Expanded para ocupar o centro
               Expanded(
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final fullFormat = DateFormat('MMMM yyyy', 'pt_BR');
-                    // Formato curto: "Nov. 2025"
-                    // DateFormat('MMM', 'pt_BR') retorna "nov." (com ponto)
-                    // Então construímos manualmente para garantir o formato desejado
-                    final monthShort = toBeginningOfSentenceCase(DateFormat('MMM', 'pt_BR').format(focusedDay));
-                    final year = DateFormat('yyyy').format(focusedDay);
-                    final shortText = "$monthShort $year";
-                    
-                    final fullText = toBeginningOfSentenceCase(fullFormat.format(focusedDay));
-
-                    // Define o tamanho da fonte com base no modo (Mobile vs Desktop)
-                    final double fontSize = isCompact ? 20.0 : 24.0;
-
-                    // Check if full text fits
-                    final textPainter = TextPainter(
-                      text: TextSpan(
-                        text: fullText,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Title (Month Year)
+                     Flexible(
+                       child: Text(
+                        titleText ?? '',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: AppColors.primaryText,
                           fontSize: fontSize,
                           fontWeight: FontWeight.bold,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      textDirection: ui.TextDirection.ltr,
-                      textScaler: MediaQuery.of(context).textScaler, // Importante para precisão
-                    );
-                    
-                    textPainter.layout(maxWidth: constraints.maxWidth);
-
-                    // Verifica se a largura do texto excede a largura disponível
-                    final useShort = textPainter.width > constraints.maxWidth;
-                    
-                    return Text(
-                      useShort ? shortText : fullText,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: fontSize,
-                        fontWeight: FontWeight.bold,
+                     ),
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.arrow_drop_down,
+                      color: AppColors.secondaryText,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    // Today Button (Small)
+                    TextButton(
+                      onPressed: onTodayButtonTap,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                    );
-                  },
+                      child: const Text('Hoje', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left,
-                        color: AppColors.secondaryText),
-                    onPressed: onLeftArrowTap,
-                  ),
-                  TextButton(
-                    onPressed: onTodayButtonTap,
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primaryText,
-                      backgroundColor: AppColors.cardBackground,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    child: const Text('Hoje'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right,
-                        color: AppColors.secondaryText),
-                    onPressed: onRightArrowTap,
-                  ),
-                ],
+
+              // Right Arrow
+              IconButton(
+                icon: const Icon(Icons.chevron_right, color: AppColors.primaryText),
+                onPressed: onRightArrowTap,
+                iconSize: 24,
+                splashRadius: 24,
+                padding: EdgeInsets.zero,
+                 constraints: const BoxConstraints(),
               ),
             ],
           ),

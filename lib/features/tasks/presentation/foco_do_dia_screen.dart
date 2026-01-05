@@ -10,7 +10,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tasks_list_view.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:uuid/uuid.dart';
 import 'widgets/task_input_modal.dart';
 import 'widgets/task_detail_modal.dart';
@@ -151,6 +151,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // --- FIM DA MUDANÇA ---
       tags: parsedTask.tags,
       reminderTime: parsedTask.reminderTime,
+      reminderAt: parsedTask.reminderAt,
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),

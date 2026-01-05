@@ -180,7 +180,7 @@ class _SidebarItemState extends State<_SidebarItem> {
     if (widget.isLogout) {
       textColor = _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
       iconColor = textColor;
-      hoverBgColor = const Color(0x33ef4444);
+      hoverBgColor = const Color(0xff1f2937); // Standard hover background
     } else if (widget.isSelected) {
       textColor = Colors.white;
       iconColor = Colors.white;

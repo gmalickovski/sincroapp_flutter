@@ -1,6 +1,6 @@
 // lib/features/tasks/models/task_model.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:flutter/material.dart';
 
 class TaskModel {
@@ -25,6 +25,7 @@ class TaskModel {
   // --- INÍCIO DA MUDANÇA (Solicitação 2): Campo 'completedAt' adicionado ---
   final DateTime? completedAt;
   // --- FIM DA MUDANÇA ---
+  final DateTime? reminderAt; // Precise reminder timestamp
 
   TaskModel({
     required this.id,
@@ -45,6 +46,7 @@ class TaskModel {
     // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
     this.completedAt,
     // --- FIM DA MUDANÇA ---
+    this.reminderAt,
   });
 
   // copyWith atualizado para incluir os novos campos
@@ -67,6 +69,7 @@ class TaskModel {
     // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
     Object? completedAt = const _Undefined(),
     // --- FIM DA MUDANÇA ---
+    Object? reminderAt = const _Undefined(),
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -99,6 +102,7 @@ class TaskModel {
           ? this.completedAt
           : completedAt as DateTime?,
       // --- FIM DA MUDANÇA ---
+      reminderAt: reminderAt is _Undefined ? this.reminderAt : reminderAt as DateTime?,
     );
   }
 
@@ -120,7 +124,9 @@ class TaskModel {
       recDays = List<int>.from(data['recurrenceDaysOfWeek']);
     }
 
+    // Modificado: Tentar obter o tempo do próprio dueDate (se contiver hora)
     TimeOfDay? reminder;
+    // Se tivermos as colunas antigas, usamos (backward compatibility)
     if (data['reminderHour'] != null &&
         data['reminderMinute'] != null &&
         data['reminderHour'] is int &&
@@ -130,6 +136,15 @@ class TaskModel {
             hour: data['reminderHour'], minute: data['reminderMinute']);
       } catch (e) {
         reminder = null;
+      }
+    } else {
+      // Se não, tentamos extrair do dueDate
+      DateTime? due = (data['dueDate'] as Timestamp?)?.toDate();
+      if (due != null) {
+          final localDue = due.toLocal();
+          if (localDue.hour != 0 || localDue.minute != 0) {
+              reminder = TimeOfDay.fromDateTime(localDue);
+          }
       }
     }
 
@@ -152,6 +167,7 @@ class TaskModel {
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       // --- FIM DA MUDANÇA ---
+      reminderAt: (data['reminder_at'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -162,24 +178,15 @@ class TaskModel {
       recurrenceTypeString = recurrenceType.toString();
     }
 
-    int? reminderHour;
-    int? reminderMinute;
-    if (reminderTime != null) {
-      reminderHour = reminderTime!.hour;
-      reminderMinute = reminderTime!.minute;
-    }
-
-    DateTime? dateOnlyDueDate;
-    if (dueDate != null) {
-      dateOnlyDueDate = DateTime(dueDate!.year, dueDate!.month, dueDate!.day);
-    }
+    // REMOVIDO: reminderHour e reminderMinute pois não existem na schema
+    // Em vez disso, salvamos o dueDate COM o horário, se existir.
 
     return {
       'text': text,
       'completed': completed,
       'createdAt': Timestamp.fromDate(createdAt),
-      'dueDate':
-          dateOnlyDueDate != null ? Timestamp.fromDate(dateOnlyDueDate) : null,
+      // Salva o dueDate completo (com hora)
+      'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'tags': tags,
       'journeyId': journeyId,
       'journeyTitle': journeyTitle,
@@ -189,14 +196,13 @@ class TaskModel {
       'recurrenceEndDate': recurrenceEndDate != null
           ? Timestamp.fromDate(recurrenceEndDate!)
           : null,
-      'reminderHour': reminderHour,
-      'reminderMinute': reminderMinute,
       'recurrenceId': recurrenceId,
       'goalId': goalId,
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
       'completedAt':
           completedAt != null ? Timestamp.fromDate(completedAt!) : null,
       // --- FIM DA MUDANÇA ---
+      'reminder_at': reminderAt != null ? Timestamp.fromDate(reminderAt!) : null,
     };
   }
   // --- INÍCIO DA MUDANÇA (Solicitação 2) ---

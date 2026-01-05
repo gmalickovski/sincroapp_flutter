@@ -141,6 +141,8 @@ class TaskItem extends StatelessWidget {
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
         task.personalDay! > 0;
+    // Nova flag para lembrete
+    final bool shouldShowReminderIcon = task.reminderAt != null;
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;
@@ -230,6 +232,7 @@ class TaskItem extends StatelessWidget {
               if (shouldShowDateIcon ||
                   shouldShowGoalIcon ||
                   shouldShowTagIcon ||
+                  shouldShowReminderIcon || // Adicionado
                   shouldShowPill)
                 ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 120),
@@ -249,7 +252,17 @@ class TaskItem extends StatelessWidget {
                               task.isOverdue ? Icons.event_busy : Icons.calendar_today_outlined,
                               size: iconIndicatorSize,
                               color: task.isOverdue ? Colors.red : const Color(
-                                  0xFFFB923C), // orange-400 (laranja como no chip)
+                                  0xFFFB923C), // orange-400
+                            ),
+                          ),
+                        if (shouldShowReminderIcon) // Ícone de Lembrete
+                           const Padding(
+                            padding:
+                                EdgeInsets.symmetric(horizontal: 3.0),
+                            child: Icon(
+                              Icons.notifications_active_outlined,
+                              size: iconIndicatorSize,
+                              color: AppColors.primary, // Roxo como destaque
                             ),
                           ),
                         if (shouldShowGoalIcon)
@@ -260,7 +273,7 @@ class TaskItem extends StatelessWidget {
                               Icons.flag_outlined,
                               size: iconIndicatorSize,
                               color: Color(
-                                  0xFF06B6D4), // cyan-500 (ciano como no chip)
+                                  0xFF06B6D4), // cyan-500
                             ),
                           ),
                         if (shouldShowTagIcon)
@@ -271,7 +284,7 @@ class TaskItem extends StatelessWidget {
                               Icons.label_outline,
                               size: iconIndicatorSize,
                               color: Color(
-                                  0xFFEC4899), // pink-500 (rosa/magenta como no chip)
+                                  0xFFEC4899), // pink-500
                             ),
                           ),
                         if (shouldShowPill)
@@ -279,7 +292,8 @@ class TaskItem extends StatelessWidget {
                             padding: EdgeInsets.only(
                               left: (shouldShowDateIcon ||
                                       shouldShowGoalIcon ||
-                                      shouldShowTagIcon)
+                                      shouldShowTagIcon || 
+                                      shouldShowReminderIcon) // Ajuste padding
                                   ? 6.0
                                   : 0,
                             ),
