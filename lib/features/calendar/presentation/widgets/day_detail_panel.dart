@@ -65,36 +65,46 @@ class DayDetailPanel extends StatelessWidget {
                children: [
                  Row(
                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                   crossAxisAlignment: CrossAxisAlignment.start, // Alinha ao topo para wrap
                    children: [
                      Expanded(
                        child: Text(
                          formattedDate,
                          style: const TextStyle(
                              color: Colors.white,
-                             fontSize: 20,
+                             fontSize: isDesktop ? 24.0 : 16.0,
                              fontWeight: FontWeight.bold),
+                         // Permite quebra de linha
+                         maxLines: 2,
                          overflow: TextOverflow.ellipsis,
                        ),
                      ),
-                     // Pill de vibração
-                     if (personalDayNumber != null && personalDayNumber! > 0)
-                       Padding(
-                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                         child: VibrationPill(vibrationNumber: personalDayNumber!),
-                       ),
-                      
-                      // Ícone de expandir/recolher calendário (Apenas mobile)
-                      if (!isDesktop && onToggleCalendar != null)
-                        IconButton(
-                          icon: Icon(
-                            isCalendarExpanded 
-                              ? Icons.keyboard_arrow_up 
-                              : Icons.keyboard_arrow_down,
-                            color: AppColors.secondaryText,
-                          ),
-                          onPressed: onToggleCalendar,
-                        ),
-                   ],
+                     // Pill de vibração + Botão de expandir em uma Row compacta
+                     Row(
+                       mainAxisSize: MainAxisSize.min,
+                       children: [
+                         if (personalDayNumber != null && personalDayNumber! > 0)
+                           Padding(
+                             padding: const EdgeInsets.only(left: 4.0), // Reduzido
+                             child: VibrationPill(vibrationNumber: personalDayNumber!),
+                           ),
+                         // Ícone de expandir/recolher calendário (Apenas mobile)
+                         if (!isDesktop && onToggleCalendar != null)
+                           IconButton(
+                             icon: Icon(
+                               isCalendarExpanded 
+                                 ? Icons.keyboard_arrow_up 
+                                 : Icons.keyboard_arrow_down,
+                               color: AppColors.secondaryText,
+                             ),
+                             onPressed: onToggleCalendar,
+                             padding: const EdgeInsets.all(4), // Padding mínimo
+                             constraints: const BoxConstraints(), // Remove constraints padrão
+                             visualDensity: VisualDensity.compact,
+                           ),
+                       ],
+                     ),
+                  ],
                  ),
                  const Divider(height: 24, color: AppColors.border),
                ],

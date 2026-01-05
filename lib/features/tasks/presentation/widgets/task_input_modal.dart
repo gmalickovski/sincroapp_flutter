@@ -557,11 +557,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
                       onPressed: _submit, // Chama o submit atualizado
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          minimumSize: const Size(44, 36)),
+                          shape: const CircleBorder(), // Botão circular
+                          padding: const EdgeInsets.all(12), // Padding uniforme
+                          minimumSize: const Size(44, 44)), // Quadrado perfeito para círculo
                       child: Icon(
                         _isEditing ? Icons.check : Icons.arrow_upward,
                         color: Colors.white,

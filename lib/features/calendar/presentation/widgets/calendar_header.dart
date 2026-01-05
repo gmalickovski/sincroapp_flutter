@@ -12,6 +12,7 @@ class CalendarHeader extends StatelessWidget {
 
   final bool isDesktop; // Nova propriedade
   final bool isCompact; // Propriedade faltante restaurada
+  final VoidCallback? onMonthYearTap; // Callback para abrir seletor de mês/ano
 
   const CalendarHeader({
     super.key,
@@ -21,6 +22,7 @@ class CalendarHeader extends StatelessWidget {
     required this.onRightArrowTap,
     this.isCompact = false,
     this.isDesktop = false, // Default false
+    this.onMonthYearTap, // Novo callback
   });
 
   @override
@@ -43,19 +45,28 @@ class CalendarHeader extends StatelessWidget {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          titleText ?? '',
-                          style: TextStyle(
-                            color: Colors.white, // Título branco no desktop (fundo escuro)
-                            fontSize: fontSize,
-                            fontWeight: FontWeight.bold,
+                        // Título clicável para abrir seletor de mês/ano
+                        GestureDetector(
+                          onTap: onMonthYearTap,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                titleText ?? '',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: fontSize,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              const Icon(
+                                Icons.arrow_drop_down,
+                                color: AppColors.secondaryText,
+                                size: 24,
+                              ),
+                            ],
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                         const Icon(
-                          Icons.arrow_drop_down,
-                          color: AppColors.secondaryText,
-                          size: 24,
                         ),
                         const SizedBox(width: 16),
                          TextButton(
@@ -110,22 +121,31 @@ class CalendarHeader extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                           Flexible(
-                             child: Text(
-                              titleText ?? '',
-                              style: TextStyle(
-                                color: AppColors.primaryText,
-                                fontSize: fontSize,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              overflow: TextOverflow.ellipsis,
+                          // Título clicável para seletor de mês/ano (Mobile)
+                          GestureDetector(
+                            onTap: onMonthYearTap,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    titleText ?? '',
+                                    style: TextStyle(
+                                      color: AppColors.primaryText,
+                                      fontSize: fontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: AppColors.secondaryText,
+                                  size: 20,
+                                ),
+                              ],
                             ),
-                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.arrow_drop_down,
-                            color: AppColors.secondaryText,
-                            size: 20,
                           ),
                           const SizedBox(width: 8),
                           TextButton(

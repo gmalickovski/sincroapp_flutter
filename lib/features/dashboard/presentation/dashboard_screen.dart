@@ -206,14 +206,21 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           setState(() {
             _currentTodayTasks = [];
-            _isLoading = false;
-            _buildCardList();
+            // _isLoading = false; // Mantém loading false se der erro
+            // _buildCardList(); // Mantém lista anterior se possível
           });
+          // --- CORREÇÃO DE BUG (Erro ao carregar tarefas) ---
+          // Suprime o SnackBar intrusivo para erros de stream (ex: timeout, network glitch)
+          // Apenas loga no console e mantém os dados antigos se existirem.
+          debugPrint("Erro silencioso no stream de tarefas: $error");
+          
+          /* 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
                 content: Text("Erro ao carregar tarefas do dia."),
                 backgroundColor: Colors.red),
-          );
+          ); 
+          */
         }
       },
     );

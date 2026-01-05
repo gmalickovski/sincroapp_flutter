@@ -25,6 +25,7 @@ import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_month_year_picker.dart';
 
 class CalendarScreen extends StatefulWidget {
   final UserModel userData;
@@ -106,6 +107,26 @@ class _CalendarScreenState extends State<CalendarScreen> {
     setState(() {
       _isCalendarExpanded = !_isCalendarExpanded;
     });
+  }
+
+  // Abre o seletor customizado de Mês/Ano
+  Future<void> _showMonthYearPicker() async {
+    final DateTime? picked = await showModalBottomSheet<DateTime>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext builderContext) {
+        return CustomMonthYearPicker(
+          initialDate: _focusedDay,
+          firstDate: DateTime(2020),
+          lastDate: DateTime(2101),
+        );
+      },
+    );
+    if (picked != null && mounted) {
+      final newFocusedDay = DateTime(picked.year, picked.month, 1);
+      _onPageChanged(newFocusedDay);
+    }
   }
 
   void _initializeStreams(DateTime month, {bool isInitialLoad = false}) {
@@ -630,7 +651,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           onRightArrowTap: () => _onPageChanged(DateTime(
                               _focusedDay.year, _focusedDay.month + 1)),
                           isCompact: true,
-                          isDesktop: false, // Mobile landscape should keep mobile header
+                          isDesktop: false,
+                          onMonthYearTap: _showMonthYearPicker,
                         ),
                         const SizedBox(height: 8),
                         Stack(
@@ -702,6 +724,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                           onRightArrowTap: () => _onPageChanged(
                               DateTime(_focusedDay.year, _focusedDay.month + 1)),
                           isCompact: true,
+                          onMonthYearTap: _showMonthYearPicker,
                         ),
                         // Removido SizedBox(height: 8) fixo
                         CustomCalendar(
@@ -795,7 +818,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                       DateTime(_focusedDay.year, _focusedDay.month - 1)),
                   onRightArrowTap: () => _onPageChanged(
                       DateTime(_focusedDay.year, _focusedDay.month + 1)),
-                  isDesktop: true, // Enable desktop layout
+                  isDesktop: true,
+                  onMonthYearTap: _showMonthYearPicker, // Abre seletor de mês/ano
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(
