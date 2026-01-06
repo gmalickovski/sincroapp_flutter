@@ -443,7 +443,8 @@ class SupabaseService {
         ].toSet().toList(), // NOVO: Parse mentions + explicit shared
       };
       
-      await _supabase.schema('sincroapp').from('tasks').insert(taskData);
+      final response = await _supabase.schema('sincroapp').from('tasks').insert(taskData).select().single();
+      final newTaskId = response['id']; // Get the generated ID
 
       // --- SINCRO MATCH LOGIC (INTERNAL) ---
       final newSharedUsers = [
@@ -452,7 +453,7 @@ class SupabaseService {
       ].toSet().toList();
       
       if (newSharedUsers.isNotEmpty && task.dueDate != null) {
-        _handleSincroMatchLogic(uid, task.text, task.dueDate!, newSharedUsers);
+        _handleSincroMatchLogic(uid, newTaskId, task.text, task.dueDate!, newSharedUsers);
       }
       // -------------------------------------
     } catch (e) {
@@ -528,7 +529,7 @@ class SupabaseService {
       ].toSet().toList();
       
       if (newSharedUsers.isNotEmpty && task.dueDate != null) {
-        _handleSincroMatchLogic(uid, task.text, task.dueDate!, newSharedUsers);
+        _handleSincroMatchLogic(uid, task.id, task.text, task.dueDate!, newSharedUsers);
       }
       // -------------------------------------
 
@@ -539,7 +540,7 @@ class SupabaseService {
   }
 
   /// Lógica Interna de Sincro Match (Substitui N8N para alertas)
-  Future<void> _handleSincroMatchLogic(String ownerId, String taskTitle, DateTime dueDate, List<String> sharedUsernames) async {
+  Future<void> _handleSincroMatchLogic(String ownerId, String taskId, String taskTitle, DateTime dueDate, List<String> sharedUsernames) async {
     try {
       // 1. Buscar dados do Owner (User A)
       final ownerData = await _supabase.schema('sincroapp').from('users').select('uid, username, birth_date').eq('uid', ownerId).single();
@@ -569,12 +570,13 @@ class SupabaseService {
         );
 
         // 4. Se for compatibilidade baixa/média, criar notificação Sincro Alert
-        if (score < 0.9) { // 0.9 = Perfeito. Menor que isso é conflito ou parcial.
+        // AGORA: Sempre envia para permitir o fluxo de "Aceitar/Recusar"
+        if (score < 0.9 || true) { // <--- Sempre enviar para testar o fluxo
            await sendNotification(
              toUserId: contactId, // Avisar o destinatário (User B)
              type: NotificationType.sincroAlert,
-             title: 'Sincro Alert: ${ownerData['username']} compartilhou uma tarefa',
-             body: 'A data ${DateFormat('dd/MM').format(dueDate)} pode não ser ideal para ambos. Toque para ver sugestões.',
+             title: 'Sincro: ${ownerData['username']} te convidou',
+             body: 'Novo agendamento: "$taskTitle". Toque para aceitar ou recusar.',
              metadata: {
                'userA_name': ownerData['username'],
                'userA_birth': ownerBirth.toIso8601String(),
@@ -582,16 +584,15 @@ class SupabaseService {
                'userB_birth': contactBirth.toIso8601String(),
                'target_date': dueDate.toIso8601String(),
                'compatibility_score': score,
-               'task_title': taskTitle, // Added Task Title
+               'task_title': taskTitle,
+               'task_id': taskId,      // Needed for response
+               'owner_id': ownerId,    // Needed for response
              }
            );
-           
-           // Opcional: Avisar também o Owner? Por enquanto só o convidado.
         }
       }
     } catch (e) {
       debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
-      // Não damos rethrow para não travar o fluxo principal de salvar tarefa
     }
   }
 

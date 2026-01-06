@@ -11,6 +11,9 @@ class CompatibilitySuggestionModal extends StatefulWidget {
   final String userBName;
   final DateTime userBBirth;
   final String taskTitle;
+  final String? taskId;
+  final String? ownerId;
+  final String currentUserId;
 
   const CompatibilitySuggestionModal({
     super.key,
@@ -20,6 +23,9 @@ class CompatibilitySuggestionModal extends StatefulWidget {
     required this.userBName,
     required this.userBBirth,
     required this.taskTitle,
+    this.taskId,
+    this.ownerId,
+    required this.currentUserId,
   });
 
   @override
@@ -31,6 +37,7 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
   late List<DateTime> suggestions;
   bool isLoading = true;
   bool hasAccepted = false; // Controls the 2-step flow
+  bool isProcessing = false;
 
   @override
   void initState() {
@@ -64,12 +71,38 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
     });
   }
 
-  void _acceptInvitation() {
-    setState(() {
-      hasAccepted = true;
-    });
-    // In a real scenario, this would trigger an API call to update status
-    // SupabaseService().acceptShare(...)
+  Future<void> _respondToInvitation(bool accepted) async {
+    if (widget.taskId == null || widget.ownerId == null) {
+      // Fallback local only if data missing
+      if (accepted) {
+         setState(() => hasAccepted = true);
+      } else {
+         Navigator.pop(context);
+      }
+      return;
+    }
+
+    setState(() => isProcessing = true);
+
+    await SupabaseService().respondToInvitation(
+      taskId: widget.taskId!,
+      ownerId: widget.ownerId!,
+      responderUid: widget.currentUserId,
+      responderName: widget.userBName, // Assuming userBName is 'You' or mapped correctly, actually userB is Recipient.
+      accepted: accepted,
+    );
+
+    if (mounted) {
+      setState(() => isProcessing = false);
+      if (accepted) {
+        setState(() => hasAccepted = true);
+      } else {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Convite recusado.')),
+        );
+      }
+    }
   }
 
   @override
@@ -120,35 +153,38 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
           ),
         ),
         const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context), // "Não" just closes
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.redAccent,
-                  side: const BorderSide(color: Colors.redAccent),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        if (isProcessing)
+           const CircularProgressIndicator()
+        else
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _respondToInvitation(false), // "Não"
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Não'),
                 ),
-                child: const Text('Não'),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: _acceptInvitation,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => _respondToInvitation(true), // "Sim"
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Sim'),
                 ),
-                child: const Text('Sim'),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }
