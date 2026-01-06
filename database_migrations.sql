@@ -60,6 +60,19 @@ CREATE INDEX idx_username_history_user ON sincroapp.username_history(user_id);
 COMMENT ON TABLE sincroapp.username_history IS 
 'Histórico de alterações de username para auditoria';
 
+-- RLS para Users (Essencial para Busca e Admin)
+ALTER TABLE sincroapp.users ENABLE ROW LEVEL SECURITY;
+
+-- 1. Qualquer usuário autenticado pode ver (SELECT) dados básicos de outros (nome, username, avatar)
+-- Necessário para "Buscar Global" e "Admin Panel"
+CREATE POLICY users_read_policy ON sincroapp.users
+FOR SELECT USING (auth.role() = 'authenticated');
+
+-- 2. Apenas o próprio usuário pode atualizar (UPDATE) seus dados
+CREATE POLICY users_update_policy ON sincroapp.users
+FOR UPDATE USING (uid = auth.uid());
+
+
 
 -- --------------------------------------------
 -- 2.1. Tabela de Contatos do Usuário (NOVO)
@@ -85,6 +98,26 @@ CREATE INDEX idx_user_contacts_contact ON sincroapp.user_contacts(contact_user_i
 
 COMMENT ON TABLE sincroapp.user_contacts IS 
 'Lista de contatos do usuário para acesso rápido e bloqueios';
+
+-- RLS para user_contacts
+ALTER TABLE sincroapp.user_contacts ENABLE ROW LEVEL SECURITY;
+
+-- Ver seus próprios contatos
+CREATE POLICY user_contacts_select_policy ON sincroapp.user_contacts
+FOR SELECT USING (user_id = auth.uid());
+
+-- Adicionar contato (apenas para si mesmo)
+CREATE POLICY user_contacts_insert_policy ON sincroapp.user_contacts
+FOR INSERT WITH CHECK (user_id = auth.uid());
+
+-- Remover contato (apenas seus próprios)
+CREATE POLICY user_contacts_delete_policy ON sincroapp.user_contacts
+FOR DELETE USING (user_id = auth.uid());
+
+-- Atualizar contato (bloquear/desbloquear)
+CREATE POLICY user_contacts_update_policy ON sincroapp.user_contacts
+FOR UPDATE USING (user_id = auth.uid());
+
 
 -- ============================================
 -- SPRINT 2: SHARING SYSTEM BACKEND

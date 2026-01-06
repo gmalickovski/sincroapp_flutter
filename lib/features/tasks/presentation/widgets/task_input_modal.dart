@@ -406,10 +406,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
   // --- FIM DA MUDANÇA ---
 
   void _openContactPicker() async {
-    final result = await showModalBottomSheet<List<String>>(
+    final result = await showDialog<List<String>>(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => ContactPickerModal(
         userId: widget.userId,
         initialSelectedUsernames: [], // Poderia extrair do texto se quisesse

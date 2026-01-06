@@ -135,135 +135,126 @@ class _ContactPickerModalState extends State<ContactPickerModal>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
-      padding: EdgeInsets.fromLTRB(
-          16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          
-          // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Adicionar Pessoas',
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryText,
-                      fontWeight: FontWeight.bold,
-                    ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Tabs
-          Container(
-            decoration: BoxDecoration(
-              color: AppColors.background.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(4),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: AppColors.contact,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              labelColor: Colors.white,
-              unselectedLabelColor: AppColors.secondaryText,
-              tabs: const [
-                Tab(text: 'Meus Contatos'),
-                Tab(text: 'Buscar Global'),
+    return Dialog(
+      backgroundColor: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
+      child: Container(
+        width: 400, // Fixed width for desktop consistency
+        constraints: BoxConstraints(
+           maxHeight: MediaQuery.of(context).size.height * 0.8,
+           maxWidth: 500,
+        ),
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Adicionar Pessoas',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ],
             ),
-          ),
-          
-          const SizedBox(height: 16),
+            
+            const SizedBox(height: 24),
+            
+            // Tabs (Pill Style)
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(100), // Pill shape container
+              ),
+              padding: const EdgeInsets.all(4),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: AppColors.primary, // Standard Purple
+                  borderRadius: BorderRadius.circular(100), // Pill shape indicator
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppColors.secondaryText,
+                tabs: const [
+                  Tab(text: 'Meus Contatos'),
+                  Tab(text: 'Buscar Global'),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 16),
           
           // Search Field (Visible mainly on Search tab, but useful on both maybe?)
           // Vamos deixar visível apenas na aba de busca para não confundir, 
           // ou um filtro local na aba de contatos. 
           // Para simplificar, colocamos dentro do TabBarView ou mudamos dinamicamente.
           // Vamos colocar aqui fora mesmo, mas mudando o hint.
-          TextField(
-            controller: _searchController,
-            style: const TextStyle(color: Colors.white),
-            decoration: InputDecoration(
-              hintText: 'Buscar por nome ou @username...',
-              hintStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
-              filled: true,
-              fillColor: AppColors.background,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // List Content
-          Flexible(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildMyContactsList(),
-                _buildGlobalSearchList(),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Action Button
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop(_selectedUsernames.toList());
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.contact,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            // Search Field
+            TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Buscar por nome ou @username...',
+                hintStyle: const TextStyle(color: AppColors.secondaryText),
+                prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
+                filled: true,
+                fillColor: AppColors.background,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
               ),
             ),
-            child: Text(
-              _selectedUsernames.isEmpty 
-                  ? 'Concluído' 
-                  : 'Adicionar ${_selectedUsernames.length} pessoa(s)',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            
+            const SizedBox(height: 16),
+            
+            // List Content
+            Expanded( // Changed to Expanded
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildMyContactsList(),
+                  _buildGlobalSearchList(),
+                ],
+              ),
             ),
-          ),
-        ],
+            
+            const SizedBox(height: 16),
+            
+            // Action Button
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(_selectedUsernames.toList());
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary, // Changed to Primary (Purple)
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(100), // Pill Shape
+                ),
+              ),
+              child: Text(
+                _selectedUsernames.isEmpty 
+                    ? 'Concluído' 
+                    : 'Adicionar ${_selectedUsernames.length} pessoa(s)',
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -296,7 +287,7 @@ class _ContactPickerModalState extends State<ContactPickerModal>
             if (_myContacts.isEmpty && filter.isEmpty)
               TextButton(
                 onPressed: () => _tabController.animateTo(1),
-                child: const Text('Buscar novas pessoas', style: TextStyle(color: AppColors.contact)),
+                child: const Text('Buscar novas pessoas', style: TextStyle(color: AppColors.primary)),
               ),
           ],
         ),
@@ -322,10 +313,10 @@ class _ContactPickerModalState extends State<ContactPickerModal>
             style: const TextStyle(color: Colors.white),
           ),
           subtitle: contact.username.isNotEmpty 
-              ? Text('@${contact.username}', style: const TextStyle(color: AppColors.contact))
+              ? Text('@${contact.username}', style: const TextStyle(color: AppColors.primary))
               : null,
           trailing: isSelected 
-              ? const Icon(Icons.check_circle, color: AppColors.contact)
+              ? const Icon(Icons.check_circle, color: AppColors.primary)
               : const Icon(Icons.circle_outlined, color: AppColors.secondaryText),
           onTap: () {
              if (contact.username.isNotEmpty) {
@@ -392,7 +383,7 @@ class _ContactPickerModalState extends State<ContactPickerModal>
               if (user.username != null)
                 Checkbox(
                   value: isSelected,
-                  activeColor: AppColors.contact,
+                  activeColor: AppColors.primary,
                   onChanged: (val) => _toggleSelection(user.username!),
                   shape: const CircleBorder(),
                 ),
