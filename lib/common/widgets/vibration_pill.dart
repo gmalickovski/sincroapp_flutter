@@ -21,13 +21,13 @@ VibrationColors getColorsForVibration(int vibrationNumber) {
           background: Color(0xfff97316), text: Colors.white); // Laranja
     case 3:
       return const VibrationColors(
-          background: Color(0xffeab308), text: Colors.black); // Amarelo
+          background: Color(0xffca8a04), text: Colors.white); // Amarelo Escuro (Yellow-600)
     case 4:
       return const VibrationColors(
-          background: Color(0xff84cc16), text: Colors.black); // Verde Lima
+          background: Color(0xff65a30d), text: Colors.white); // Verde Lima Escuro (Lime-600)
     case 5:
       return const VibrationColors(
-          background: Color(0xff22d3ee), text: Colors.black); // Ciano
+          background: Color(0xff0891b2), text: Colors.white); // Ciano Escuro (Cyan-600)
     case 6:
       return const VibrationColors(
           background: Color(0xff3b82f6), text: Colors.white); // Azul
