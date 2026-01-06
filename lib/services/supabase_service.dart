@@ -596,6 +596,50 @@ class SupabaseService {
     }
   }
 
+  /// Responde a um convite de tarefa (Aceitar/Recusar)
+  Future<void> respondToInvitation({
+    required String taskId,
+    required String ownerId,
+    required String responderUid,
+    required String responderName,
+    required bool accepted,
+  }) async {
+    try {
+      final statusStr = accepted ? 'aceitou' : 'recusou';
+      final iconStr = accepted ? '✅' : '❌';
+      
+      // 1. Notificar o dono da tarefa
+      await sendNotification(
+        toUserId: ownerId,
+        type: NotificationType.system, 
+        title: 'Convite $statusStr',
+        body: '$iconStr $responderName $statusStr seu convite para a tarefa.',
+        relatedItemId: taskId,
+        metadata: {
+          'action': accepted ? 'accepted' : 'declined',
+          'responder_name': responderName,
+        }
+      );
+
+      // 2. Se recusou, remover da lista shared_with
+      if (!accepted) {
+         final taskResponse = await _supabase.schema('sincroapp').from('tasks').select('shared_with, text').eq('id', taskId).single();
+         final List<dynamic> currentShared = taskResponse['shared_with'] ?? [];
+         
+         // Tentamos remover pelo username 
+         final userResponse = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', responderUid).single();
+         final String username = userResponse['username'];
+
+         if (currentShared.contains(username)) {
+           final newShared = List<String>.from(currentShared)..remove(username);
+           await _supabase.schema('sincroapp').from('tasks').update({'shared_with': newShared}).eq('id', taskId);
+         }
+      }
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');
+    }
+  }
+
   Future<void> deleteTask(String uid, String taskId) async {
     try {
       await _supabase
