@@ -1062,4 +1062,73 @@ class NumerologyEngine {
 
     return diaPessoal;
   }
+
+  // === SINCRO MATCH LOGIC (COMPATIBILIDADE) ===
+
+
+  /// Verifica se uma data específica é favorável para um usuário
+  bool isDateFavorable(DateTime targetDate) {
+    if (_parseDate(dataNascimento) == null) return false;
+    
+    // A logica atual de calcularDiasFavoraveis é "para o mês corrente"?
+    // O método original pega dia/mes de nascimento e gera dias fixos (1 a 31).
+    // Assumimos que esses dias são favoráveis em QUALQUER mês.
+    // (Esta é uma simplificação comum em numerologia cabalística de dias favoráveis)
+    final diasFavoraveis = calcularDiasFavoraveis();
+    return diasFavoraveis.contains(targetDate.day);
+  }
+
+  /// Calcula a compatibilidade entre dois usuários para uma data específica
+  /// Retorna:
+  /// - 1.0 (Perfeito): Favorável para ambos
+  /// - 0.5 (Parcial): Favorável para um apenas
+  /// - 0.0 (Neutro/Conflito): Favorável para nenhum
+  static double calculateCompatibilityScore({
+    required DateTime date,
+    required DateTime birthDateA,
+    required DateTime birthDateB,
+  }) {
+    // Instancia engines temporárias para calcular
+    // Nota: Nome não importa para dias favoráveis, apenas data nasc
+    final engineA = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateA));
+    final engineB = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateB));
+
+    final bool favorableA = engineA.isDateFavorable(date);
+    final bool favorableB = engineB.isDateFavorable(date);
+
+    if (favorableA && favorableB) return 1.0;
+    if (favorableA || favorableB) return 0.5;
+    return 0.0;
+  }
+
+  /// Encontra as próximas datas onde AMBOS possuem dia favorável (Sincro Match)
+  static List<DateTime> findNextCompatibleDates({
+    required DateTime startDate,
+    required DateTime birthDateA,
+    required DateTime birthDateB,
+    int limit = 5,
+  }) {
+    final engineA = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateA));
+    final engineB = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateB));
+
+    final daysA = engineA.calcularDiasFavoraveis(); // ex: [2, 5, 11, 20...]
+    final daysB = engineB.calcularDiasFavoraveis(); // ex: [1, 5, 10, 20...]
+
+    // Interseção: dias do mês bons para ambos
+    final commonDays = daysA.toSet().intersection(daysB.toSet()).toList()..sort();
+
+    final List<DateTime> results = [];
+    DateTime cursor = startDate;
+
+    // Procura nos próximos 60 dias
+    for (int i = 0; i < 60; i++) {
+        if (commonDays.contains(cursor.day)) {
+            results.add(cursor);
+            if (results.length >= limit) break;
+        }
+        cursor = cursor.add(const Duration(days: 1));
+    }
+
+    return results;
+  }
 }

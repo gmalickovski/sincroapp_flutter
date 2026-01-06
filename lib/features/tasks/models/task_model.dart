@@ -26,6 +26,8 @@ class TaskModel {
   final DateTime? completedAt;
   // --- FIM DA MUDANÇA ---
   final DateTime? reminderAt; // Precise reminder timestamp
+  
+  final List<String> sharedWith; // NOVO: Usernames ou IDs com quem foi compartilhado
 
   TaskModel({
     required this.id,
@@ -34,6 +36,7 @@ class TaskModel {
     required this.createdAt,
     this.dueDate,
     this.tags = const [],
+    this.sharedWith = const [], // NOVO
     this.journeyId,
     this.journeyTitle,
     this.personalDay,
@@ -57,6 +60,7 @@ class TaskModel {
     DateTime? createdAt,
     Object? dueDate = const _Undefined(),
     List<String>? tags,
+    List<String>? sharedWith, // NOVO
     Object? journeyId = const _Undefined(),
     Object? journeyTitle = const _Undefined(),
     Object? personalDay = const _Undefined(),
@@ -78,6 +82,7 @@ class TaskModel {
       createdAt: createdAt ?? this.createdAt,
       dueDate: dueDate is _Undefined ? this.dueDate : dueDate as DateTime?,
       tags: tags ?? this.tags,
+      sharedWith: sharedWith ?? this.sharedWith, // NOVO
       journeyId:
           journeyId is _Undefined ? this.journeyId : journeyId as String?,
       journeyTitle: journeyTitle is _Undefined
@@ -155,6 +160,7 @@ class TaskModel {
       createdAt: (data['createdAt'] as Timestamp? ?? Timestamp.now()).toDate(),
       dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
       tags: List<String>.from(data['tags'] ?? []),
+      sharedWith: List<String>.from(data['sharedWith'] ?? []), // NOVO
       journeyId: data['journeyId'],
       journeyTitle: data['journeyTitle'],
       personalDay: data['personalDay'],
@@ -188,6 +194,7 @@ class TaskModel {
       // Salva o dueDate completo (com hora)
       'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'tags': tags,
+      'sharedWith': sharedWith, // NOVO
       'journeyId': journeyId,
       'journeyTitle': journeyTitle,
       'personalDay': personalDay,

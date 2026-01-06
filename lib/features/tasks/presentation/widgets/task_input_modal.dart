@@ -14,6 +14,9 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tag_selec
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/common/widgets/mention_input_field.dart'; // NOVO
+import 'package:sincro_app_flutter/common/widgets/mention_text_editing_controller.dart'; // NOVO
+import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart'; // NOVO
 
 // --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
 
@@ -43,7 +46,7 @@ class TaskInputModal extends StatefulWidget {
 
 class _TaskInputModalState extends State<TaskInputModal> {
   // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-  late TextEditingController _textController;
+  late MentionTextEditingController _textController; // MUDANÇA: Controller com Highlight
   // --- FIM DA MUDANÇA ---
 
   DateTime _selectedDateForPill = DateTime.now();
@@ -67,7 +70,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     super.initState();
 
     // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-    _textController = TextEditingController();
+    _textController = MentionTextEditingController(); // MUDANÇA
     // --- FIM DA MUDANÇA ---
 
     DateTime initialDateForPill = DateTime.now();
@@ -402,6 +405,39 @@ class _TaskInputModalState extends State<TaskInputModal> {
   }
   // --- FIM DA MUDANÇA ---
 
+  void _openContactPicker() async {
+    final result = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ContactPickerModal(
+        userId: widget.userId,
+        initialSelectedUsernames: [], // Poderia extrair do texto se quisesse
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      // Adiciona mentions no texto
+      String currentText = _textController.text;
+      
+      // Adiciona espaço se não tiver
+      if (currentText.isNotEmpty && !currentText.endsWith(' ')) {
+        currentText += ' ';
+      }
+
+      for (var username in result) {
+        currentText += '@$username ';
+      }
+
+      _textController.text = currentText;
+      
+      // Move cursor para o final
+      _textController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _textController.text.length),
+      );
+    }
+  }
+
   @override
   void dispose() {
     // _textController.removeListener(_onTextChanged); // Removido
@@ -434,23 +470,20 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
+              // Substituído TextField por MentionInputField
+              MentionInputField(
+                controller: _textController,
                 focusNode: _textFieldFocusNode,
-                controller: _textController, // Controller padrão
-                style:
-                    const TextStyle(fontSize: 16, color: AppColors.primaryText),
+                onSubmitted: (_) => _submit(), // Chama o submit atualizado
+                hintText: _selectedGoalId != null
+                    ? "Adicionar novo marco... use @ para mencionar"
+                    : "Adicionar tarefa... use @ para mencionar",
                 decoration: InputDecoration(
-                  hintText: _selectedGoalId != null
-                      ? "Adicionar novo marco..."
-                      : "Adicionar tarefa...", // Hint simplificado
                   hintStyle: const TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
-                onTap: () {},
-                onSubmitted: (_) => _submit(),
                 maxLines: null,
-                keyboardType: TextInputType.multiline,
-                textCapitalization: TextCapitalization.sentences,
               ),
 
               // --- INÍCIO: ÁREA DE "PILLS" ---
@@ -530,13 +563,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     color: _selectedGoalId != null
                         ? Colors.cyanAccent
                         : (widget.preselectedGoal != null
-                            ? AppColors.tertiaryText.withValues(alpha: 0.3)
+                            ? AppColors.tertiaryText.withOpacity(0.3)
                             : AppColors.tertiaryText),
                   ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
                     onTap: _showDatePickerModal, // Chama o novo modal
                     color: _selectedDate != null ? Colors.orangeAccent : null,
+                  ),
+                  // NOVO: Botão para abrir o Contact Picker
+                  _buildActionButton(
+                    icon: Icons.person_add_alt_1,
+                    onTap: _openContactPicker,
+                    color: null, // Cor padrão
                   ),
                   const Spacer(),
                   if (_personalDay > 0)

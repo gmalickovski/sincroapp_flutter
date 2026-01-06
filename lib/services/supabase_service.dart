@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart'; // Para TimeOfDay
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/contact_model.dart'; // NOVO
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
@@ -10,6 +11,11 @@ import 'package:postgrest/postgrest.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
+import 'package:sincro_app_flutter/common/utils/username_validator.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
+
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -27,6 +33,7 @@ class SupabaseService {
         'uid': user.uid, // PK (Texto, vindo do Firebase Auth)
         'email': user.email,
         'photo_url': user.photoUrl,
+        'username': user.username, // NOVO: Username único
         'first_name': user.primeiroNome,
         'last_name': user.sobrenome,
         'analysis_name': user.nomeAnalise,
@@ -75,6 +82,7 @@ class SupabaseService {
         uid: data['uid'],
         email: data['email'] ?? '',
         photoUrl: data['photo_url'],
+        username: data['username'], // NOVO: pode ser null se usuário ainda não criou
         primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '', // Fallback para compatibility
         sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
         plano: 'essencial', // Default legacy plan name
@@ -100,6 +108,7 @@ class SupabaseService {
       final mappedData = <String, dynamic>{};
       data.forEach((key, value) {
         switch (key) {
+          case 'username': mappedData['username'] = value; break; // NOVO: Username
           case 'primeiroNome': mappedData['first_name'] = value; break;
           case 'sobrenome': mappedData['last_name'] = value; break;
           case 'nomeAnalise': mappedData['analysis_name'] = value; break;
@@ -116,6 +125,289 @@ class SupabaseService {
       await _supabase.schema('sincroapp').from('users').update(mappedData).eq('uid', uid);
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao atualizar usuário: $e');
+      rethrow;
+    }
+  }
+
+  // --- USERNAME METHODS ---
+
+  /// Verifica se um username está disponível (não está em uso)
+  /// 
+  /// Retorna true se disponível, false se já existe
+  Future<bool> isUsernameAvailable(String username) async {
+    try {
+      final sanitized = username.toLowerCase().trim();
+      
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .select('username')
+          .eq('username', sanitized)
+          .maybeSingle();
+      
+      return response == null; // null = disponível, != null = já existe
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao verificar username: $e');
+      return false; // Em caso de erro, assumir indisponível por segurança
+    }
+  }
+
+  /// Busca usuário por username
+  /// 
+  /// Retorna UserModel se encontrado, null se não existir
+  Future<UserModel?> getUserByUsername(String username) async {
+    try {
+      final sanitized = username.toLowerCase().trim();
+      
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .select()
+          .eq('username', sanitized)
+          .maybeSingle();
+      
+      if (response == null) return null;
+      
+      // Reutilizar a mesma lógica de mapeamento do getUserData
+      final data = response;
+      return UserModel(
+        uid: data['uid'],
+        email: data['email'] ?? '',
+        photoUrl: data['photo_url'],
+        username: data['username'],
+        primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '',
+        sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
+        plano: 'essencial',
+        nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
+        dataNasc: data['birth_date'] ?? '',
+        isAdmin: data['is_admin'] ?? false,
+        dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+        dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
+        subscription: data['subscription_data'] != null 
+            ? SubscriptionModel.fromFirestore(data['subscription_data']) 
+            : SubscriptionModel.free(),
+      );
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar usuário por username: $e');
+      return null;
+    }
+  }
+
+  /// Busca usuários por username (autocomplete)
+  /// 
+  /// Retorna lista de UserModel que correspondem à busca
+  /// - query: termo de busca (parcial OK)
+  /// - limit: número máximo de resultados (padrão: 10)
+  Future<List<UserModel>> searchUsersByUsername(String query, {int limit = 10}) async {
+    try {
+      if (query.isEmpty) return [];
+      
+      final sanitized = query.toLowerCase().trim();
+      
+      // Busca usando ILIKE para match parcial (case-insensitive)
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .select()
+          .ilike('username', '%$sanitized%')
+          .limit(limit);
+      
+      final List<dynamic> data = response;
+      
+      return data.map((item) {
+        return UserModel(
+          uid: item['uid'],
+          email: item['email'] ?? '',
+          photoUrl: item['photo_url'],
+          username: item['username'],
+          primeiroNome: item['primeiro_nome'] ?? item['first_name'] ?? '',
+          sobrenome: item['sobrenome'] ?? item['last_name'] ?? '',
+          plano: 'essencial',
+          nomeAnalise: item['nome_analise'] ?? item['analysis_name'] ?? '',
+          dataNasc: item['birth_date'] ?? '',
+          isAdmin: item['is_admin'] ?? false,
+          dashboardCardOrder: List<String>.from(item['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+          dashboardHiddenCards: List<String>.from(item['dashboard_hidden_cards'] ?? []),
+          subscription: item['subscription_data'] != null 
+              ? SubscriptionModel.fromFirestore(item['subscription_data']) 
+              : SubscriptionModel.free(),
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar usuários por username: $e');
+      return [];
+    }
+  }
+
+  // --- NOTIFICAÇÕES (NOVO) ---
+
+  Stream<List<NotificationModel>> getNotificationsStream(String uid) {
+    return _supabase
+        .schema('sincroapp')
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', uid)
+        .order('created_at', ascending: false)
+        .map((data) => data.map((json) => NotificationModel.fromFirestore(json)).toList());
+  }
+  
+  Stream<int> getUnreadNotificationsCountStream(String uid) {
+     return _supabase
+        .schema('sincroapp')
+        .from('notifications')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', uid)
+        .map((data) => data.where((json) => json['is_read'] == false).length);
+  }
+
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao marcar notificação como lida: $e');
+    }
+  }
+  
+  Future<void> markAllNotificationsAsRead(String uid) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('user_id', uid)
+          .eq('is_read', false);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao marcar todas como lidas: $e');
+    }
+  }
+
+  /// Método helper para criar notificação (Uso interno no app ao compartilhar/mencionar)
+  /// Em um cenário ideal, isso seria feito via Database Trigger ou Edge Function,
+  /// mas para o MVP faremos direto no client.
+  Future<void> sendNotification({
+    required String toUserId,
+    required NotificationType type,
+    required String title,
+    required String body,
+    String? relatedItemId,
+    String? relatedItemType,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final notifData = {
+        'user_id': toUserId,
+        'type': NotificationModel.typeToString(type),
+        'title': title,
+        'body': body,
+        'related_item_id': relatedItemId,
+        'related_item_type': relatedItemType,
+        'is_read': false,
+        'created_at': DateTime.now().toIso8601String(),
+        'metadata': metadata ?? {},
+      };
+      
+      await _supabase.schema('sincroapp').from('notifications').insert(notifData);
+    } catch (e) {
+        debugPrint('❌ [SupabaseService] Erro ao enviar notificação: $e');
+    }
+  }
+
+  // --- EVENTS (Calendar) ---
+
+  /// Busca a lista de contatos do usuário
+  Future<List<ContactModel>> getContacts(String uid) async {
+    try {
+      // Faz join com a tabela de users para pegar os dados do contato
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .select('contact_user_id, status, users!contact_user_id(uid, username, first_name, last_name, email)')
+          .eq('user_id', uid)
+          .order('created_at');
+
+      final List<dynamic> data = response;
+
+      return data.map((item) {
+        final userData = item['users'] as Map<String, dynamic>;
+        final status = item['status'] as String;
+        
+        // Reconstrói UserModel simplificado para criar ContactModel
+        // Nota: Ajuste os campos conforme sua query Select acima
+        final fullName = '${userData['first_name'] ?? ''} ${userData['last_name'] ?? ''}'.trim();
+        final displayName = fullName.isNotEmpty ? fullName : (userData['email'] ?? '');
+
+        return ContactModel(
+          userId: userData['uid'],
+          username: userData['username'] ?? '',
+          displayName: displayName,
+          status: status,
+        );
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar contatos: $e');
+      return [];
+    }
+  }
+
+  /// Adiciona um usuário aos contatos
+  Future<void> addContact(String uid, String contactUid) async {
+    try {
+      await _supabase.schema('sincroapp').from('user_contacts').insert({
+        'user_id': uid,
+        'contact_user_id': contactUid,
+        'status': 'active',
+      });
+    } catch (e) {
+      // Ignora erro se já existir (devido à constraint UNIQUE)
+      if (e.toString().contains('unique constraint')) return;
+      debugPrint('❌ [SupabaseService] Erro ao adicionar contato: $e');
+      rethrow;
+    }
+  }
+
+  /// Remove um usuário dos contatos
+  Future<void> removeContact(String uid, String contactUid) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .delete()
+          .match({'user_id': uid, 'contact_user_id': contactUid});
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao remover contato: $e');
+      rethrow;
+    }
+  }
+
+  /// Bloqueia um contato
+  Future<void> blockContact(String uid, String contactUid) async {
+    try {
+      // Upsert para garantir que crie se não existir, ou atualize se já existir
+      await _supabase.schema('sincroapp').from('user_contacts').upsert({
+        'user_id': uid,
+        'contact_user_id': contactUid,
+        'status': 'blocked',
+      }, onConflict: 'user_id, contact_user_id');
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao bloquear contato: $e');
+      rethrow;
+    }
+  }
+
+  /// Desbloqueia um contato (volta para active)
+  Future<void> unblockContact(String uid, String contactUid) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .update({'status': 'active'})
+          .match({'user_id': uid, 'contact_user_id': contactUid});
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao desbloquear contato: $e');
       rethrow;
     }
   }
@@ -145,9 +437,24 @@ class SupabaseService {
         'recurrence_id': task.recurrenceId,
         'goal_id': task.goalId,
         'completed_at': task.completedAt?.toIso8601String(),
+        'shared_with': [
+          ...task.sharedWith, 
+          ...UsernameValidator.extractMentionsFromText(task.text)
+        ].toSet().toList(), // NOVO: Parse mentions + explicit shared
       };
       
       await _supabase.schema('sincroapp').from('tasks').insert(taskData);
+
+      // --- SINCRO MATCH LOGIC (INTERNAL) ---
+      final newSharedUsers = [
+          ...task.sharedWith, 
+          ...UsernameValidator.extractMentionsFromText(task.text)
+      ].toSet().toList();
+      
+      if (newSharedUsers.isNotEmpty && task.dueDate != null) {
+        _handleSincroMatchLogic(uid, task.text, task.dueDate!, newSharedUsers);
+      }
+      // -------------------------------------
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao adicionar tarefa: $e');
       rethrow;
@@ -202,15 +509,88 @@ class SupabaseService {
         'reminder_at': task.reminderAt?.toIso8601String(),
         'personal_day': task.personalDay,
         'completed_at': task.completedAt?.toIso8601String(),
+        'shared_with': [
+          ...task.sharedWith, 
+          ...UsernameValidator.extractMentionsFromText(task.text)
+        ].toSet().toList(), // NOVO
       };
       await _supabase
           .schema('sincroapp')
           .from('tasks')
           .update(taskData)
           .eq('id', task.id);
+
+      // --- SINCRO MATCH LOGIC (INTERNAL) ---
+      // Verifica se houve compartilhamento novo e processa compatibilidade
+      final newSharedUsers = [
+          ...task.sharedWith, 
+          ...UsernameValidator.extractMentionsFromText(task.text)
+      ].toSet().toList();
+      
+      if (newSharedUsers.isNotEmpty && task.dueDate != null) {
+        _handleSincroMatchLogic(uid, task.text, task.dueDate!, newSharedUsers);
+      }
+      // -------------------------------------
+
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao atualizar tarefa: $e');
       rethrow;
+    }
+  }
+
+  /// Lógica Interna de Sincro Match (Substitui N8N para alertas)
+  Future<void> _handleSincroMatchLogic(String ownerId, String taskTitle, DateTime dueDate, List<String> sharedUsernames) async {
+    try {
+      // 1. Buscar dados do Owner (User A)
+      final ownerData = await _supabase.schema('sincroapp').from('users').select('uid, username, birth_date').eq('uid', ownerId).single();
+      final ownerBirthStr = ownerData['birth_date'];
+
+      if (ownerBirthStr == null) return; // Se não tem data nasc, não calcula
+      
+      final ownerBirth = DateFormat('dd/MM/yyyy').parse(ownerBirthStr);
+
+      // 2. Para cada usuário compartilhado (User B)
+      for (final username in sharedUsernames) {
+        // Busca User B pelo username
+        final userData = await _supabase.schema('sincroapp').from('users').select('uid, username, birth_date').eq('username', username).maybeSingle();
+        
+        if (userData == null || userData['birth_date'] == null) continue;
+
+        final contactId = userData['uid'];
+        if (contactId == ownerId) continue; // Não comparar consigo mesmo
+
+        final contactBirth = DateFormat('dd/MM/yyyy').parse(userData['birth_date']);
+
+        // 3. Calcular Compatibilidade
+        final score = NumerologyEngine.calculateCompatibilityScore(
+          date: dueDate,
+          birthDateA: ownerBirth,
+          birthDateB: contactBirth,
+        );
+
+        // 4. Se for compatibilidade baixa/média, criar notificação Sincro Alert
+        if (score < 0.9) { // 0.9 = Perfeito. Menor que isso é conflito ou parcial.
+           await sendNotification(
+             toUserId: contactId, // Avisar o destinatário (User B)
+             type: NotificationType.sincroAlert,
+             title: 'Sincro Alert: ${ownerData['username']} compartilhou uma tarefa',
+             body: 'A data ${DateFormat('dd/MM').format(dueDate)} pode não ser ideal para ambos. Toque para ver sugestões.',
+             metadata: {
+               'userA_name': ownerData['username'],
+               'userA_birth': ownerBirth.toIso8601String(),
+               'userB_name': userData['username'],
+               'userB_birth': contactBirth.toIso8601String(),
+               'target_date': dueDate.toIso8601String(),
+               'compatibility_score': score,
+             }
+           );
+           
+           // Opcional: Avisar também o Owner? Por enquanto só o convidado.
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
+      // Não damos rethrow para não travar o fluxo principal de salvar tarefa
     }
   }
 

@@ -7,6 +7,8 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/admin_screen.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // NOVO
+import 'package:sincro_app_flutter/features/notifications/presentation/notification_center_screen.dart'; // NOVO
 
 class DashboardSidebar extends StatelessWidget {
   final bool isExpanded;
@@ -82,8 +84,37 @@ class DashboardSidebar extends StatelessWidget {
                   Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => AdminScreen(userData: userData),
                   ));
+                  },
+                ),
+
+              // --- NOTIFICAÇÕES (NOVO) ---
+              StreamBuilder<int>(
+                stream: SupabaseService().getUnreadNotificationsCountStream(userData.uid),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildNavItem(
+                    context: context,
+                    icon: count > 0 ? Icons.notifications_active : Icons.notifications_none,
+                    text: 'Notificações',
+                    index: 96,
+                    badgeCount: count, // PASSA O BADGE
+                    onTap: () {
+                      if (MediaQuery.of(context).size.width >= 720) {
+                        showDialog(
+                          context: context,
+                          builder: (_) => NotificationCenterScreen(userId: userData.uid),
+                        );
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => NotificationCenterScreen(userId: userData.uid)),
+                        );
+                      }
+                    },
+                  );
                 },
               ),
+
             _buildNavItem(
               context: context,
               icon: Icons.settings_outlined,
@@ -180,6 +211,7 @@ class DashboardSidebar extends StatelessWidget {
     required String text,
     required int index,
     bool isLogout = false,
+    int badgeCount = 0, // NOVO
     VoidCallback? onTap,
   }) {
     final bool isSelected = selectedIndex == index;
@@ -190,6 +222,7 @@ class DashboardSidebar extends StatelessWidget {
       isLogout: isLogout,
       icon: icon,
       text: text,
+      badgeCount: badgeCount, // NOVO
     );
   }
 }
@@ -202,6 +235,7 @@ class _SidebarItem extends StatefulWidget {
   final bool isLogout;
   final IconData icon;
   final String text;
+  final int badgeCount; // NOVO
 
   const _SidebarItem({
     required this.onTap,
@@ -210,6 +244,7 @@ class _SidebarItem extends StatefulWidget {
     this.isLogout = false,
     required this.icon,
     required this.text,
+    this.badgeCount = 0, // NOVO
   });
 
   @override
@@ -276,8 +311,13 @@ class _SidebarItemState extends State<_SidebarItem> {
             mainAxisSize: MainAxisSize
                 .min, // <<< Adicionado para Row encolher ao redor do conteúdo
             children: [
-              Icon(widget.icon,
-                  size: 20, color: _isHovered ? hoverTextColor : iconColor),
+              widget.badgeCount > 0 
+                  ? Badge(
+                      label: Text('${widget.badgeCount}'),
+                      backgroundColor: Colors.redAccent,
+                      child: Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
+                    )
+                  : Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
               // Mostra o texto apenas se estiver expandido
               if (widget.isExpanded)
                 Expanded(

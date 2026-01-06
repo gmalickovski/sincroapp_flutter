@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:sincro_app_flutter/common/utils/username_validator.dart'; // NOVO
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/contact_management_modal.dart'; // NOVO
 
 class AccountSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -22,6 +24,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
 
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
+  late TextEditingController _usernameController; // NOVO: Controller para username
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -37,12 +40,15 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
         TextEditingController(text: widget.userData.primeiroNome);
     _lastNameController =
         TextEditingController(text: widget.userData.sobrenome);
+    _usernameController =
+        TextEditingController(text: widget.userData.username ?? ''); // Inicializa username
   }
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _usernameController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -62,13 +68,43 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
   Future<void> _handleSaveChanges() async {
     if (!_formKeyInfo.currentState!.validate()) return;
     setState(() => _isSavingInfo = true);
+    
     try {
-      await _supabaseService.updateUserData(widget.userData.uid, {
+      final newUsername = _usernameController.text.trim();
+      final currentUsername = widget.userData.username;
+
+      // Se mudou o username, faz validações extras
+      if (newUsername.isNotEmpty && newUsername != currentUsername) {
+        // Validação de formato (já feita pelo validator do campo, mas reforçando)
+        if (!UsernameValidator.isValidFormat(newUsername)) {
+          _showFeedback('Formato de username inválido.', isError: true);
+          return;
+        }
+
+        // Verifica disponibilidade
+        final isAvailable = await _supabaseService.isUsernameAvailable(newUsername);
+        if (!isAvailable) {
+          _showFeedback('Este nome de usuário já está em uso.', isError: true);
+          return; // Para aqui
+        }
+      }
+
+      // Prepara dados para atualização
+      final Map<String, dynamic> updates = {
         'primeiroNome': _firstNameController.text.trim(),
         'sobrenome': _lastNameController.text.trim(),
-      });
+      };
+      
+      // Adiciona username se mudou
+      if (newUsername != currentUsername) {
+        updates['username'] = newUsername.isEmpty ? null : newUsername;
+      }
+
+      await _supabaseService.updateUserData(widget.userData.uid, updates);
+      
       _showFeedback('Informações salvas com sucesso!');
     } catch (e) {
+      debugPrint('Erro: $e');
       _showFeedback('Erro ao salvar as informações.', isError: true);
     } finally {
       if (mounted) setState(() => _isSavingInfo = false);
@@ -187,6 +223,31 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
               key: _formKeyInfo,
               child: Column(
                 children: [
+                  // --- CAMPO USERNAME ---
+                  TextFormField(
+                    controller: _usernameController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Nome de Usuário (@username)',
+                      hintText: 'Ex: joao.silva',
+                      labelStyle: const TextStyle(color: AppColors.secondaryText),
+                      prefixIcon: const Icon(Icons.alternate_email, color: AppColors.secondaryText),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                    validator: (value) {
+                       if (value == null || value.isEmpty) return null; // Opcional
+                       return UsernameValidator.validate(value);
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
                   TextFormField(
                     controller: _firstNameController,
                     style: const TextStyle(color: Colors.white),
@@ -233,6 +294,35 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
                         : const Text('Salvar Alterações'),
                   ),
                 ],
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // Seção Contatos (NOVO)
+          _buildSectionCard(
+            title: 'Contatos',
+            subtitle: 'Gerencie sua lista de contatos e bloqueios.',
+            content: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.people_outline, color: AppColors.primary),
+                label: const Text('Gerenciar Contatos'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.primary),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ContactManagementModal(userId: widget.userData.uid),
+                  );
+                },
               ),
             ),
           ),

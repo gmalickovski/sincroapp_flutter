@@ -579,8 +579,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final Map<String, Widget> allCardsMap = {
 
       if (_numerologyData != null)
-        'strategyCard': StrategyCard(
-          key: const ValueKey('strategyCard'),
+        'sincroflow': StrategyCard(
+          key: const ValueKey('sincroflow'),
           recommendation: _strategyRecommendation ??
               StrategyEngine.getRecommendation(
                   _numerologyData!.numeros['diaPessoal'] ?? 1),
@@ -1192,11 +1192,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     final List<Widget> orderedCards = [];
     Set<String> addedKeys = {};
     for (String cardId in cardOrder) {
-      if (allCardsMap.containsKey(cardId) &&
-          !addedKeys.contains(cardId) &&
-          !hidden.contains(cardId)) {
-        orderedCards.add(allCardsMap[cardId]!);
-        addedKeys.add(cardId);
+      String effectiveId = cardId;
+      // Compatibilidade: 'bussola' ou 'strategyCard' viram 'sincroflow'
+      if (cardId == 'bussola' || cardId == 'strategyCard') {
+        effectiveId = 'sincroflow';
+      }
+
+      if (allCardsMap.containsKey(effectiveId) &&
+          !addedKeys.contains(effectiveId) &&
+          !hidden.contains(effectiveId)) {
+        orderedCards.add(allCardsMap[effectiveId]!);
+        addedKeys.add(effectiveId);
       }
     }
     allCardsMap.forEach((key, value) {
@@ -1205,12 +1211,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
     });
 
-    // Força StrategyCard no topo se disponível e não oculto
-    if (allCardsMap.containsKey('strategyCard') && !hidden.contains('strategyCard')) {
-      final strategyWidget = allCardsMap['strategyCard']!;
-      orderedCards.remove(strategyWidget);
-      orderedCards.insert(0, strategyWidget);
-    }
+    // Código de força 'strategyCard' removido para respeitar a ordem do usuário.
+    _cards = orderedCards;
 
     _cards = orderedCards;
   }
@@ -2069,49 +2071,43 @@ class _DashboardScreenState extends State<DashboardScreen>
     final BuildContext currentContext = context;
     setState(() => _isEditMode = true);
 
-    showModalBottomSheet<void>(
+    showDialog<void>(
       context: currentContext,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (modalContext) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.4,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (_, scrollController) {
-          final currentOrder = List<String>.from(_userData!.dashboardCardOrder);
-          return ReorderDashboardModal(
-            userId: _userData!.uid,
-            initialOrder: currentOrder,
-            initialHidden: _userData!.dashboardHiddenCards,
-            scrollController: scrollController,
-            onSaveComplete: (bool success) async {
-              if (!mounted) return;
-              try {
-                Navigator.of(currentContext).pop();
-              } catch (e) {
-                debugPrint("Erro ao fechar modal: $e");
-              }
-              await Future.delayed(const Duration(milliseconds: 50));
-              if (!mounted) return;
+      barrierColor: Colors.black54,
+      builder: (modalContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        child: ReorderDashboardModal(
+          userId: _userData!.uid,
+          initialOrder: List<String>.from(_userData!.dashboardCardOrder),
+          initialHidden: _userData!.dashboardHiddenCards,
+          scrollController: null, // Dialog não usa scroll controller externo
+          onSaveComplete: (bool success) async {
+            if (!mounted) return;
+            try {
+              Navigator.of(currentContext).pop();
+            } catch (e) {
+              debugPrint("Erro ao fechar modal: $e");
+            }
+            await Future.delayed(const Duration(milliseconds: 50));
+            if (!mounted) return;
 
-              if (success) {
-                setState(() => _isUpdatingLayout = true);
-                await _reloadDataNonStream(rebuildCards: true);
-                await Future.delayed(const Duration(milliseconds: 100));
-                if (mounted) {
-                  setState(() {
-                    _masonryGridKey = UniqueKey();
-                    _isUpdatingLayout = false;
-                    _isEditMode = false;
-                  });
-                }
-              } else {
-                if (mounted) setState(() => _isEditMode = false);
+            if (success) {
+              setState(() => _isUpdatingLayout = true);
+              await _reloadDataNonStream(rebuildCards: true);
+              await Future.delayed(const Duration(milliseconds: 100));
+              if (mounted) {
+                setState(() {
+                  _masonryGridKey = UniqueKey();
+                  _isUpdatingLayout = false;
+                  _isEditMode = false;
+                });
               }
-            },
-          );
-        },
+            } else {
+              if (mounted) setState(() => _isEditMode = false);
+            }
+          },
+        ),
       ),
     ).whenComplete(() {
       if (mounted && (_isEditMode || _isUpdatingLayout)) {

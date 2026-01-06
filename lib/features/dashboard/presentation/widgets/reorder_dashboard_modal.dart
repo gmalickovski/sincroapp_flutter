@@ -12,16 +12,11 @@ const Map<String, Map<String, dynamic>> _cardDisplayData = {
   },
   'focusDay': {'name': 'Foco do Dia', 'icon': Icons.check_circle_outline},
   'vibracaoDia': {'name': 'Dia Pessoal', 'icon': Icons.sunny},
-  'bussola': {'name': 'Bússola de Atividades', 'icon': Icons.explore_outlined},
+  'sincroflow': {'name': 'Sincroflow', 'icon': Icons.hub_outlined}, // ATUALIZADO
   'vibracaoMes': {'name': 'Mês Pessoal', 'icon': Icons.nightlight_round},
   'vibracaoAno': {'name': 'Ano Pessoal', 'icon': Icons.star_border},
   'cicloVida': {'name': 'Ciclo de Vida', 'icon': Icons.repeat},
   'diaNatalicio': {'name': 'Dia Natalício', 'icon': Icons.cake},
-  // Insights diários da IA (premium)
-  'assistantInsights': {
-    'name': 'Insight Diário (IA)',
-    'icon': Icons.lightbulb_outline,
-  },
   // Novos cards numerológicos (planos pagos)
   'numeroDestino': {
     'name': 'Número de Destino',
@@ -124,6 +119,13 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
   void initState() {
     super.initState();
     _currentOrder = List.from(widget.initialOrder);
+    
+    // ATUALIZAÇÃO: Se 'bussola' ainda estiver salvo, migrar para 'sincroflow' visualmente
+    if (_currentOrder.contains('bussola')) {
+      final index = _currentOrder.indexOf('bussola');
+      _currentOrder[index] = 'sincroflow';
+    }
+
     // 1) Mantém apenas IDs conhecidos no catálogo
     _currentOrder.removeWhere((id) => !_cardDisplayData.containsKey(id));
     // 2) Garante que TODOS os cards do catálogo (ou os disponíveis informados)
@@ -137,6 +139,13 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     }
     // 3) Filtra o conjunto de ocultos para conter apenas IDs válidos
     _hidden = {...widget.initialHidden};
+    
+    // Migração de ocultos também
+    if (_hidden.contains('bussola')) {
+        _hidden.remove('bussola');
+        _hidden.add('sincroflow');
+    }
+
     _hidden.removeWhere((id) => !_cardDisplayData.containsKey(id));
   }
 
@@ -184,44 +193,40 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
 
   @override
   Widget build(BuildContext context) {
+    // Usamos Container mas agora pensado para Dialog
     return Container(
+      constraints: BoxConstraints(
+          maxWidth: 500,
+          maxHeight: MediaQuery.of(context).size.height * 0.8), // Limita altura e largura
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.all(Radius.circular(24)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
-          Container(
-            width: 40,
-            height: 4,
-            margin: const EdgeInsets.symmetric(vertical: 12),
-            decoration: BoxDecoration(
-                color: AppColors.border.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(2)),
-          ),
+          // REMOVIDO: Handle (barra cinza)
+
           // Título centralizado e Fechar
           Padding(
             padding:
-                const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 8.0),
-            child: Stack(
-              alignment: Alignment.center,
+                const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Organizar Dashboard',
+                 // Título
+                 const Text('Organizar Dashboard',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: IconButton(
+                 // Fechar
+                 IconButton(
                     icon:
-                        const Icon(Icons.close, color: AppColors.secondaryText),
+                        const Icon(Icons.close_rounded, color: AppColors.secondaryText),
                     onPressed: () => widget.onSaveComplete(false),
                     tooltip: 'Fechar',
                   ),
-                ),
               ],
             ),
           ),
@@ -229,9 +234,10 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
           // Lista
           Flexible(
             child: ReorderableListView.builder(
+              shrinkWrap: true, // Importante para Dialog com Column min
               buildDefaultDragHandles: false,
               scrollController: widget.scrollController,
-              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8),
               itemCount: _currentOrder.length,
               itemBuilder: (context, index) {
                 final cardId = _currentOrder[index];
@@ -256,7 +262,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                           size: 22,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 8),
                       Icon(
                         cardData['icon'],
                         color: isHidden
@@ -299,33 +305,30 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                   _currentOrder.insert(newIndex, item);
                 });
               },
-              // Adiciona um proxyDecorator para dar feedback visual durante o arraste
               proxyDecorator:
                   (Widget child, int index, Animation<double> animation) {
                 return Material(
-                  color: AppColors.primary
-                      .withValues(alpha: 0.1), // Cor de fundo suave
-                  elevation: 4.0, // Sombra
+                  color: AppColors.cardBackground,
+                  elevation: 8.0,
                   borderRadius: BorderRadius.circular(8),
                   child: child,
                 );
               },
             ),
           ),
-          // Botão Salvar
+          // Botão Salvar (Pill)
           const Divider(height: 1, color: AppColors.border),
           Padding(
-            padding: EdgeInsets.fromLTRB(
-                16.0, 16.0, 16.0, MediaQuery.of(context).padding.bottom + 16.0),
-            child: SizedBox(
-              width: double.infinity,
+            padding: const EdgeInsets.all(24.0),
+            child: Center(
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _onSave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
+                      borderRadius: BorderRadius.circular(24)), // Pilula
+                  elevation: 4,
                 ),
                 child: _isLoading
                     ? const SizedBox(
