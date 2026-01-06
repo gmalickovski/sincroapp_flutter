@@ -130,9 +130,7 @@ class _ContactManagementModalState extends State<ContactManagementModal>
   }
 
   @override
-  Widget build(BuildContext context) {
-    final activeContacts = _contacts.where((c) => c.status == 'active').toList();
-    final blockedContacts = _contacts.where((c) => c.status == 'blocked').toList();
+
 
   Widget build(BuildContext context) {
     final activeContacts = _contacts.where((c) => c.status == 'active').toList();
