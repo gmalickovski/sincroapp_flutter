@@ -139,6 +139,7 @@ class NotificationCenterScreen extends StatelessWidget {
             userABirth: DateTime.parse(meta['userA_birth']),
             userBName: meta['userB_name'] ?? 'Contato',
             userBBirth: DateTime.parse(meta['userB_birth']),
+            taskTitle: meta['task_title'] ?? 'Tarefa Compartilhada', // Pass task title
           ),
         );
       } else {

@@ -582,6 +582,7 @@ class SupabaseService {
                'userB_birth': contactBirth.toIso8601String(),
                'target_date': dueDate.toIso8601String(),
                'compatibility_score': score,
+               'task_title': taskTitle, // Added Task Title
              }
            );
            

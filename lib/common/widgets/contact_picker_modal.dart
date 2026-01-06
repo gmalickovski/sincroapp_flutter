@@ -294,35 +294,54 @@ class _ContactPickerModalState extends State<ContactPickerModal>
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       itemCount: filteredContacts.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final contact = filteredContacts[index];
         final isSelected = _selectedUsernames.contains(contact.username);
         
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppColors.background,
-            child: Text(
-              contact.initials,
-              style: const TextStyle(color: AppColors.contact, fontWeight: FontWeight.bold),
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.background.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              splashColor: AppColors.primary.withOpacity(0.2),
+              hoverColor: AppColors.primary.withOpacity(0.1),
+              onTap: () {
+                 if (contact.username.isNotEmpty) {
+                   _toggleSelection(contact.username);
+                 }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.background,
+                    child: Text(
+                      contact.initials,
+                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  title: Text(
+                    contact.displayName, // ContactModel usually comes clean
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: contact.username.isNotEmpty 
+                      ? Text('@${contact.username}', style: const TextStyle(color: AppColors.primary))
+                      : null,
+                  trailing: isSelected 
+                      ? const Icon(Icons.check_circle, color: AppColors.primary)
+                      : const Icon(Icons.circle_outlined, color: AppColors.secondaryText),
+                ),
+              ),
             ),
           ),
-          title: Text(
-            contact.displayName,
-            style: const TextStyle(color: Colors.white),
-          ),
-          subtitle: contact.username.isNotEmpty 
-              ? Text('@${contact.username}', style: const TextStyle(color: AppColors.primary))
-              : null,
-          trailing: isSelected 
-              ? const Icon(Icons.check_circle, color: AppColors.primary)
-              : const Icon(Icons.circle_outlined, color: AppColors.secondaryText),
-          onTap: () {
-             if (contact.username.isNotEmpty) {
-               _toggleSelection(contact.username);
-             }
-          },
         );
       },
     );
@@ -344,56 +363,87 @@ class _ContactPickerModalState extends State<ContactPickerModal>
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       itemCount: _searchResults.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 8),
       itemBuilder: (context, index) {
         final user = _searchResults[index];
         final isSelected = _selectedUsernames.contains(user.username);
         final isAlreadyContact = _myContacts.any((c) => c.userId == user.uid);
         
-        // Nome de exibição
-        final fullName = '${user.primeiroNome} ${user.sobrenome}'.trim();
-        final displayName = fullName.isNotEmpty ? fullName : user.email;
+        // Lógica de nome mais limpa (evitar duplicidade e nomes muito longos)
+        String displayName = user.primeiroNome;
+        if (user.sobrenome.isNotEmpty) {
+           // Se o sobrenome já estiver no primeiro nome, ignora
+           if (!displayName.toLowerCase().contains(user.sobrenome.toLowerCase())) {
+             // Pega apenas o último sobrenome para privacidade/limpeza, ou usa tudo se curto
+             final lastNames = user.sobrenome.split(' ');
+             final lastName = lastNames.isNotEmpty ? lastNames.last : user.sobrenome;
+             displayName = '$displayName $lastName';
+           }
+        }
+        
+        // Se ainda vazio, usa email
+        if (displayName.trim().isEmpty) displayName = user.email;
+
         final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
 
-        return ListTile(
-          leading: CircleAvatar(
-            backgroundColor: AppColors.background,
-            child: Text(
-              initials,
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.background.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              splashColor: AppColors.primary.withOpacity(0.2),
+              hoverColor: AppColors.primary.withOpacity(0.1),
+              onTap: () {
+                if (user.username != null) {
+                  _toggleSelection(user.username!);
+                }
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                  leading: CircleAvatar(
+                    backgroundColor: AppColors.background,
+                    child: Text(
+                      initials,
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  title: Text(
+                    displayName,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                  ),
+                  subtitle: user.username != null 
+                      ? Text('@${user.username}', style: const TextStyle(color: AppColors.primary))
+                      : const Text('Sem username', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!isAlreadyContact)
+                        IconButton(
+                          icon: const Icon(Icons.person_add_alt_1, color: AppColors.secondaryText),
+                          onPressed: () => _addContact(user.uid),
+                          tooltip: 'Adicionar aos contatos',
+                        ),
+                      if (user.username != null)
+                        Checkbox(
+                          value: isSelected,
+                          activeColor: AppColors.primary,
+                          onChanged: (val) => _toggleSelection(user.username!),
+                          shape: const CircleBorder(),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
-          title: Text(
-            displayName,
-            style: const TextStyle(color: Colors.white),
-          ),
-          subtitle: user.username != null 
-              ? Text('@${user.username}', style: const TextStyle(color: AppColors.contact))
-              : const Text('Sem username configurado', style: TextStyle(color: Colors.grey)),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (!isAlreadyContact)
-                IconButton(
-                  icon: const Icon(Icons.person_add_alt_1, color: AppColors.secondaryText),
-                  onPressed: () => _addContact(user.uid),
-                  tooltip: 'Adicionar aos contatos',
-                ),
-              if (user.username != null)
-                Checkbox(
-                  value: isSelected,
-                  activeColor: AppColors.primary,
-                  onChanged: (val) => _toggleSelection(user.username!),
-                  shape: const CircleBorder(),
-                ),
-            ],
-          ),
-          onTap: () {
-            if (user.username != null) {
-              _toggleSelection(user.username!);
-            }
-          },
         );
       },
     );
