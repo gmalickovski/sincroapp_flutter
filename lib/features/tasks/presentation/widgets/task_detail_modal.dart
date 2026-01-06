@@ -455,15 +455,23 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (modalContext) => ScheduleTaskSheet(
-        initialDate: initialPickerDate,
-        initialRecurrence: _recurrenceRule,
-        initialTime: _selectedDateTime != null 
-            ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
-            : null,
-        initialReminderOffset: _reminderOffset, // Passa o offset atual
-        userData: widget.userData,
-      ),
+      builder: (modalContext) {
+        // Verifica se é "meia-noite" (00:00) para tratar como "Dia Inteiro" (sem horário definido)
+        final bool isMidnight = _selectedDateTime != null && 
+            _selectedDateTime!.hour == 0 && 
+            _selectedDateTime!.minute == 0;
+            
+        return ScheduleTaskSheet(
+          initialDate: initialPickerDate,
+          initialRecurrence: _recurrenceRule,
+          // Se for meia-noite, passa null para iniciar como "Dia Inteiro" (desativado)
+          initialTime: (_selectedDateTime != null && !isMidnight)
+              ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
+              : null,
+          initialReminderOffset: _reminderOffset, 
+          userData: widget.userData,
+        );
+      },
     );
 
     if (result != null && mounted) {
@@ -607,7 +615,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   @override
   Widget build(BuildContext context) {
     // UNIFICANDO O LAYOUT: Sempre usar estilo "Card" (Dialog-like)
-    // Se for mobile, usamos constraints menores ou adaptáveis
     final int currentPersonalDay =
         _calculatePersonalDayForDate(_selectedDateTime ?? DateTime.now());
 
@@ -660,6 +667,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 const Divider(color: AppColors.border, height: 24),
                 _buildDetailRow(
                   icon: Icons.calendar_month_outlined,
+                  // COR: Laranja/Amber se tiver data definida
+                  iconColor: (_selectedDateTime != null || _recurrenceRule.type != RecurrenceType.none)
+                      ? Colors.amber
+                      : AppColors.secondaryText,
                   valueWidget:
                       _buildDateTimeRecurrenceSummaryWidget(),
                   onTap: _selectDateAndTimeRecurrence,
@@ -694,6 +705,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 const SizedBox(height: 8),
                 _buildDetailRow(
                   icon: Icons.flag_outlined,
+                  // COR: Ciano se tiver meta
+                  iconColor: _selectedGoal != null ? Colors.cyan : AppColors.secondaryText,
                   valueWidget: _isLoadingGoal
                       ? const Align(
                           alignment: Alignment.centerLeft,
@@ -735,20 +748,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           ),
       );
 
-      // Layout Unificado: Style like a centered Dialog/Card
-      // Isso funciona tanto em desktop (Dialog) quanto mobile (dentro de Scaffold ou Dialog)
-      // Ajuste: usar Dialog widget sempre, mas com insetPadding ajustado?
-      // O usuário quer "parecido com desktop". O desktop é um Dialog flutuante.
-      // Se retornamos Dialog, ele deve ser renderizado como filho de showDialog OU como filho de um Page route.
-      // Se for Page Route, Dialog fica centralizado.
-      
       return Dialog(
-        backgroundColor: Colors.transparent, // Transparente para usar o container
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0), // Margens no mobile
+        backgroundColor: Colors.transparent, 
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0), 
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700), // Max width para desktop
+          constraints: const BoxConstraints(maxWidth: 700), 
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(24.0), // Bordas arredondadas (como na imagem)
+            borderRadius: BorderRadius.circular(24.0), 
             child: Container(
               decoration: BoxDecoration(
                   color: AppColors.cardBackground,
@@ -764,6 +770,34 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     child: _buildAppBar(),
                   ),
                   Flexible(child: contentBody),
+                  
+                  // --- RODAPÉ COM BOTÃO SALVAR ---
+                  if (_hasChanges)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                      child: Center( // Centraliza
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveChanges,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(24)), // Pilula
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 32, vertical: 12), // Padding ajustado
+                            elevation: 4,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CustomLoadingSpinner(size: 20, color: Colors.white))
+                              : const Text('Salvar Alterações',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -783,41 +817,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             Navigator.maybePop(context);
           }),
       actions: [
-        AnimatedOpacity(
-          opacity: _hasChanges ? 1.0 : 0.0,
-          duration: const Duration(milliseconds: 200),
-          child: Visibility(
-            visible: _hasChanges,
-            maintainSize: true,
-            maintainAnimation: true,
-            maintainState: true,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4.0),
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _saveChanges,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8)),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: const Size(0, 36),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  elevation: 2,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CustomLoadingSpinner(size: 20))
-                    : const Text('Salvar',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold, fontSize: 14)),
-              ),
-            ),
-          ),
-        ),
+        // Botão Salvar REMOVIDO daqui
         Padding(
           padding: const EdgeInsets.only(right: 8.0),
           child: PopupMenuButton<String>(
@@ -870,6 +870,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
+  // Métodos auxiliares de texto... (sem alterações)
   String _buildDateSummaryText() {
     if (_selectedDateTime == null) return '';
     final now = DateTime.now();
@@ -889,28 +890,19 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   String _getShortRecurrenceText(RecurrenceRule rule) {
     switch (rule.type) {
-      case RecurrenceType.daily:
-        return 'Diariamente';
+      case RecurrenceType.daily: return 'Diariamente';
       case RecurrenceType.weekly:
         if (rule.daysOfWeek.length == 7) return 'Diariamente';
         return 'Semanalmente';
-      case RecurrenceType.monthly:
-        return 'Mensalmente';
-      case RecurrenceType.none:
-        return '';
+      case RecurrenceType.monthly: return 'Mensalmente';
+      case RecurrenceType.none: return '';
     }
   }
 
   String _getReminderText(Duration offset) {
-      // Ex: 00:10:00 -> "10 min antes"
-      if (offset.inMinutes == 0) return "No horário do evento"; // ou "Em ponto"
-      
-      if (offset.inMinutes < 60) {
-          return "${offset.inMinutes} min antes";
-      }
-      if (offset.inHours < 24) {
-          return "${offset.inHours}h antes";
-      }
+      if (offset.inMinutes == 0) return "No horário";
+      if (offset.inMinutes < 60) return "${offset.inMinutes} min antes";
+      if (offset.inHours < 24) return "${offset.inHours}h antes";
       return "${offset.inDays} dias antes";
   }
 
@@ -922,8 +914,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final Color color = (hasDateTime || hasRecurrence || hasReminder)
         ? AppColors.primaryText
         : AppColors.secondaryText;
+    
+    // COR: Laranja/Amber se tiver data
     final Color iconColor = (hasDateTime || hasRecurrence || hasReminder)
-        ? AppColors.secondaryText
+        ? Colors.amber
         : AppColors.tertiaryText;
 
     if (!hasDateTime && !hasRecurrence) {
@@ -961,12 +955,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       ));
     }
     
-    // Mostra o lembrete
     if (hasReminder) {
         children.add(_buildIconText(
             Icons.notifications_active_outlined,
             _getReminderText(_reminderOffset!),
-            AppColors.primary, // Destaque na cor
+            AppColors.primary, 
             AppColors.primary,
         ));
     }
@@ -985,6 +978,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     Widget? valueWidget,
     VoidCallback? onTap,
     Color valueColor = AppColors.primaryText,
+    Color? iconColor, // Adicionado parâmetro opcional para cor do ícone
     Widget? trailingAction,
   }) {
     assert(value != null || valueWidget != null,
@@ -992,7 +986,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     Widget rowContent = Row(
       children: [
-        Icon(icon, color: AppColors.secondaryText, size: 20),
+        Icon(icon, color: iconColor ?? AppColors.secondaryText, size: 20),
         const SizedBox(width: 16),
         Expanded(
           child: valueWidget ??
@@ -1037,15 +1031,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   Widget _buildTagsSection() {
+    // COR: Roxo para tags se tiver tags
+    final Color tagIconColor = _currentTags.isNotEmpty ? Colors.purpleAccent : AppColors.secondaryText;
+    
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 4.0, right: 16.0),
+           Padding(
+            padding: const EdgeInsets.only(top: 8.0, right: 16.0), // Ajuste ALINHAMENTO (antes top: 4.0)
             child: Icon(Icons.label_outline,
-                color: AppColors.secondaryText, size: 20),
+                color: tagIconColor, size: 20),
           ),
           Expanded(
             child: Column(

@@ -41,7 +41,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   late final String _userId;
   final Uuid _uuid = const Uuid();
 
-  TaskFilterType _selectedFilter = TaskFilterType.focoDoDia;
+  TaskFilterType _selectedFilter = TaskFilterType.todas;
   int? _selectedVibrationNumber;
   final List<int> _vibrationNumbers = List.generate(9, (i) => i + 1) + [11, 22];
 

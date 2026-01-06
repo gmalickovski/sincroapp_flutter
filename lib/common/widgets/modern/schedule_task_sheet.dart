@@ -321,9 +321,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   child: Text(
                     _isAllDay ? "Dia inteiro" : (_selectedTime?.format(context) ?? "Definir"),
                     style: TextStyle(
-                      color: _isAllDay ? AppColors.secondaryText : AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+                      color: _isAllDay ? AppColors.secondaryText : AppColors.primary, 
+                      fontWeight: FontWeight.normal,
+                      fontSize: 14, // Padronizado com "Nunca" (14px)
                     ),
                   ),
                 ),

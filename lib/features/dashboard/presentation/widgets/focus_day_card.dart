@@ -65,22 +65,16 @@ class _FocusDayCardState extends State<FocusDayCard> {
       return DateTime(dl.year, dl.month, dl.day);
     }
 
-    // Filtra TODAS as tarefas do Foco do Dia (concluídas ou não)
+    // Filtra TODAS as tarefas do Foco do Dia (apenas pela data)
     final allFocusDayTasks = widget.tasks.where((task) {
       final DateTime taskDate = task.dueDate ?? task.createdAt;
       final taskDateOnly = localDateOnly(taskDate);
       if (taskDateOnly == null) return false;
 
-      if (!(taskDateOnly.year == todayLocal.year &&
+      // Verifica apenas se a data é hoje
+      return (taskDateOnly.year == todayLocal.year &&
           taskDateOnly.month == todayLocal.month &&
-          taskDateOnly.day == todayLocal.day)) {
-        return false;
-      }
-
-      final int taskPersonalDay =
-          task.personalDay ?? engine.calculatePersonalDayForDate(taskDateOnly);
-
-      return taskPersonalDay == todayPersonalDay;
+          taskDateOnly.day == todayLocal.day);
     }).toList();
 
     final int totalTasks = allFocusDayTasks.length;
@@ -235,27 +229,55 @@ class _FocusDayCardState extends State<FocusDayCard> {
 
   Widget _buildFooter(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween, // Botões nas extremidades
       children: [
-        if (!widget.isEditMode)
-           IconButton(
-             onPressed: widget.onAddTask,
-             icon: const Icon(Icons.add_circle_outline, color: AppColors.primary),
-             tooltip: 'Adicionar Tarefa',
-             padding: EdgeInsets.zero,
-             constraints: const BoxConstraints(),
-           ),
-        const SizedBox(width: 12), // Espaço entre os botões
-        TextButton(
-          onPressed: widget.isEditMode ? null : widget.onViewAll,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            foregroundColor: AppColors.secondaryText,
-            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+        // Botão Ver Tudo (Esquerda) - Estilo Pílula
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: widget.isEditMode ? null : widget.onViewAll,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3), width: 1),
+              ),
+              child: const Text(
+                'Ver tudo',
+                style: TextStyle(
+                  color: AppColors.primary, // Roxo mais vibrante
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-          child: const Text('Ver tudo'),
         ),
+
+        // Botão Adicionar "Padronizado" (Direita)
+        if (!widget.isEditMode)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: widget.onAddTask,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

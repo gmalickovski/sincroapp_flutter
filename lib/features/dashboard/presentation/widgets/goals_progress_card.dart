@@ -13,6 +13,7 @@ class GoalsProgressCard extends StatefulWidget {
   final Widget? dragHandle;
   final bool isEditMode;
   final String userId; // necessário para calcular progresso via tasks
+  final VoidCallback? onAddGoal; // Novo callback opcional
 
   const GoalsProgressCard({
     super.key,
@@ -22,6 +23,7 @@ class GoalsProgressCard extends StatefulWidget {
     required this.userId,
     this.dragHandle,
     this.isEditMode = false,
+    this.onAddGoal,
   });
 
   @override
@@ -90,14 +92,16 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildHeader(),
-                    const SizedBox(height: 12),
-                    widget.goals.isEmpty
-                        ? _buildEmptyState()
-                        : _buildCarousel(context),
-                  ],
-                ),
+                  _buildHeader(),
+                  const SizedBox(height: 12),
+                  widget.goals.isEmpty
+                      ? _buildEmptyState()
+                      : _buildCarousel(context),
+                  const SizedBox(height: 12),
+                  _buildFooter(context),
+                ],
               ),
+            ),
               // Controles de navegação (somente Desktop e quando há mais de 1 meta)
               if (!widget.isEditMode && isDesktop && widget.goals.length > 1)
                 Positioned.fill(
@@ -197,19 +201,19 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.flag_outlined, color: AppColors.primary, size: 20),
-          SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              'Metas',
-              style: TextStyle(
-                color: AppColors.primaryText,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+           Icon(Icons.flag_outlined, color: AppColors.primary, size: 20),
+           SizedBox(width: 8),
+           Flexible(
+             child: Text(
+               'Metas',
+               style: TextStyle(
+                 color: AppColors.primaryText,
+                 fontSize: 18,
+                 fontWeight: FontWeight.bold,
+               ),
+               overflow: TextOverflow.ellipsis,
+             ),
+           ),
         ],
       ),
     );
@@ -373,6 +377,60 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
           );
         }),
       ),
+    );
+  }
+  Widget _buildFooter(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween, // Botões nas extremidades
+      children: [
+        // Botão Ver Tudo (Esquerda) - Estilo Pílula
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(20),
+            onTap: widget.isEditMode ? null : widget.onViewAll,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3), width: 1),
+              ),
+              child: const Text(
+                'Ver todas',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Botão Adicionar "Padronizado" (Direita)
+        if (!widget.isEditMode && widget.onAddGoal != null)
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: widget.onAddGoal,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

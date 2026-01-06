@@ -898,18 +898,20 @@ class SupabaseService {
         .map((data) {
           final tasks = data.map((item) => _mapTaskFromSupabase(item)).toList();
           
-          final now = DateTime.now().toUtc();
-          final startOfDay = DateTime.utc(now.year, now.month, now.day);
+          final now = DateTime.now(); // Local time
+          final startOfDay = DateTime(now.year, now.month, now.day);
           final endOfDay = startOfDay.add(const Duration(days: 1));
           
           return tasks.where((task) {
              if (task.dueDate != null) {
-                final d = task.dueDate!.toUtc();
-                // Check if d is >= startOfDay and < endOfDay
+                // dueDate já é convertido para local no _mapTaskFromSupabase?
+                // Se _parseDateAsLocal retorna local, então 'd' já está ok.
+                // Mas para garantir, usamos .toLocal()
+                final d = task.dueDate!.toLocal();
                 return !d.isBefore(startOfDay) && d.isBefore(endOfDay);
              }
              
-             final c = task.createdAt.toUtc();
+             final c = task.createdAt.toLocal();
              return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
           }).toList()
             ..sort((a, b) => (a.dueDate ?? a.createdAt).compareTo(b.dueDate ?? b.createdAt));
@@ -948,8 +950,8 @@ class SupabaseService {
   }
 
   Future<List<TaskModel>> getTasksForToday(String uid) async {
-    final now = DateTime.now().toUtc();
-    final startOfDay = DateTime.utc(now.year, now.month, now.day);
+    final now = DateTime.now(); // Local Time
+    final startOfDay = DateTime(now.year, now.month, now.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final response = await _supabase
@@ -964,10 +966,10 @@ class SupabaseService {
 
     return tasks.where((task) {
       if (task.dueDate != null) {
-        final d = task.dueDate!.toUtc();
+        final d = task.dueDate!.toLocal();
         return !d.isBefore(startOfDay) && d.isBefore(endOfDay);
       }
-      final c = task.createdAt.toUtc();
+      final c = task.createdAt.toLocal();
       return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
     }).toList();
   }

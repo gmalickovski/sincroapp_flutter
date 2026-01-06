@@ -222,7 +222,6 @@ class VibrationPill extends StatelessWidget {
 // Modal (inalterado)
 void showVibrationInfoModal(BuildContext context,
     {required int vibrationNumber}) {
-  // ... código inalterado ...
   final vibrationContent = ContentData.vibracoes['diaPessoal']
           ?[vibrationNumber] ??
       const VibrationContent(
@@ -234,69 +233,125 @@ void showVibrationInfoModal(BuildContext context,
 
   final colors = getColorsForVibration(vibrationNumber);
 
-  showModalBottomSheet(
+  showDialog(
     context: context,
-    backgroundColor: Colors.transparent, // Fundo transparente para ver bordas
-    isScrollControlled: true,
     builder: (ctx) {
-      return Container(
-        // Define altura máxima para evitar cobrir a tela inteira em listas longas
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(ctx).size.height * 0.75, // 75% da altura
-        ),
-        margin: const EdgeInsets.only(top: 64), // Margem para status bar
-        decoration: const BoxDecoration(
-          color: AppColors.cardBackground, // Usa cor do app
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min, // Encolhe para caber o conteúdo
-          children: [
-            // Barra superior colorida com o título
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: colors.background, // Cor da vibração
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(24),
-                  topRight: Radius.circular(24),
-                ),
-              ),
-              child: Text(
-                'Dia Pessoal $vibrationNumber: ${vibrationContent.titulo}',
-                style: TextStyle(
-                  color: colors.text, // Cor do texto da vibração
-                  fontSize: 20, // Um pouco menor
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center, // Centraliza título
-              ),
-            ),
-            // Conteúdo scrollável
-            Flexible(
-              // Permite que o SingleChildScrollView expanda e encolha
-              child: SingleChildScrollView(
-                padding:
-                    const EdgeInsets.fromLTRB(24, 16, 24, 24), // Ajusta padding
-                child: Text(
-                  vibrationContent.descricaoCompleta.isEmpty
-                      ? vibrationContent
-                          .descricaoCurta // Fallback se completa vazia
-                      : vibrationContent.descricaoCompleta,
-                  style: const TextStyle(
-                    // Usa cores do app
-                    color: AppColors.secondaryText,
-                    fontSize: 16,
-                    height: 1.5,
+      return Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24.0),
+            child: Container(
+              color: AppColors.cardBackground,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Header com botão fechar
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          onPressed: () => Navigator.pop(ctx),
+                          icon: const Icon(Icons.close_rounded,
+                              color: AppColors.secondaryText),
+                          tooltip: 'Fechar',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
+                  
+                  // Título e Conteúdo
+                  Flexible(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(32, 0, 32, 40),
+                      child: Column(
+                        children: [
+                          // Título Colorido
+                          Text(
+                            'Dia Pessoal $vibrationNumber',
+                            style: TextStyle(
+                              color: colors.background, // A cor da vibração
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            vibrationContent.titulo,
+                            style: const TextStyle(
+                              color: AppColors.primaryText,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              height: 1.2,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Divisor sutil
+                          Container(
+                            width: 60,
+                            height: 4,
+                            decoration: BoxDecoration(
+                                color: colors.background.withValues(alpha: 0.3),
+                                borderRadius: BorderRadius.circular(2)),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Texto Descritivo
+                          Text(
+                            vibrationContent.descricaoCompleta.isEmpty
+                                ? vibrationContent.descricaoCurta
+                                : vibrationContent.descricaoCompleta,
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 16,
+                              height: 1.6,
+                            ),
+                            textAlign: TextAlign.center, // Centralizado para leitura fluida
+                          ),
+                          
+                          if (vibrationContent.inspiracao.isNotEmpty) ...[
+                             const SizedBox(height: 32),
+                             Container(
+                               padding: const EdgeInsets.all(16),
+                               decoration: BoxDecoration(
+                                 color: colors.background.withValues(alpha: 0.1),
+                                 borderRadius: BorderRadius.circular(16),
+                                 border: Border.all(color: colors.background.withValues(alpha: 0.2)),
+                               ),
+                               child: Row(
+                                 children: [
+                                   Icon(Icons.lightbulb_outline_rounded, color: colors.background),
+                                   const SizedBox(width: 12),
+                                   Expanded(
+                                     child: Text(
+                                       vibrationContent.inspiracao,
+                                        style: TextStyle(
+                                          color: AppColors.primaryText.withValues(alpha: 0.9),
+                                          fontSize: 14,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                     ),
+                                   ),
+                                 ],
+                               ),
+                             )
+                          ]
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       );
     },

@@ -11,6 +11,8 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/focus_day_card.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/goals_progress_card.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart'; // IMPORT
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
@@ -512,6 +514,47 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  // Lógica de diálogo de criação de meta (Desktop vs Mobile)
+  void _navigateToCreateGoal() {
+    if (!mounted || _userData == null) return;
+
+    final bool isDesktop = MediaQuery.of(context).size.width >= 768.0;
+
+    if (isDesktop) {
+      final messenger = ScaffoldMessenger.of(context);
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext dialogContext) {
+          return CreateGoalDialog(
+            userData: _userData!,
+          );
+        },
+      ).then((result) {
+        if (result == true) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text("Nova jornada criada com sucesso!"),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+          _reloadDataNonStream(); // Recarrega metas
+        }
+      });
+    } else {
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => CreateGoalScreen(
+          userData: _userData!,
+        ),
+        fullscreenDialog: true,
+      )).then((_) {
+         // Ao voltar, recarrega
+         if (mounted) _reloadDataNonStream();
+      });
+    }
+  }
+
   void _navigateToGoalDetail(Goal goal) {
     if (_userData == null) return;
     Navigator.of(context)
@@ -547,6 +590,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         goals: _userGoals,
         onViewAll: () => _navigateToPage(4),
         onGoalSelected: _navigateToGoalDetail,
+        onAddGoal: _navigateToCreateGoal, // CALLBACK
         userId: _userData!.uid,
         isEditMode: _isEditMode,
         dragHandle: _isEditMode ? _buildDragHandle('goalsProgress') : null,

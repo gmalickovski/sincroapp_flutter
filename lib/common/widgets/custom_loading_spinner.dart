@@ -5,10 +5,12 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 
 class CustomLoadingSpinner extends StatefulWidget {
   final double? size;
+  final Color? color;
   
   const CustomLoadingSpinner({
     super.key,
     this.size,
+    this.color,
   });
 
   @override
@@ -157,7 +159,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
               dashProgress: _dashAnimation.value,
               offsetProgress: _offsetAnimation.value,
               strokeWidth: _strokeWidthAnimation.value,
-              color: AppColors.primaryAccent,
+              color: widget.color ?? AppColors.primaryAccent,
             ),
           );
         },
@@ -319,6 +321,7 @@ class StarCometPainter extends CustomPainter {
         oldDelegate.scale != scale ||
         oldDelegate.dashProgress != dashProgress ||
         oldDelegate.offsetProgress != offsetProgress ||
-        oldDelegate.strokeWidth != strokeWidth;
+        oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.color != color;
   }
 }
