@@ -45,11 +45,13 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
   double _compatibilityScore = 1.0;
   String _compatibilityStatus = 'good'; // good, bad
   List<DateTime> _suggestedDates = [];
+  DateTime? _pendingDate; // Data selecionada aguardando confirmação
 
   @override
   void initState() {
     super.initState();
     _selectedUsernames = widget.preSelectedUsernames.toSet();
+    _pendingDate = null; // Sem data pendente inicialmente
     _fetchContacts();
     
     // Initial calc if pre-selected
@@ -178,7 +180,11 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
             children: [
               IconButton(
                 icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  // Limpa seleções ao fechar com X
+                  widget.onSelectionChanged([]);
+                  Navigator.pop(context);
+                },
               ),
               const Text(
                 'Meus Contatos', // TITLE UPDATED
@@ -190,7 +196,17 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
               ),
               IconButton( // Check button to confirm/close
                 icon: const Icon(Icons.check, color: AppColors.primary),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  // Confirma seleção com usernames
+                  widget.onSelectionChanged(_selectedUsernames.toList());
+                  
+                  // Se tiver uma data pendente selecionada, notifica também
+                  if (_pendingDate != null && widget.onDateChanged != null) {
+                    widget.onDateChanged!(_pendingDate!);
+                  }
+                  
+                  Navigator.pop(context, _selectedUsernames.toList());
+                },
               ),
             ],
           ),
@@ -303,7 +319,7 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
   Widget _buildCompatibilitySection() {
     if (_calculatingCompatibility) {
       return const Center(child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: EdgeInsets.all(16.0),
         child: LinearProgressIndicator(color: AppColors.primary),
       ));
     }
@@ -313,54 +329,149 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
     final String statusText = isBad ? 'Ruim' : 'Boa';
     final int percentage = (_compatibilityScore * 100).toInt();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.auto_awesome, color: AppColors.tertiaryText, size: 20),
-            const SizedBox(width: 8),
-            Text(
-              'Sinergia do grupo: ',
-              style: TextStyle(color: Colors.white.withOpacity(0.8)),
-            ),
-            Text(
-              '$percentage% ($statusText)',
-              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
-            ),
-          ],
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isBad 
+          ? Colors.red.withOpacity(0.1) 
+          : Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: statusColor.withOpacity(0.3),
+          width: 1,
         ),
-        
-        if (isBad && _suggestedDates.isNotEmpty) ...[
-          const SizedBox(height: 8),
-          const Text(
-            'Datas melhores:',
-            style: TextStyle(color: AppColors.secondaryText, fontSize: 12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Score principal
+          Row(
+            children: [
+              Icon(
+                isBad ? Icons.warning_amber_rounded : Icons.auto_awesome,
+                color: statusColor,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Sinergia do grupo',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '$percentage% ($statusText)',
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: _suggestedDates.map((date) {
-                return Padding(
-                  padding: const EdgeInsets.only(right: 8.0),
-                  child: ActionChip(
-                    backgroundColor: AppColors.cardBackground,
-                    labelStyle: const TextStyle(color: Colors.white),
-                    label: Text(DateFormat('dd/MM').format(date)),
-                    avatar: const Icon(Icons.calendar_today, size: 14, color: Colors.greenAccent),
-                    onPressed: () {
-                      if (widget.onDateChanged != null) {
-                        widget.onDateChanged!(date);
-                      }
-                    },
-                  ),
-                );
-              }).toList(),
+          
+          // Sugestões de datas melhores
+          if (isBad) ...[
+            const SizedBox(height: 16),
+            Text(
+              _suggestedDates.isNotEmpty 
+                ? '📅 Datas com melhor compatibilidade:'
+                : '⚠️ Nenhuma data ideal encontrada nos próximos 30 dias',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          )
-        ]
-      ],
+            if (_suggestedDates.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: _suggestedDates.take(3).map((date) {
+                  final isSelected = _pendingDate != null && 
+                      _pendingDate!.day == date.day && 
+                      _pendingDate!.month == date.month &&
+                      _pendingDate!.year == date.year;
+                  
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        // Seleciona a data (não fecha o modal)
+                        setState(() {
+                          _pendingDate = date;
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: isSelected 
+                            ? Colors.amber.withOpacity(0.2) 
+                            : AppColors.cardBackground,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: isSelected ? Colors.amber : Colors.amber.withOpacity(0.5),
+                            width: isSelected ? 2 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isSelected ? Icons.check_circle : Icons.calendar_today, 
+                              size: 16, 
+                              color: Colors.amber,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              DateFormat('dd/MM').format(date),
+                              style: TextStyle(
+                                color: isSelected ? Colors.amber : Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            if (!isSelected) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  '✓ Boa',
+                                  style: TextStyle(
+                                    color: Colors.greenAccent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ],
+      ),
     );
   }
 }

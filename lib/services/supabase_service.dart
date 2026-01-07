@@ -365,9 +365,21 @@ class SupabaseService {
         final status = item['status'] as String;
         
         // Reconstrói UserModel simplificado para criar ContactModel
-        // Nota: Ajuste os campos conforme sua query Select acima
-        final fullName = '${userData['first_name'] ?? ''} ${userData['last_name'] ?? ''}'.trim();
-        final displayName = fullName.isNotEmpty ? fullName : (userData['email'] ?? '');
+        // Limita a 2 nomes para evitar duplicação visual (primeiro nome + sobrenome)
+        final firstName = (userData['first_name'] ?? '').toString().trim();
+        final lastName = (userData['last_name'] ?? '').toString().trim();
+        
+        // Pega apenas o primeiro sobrenome se houver mais de um
+        final firstLastNamePart = lastName.split(' ').first;
+        
+        String displayName;
+        if (firstName.isNotEmpty && firstLastNamePart.isNotEmpty) {
+          displayName = '$firstName $firstLastNamePart';
+        } else if (firstName.isNotEmpty) {
+          displayName = firstName;
+        } else {
+          displayName = userData['email'] ?? '';
+        }
 
         return ContactModel(
           userId: userData['uid'],
@@ -540,7 +552,7 @@ class SupabaseService {
              candCount++;
           }
           final candAvg = candCount > 0 ? candTotal / candCount : 0.0;
-          if (candAvg >= 0.8) { // Good score threshold
+          if (candAvg >= 0.75) { // Threshold de compatibilidade boa
              suggestions.add(candidate);
              found++;
           }

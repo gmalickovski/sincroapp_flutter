@@ -425,19 +425,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
             // Não fecha o modal aqui, o usuário pode continuar selecionando
           },
           onDateChanged: (newDate) {
-            // Quando o usuário clica em uma data sugerida, atualiza a data da tarefa
+            // A data é atualizada quando o usuário clica no ✓ para confirmar
             setState(() {
               _selectedDate = newDate;
             });
-            // Fecha o modal após mudar a data
-            Navigator.pop(context);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Data alterada para ${DateFormat('dd/MM/yyyy').format(newDate)}'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            // Update vibration pill for the new date
+            _updateVibrationForDate(newDate);
           },
         );
       },
@@ -568,6 +561,20 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         },
                       ),
                     ),
+                    
+                    // Pills dos Contatos Compartilhados
+                    ..._sharedWithUsernames.map(
+                      (username) => _buildPill(
+                        label: '@$username',
+                        icon: Icons.person,
+                        color: Colors.lightBlueAccent,
+                        onDeleted: () {
+                          setState(() {
+                            _sharedWithUsernames.remove(username);
+                          });
+                        },
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -598,11 +605,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     onTap: _showDatePickerModal, // Chama o novo modal
                     color: _selectedDate != null ? Colors.orangeAccent : null,
                   ),
-                  // NOVO: Bot├úo para abrir o Contact Picker
+                  // NOVO: Botão para abrir o Contact Picker
                   _buildActionButton(
                     icon: Icons.person_add_alt,
                     onTap: _openContactPicker,
-                    color: null, // Cor padr├úo
+                    color: _sharedWithUsernames.isNotEmpty ? Colors.lightBlueAccent : null,
                   ),
                   const Spacer(),
                   if (_personalDay > 0)
