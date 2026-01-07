@@ -421,7 +421,22 @@ class _TaskInputModalState extends State<TaskInputModal> {
             setState(() {
               _sharedWithUsernames = selectedUsernames;
             });
-            // N├úo fecha o modal aqui, o usu├írio pode continuar selecionando
+            // Não fecha o modal aqui, o usuário pode continuar selecionando
+          },
+          onDateChanged: (newDate) {
+            // Quando o usuário clica em uma data sugerida, atualiza a data da tarefa
+            setState(() {
+              _selectedDate = newDate;
+            });
+            // Fecha o modal após mudar a data
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Data alterada para ${DateFormat('dd/MM/yyyy').format(newDate)}'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
           },
         );
       },
