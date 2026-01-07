@@ -286,22 +286,31 @@ class SupabaseService {
   }
 
   Future<void> deleteNotifications(List<String> ids) async {
+    if (ids.isEmpty) return;
     try {
-      await _supabase.schema('sincroapp').from('notifications').delete().filter('id', 'in', ids);
+      // Format: (id1,id2,id3) for IN operator
+      final idsString = '(${ids.join(',')})';
+      await _supabase.schema('sincroapp').from('notifications').delete().filter('id', 'in', idsString);
+      debugPrint('✅ [SupabaseService] ${ids.length} notificações deletadas');
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao deletar notificações: $e');
+      rethrow; // Propagar erro para UI mostrar feedback
     }
   }
 
   Future<void> markNotificationsAsRead(List<String> ids) async {
+    if (ids.isEmpty) return;
     try {
+      final idsString = '(${ids.join(',')})';
       await _supabase
           .schema('sincroapp')
           .from('notifications')
           .update({'is_read': true})
-          .filter('id', 'in', ids);
+          .filter('id', 'in', idsString);
+      debugPrint('✅ [SupabaseService] ${ids.length} notificações marcadas como lidas');
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao marcar notificações como lidas: $e');
+      rethrow;
     }
   }
 
