@@ -1087,27 +1087,80 @@ class NumerologyEngine {
     return diasFavoraveis.contains(targetDate.day);
   }
 
+  /// Matriz de compatibilidade entre Dias Pessoais
+  /// Baseada em pesquisa de Numerologia Cabalística
+  static const Map<String, double> _personalDayCompatibility = {
+    // Pares Altamente Compatíveis (1.0)
+    '1-9': 1.0, '9-1': 1.0, // Início + Conclusão
+    '2-7': 1.0, '7-2': 1.0, // Harmonia + Espiritualidade
+    '3-5': 1.0, '5-3': 1.0, // Criatividade + Liberdade
+    '3-9': 1.0, '9-3': 1.0, // Comunicação + Compaixão
+    '6-9': 1.0, '9-6': 1.0, // Família + Universal
+    
+    // Pares Complementares (0.8)
+    '1-2': 0.8, '2-1': 0.8, // Liderança + Diplomacia
+    '1-5': 0.8, '5-1': 0.8, // Iniciativa + Versatilidade
+    '2-6': 0.8, '6-2': 0.8, // Cooperação + Família
+    '3-6': 0.8, '6-3': 0.8, // Expressão + Harmonia
+    '4-8': 0.8, '8-4': 0.8, // Construção + Realização
+    '5-7': 0.8, '7-5': 0.8, // Liberdade + Sabedoria
+    '6-8': 0.8, '8-6': 0.8, // Responsabilidade + Poder
+    '7-9': 0.8, '9-7': 0.8, // Sabedoria + Compaixão
+    '1-8': 0.8, '8-1': 0.8, // Liderança + Poder
+    '2-4': 0.8, '4-2': 0.8, // Cooperação + Estrutura
+    
+    // Pares com Tensão (0.3)
+    '1-4': 0.3, '4-1': 0.3, // Impulso vs. Rigidez
+    '2-5': 0.3, '5-2': 0.3, // Estabilidade vs. Mudança
+    '4-5': 0.3, '5-4': 0.3, // Ordem vs. Liberdade
+    '4-7': 0.3, '7-4': 0.3, // Praticidade vs. Abstração
+    '6-7': 0.3, '7-6': 0.3, // Família vs. Solidão
+  };
+
+  /// Retorna o score de compatibilidade entre dois Dias Pessoais
+  static double _getPersonalDayCompatibility(int dpA, int dpB) {
+    // Números iguais = ressonância perfeita
+    if (dpA == dpB) return 1.0;
+    
+    // Busca na matriz de compatibilidade
+    final key = '$dpA-$dpB';
+    if (_personalDayCompatibility.containsKey(key)) {
+      return _personalDayCompatibility[key]!;
+    }
+    
+    // Padrão: Neutro
+    return 0.5;
+  }
+
   /// Calcula a compatibilidade entre dois usuários para uma data específica
-  /// Retorna:
-  /// - 1.0 (Perfeito): Favorável para ambos
-  /// - 0.5 (Parcial): Favorável para um apenas
-  /// - 0.0 (Neutro/Conflito): Favorável para nenhum
+  /// 
+  /// Score Final = (FavorableScore × 0.5) + (PersonalDayScore × 0.5)
+  /// 
+  /// - FavorableScore: 1.0 (ambos), 0.5 (um), 0.0 (nenhum)
+  /// - PersonalDayScore: Baseado na matriz de compatibilidade cabalística
   static double calculateCompatibilityScore({
     required DateTime date,
     required DateTime birthDateA,
     required DateTime birthDateB,
   }) {
     // Instancia engines temporárias para calcular
-    // Nota: Nome não importa para dias favoráveis, apenas data nasc
     final engineA = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateA));
     final engineB = NumerologyEngine(nomeCompleto: '', dataNascimento: DateFormat('dd/MM/yyyy').format(birthDateB));
 
+    // 1. Calcular Dias Favoráveis
     final bool favorableA = engineA.isDateFavorable(date);
     final bool favorableB = engineB.isDateFavorable(date);
+    double favorableScore = (favorableA && favorableB) ? 1.0 
+                          : (favorableA || favorableB) ? 0.5 
+                          : 0.0;
 
-    if (favorableA && favorableB) return 1.0;
-    if (favorableA || favorableB) return 0.5;
-    return 0.0;
+    // 2. Calcular Dias Pessoais
+    final int dpA = engineA.calculatePersonalDayForDate(date);
+    final int dpB = engineB.calculatePersonalDayForDate(date);
+    double pdScore = _getPersonalDayCompatibility(dpA, dpB);
+
+    // 3. Score Final (média ponderada 50/50)
+    return (favorableScore * 0.5) + (pdScore * 0.5);
   }
 
   /// Encontra as próximas datas onde AMBOS possuem dia favorável (Sincro Match)
