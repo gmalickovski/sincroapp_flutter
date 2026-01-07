@@ -45,13 +45,17 @@ class _AddContactModalState extends State<AddContactModal> {
     try {
       await _supabaseService.addContact(_currentUserId, user.uid);
       
+      // Get sender's username for the notification
+      final senderData = await _supabaseService.getUserData(_currentUserId);
+      final senderName = senderData?.username ?? 'Alguém';
+      
       // Send invitation notification
       await _supabaseService.sendNotification(
         toUserId: user.uid,
         type: NotificationType.contactRequest,
-        title: 'Solicitação de Contato',
-        body: 'Alguém quer adicionar você aos contatos do Sincro.',
-        metadata: {'type': 'contact_request', 'from_uid': _currentUserId},
+        title: '📩 Pedido de Sincronia',
+        body: '@$senderName quer sincronizar com você!',
+        metadata: {'type': 'contact_request', 'from_uid': _currentUserId, 'from_name': senderName},
       );
 
       setState(() {

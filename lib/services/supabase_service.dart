@@ -414,6 +414,17 @@ class SupabaseService {
           'status': 'active',
         }, onConflict: 'user_id, contact_user_id');
 
+        // Enviar notificação de confirmação para quem solicitou
+        final responderData = await getUserData(uid);
+        final responderName = responderData?.username ?? 'Alguém';
+        await sendNotification(
+          toUserId: contactUid,
+          type: NotificationType.contactAccepted,
+          title: '✅ Sincronia Aceita!',
+          body: '@$responderName aceitou seu pedido de sincronia.',
+          metadata: {'responder_uid': uid, 'responder_name': responderName},
+        );
+
       } else {
         // Rejeitar: remove ambos os lados se existirem
          await _supabase
@@ -700,8 +711,8 @@ class SupabaseService {
                 await sendNotification(
                   toUserId: contactUid,
                   type: NotificationType.taskUpdate,
-                  title: 'Tarefa Atualizada',
-                  body: '$ownerName alterou: ${changes.join(", ")} em "$sanitizedTitle"',
+                  title: '📝 Tarefa Atualizada',
+                  body: '@$ownerName alterou "$sanitizedTitle": ${changes.join(", ")}',
                   relatedItemId: task.id,
                   relatedItemType: 'task',
                   metadata: {
@@ -771,8 +782,8 @@ class SupabaseService {
            await sendNotification(
              toUserId: contactId, // Avisar o destinatário (User B)
              type: NotificationType.taskInvite,
-             title: 'Convite: $sanitizedTitle',
-             body: '${ownerData['username']} te convidou para uma tarefa no dia ${DateFormat('dd/MM').format(dueDate)}.',
+             title: '📅 Convite de Agendamento',
+             body: '@${ownerData['username']} te convidou para: "$sanitizedTitle" em ${DateFormat('dd/MM').format(dueDate)}.',
              metadata: {
                'userA_name': ownerData['username'],
                'userA_birth': ownerBirth.toIso8601String(),
@@ -801,21 +812,32 @@ class SupabaseService {
     required bool accepted,
   }) async {
     try {
-      final statusStr = accepted ? 'aceitou' : 'recusou';
-      final iconStr = accepted ? '✅' : '❌';
-      
       // 1. Notificar o dono da tarefa
-      await sendNotification(
-        toUserId: ownerId,
-        type: NotificationType.system, 
-        title: 'Convite $statusStr',
-        body: '$iconStr $responderName $statusStr seu convite para a tarefa.',
-        relatedItemId: taskId,
-        metadata: {
-          'action': accepted ? 'accepted' : 'declined',
-          'responder_name': responderName,
-        }
-      );
+      if (accepted) {
+        await sendNotification(
+          toUserId: ownerId,
+          type: NotificationType.contactAccepted, // Reutilizando para confirmações positivas
+          title: '✅ Convite Aceito!',
+          body: '@$responderName aceitou participar da sua tarefa.',
+          relatedItemId: taskId,
+          metadata: {
+            'action': 'accepted',
+            'responder_name': responderName,
+          }
+        );
+      } else {
+        await sendNotification(
+          toUserId: ownerId,
+          type: NotificationType.system,
+          title: '❌ Convite Recusado',
+          body: '@$responderName não poderá participar da tarefa.',
+          relatedItemId: taskId,
+          metadata: {
+            'action': 'declined',
+            'responder_name': responderName,
+          }
+        );
+      }
 
       // 2. Se recusou, remover da lista shared_with
       if (!accepted) {

@@ -319,7 +319,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       if (_selectedFilter == 'system') {
         return n.type == NotificationType.system || 
                n.type == NotificationType.mention ||
-               n.type == NotificationType.share;
+               n.type == NotificationType.share ||
+               n.type == NotificationType.contactAccepted; // Confirmações
       }
       return true;
     }).toList();
@@ -330,18 +331,24 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       _supabaseService.markNotificationAsRead(notification.id);
     }
     
+    // Notificações informativas (não clicáveis) - apenas marcar como lida
+    if (notification.type == NotificationType.contactAccepted ||
+        notification.type == NotificationType.system) {
+      return; // Não abrir modal
+    }
+    
+    // Notificações com ação
     if (notification.type == NotificationType.contactRequest || 
         notification.type == NotificationType.taskInvite ||
         notification.type == NotificationType.taskUpdate ||
-        notification.type == NotificationType.sincroAlert) { // SincroAlert agora abre Detail também (unificado)
+        notification.type == NotificationType.sincroAlert) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
         builder: (context) => NotificationDetailModal(notification: notification),
       );
-    } 
-    // Outros tipos futuros...
+    }
   }
 }
 
@@ -476,6 +483,8 @@ class _NotificationTile extends StatelessWidget {
     switch (type) {
       case NotificationType.contactRequest:
         return _NotificationTheme(Icons.person_add_rounded, AppColors.primary);
+      case NotificationType.contactAccepted:
+        return _NotificationTheme(Icons.check_circle_rounded, Colors.green);
       case NotificationType.taskInvite:
         return _NotificationTheme(Icons.event_available_rounded, Colors.orange);
       case NotificationType.taskUpdate:
