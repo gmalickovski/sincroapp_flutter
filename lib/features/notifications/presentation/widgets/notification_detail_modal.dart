@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -25,7 +26,8 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
   int? _personalDayNumber;
-  String? _personalDayText;
+  String? _personalDayTitle;  // Ex: "Estrutura e Trabalho"
+  String? _personalDayText;   // Descrição completa
   String? _senderUsername;
   String? _taskText;
   DateTime? _targetDate;
@@ -59,14 +61,17 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
          try {
            final personalDayNum = NumerologyEngine.calculatePersonalDay(_targetDate!, userData.dataNasc);
            
-           // Use the short text from ContentData
+           // Buscar conteúdo do dia pessoal
            final vibrationContent = ContentData.vibracoes['diaPessoal']?[personalDayNum];
            
            setState(() {
              _personalDayNumber = personalDayNum;
-             _personalDayText = vibrationContent?.descricaoCurta ?? 
+             _personalDayTitle = vibrationContent?.titulo ?? 'Dia $personalDayNum';
+             // Usar descrição completa para o card
+             _personalDayText = vibrationContent?.descricaoCompleta ?? 
+                 vibrationContent?.descricaoCurta ??
                  ContentData.textosDiasFavoraveis[personalDayNum] ??
-                 "Energia numerológica do dia.";
+                 'Energia numerológica do dia.';
            });
          } catch (e) {
            debugPrint("Erro calc dia pessoal: $e");
@@ -90,16 +95,22 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
           accept: accept
         );
       } else if (type == NotificationType.taskInvite) {
-        final taskId = meta['task_id'];
-        final ownerId = meta['owner_id'];
+        final taskId = meta['task_id'] as String?;
+        final ownerId = meta['owner_id'] as String?;
+        final taskText = meta['task_text'] as String?;
+        final targetDateStr = meta['target_date'] as String?;
         final userData = await _supabaseService.getUserData(currentUid);
         
+        // Passar os dados da tarefa diretamente (evita problema de RLS)
         await _supabaseService.respondToInvitation(
-          taskId: taskId,
-          ownerId: ownerId,
+          taskId: taskId ?? '',
+          ownerId: ownerId ?? '',
           responderUid: currentUid,
           responderName: userData?.username ?? 'Alguém',
           accepted: accept,
+          // Dados da tarefa vindos do metadata (bypass RLS)
+          taskText: taskText,
+          targetDate: targetDateStr,
         );
       }
       
@@ -176,7 +187,6 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
   }
   
   Widget _buildFormattedBody() {
-    // Build rich text with colored elements
     final username = _senderUsername ?? 'Alguém';
     final taskText = _taskText ?? widget.notification.body;
     final dateFormatted = _targetDate != null 
@@ -185,7 +195,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
     
     return Column(
       children: [
-        // Line 1: @username te convidou para participar
+        // Linha 1: @username convidou você para:
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
@@ -198,29 +208,46 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const TextSpan(text: ' te convidou para: '),
-              if (dateFormatted.isNotEmpty) ...[
-                const TextSpan(text: '"'),
-                TextSpan(
-                  text: taskText,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const TextSpan(text: '" em '),
+              const TextSpan(text: ' convidou você para:'),
+            ],
+          ),
+        ),
+        
+        // Espaçamento
+        const SizedBox(height: 12),
+        
+        // Linha 2: Texto da tarefa (destaque maior)
+        Text(
+          taskText,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        
+        // Linha 3: Data em âmbar
+        if (dateFormatted.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+              children: [
+                const TextSpan(text: 'Data: '),
                 TextSpan(
                   text: dateFormatted,
                   style: const TextStyle(
                     color: Colors.amber,
                     fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
                 ),
-                const TextSpan(text: '.'),
               ],
-            ],
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -263,6 +290,9 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
   }
   
   Widget _buildPersonalDayCard() {
+    // Formato: ☀️ Dia Pessoal X: Título
+    final headerText = 'Dia Pessoal ${_personalDayNumber ?? ''}: ${_personalDayTitle ?? ''}';
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -273,46 +303,37 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              const Icon(Icons.wb_sunny, size: 18, color: Colors.amber),
-              const SizedBox(width: 8),
-              const Text(
-                'Seu dia nesta data',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
+          // Header: ☀️ Dia Pessoal X: Título (em verde)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Personal day number badge
-              if (_personalDayNumber != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.amber.withOpacity(0.5)),
-                  ),
-                  child: Text(
-                    'Dia $_personalDayNumber',
-                    style: const TextStyle(
-                      color: Colors.amber,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
-                ),
-              const SizedBox(width: 12),
+              const Icon(Icons.wb_sunny, size: 20, color: Colors.amber),
+              const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  _personalDayText ?? '',
-                  style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+                  headerText,
+                  style: const TextStyle(
+                    color: Color(0xFF7ED321), // Verde como na imagem
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
                 ),
               ),
             ],
+          ),
+          
+          // Descrição do dia pessoal
+          const SizedBox(height: 10),
+          Padding(
+            padding: const EdgeInsets.only(left: 30), // Alinhado com o texto do header
+            child: Text(
+              _personalDayText ?? '',
+              style: const TextStyle(
+                color: AppColors.secondaryText,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),

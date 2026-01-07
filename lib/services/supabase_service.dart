@@ -809,6 +809,9 @@ class SupabaseService {
     required String responderUid,
     required String responderName,
     required bool accepted,
+    // Dados da tarefa vindos do metadata (para bypass de RLS)
+    String? taskText,
+    String? targetDate,
   }) async {
     try {
       // 1. Notificar o dono da tarefa
@@ -826,33 +829,50 @@ class SupabaseService {
         );
         
         // 2. CRITICAL: Criar uma cópia da tarefa para o usuário que aceitou
-        // Buscar dados da tarefa original
-        final taskResponse = await _supabase.schema('sincroapp').from('tasks')
-            .select()
-            .eq('id', taskId)
-            .single();
+        debugPrint('🔍 [SupabaseService] Tentando buscar tarefa $taskId...');
         
-        // Criar nova tarefa para o usuário que aceitou (cópia com suas configurações)
+        // Tentar buscar tarefa original (pode falhar por RLS)
+        Map<String, dynamic>? taskResponse;
+        try {
+          taskResponse = await _supabase.schema('sincroapp').from('tasks')
+              .select()
+              .eq('id', taskId)
+              .maybeSingle();
+        } catch (e) {
+          debugPrint('⚠️ [SupabaseService] Erro ao buscar tarefa (RLS?): $e');
+        }
+        
+        // Criar nova tarefa para o usuário que aceitou
         final String newTaskId = Uuid().v4();
-        await _supabase.schema('sincroapp').from('tasks').insert({
+        
+        // Se conseguiu buscar a original, usar dados completos
+        // Senão, usar dados do metadata da notificação
+        final Map<String, dynamic> newTaskData = {
           'id': newTaskId,
           'user_id': responderUid, // Nova tarefa pertence ao usuário que aceitou
-          'text': taskResponse['text'],
-          'due_date': taskResponse['due_date'],
-          'due_date_utc': taskResponse['due_date_utc'],
-          'reminder_time': taskResponse['reminder_time'],
-          'recurrence_type': taskResponse['recurrence_type'],
-          'recurrence_days_of_week': taskResponse['recurrence_days_of_week'],
-          'recurrence_end_date': taskResponse['recurrence_end_date'],
-          'tags': taskResponse['tags'] ?? [],
-          'shared_with': [], // Não compartilhar a cópia
-          'journey_id': taskResponse['journey_id'],
-          'original_task_id': taskId, // Referência à tarefa original para tracking
-          'shared_from_user_id': ownerId, // Quem compartilhou
+          'text': taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada',
+          'due_date': taskResponse?['due_date'] ?? targetDate,
+          'due_date_utc': taskResponse?['due_date_utc'] ?? targetDate,
+          'tags': taskResponse?['tags'] ?? [],
+          'shared_with': [],
           'created_at': DateTime.now().toUtc().toIso8601String(),
-        });
+        };
         
-        debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid');
+        // Adicionar campos opcionais apenas se existirem
+        if (taskResponse != null) {
+          if (taskResponse['reminder_time'] != null) newTaskData['reminder_time'] = taskResponse['reminder_time'];
+          if (taskResponse['recurrence_type'] != null) newTaskData['recurrence_type'] = taskResponse['recurrence_type'];
+          if (taskResponse['recurrence_days_of_week'] != null) newTaskData['recurrence_days_of_week'] = taskResponse['recurrence_days_of_week'];
+          if (taskResponse['recurrence_end_date'] != null) newTaskData['recurrence_end_date'] = taskResponse['recurrence_end_date'];
+          if (taskResponse['journey_id'] != null) newTaskData['journey_id'] = taskResponse['journey_id'];
+        }
+        
+        try {
+          await _supabase.schema('sincroapp').from('tasks').insert(newTaskData);
+          debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid');
+        } catch (insertError) {
+          debugPrint('❌ [SupabaseService] Erro ao inserir tarefa: $insertError');
+        }
         
       } else {
         await sendNotification(
