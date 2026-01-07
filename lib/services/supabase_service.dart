@@ -405,24 +405,14 @@ class SupabaseService {
     required bool accept,
   }) async {
     try {
+      // Tenta chamar a função RPC (sem prefixo de schema, usando nome qualificado)
+      await _supabase.rpc('sincroapp.respond_to_contact_request', params: {
+        'p_responder_uid': uid,
+        'p_requester_uid': contactUid,
+        'p_accept': accept,
+      });
+      
       if (accept) {
-        // 1. Atualiza quem solicitou (contact -> user)
-        // Isso assume que o solicitante criou um registro (verificar lógica de criação bidirecional ou única)
-        // Simplificando: Assumimos que a tabela é bidirecional ou gerenciamos 2 linhas.
-        // Para este MVP, vamos garantir que ambos tenham uma linha 'active'
-        
-        await _supabase.schema('sincroapp').from('user_contacts').upsert({
-          'user_id': uid,
-          'contact_user_id': contactUid,
-          'status': 'active',
-        }, onConflict: 'user_id, contact_user_id');
-
-         await _supabase.schema('sincroapp').from('user_contacts').upsert({
-          'user_id': contactUid,
-          'contact_user_id': uid,
-          'status': 'active',
-        }, onConflict: 'user_id, contact_user_id');
-
         // Enviar notificação de confirmação para quem solicitou
         final responderData = await getUserData(uid);
         final responderName = responderData?.username ?? 'Alguém';
@@ -433,20 +423,9 @@ class SupabaseService {
           body: '@$responderName aceitou seu pedido de sincronia.',
           metadata: {'responder_uid': uid, 'responder_name': responderName},
         );
-
+        debugPrint('✅ [SupabaseService] Contato aceito: $uid <-> $contactUid');
       } else {
-        // Rejeitar: remove ambos os lados se existirem
-         await _supabase
-          .schema('sincroapp')
-          .from('user_contacts')
-          .delete()
-          .match({'user_id': uid, 'contact_user_id': contactUid});
-          
-         await _supabase
-          .schema('sincroapp')
-          .from('user_contacts')
-          .delete()
-          .match({'user_id': contactUid, 'contact_user_id': uid});
+        debugPrint('✅ [SupabaseService] Contato recusado: $uid <-> $contactUid');
       }
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao responder contato: $e');
