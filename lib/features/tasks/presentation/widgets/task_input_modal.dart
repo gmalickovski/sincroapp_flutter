@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
-import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dart';
-import 'package:sincro_app_flutter/models/recurrence_rule.dart';
-import 'package:sincro_app_flutter/models/date_picker_result.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
@@ -14,9 +12,6 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tag_selec
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
-import 'package:sincro_app_flutter/common/widgets/mention_input_field.dart'; // NOVO
-import 'package:sincro_app_flutter/common/widgets/mention_text_editing_controller.dart'; // NOVO
-import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart'; // NOVO
 
 // --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
 
@@ -46,7 +41,7 @@ class TaskInputModal extends StatefulWidget {
 
 class _TaskInputModalState extends State<TaskInputModal> {
   // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-  late MentionTextEditingController _textController; // MUDANÇA: Controller com Highlight
+  late TextEditingController _textController;
   // --- FIM DA MUDANÇA ---
 
   DateTime _selectedDateForPill = DateTime.now();
@@ -59,9 +54,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
   String? _selectedGoalId;
   String? _selectedGoalTitle;
   DateTime? _selectedDate; // Novo estado para a data
-
   List<String> _selectedTags = []; // Novo estado para as tags
-  Duration? _selectedReminderOffset; // Novo estado para o offset do lembrete
 
   bool get _isEditing => widget.taskToEdit != null;
 
@@ -70,7 +63,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     super.initState();
 
     // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-    _textController = MentionTextEditingController(); // MUDANÇA
+    _textController = TextEditingController();
     // --- FIM DA MUDANÇA ---
 
     DateTime initialDateForPill = DateTime.now();
@@ -319,11 +312,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ScheduleTaskSheet(
+      builder: (context) => CustomDatePickerModal(
         initialDate: initialPickerDate,
-        initialTime: _selectedTime,
-        initialRecurrence: ruleToPass,
         userData: widget.userData!,
+        initialRecurrenceRule: ruleToPass,
       ),
     ).then((result) {
       if (result != null) {
@@ -331,23 +323,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
         final selectedDateMidnight = DateTime(selectedDateTime.year,
             selectedDateTime.month, selectedDateTime.day);
 
+        // --- REMOVIDO: Lógica de adicionar ao _textController ---
+
         // Atualiza a pílula de vibração
         _updateVibrationForDate(selectedDateMidnight);
 
         // Atualiza o estado
         setState(() {
-          _selectedDate = selectedDateMidnight; // Armazena a data (meia-noite) para pílulas e lógica
-          
-          // Se o usuário selecionou um horário, extraímos dele.
-          // Se não (Dia Inteiro), fica null.
-          if (result.hasTime) {
-             _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
-          } else {
-             _selectedTime = null;
-          }
-          
+          _selectedDate = selectedDateMidnight; // Armazena a data selecionada
+          _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
           _selectedRecurrenceRule = result.recurrenceRule;
-          _selectedReminderOffset = result.reminderOffset; // Captura offset
         });
       }
     });
@@ -385,18 +370,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
       journeyId: _selectedGoalId, // Envia o ID da meta
       journeyTitle: _selectedGoalTitle, // Envia o Título da meta
       // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
-    ).copyWith(
-        reminderAt: () {
-            // Calculate numeric reminderAt
-            if (_selectedDate == null) return null;
-            if (_selectedReminderOffset == null) return null;
-            
-            DateTime base = _selectedDate!; // Midnight
-            if (_selectedTime != null) {
-                base = DateTime(base.year, base.month, base.day, _selectedTime!.hour, _selectedTime!.minute);
-            }
-            return base.subtract(_selectedReminderOffset!);
-        }()
     );
 
     widget.onAddTask(finalParsedTask);
@@ -404,37 +377,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
     if (mounted) Navigator.of(context).pop();
   }
   // --- FIM DA MUDANÇA ---
-
-  void _openContactPicker() async {
-    final result = await showDialog<List<String>>(
-      context: context,
-      builder: (context) => ContactPickerModal(
-        userId: widget.userId,
-        initialSelectedUsernames: [], // Poderia extrair do texto se quisesse
-      ),
-    );
-
-    if (result != null && result.isNotEmpty) {
-      // Adiciona mentions no texto
-      String currentText = _textController.text;
-      
-      // Adiciona espaço se não tiver
-      if (currentText.isNotEmpty && !currentText.endsWith(' ')) {
-        currentText += ' ';
-      }
-
-      for (var username in result) {
-        currentText += '@$username ';
-      }
-
-      _textController.text = currentText;
-      
-      // Move cursor para o final
-      _textController.selection = TextSelection.fromPosition(
-        TextPosition(offset: _textController.text.length),
-      );
-    }
-  }
 
   @override
   void dispose() {
@@ -468,20 +410,23 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Substituído TextField por MentionInputField
-              MentionInputField(
-                controller: _textController,
+              TextField(
                 focusNode: _textFieldFocusNode,
-                onSubmitted: (_) => _submit(), // Chama o submit atualizado
-                hintText: _selectedGoalId != null
-                    ? "Adicionar novo marco... use @ para mencionar"
-                    : "Adicionar tarefa... use @ para mencionar",
+                controller: _textController, // Controller padrão
+                style:
+                    const TextStyle(fontSize: 16, color: AppColors.primaryText),
                 decoration: InputDecoration(
+                  hintText: _selectedGoalId != null
+                      ? "Adicionar novo marco..."
+                      : "Adicionar tarefa...", // Hint simplificado
                   hintStyle: const TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
                 ),
+                onTap: () {},
+                onSubmitted: (_) => _submit(),
                 maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
               ),
 
               // --- INÍCIO: ÁREA DE "PILLS" ---
@@ -561,19 +506,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     color: _selectedGoalId != null
                         ? Colors.cyanAccent
                         : (widget.preselectedGoal != null
-                            ? AppColors.tertiaryText.withOpacity(0.3)
+                            ? AppColors.tertiaryText.withValues(alpha: 0.3)
                             : AppColors.tertiaryText),
                   ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
                     onTap: _showDatePickerModal, // Chama o novo modal
                     color: _selectedDate != null ? Colors.orangeAccent : null,
-                  ),
-                  // NOVO: Botão para abrir o Contact Picker
-                  _buildActionButton(
-                    icon: Icons.person_add_alt_1,
-                    onTap: _openContactPicker,
-                    color: null, // Cor padrão
                   ),
                   const Spacer(),
                   if (_personalDay > 0)
@@ -594,9 +533,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
                       onPressed: _submit, // Chama o submit atualizado
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: const CircleBorder(), // Botão circular
-                          padding: const EdgeInsets.all(12), // Padding uniforme
-                          minimumSize: const Size(44, 44)), // Quadrado perfeito para círculo
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          minimumSize: const Size(44, 36)),
                       child: Icon(
                         _isEditing ? Icons.check : Icons.arrow_upward,
                         color: Colors.white,
@@ -692,7 +633,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       dateStr = '$day de $month de ${date.year}';
     }
 
-    // Adiciona horário se houver (e se não for nulo)
+    // Adiciona horário se houver
     if (_selectedTime != null) {
       final hh = _selectedTime!.hour.toString().padLeft(2, '0');
       final mm = _selectedTime!.minute.toString().padLeft(2, '0');

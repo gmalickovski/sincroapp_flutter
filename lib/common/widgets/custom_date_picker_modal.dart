@@ -11,8 +11,7 @@ import 'package:table_calendar/table_calendar.dart';
 
 import 'custom_time_picker_modal.dart';
 import 'custom_month_year_picker.dart';
-import 'package:sincro_app_flutter/models/recurrence_rule.dart';
-import 'package:sincro_app_flutter/models/date_picker_result.dart';
+import 'custom_recurrence_picker_modal.dart'; // Import necessário
 
 // Classe interna para dados da lista de datas
 class _DateWithVibration {
@@ -21,7 +20,12 @@ class _DateWithVibration {
   _DateWithVibration(this.date, this.personalDay);
 }
 
-
+// Classe de retorno do modal, incluindo data/hora e regra de recorrência
+class DatePickerResult {
+  final DateTime dateTime;
+  final RecurrenceRule recurrenceRule;
+  DatePickerResult(this.dateTime, this.recurrenceRule);
+}
 
 class CustomDatePickerModal extends StatefulWidget {
   final DateTime initialDate; // Data inicial para focar/selecionar
@@ -55,7 +59,6 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
   final double _datePillWidth = 68.0; // Largura fixa das pílulas de data
   late DateTime _todayMidnight; // Data de hoje à meia-noite para comparações
   late RecurrenceRule _recurrenceRule; // Regra de recorrência selecionada
-  Duration? _selectedReminderOffset; // Offset do lembrete (ex: 10 min antes)
 
   @override
   void initState() {
@@ -194,27 +197,8 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         _selectedTime!.minute,
       );
     }
-    // Calcula o horário do lembrete se houver offset e hora selecionada
-    TimeOfDay? finalReminderTime;
-    if (_selectedTime != null && _selectedReminderOffset != null) {
-      final dateTimeWithTime = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
-        _selectedTime!.hour,
-        _selectedTime!.minute,
-      );
-      final reminderDateTime = dateTimeWithTime.subtract(_selectedReminderOffset!);
-      finalReminderTime = TimeOfDay.fromDateTime(reminderDateTime);
-    }
-
-    // Cria o objeto de resultado com data/hora, regra de recorrência, lembrete e flag de tempo
-    final result = DatePickerResult(
-      finalDateTime,
-      _recurrenceRule,
-      reminderTime: finalReminderTime,
-      hasTime: _selectedTime != null,
-    );
+    // Cria o objeto de resultado com data/hora e regra de recorrência
+    final result = DatePickerResult(finalDateTime, _recurrenceRule);
     Navigator.of(context).pop(result); // Fecha o modal retornando o resultado
   }
 
@@ -287,13 +271,31 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     }
   }
 
-  // Recurrence Picker removed as CustomRecurrencePickerModal was deleted. 
-  // Use ScheduleTaskSheet for recurrence.
-  /*
+  /// Abre o modal customizado para seleção da regra de recorrência.
   Future<void> _showRecurrencePicker() async {
-    // ...
-  } 
-  */
+    // Garante que a data passada não tenha hora/minuto
+    final startDate =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+
+    final RecurrenceRule? newRule = await showModalBottomSheet<RecurrenceRule>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext builderContext) {
+        return CustomRecurrencePickerModal(
+          initialRule: _recurrenceRule, // Passa a regra atual
+          userData: widget.userData, // Necessário para o seletor de data final
+          startDate: startDate, // Passa a data de início da tarefa
+        );
+      },
+    );
+    // Atualiza o estado se uma nova regra foi selecionada
+    if (newRule != null) {
+      setState(() {
+        _recurrenceRule = newRule;
+      });
+    }
+  }
 
   /// Rola a lista de dias horizontalmente.
   void _scrollDays(int direction) {
@@ -405,9 +407,8 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
                             endIndent: 16),
                         _buildTimePickerButton(
                             context), // Botão para adicionar/editar hora
-                        _buildReminderSection(context), // Seção de Lembretes
-                        /* _buildRecurrenceSection(
-                            context), */ // Botão para adicionar/editar recorrência
+                        _buildRecurrenceSection(
+                            context), // Botão para adicionar/editar recorrência
                         const SizedBox(height: 16), // Espaçamento inferior
                       ],
                     ),
@@ -1005,78 +1006,44 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-
-
-  // --- Lembretes Widget ---
-
-  Widget _buildReminderSection(BuildContext context) {
-    // Só mostra opções de lembrete se uma hora estiver selecionada
-    if (_selectedTime == null) return const SizedBox.shrink();
-
+  /// Constrói a linha para adicionar/editar a recorrência.
+  Widget _buildRecurrenceSection(BuildContext context) {
+    final String recurrenceText = _recurrenceRule.getSummaryText();
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-           // Separador antes dos lembretes
-          const Divider(color: AppColors.border, height: 1),
-          const SizedBox(height: 12),
-          Text(
-            "Lembrete",
-            style: TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildReminderChip("Sem lembrete", null),
-                const SizedBox(width: 8),
-                _buildReminderChip("Na hora", Duration.zero),
-                const SizedBox(width: 8),
-                _buildReminderChip("10 min antes", const Duration(minutes: 10)),
-                const SizedBox(width: 8),
-                _buildReminderChip("1 h antes", const Duration(hours: 1)),
-                const SizedBox(width: 8),
-                _buildReminderChip("1 dia antes", const Duration(days: 1)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 12),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReminderChip(String label, Duration? offset) {
-    final bool isSelected = _selectedReminderOffset == offset;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedReminderOffset = offset;
-        });
-        HapticFeedback.lightImpact();
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : AppColors.secondaryText,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 14,
+      child: InkWell(
+        onTap: _showRecurrencePicker,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Row(
+            children: [
+              const Icon(Icons.repeat,
+                  color: AppColors.secondaryText, size: 20),
+              const SizedBox(width: 16),
+              const Text(
+                "Repetir",
+                style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              Text(
+                recurrenceText,
+                style: TextStyle(
+                    color: _recurrenceRule.type == RecurrenceType.none
+                        ? AppColors.secondaryText
+                        : AppColors.primary,
+                    fontSize: 16,
+                    fontWeight: _recurrenceRule.type == RecurrenceType.none
+                        ? FontWeight.w400
+                        : FontWeight.w500),
+              ),
+              const SizedBox(width: 4),
+              const Icon(Icons.chevron_right,
+                  color: AppColors.tertiaryText, size: 20),
+            ],
           ),
         ),
       ),
