@@ -458,9 +458,8 @@ class _NotificationTile extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 6),
-                  Text(
-                    notification.body,
-                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                  RichText(
+                    text: _buildHighlightedNotificationText(notification.body),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -510,6 +509,67 @@ class _NotificationTile extends StatelessWidget {
       default:
         return _NotificationTheme(Icons.info_outline_rounded, Colors.blueGrey);
     }
+  }
+
+  /// Helper para criar TextSpan com destaque de @menções em azul e datas em âmbar
+  TextSpan _buildHighlightedNotificationText(String text) {
+    const baseStyle = TextStyle(color: AppColors.secondaryText, fontSize: 14);
+    const mentionStyle = TextStyle(
+      color: Colors.lightBlueAccent,
+      fontWeight: FontWeight.bold,
+      fontSize: 14,
+    );
+    const dateStyle = TextStyle(
+      color: Colors.amber,
+      fontWeight: FontWeight.bold,
+      fontSize: 14,
+    );
+
+    // Regex combinado para @username e datas (dd/MM, dd de mês, etc.)
+    final combinedRegex = RegExp(
+      r'(@[\w.]+)|(\d{1,2}/\d{1,2}(?:/\d{2,4})?)|(\d{1,2}\s+de\s+\w+)',
+      caseSensitive: false,
+    );
+    
+    final matches = combinedRegex.allMatches(text);
+    
+    if (matches.isEmpty) {
+      return TextSpan(text: text, style: baseStyle);
+    }
+    
+    final spans = <TextSpan>[];
+    int lastEnd = 0;
+    
+    for (final match in matches) {
+      // Texto antes do match
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: baseStyle,
+        ));
+      }
+      
+      // Determinar qual grupo foi matched
+      final matchedText = match.group(0)!;
+      final isMention = match.group(1) != null;
+      
+      spans.add(TextSpan(
+        text: matchedText,
+        style: isMention ? mentionStyle : dateStyle,
+      ));
+      
+      lastEnd = match.end;
+    }
+    
+    // Texto após o último match
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: baseStyle,
+      ));
+    }
+    
+    return TextSpan(children: spans);
   }
 }
 

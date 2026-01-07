@@ -15,6 +15,7 @@ import 'package:sincro_app_flutter/common/utils/username_validator.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
+import 'package:uuid/uuid.dart';
 
 
 class SupabaseService {
@@ -785,15 +786,14 @@ class SupabaseService {
              title: '📅 Convite de Agendamento',
              body: '@${ownerData['username']} te convidou para: "$sanitizedTitle" em ${DateFormat('dd/MM').format(dueDate)}.',
              metadata: {
-               'userA_name': ownerData['username'],
-               'userA_birth': ownerBirth.toIso8601String(),
-               'userB_name': userData['username'],
-               'userB_birth': contactBirth.toIso8601String(),
+               'sender_username': ownerData['username'],  // Para destaque azul no modal
+               'task_text': sanitizedTitle,                // Texto da tarefa
                'target_date': dueDate.toIso8601String(),
                'compatibility_score': score,
-               'task_title': sanitizedTitle, // Send clean title
                'task_id': taskId,      // Needed for response
                'owner_id': ownerId,    // Needed for response
+               'userA_birth': ownerBirth.toIso8601String(),
+               'userB_birth': contactBirth.toIso8601String(),
              }
            );
         }
@@ -802,7 +802,6 @@ class SupabaseService {
       debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
     }
   }
-
   /// Responde a um convite de tarefa (Aceitar/Recusar)
   Future<void> respondToInvitation({
     required String taskId,
@@ -825,6 +824,36 @@ class SupabaseService {
             'responder_name': responderName,
           }
         );
+        
+        // 2. CRITICAL: Criar uma cópia da tarefa para o usuário que aceitou
+        // Buscar dados da tarefa original
+        final taskResponse = await _supabase.schema('sincroapp').from('tasks')
+            .select()
+            .eq('id', taskId)
+            .single();
+        
+        // Criar nova tarefa para o usuário que aceitou (cópia com suas configurações)
+        final String newTaskId = Uuid().v4();
+        await _supabase.schema('sincroapp').from('tasks').insert({
+          'id': newTaskId,
+          'user_id': responderUid, // Nova tarefa pertence ao usuário que aceitou
+          'text': taskResponse['text'],
+          'due_date': taskResponse['due_date'],
+          'due_date_utc': taskResponse['due_date_utc'],
+          'reminder_time': taskResponse['reminder_time'],
+          'recurrence_type': taskResponse['recurrence_type'],
+          'recurrence_days_of_week': taskResponse['recurrence_days_of_week'],
+          'recurrence_end_date': taskResponse['recurrence_end_date'],
+          'tags': taskResponse['tags'] ?? [],
+          'shared_with': [], // Não compartilhar a cópia
+          'journey_id': taskResponse['journey_id'],
+          'original_task_id': taskId, // Referência à tarefa original para tracking
+          'shared_from_user_id': ownerId, // Quem compartilhou
+          'created_at': DateTime.now().toUtc().toIso8601String(),
+        });
+        
+        debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid');
+        
       } else {
         await sendNotification(
           toUserId: ownerId,
@@ -837,21 +866,19 @@ class SupabaseService {
             'responder_name': responderName,
           }
         );
-      }
+        
+        // Se recusou, remover da lista shared_with
+        final taskResponse = await _supabase.schema('sincroapp').from('tasks').select('shared_with, text').eq('id', taskId).single();
+        final List<dynamic> currentShared = taskResponse['shared_with'] ?? [];
+        
+        // Tentamos remover pelo username 
+        final userResponse = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', responderUid).single();
+        final String username = userResponse['username'];
 
-      // 2. Se recusou, remover da lista shared_with
-      if (!accepted) {
-         final taskResponse = await _supabase.schema('sincroapp').from('tasks').select('shared_with, text').eq('id', taskId).single();
-         final List<dynamic> currentShared = taskResponse['shared_with'] ?? [];
-         
-         // Tentamos remover pelo username 
-         final userResponse = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', responderUid).single();
-         final String username = userResponse['username'];
-
-         if (currentShared.contains(username)) {
-           final newShared = List<String>.from(currentShared)..remove(username);
-           await _supabase.schema('sincroapp').from('tasks').update({'shared_with': newShared}).eq('id', taskId);
-         }
+        if (currentShared.contains(username)) {
+          final newShared = List<String>.from(currentShared)..remove(username);
+          await _supabase.schema('sincroapp').from('tasks').update({'shared_with': newShared}).eq('id', taskId);
+        }
       }
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');

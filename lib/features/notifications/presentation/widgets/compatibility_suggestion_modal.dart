@@ -145,8 +145,8 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
             children: [
               const TextSpan(text: 'De '),
               TextSpan(
-                text: widget.userAName, 
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)
+                text: '@${widget.userAName}', 
+                style: const TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)
               ),
               const TextSpan(text: '\nVocê deseja aceitar?'),
             ],
@@ -165,9 +165,9 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
                     foregroundColor: Colors.redAccent,
                     side: const BorderSide(color: Colors.redAccent),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
                   ),
-                  child: const Text('Não'),
+                  child: const Text('Recusar', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -175,12 +175,12 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
                 child: ElevatedButton(
                   onPressed: () => _respondToInvitation(true), // "Sim"
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
                   ),
-                  child: const Text('Sim'),
+                  child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -225,7 +225,7 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
               Text(
                 DateFormat('dd/MM/yyyy (EEEE)', 'pt_BR').format(widget.targetDate).toUpperCase(),
                 style: const TextStyle(
-                  color: AppColors.secondaryText,
+                  color: Colors.amber,
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),

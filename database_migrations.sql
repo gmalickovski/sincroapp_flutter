@@ -438,5 +438,44 @@ ALTER TABLE sincroapp.users DROP COLUMN IF EXISTS username CASCADE;
 
 
 -- ============================================
+-- SPRINT 4: TASK SHARING - ACCEPTANCE FLOW
+-- Data: 07/01/2026
+-- ============================================
+
+-- --------------------------------------------
+-- 7. Adicionar colunas para rastreamento de tarefas compartilhadas
+-- --------------------------------------------
+-- Quando um usuário aceita um convite de tarefa, uma cópia é criada para ele.
+-- Estas colunas permitem rastrear a origem da tarefa.
+
+-- Coluna: original_task_id 
+-- Referência à tarefa original (do dono que compartilhou)
+ALTER TABLE sincroapp.tasks 
+ADD COLUMN IF NOT EXISTS original_task_id UUID;
+
+-- Coluna: shared_from_user_id
+-- ID do usuário que compartilhou a tarefa
+ALTER TABLE sincroapp.tasks 
+ADD COLUMN IF NOT EXISTS shared_from_user_id UUID REFERENCES sincroapp.users(uid);
+
+-- Índice para buscar tarefas aceitas a partir de compartilhamentos
+CREATE INDEX IF NOT EXISTS idx_tasks_original_task 
+ON sincroapp.tasks(original_task_id) 
+WHERE original_task_id IS NOT NULL;
+
+-- Índice para buscar tarefas compartilhadas por um usuário
+CREATE INDEX IF NOT EXISTS idx_tasks_shared_from 
+ON sincroapp.tasks(shared_from_user_id) 
+WHERE shared_from_user_id IS NOT NULL;
+
+-- Comentários descritivos
+COMMENT ON COLUMN sincroapp.tasks.original_task_id IS 
+'UUID da tarefa original quando esta é uma cópia aceita de compartilhamento';
+
+COMMENT ON COLUMN sincroapp.tasks.shared_from_user_id IS 
+'UUID do usuário que compartilhou a tarefa original';
+
+
+-- ============================================
 -- FIM DA MIGRAÇÃO
 -- ============================================

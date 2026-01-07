@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
+import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart'; // Para Personal Day
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class NotificationDetailModal extends StatefulWidget {
@@ -23,37 +24,49 @@ class NotificationDetailModal extends StatefulWidget {
 class _NotificationDetailModalState extends State<NotificationDetailModal> {
   final SupabaseService _supabaseService = SupabaseService();
   bool _isLoading = false;
+  int? _personalDayNumber;
   String? _personalDayText;
+  String? _senderUsername;
+  String? _taskText;
+  DateTime? _targetDate;
   
   @override
   void initState() {
     super.initState();
+    _parseNotificationData();
     if (widget.notification.type == NotificationType.taskInvite) {
       _loadPersonalDayContext();
     }
   }
 
-  Future<void> _loadPersonalDayContext() async {
+  void _parseNotificationData() {
     final meta = widget.notification.metadata;
+    _senderUsername = meta['sender_username'] as String?;
+    _taskText = meta['task_text'] as String?;
     final dateStr = meta['target_date'] as String?;
-    if (dateStr == null) return;
+    if (dateStr != null) {
+      _targetDate = DateTime.tryParse(dateStr);
+    }
+  }
+
+  Future<void> _loadPersonalDayContext() async {
+    if (_targetDate == null) return;
     
-    final date = DateTime.parse(dateStr);
-    
-    // Calcular dia pessoal (Simulado ou Real se tiver user data)
-    // Precisaria da data de nasc do usuario LOGADO
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
       final userData = await _supabaseService.getUserData(user.id);
       if (userData != null && userData.dataNasc.isNotEmpty) {
          try {
-           final personalDayNum = NumerologyEngine.calculatePersonalDay(date, userData.dataNasc);
+           final personalDayNum = NumerologyEngine.calculatePersonalDay(_targetDate!, userData.dataNasc);
            
-           // TODO: Pegar texto do dia pessoal. Como não temos fácil acesso ao texto completo aqui,
-           // vamos usar uma descrição genérica ou chamar um método se existir.
-           // Se não tiver o texto, mostramos apenas o número.
+           // Use the short text from ContentData
+           final vibrationContent = ContentData.vibracoes['diaPessoal']?[personalDayNum];
+           
            setState(() {
-             _personalDayText = "Dia Pessoal $personalDayNum: Momento para focar nas energias deste número.";
+             _personalDayNumber = personalDayNum;
+             _personalDayText = vibrationContent?.descricaoCurta ?? 
+                 ContentData.textosDiasFavoraveis[personalDayNum] ??
+                 "Energia numerológica do dia.";
            });
          } catch (e) {
            debugPrint("Erro calc dia pessoal: $e");
@@ -79,7 +92,6 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       } else if (type == NotificationType.taskInvite) {
         final taskId = meta['task_id'];
         final ownerId = meta['owner_id'];
-        // Assumindo que current user é quem responde
         final userData = await _supabaseService.getUserData(currentUid);
         
         await _supabaseService.respondToInvitation(
@@ -91,8 +103,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         );
       }
       
-      // Update notification status locally? or assume stream updates parent list
-      await _supabaseService.markNotificationAsRead(widget.notification.id); // Mark read on action taken
+      await _supabaseService.markNotificationAsRead(widget.notification.id);
       
       if (mounted) Navigator.pop(context);
     } catch (e) {
@@ -117,27 +128,29 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
           _buildIcon(),
           const SizedBox(height: 16),
           
-          // Title
-          Text(
-            widget.notification.title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
+          // Title with calendar icon
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.event, color: Colors.amber, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Convite de Agendamento',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           
-          // Body
-          Text(
-            widget.notification.body,
-            style: const TextStyle(color: AppColors.secondaryText),
-            textAlign: TextAlign.center,
-          ),
+          // Body - formatted with colored username and date
+          _buildFormattedBody(),
           const SizedBox(height: 24),
           
-          // Contextual Content
+          // Personal Day Card
           if (widget.notification.type == NotificationType.taskInvite && _personalDayText != null)
             _buildPersonalDayCard(),
             
@@ -152,13 +165,63 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.cardBackground,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: AppColors.border)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30), side: const BorderSide(color: AppColors.border)),
                 minimumSize: const Size(double.infinity, 50),
               ),
               child: const Text('Fechar', style: TextStyle(color: Colors.white)),
             ),
         ],
       ),
+    );
+  }
+  
+  Widget _buildFormattedBody() {
+    // Build rich text with colored elements
+    final username = _senderUsername ?? 'Alguém';
+    final taskText = _taskText ?? widget.notification.body;
+    final dateFormatted = _targetDate != null 
+        ? DateFormat('dd/MM').format(_targetDate!) 
+        : '';
+    
+    return Column(
+      children: [
+        // Line 1: @username te convidou para participar
+        RichText(
+          textAlign: TextAlign.center,
+          text: TextSpan(
+            style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+            children: [
+              TextSpan(
+                text: '@$username',
+                style: const TextStyle(
+                  color: Colors.lightBlueAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const TextSpan(text: ' te convidou para: '),
+              if (dateFormatted.isNotEmpty) ...[
+                const TextSpan(text: '"'),
+                TextSpan(
+                  text: taskText,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const TextSpan(text: '" em '),
+                TextSpan(
+                  text: dateFormatted,
+                  style: const TextStyle(
+                    color: Colors.amber,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const TextSpan(text: '.'),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
   
@@ -172,8 +235,8 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         color = AppColors.primary;
         break;
       case NotificationType.taskInvite:
-        iconData = Icons.event;
-        color = Colors.orange;
+        iconData = Icons.calendar_today;
+        color = Colors.amber;
         break;
       case NotificationType.taskUpdate:
         iconData = Icons.update;
@@ -193,6 +256,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         shape: BoxShape.circle,
+        border: Border.all(color: color.withOpacity(0.3), width: 2),
       ),
       child: Icon(iconData, color: color, size: 32),
     );
@@ -200,29 +264,55 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
   
   Widget _buildPersonalDayCard() {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(Icons.wb_sunny, size: 16, color: Colors.orange),
+              const Icon(Icons.wb_sunny, size: 18, color: Colors.amber),
               const SizedBox(width: 8),
-              Text(
+              const Text(
                 'Seu dia nesta data',
-                style: TextStyle(color: Colors.white.withOpacity(0.9), fontWeight: FontWeight.bold),
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            _personalDayText ?? '',
-            style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
-             textAlign: TextAlign.center,
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Personal day number badge
+              if (_personalDayNumber != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.amber.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    'Dia $_personalDayNumber',
+                    style: const TextStyle(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _personalDayText ?? '',
+                  style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -237,10 +327,10 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
             onPressed: _isLoading ? null : () => _handleAction(false),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: Colors.redAccent),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
               minimumSize: const Size(0, 50),
             ),
-            child: const Text('Recusar', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Recusar', style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
           ),
         ),
         const SizedBox(width: 16),
@@ -249,12 +339,12 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
             onPressed: _isLoading ? null : () => _handleAction(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
               minimumSize: const Size(0, 50),
             ),
             child: _isLoading 
                 ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Aceitar', style: TextStyle(color: Colors.white)),
+                : const Text('Aceitar', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
           ),
         ),
       ],

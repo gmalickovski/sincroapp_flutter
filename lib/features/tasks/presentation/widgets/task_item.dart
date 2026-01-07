@@ -63,6 +63,52 @@ class TaskItem extends StatelessWidget {
     return !today.isAtSameMomentAs(targetDate);
   }
 
+  /// Helper para criar TextSpan com destaque de @menções em azul
+  TextSpan _buildMentionHighlightedText(
+    String text, {
+    required TextStyle baseStyle,
+    required TextStyle mentionStyle,
+  }) {
+    // Regex para encontrar @username (letras, números, underscores, pontos)
+    final mentionRegex = RegExp(r'@[\w.]+');
+    final matches = mentionRegex.allMatches(text);
+    
+    if (matches.isEmpty) {
+      return TextSpan(text: text, style: baseStyle);
+    }
+    
+    final spans = <TextSpan>[];
+    int lastEnd = 0;
+    
+    for (final match in matches) {
+      // Texto antes da menção
+      if (match.start > lastEnd) {
+        spans.add(TextSpan(
+          text: text.substring(lastEnd, match.start),
+          style: baseStyle,
+        ));
+      }
+      
+      // A menção destacada em azul
+      spans.add(TextSpan(
+        text: match.group(0),
+        style: mentionStyle,
+      ));
+      
+      lastEnd = match.end;
+    }
+    
+    // Texto após a última menção
+    if (lastEnd < text.length) {
+      spans.add(TextSpan(
+        text: text.substring(lastEnd),
+        style: baseStyle,
+      ));
+    }
+    
+    return TextSpan(children: spans);
+  }
+
   // --- INÍCIO DA MUDANÇA: (Solicitação 1) Checkbox de Conclusão (Original) ---
   /// O checkbox de conclusão original (círculo customizado)
   Widget _buildCompletionCheckbox(double verticalAlignmentPadding) {
@@ -207,23 +253,34 @@ class TaskItem extends StatelessWidget {
                 _buildCompletionCheckbox(verticalAlignmentPadding),
               // --- FIM DA MUDANÇA ---
 
-              // 2. Texto Principal
+              // 2. Texto Principal com destaque de menções
               Expanded(
-                child: Text(
-                  task.text,
+                child: RichText(
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: task.completed
-                        ? AppColors.tertiaryText
-                        : AppColors.secondaryText,
-                    decoration: task.completed
-                        ? TextDecoration.lineThrough
-                        : TextDecoration.none,
-                    fontSize: mainFontSize,
-                    height: 1.45, // Line-height padrão de leitura confortável
-                    letterSpacing:
-                        0.15, // Espaçamento de letra para melhor legibilidade
+                  text: _buildMentionHighlightedText(
+                    task.text,
+                    baseStyle: TextStyle(
+                      color: task.completed
+                          ? AppColors.tertiaryText
+                          : AppColors.secondaryText,
+                      decoration: task.completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      fontSize: mainFontSize,
+                      height: 1.45,
+                      letterSpacing: 0.15,
+                    ),
+                    mentionStyle: TextStyle(
+                      color: Colors.lightBlueAccent,
+                      fontWeight: FontWeight.bold,
+                      decoration: task.completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      fontSize: mainFontSize,
+                      height: 1.45,
+                      letterSpacing: 0.15,
+                    ),
                   ),
                 ),
               ),
