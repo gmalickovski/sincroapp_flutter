@@ -405,8 +405,8 @@ class SupabaseService {
     required bool accept,
   }) async {
     try {
-      // Tenta chamar a função RPC (sem prefixo de schema, usando nome qualificado)
-      await _supabase.rpc('sincroapp.respond_to_contact_request', params: {
+      // Chama função RPC no schema public
+      await _supabase.rpc('respond_to_contact_request', params: {
         'p_responder_uid': uid,
         'p_requester_uid': contactUid,
         'p_accept': accept,
