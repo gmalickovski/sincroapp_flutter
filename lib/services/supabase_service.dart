@@ -852,7 +852,6 @@ class SupabaseService {
           'user_id': responderUid, // Nova tarefa pertence ao usuário que aceitou
           'text': taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada',
           'due_date': taskResponse?['due_date'] ?? targetDate,
-          'due_date_utc': taskResponse?['due_date_utc'] ?? targetDate,
           'tags': taskResponse?['tags'] ?? [],
           'shared_with': [],
           'created_at': DateTime.now().toUtc().toIso8601String(),

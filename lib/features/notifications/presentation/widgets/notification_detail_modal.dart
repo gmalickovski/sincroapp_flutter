@@ -293,6 +293,11 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
     // Formato: ☀️ Dia Pessoal X: Título
     final headerText = 'Dia Pessoal ${_personalDayNumber ?? ''}: ${_personalDayTitle ?? ''}';
     
+    // Cor dinâmica baseada no número do dia pessoal
+    final vibrationColor = _personalDayNumber != null 
+        ? getColorsForVibration(_personalDayNumber!).background
+        : const Color(0xFF7ED321); // Verde como fallback
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -303,17 +308,17 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: ☀️ Dia Pessoal X: Título (em verde)
+          // Header: ☀️ Dia Pessoal X: Título (cor da vibração)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.wb_sunny, size: 20, color: Colors.amber),
+              Icon(Icons.wb_sunny, size: 20, color: vibrationColor),
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
                   headerText,
-                  style: const TextStyle(
-                    color: Color(0xFF7ED321), // Verde como na imagem
+                  style: TextStyle(
+                    color: vibrationColor, // Cor dinâmica do dia pessoal
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
