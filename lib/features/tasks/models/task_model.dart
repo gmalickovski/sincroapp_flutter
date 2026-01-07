@@ -15,6 +15,7 @@ class TaskModel {
   final int? personalDay;
 
   final RecurrenceType recurrenceType; // Tipo de recorrência
+  final int recurrenceInterval; // Intervalo da recorrência (novo)
   final List<int> recurrenceDaysOfWeek; // Dias da semana (1-7)
   final DateTime? recurrenceEndDate; // Data final da recorrência
   final TimeOfDay? reminderTime; // Horário do lembrete (hora/minuto)
@@ -41,6 +42,7 @@ class TaskModel {
     this.journeyTitle,
     this.personalDay,
     this.recurrenceType = RecurrenceType.none,
+    this.recurrenceInterval = 1, // Default 1
     this.recurrenceDaysOfWeek = const [],
     this.recurrenceEndDate,
     this.reminderTime,
@@ -65,6 +67,7 @@ class TaskModel {
     Object? journeyTitle = const _Undefined(),
     Object? personalDay = const _Undefined(),
     RecurrenceType? recurrenceType,
+    int? recurrenceInterval,
     List<int>? recurrenceDaysOfWeek,
     Object? recurrenceEndDate = const _Undefined(),
     Object? reminderTime = const _Undefined(),
@@ -91,6 +94,7 @@ class TaskModel {
       personalDay:
           personalDay is _Undefined ? this.personalDay : personalDay as int?,
       recurrenceType: recurrenceType ?? this.recurrenceType,
+      recurrenceInterval: recurrenceInterval ?? this.recurrenceInterval,
       recurrenceDaysOfWeek: recurrenceDaysOfWeek ?? this.recurrenceDaysOfWeek,
       recurrenceEndDate: recurrenceEndDate is _Undefined
           ? this.recurrenceEndDate
@@ -121,6 +125,11 @@ class TaskModel {
         (e) => e.toString() == data['recurrenceType'],
         orElse: () => RecurrenceType.none,
       );
+    }
+    
+    int recInterval = 1;
+    if (data['recurrenceInterval'] != null) {
+      recInterval = data['recurrenceInterval'] is int ? data['recurrenceInterval'] : 1;
     }
 
     List<int> recDays = [];
@@ -165,6 +174,7 @@ class TaskModel {
       journeyTitle: data['journeyTitle'],
       personalDay: data['personalDay'],
       recurrenceType: recType,
+      recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
       recurrenceEndDate: (data['recurrenceEndDate'] as Timestamp?)?.toDate(),
       reminderTime: reminder,
@@ -199,6 +209,7 @@ class TaskModel {
       'journeyTitle': journeyTitle,
       'personalDay': personalDay,
       'recurrenceType': recurrenceTypeString,
+      'recurrenceInterval': recurrenceInterval,
       'recurrenceDaysOfWeek': recurrenceDaysOfWeek,
       'recurrenceEndDate': recurrenceEndDate != null
           ? Timestamp.fromDate(recurrenceEndDate!)

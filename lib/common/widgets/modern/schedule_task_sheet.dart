@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
@@ -16,7 +16,7 @@ class ScheduleTaskSheet extends StatefulWidget {
   final DateTime? initialDate;
   final TimeOfDay? initialTime;
   final RecurrenceRule? initialRecurrence;
-  final Duration? initialReminderOffset; // Novo parâmetro
+  final Duration? initialReminderOffset; // Novo par├ómetro
   final UserModel userData;
 
   const ScheduleTaskSheet({
@@ -161,7 +161,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
        _selectedDay.day,
      );
      
-     // Combina com a hora se não for dia inteiro
+     // Combina com a hora se n├úo for dia inteiro
      if (!_isAllDay && _selectedTime != null) {
        finalDateTime = DateTime(
          _selectedDay.year,
@@ -273,7 +273,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                    
                    const Divider(color: AppColors.border, height: 1),
                    
-                   // 3. Time Row (Horário)
+                   // 3. Time Row (Hor├írio)
                    _buildTimeRow(),
                     
 
@@ -321,9 +321,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   child: Text(
                     _isAllDay ? "Dia inteiro" : (_selectedTime?.format(context) ?? "Definir"),
                     style: TextStyle(
-                      color: _isAllDay ? AppColors.secondaryText : AppColors.primary, 
-                      fontWeight: FontWeight.normal,
-                      fontSize: 14, // Padronizado com "Nunca" (14px)
+                      color: _isAllDay ? AppColors.secondaryText : AppColors.primary,
+                      fontSize: 14, // Reduced from 16 to match "Nunca"
+                      fontWeight: _isAllDay ? FontWeight.normal : FontWeight.w600, // Non-bold for "Dia inteiro"
                     ),
                   ),
                 ),
@@ -551,7 +551,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                        _buildReminderChip("1 dia antes", const Duration(days: 1)),
                        const SizedBox(width: 8),
                        ActionChip(
-                         label: const Text("Definir horário"),
+                         label: const Text("Definir hor├írio"),
                          onPressed: _pickReminderTime,
                          backgroundColor: AppColors.background,
                          labelStyle: const TextStyle(color: AppColors.primary),

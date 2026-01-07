@@ -1,4 +1,4 @@
-// lib/common/widgets/custom_date_picker_modal.dart
+﻿// lib/common/widgets/custom_date_picker_modal.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -11,7 +11,8 @@ import 'package:table_calendar/table_calendar.dart';
 
 import 'custom_time_picker_modal.dart';
 import 'custom_month_year_picker.dart';
-import 'custom_recurrence_picker_modal.dart'; // Import necessário
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
+import 'package:sincro_app_flutter/models/date_picker_result.dart';
 
 // Classe interna para dados da lista de datas
 class _DateWithVibration {
@@ -20,17 +21,12 @@ class _DateWithVibration {
   _DateWithVibration(this.date, this.personalDay);
 }
 
-// Classe de retorno do modal, incluindo data/hora e regra de recorrência
-class DatePickerResult {
-  final DateTime dateTime;
-  final RecurrenceRule recurrenceRule;
-  DatePickerResult(this.dateTime, this.recurrenceRule);
-}
+
 
 class CustomDatePickerModal extends StatefulWidget {
   final DateTime initialDate; // Data inicial para focar/selecionar
-  final RecurrenceRule? initialRecurrenceRule; // Regra de recorrência atual
-  final UserModel userData; // Dados do usuário para cálculo de numerologia
+  final RecurrenceRule? initialRecurrenceRule; // Regra de recorr├¬ncia atual
+  final UserModel userData; // Dados do usu├írio para c├ílculo de numerologia
 
   const CustomDatePickerModal({
     super.key,
@@ -46,19 +42,20 @@ class CustomDatePickerModal extends StatefulWidget {
 class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
   // --- Estados do Widget ---
   bool _isExpanded =
-      false; // Controla se a visão compacta ou expandida é mostrada
-  late DateTime _selectedDate; // Data selecionada (dia/mês/ano)
+      false; // Controla se a vis├úo compacta ou expandida ├® mostrada
+  late DateTime _selectedDate; // Data selecionada (dia/m├¬s/ano)
   late DateTime
-      _calendarFocusedDay; // Mês/Ano atualmente focado nos calendários
+      _calendarFocusedDay; // M├¬s/Ano atualmente focado nos calend├írios
   TimeOfDay? _selectedTime; // Hora selecionada (opcional)
   late NumerologyEngine _engine; // Motor para calcular dia pessoal
   final List<_DateWithVibration> _dateList =
       []; // Lista para o scroller horizontal
   final ScrollController _scrollController =
       ScrollController(); // Controlador do scroller
-  final double _datePillWidth = 68.0; // Largura fixa das pílulas de data
-  late DateTime _todayMidnight; // Data de hoje à meia-noite para comparações
-  late RecurrenceRule _recurrenceRule; // Regra de recorrência selecionada
+  final double _datePillWidth = 68.0; // Largura fixa das p├¡lulas de data
+  late DateTime _todayMidnight; // Data de hoje ├á meia-noite para compara├º├Áes
+  late RecurrenceRule _recurrenceRule; // Regra de recorr├¬ncia selecionada
+  Duration? _selectedReminderOffset; // Offset do lembrete (ex: 10 min antes)
 
   @override
   void initState() {
@@ -79,13 +76,13 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     if (widget.initialDate.hour != 0 || widget.initialDate.minute != 0) {
       _selectedTime = TimeOfDay.fromDateTime(widget.initialDate);
     } else {
-      _selectedTime = null; // Mantém nulo se não houver hora específica
+      _selectedTime = null; // Mant├®m nulo se n├úo houver hora espec├¡fica
     }
 
-    // Foca o calendário no mês da data selecionada
+    // Foca o calend├írio no m├¬s da data selecionada
     _calendarFocusedDay = DateTime(_selectedDate.year, _selectedDate.month, 1);
 
-    // Inicializa a regra de recorrência
+    // Inicializa a regra de recorr├¬ncia
     _recurrenceRule = widget.initialRecurrenceRule ?? RecurrenceRule();
 
     // Configura motor de numerologia
@@ -96,7 +93,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         dataNascimento: widget.userData.dataNasc,
       );
     } else {
-      // Fallback se dados do usuário não estiverem completos
+      // Fallback se dados do usu├írio n├úo estiverem completos
       _engine = NumerologyEngine(
         nomeCompleto: "Sincro App",
         dataNascimento: "01/01/2000",
@@ -106,17 +103,17 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     // Gera a lista de datas para o scroller (sem atualizar a UI ainda)
     _regenerateDateListForCurrentMonth(doSetState: false);
 
-    // --- ALTERAÇÃO (TASK 2): Lógica de scroll inicial modificada ---
-    // Agenda o scroll inicial para "Hoje" (se visível) após o primeiro frame
+    // --- ALTERA├ç├âO (TASK 2): L├│gica de scroll inicial modificada ---
+    // Agenda o scroll inicial para "Hoje" (se vis├¡vel) ap├│s o primeiro frame
     SchedulerBinding.instance.addPostFrameCallback((_) {
       if (mounted && _scrollController.hasClients) {
-        // Prioriza rolar para "Hoje" se estiver no mês focado
+        // Prioriza rolar para "Hoje" se estiver no m├¬s focado
         if (_isSameMonth(_todayMidnight, _calendarFocusedDay)) {
           final todayIndex =
               (_todayMidnight.day - 1).clamp(0, _dateList.length - 1);
           _scrollToIndexInCurrentMonth(todayIndex, animated: false);
         }
-        // Se "Hoje" não estiver no mês, rola para a data selecionada (ex: editando tarefa futura)
+        // Se "Hoje" n├úo estiver no m├¬s, rola para a data selecionada (ex: editando tarefa futura)
         else if (_isSameMonth(_selectedDate, _calendarFocusedDay)) {
           final selectedIndex =
               (_selectedDate.day - 1).clamp(0, _dateList.length - 1);
@@ -124,10 +121,10 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         }
       }
     });
-    // --- FIM DA ALTERAÇÃO ---
+    // --- FIM DA ALTERA├ç├âO ---
   }
 
-  // --- Funções Helper ---
+  // --- Fun├º├Áes Helper ---
 
   /// Capitaliza a primeira letra de uma string.
   String _capitalize(String s) {
@@ -135,7 +132,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  /// Regenera a lista `_dateList` para o mês atual em `_calendarFocusedDay`.
+  /// Regenera a lista `_dateList` para o m├¬s atual em `_calendarFocusedDay`.
   void _regenerateDateListForCurrentMonth({bool doSetState = true}) {
     _dateList.clear();
     final int year = _calendarFocusedDay.year;
@@ -148,7 +145,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       _dateList.add(_DateWithVibration(date, personalDay));
     }
 
-    // Reseta o scroll para o início ao mudar de mês (se o controller estiver pronto)
+    // Reseta o scroll para o in├¡cio ao mudar de m├¬s (se o controller estiver pronto)
     if (_scrollController.hasClients) {
       _scrollController.jumpTo(0);
     }
@@ -165,15 +162,15 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     super.dispose();
   }
 
-  /// Alterna entre a visão compacta e expandida do calendário.
+  /// Alterna entre a vis├úo compacta e expandida do calend├írio.
   void _toggleExpand() {
     setState(() {
       _isExpanded = !_isExpanded;
     });
   }
 
-  /// Atualiza `_selectedDate` quando um dia é selecionado.
-  /// Impede a seleção de dias anteriores a hoje.
+  /// Atualiza `_selectedDate` quando um dia ├® selecionado.
+  /// Impede a sele├º├úo de dias anteriores a hoje.
   void _handleDateSelection(DateTime date) {
     // Permite selecionar 'hoje'
     if (date.isBefore(_todayMidnight) && !_isSameDay(date, _todayMidnight)) {
@@ -186,7 +183,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
 
   /// Combina a data e hora selecionadas, cria o `DatePickerResult` e fecha o modal.
   void _confirmSelection() {
-    DateTime finalDateTime = _selectedDate; // Começa só com a data
+    DateTime finalDateTime = _selectedDate; // Come├ºa s├│ com a data
     // Adiciona a hora se ela foi selecionada
     if (_selectedTime != null) {
       finalDateTime = DateTime(
@@ -197,19 +194,38 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         _selectedTime!.minute,
       );
     }
-    // Cria o objeto de resultado com data/hora e regra de recorrência
-    final result = DatePickerResult(finalDateTime, _recurrenceRule);
+    // Calcula o hor├írio do lembrete se houver offset e hora selecionada
+    TimeOfDay? finalReminderTime;
+    if (_selectedTime != null && _selectedReminderOffset != null) {
+      final dateTimeWithTime = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+        _selectedTime!.hour,
+        _selectedTime!.minute,
+      );
+      final reminderDateTime = dateTimeWithTime.subtract(_selectedReminderOffset!);
+      finalReminderTime = TimeOfDay.fromDateTime(reminderDateTime);
+    }
+
+    // Cria o objeto de resultado com data/hora, regra de recorr├¬ncia, lembrete e flag de tempo
+    final result = DatePickerResult(
+      finalDateTime,
+      _recurrenceRule,
+      reminderTime: finalReminderTime,
+      hasTime: _selectedTime != null,
+    );
     Navigator.of(context).pop(result); // Fecha o modal retornando o resultado
   }
 
-  /// Abre o modal customizado para seleção de horário.
+  /// Abre o modal customizado para sele├º├úo de hor├írio.
   Future<void> _showCustomTimePicker(BuildContext context) async {
     final TimeOfDay? picked = await showModalBottomSheet<TimeOfDay>(
       context: context,
       backgroundColor:
-          Colors.transparent, // O modal filho tem seu próprio fundo
+          Colors.transparent, // O modal filho tem seu pr├│prio fundo
       isScrollControlled:
-          true, // Permite que o modal cresça conforme necessário
+          true, // Permite que o modal cres├ºa conforme necess├írio
       builder: (BuildContext builderContext) {
         return CustomTimePickerModal(
           // Passa a hora atual selecionada ou a hora atual como inicial
@@ -230,34 +246,34 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  /// Verifica se dois `DateTime` estão no mesmo mês e ano.
+  /// Verifica se dois `DateTime` est├úo no mesmo m├¬s e ano.
   bool _isSameMonth(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month;
   }
 
-  /// Abre o modal customizado para seleção de mês e ano.
+  /// Abre o modal customizado para sele├º├úo de m├¬s e ano.
   Future<void> _showCustomMonthYearPicker(BuildContext context) async {
-    HapticFeedback.lightImpact(); // Feedback tátil
+    HapticFeedback.lightImpact(); // Feedback t├ítil
     final DateTime? picked = await showModalBottomSheet<DateTime>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (BuildContext builderContext) {
         return CustomMonthYearPicker(
-          initialDate: _calendarFocusedDay, // Mês/ano focado atualmente
+          initialDate: _calendarFocusedDay, // M├¬s/ano focado atualmente
           firstDate: DateTime(2020), // Limite inferior
           lastDate: DateTime(2101), // Limite superior
         );
       },
     );
-    // Atualiza o mês focado e regenera a lista de dias se um mês/ano foi selecionado
+    // Atualiza o m├¬s focado e regenera a lista de dias se um m├¬s/ano foi selecionado
     if (picked != null) {
       setState(() {
         _calendarFocusedDay = DateTime(picked.year, picked.month, 1);
         _regenerateDateListForCurrentMonth();
       });
 
-      // --- ALTERAÇÃO (TASK 2): Rola para "Hoje" se o usuário navegar para o mês atual ---
+      // --- ALTERA├ç├âO (TASK 2): Rola para "Hoje" se o usu├írio navegar para o m├¬s atual ---
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (mounted &&
             _scrollController.hasClients &&
@@ -267,35 +283,17 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
           _scrollToIndexInCurrentMonth(todayIndex, animated: true);
         }
       });
-      // --- FIM DA ALTERAÇÃO ---
+      // --- FIM DA ALTERA├ç├âO ---
     }
   }
 
-  /// Abre o modal customizado para seleção da regra de recorrência.
+  // Recurrence Picker removed as CustomRecurrencePickerModal was deleted. 
+  // Use ScheduleTaskSheet for recurrence.
+  /*
   Future<void> _showRecurrencePicker() async {
-    // Garante que a data passada não tenha hora/minuto
-    final startDate =
-        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
-
-    final RecurrenceRule? newRule = await showModalBottomSheet<RecurrenceRule>(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext builderContext) {
-        return CustomRecurrencePickerModal(
-          initialRule: _recurrenceRule, // Passa a regra atual
-          userData: widget.userData, // Necessário para o seletor de data final
-          startDate: startDate, // Passa a data de início da tarefa
-        );
-      },
-    );
-    // Atualiza o estado se uma nova regra foi selecionada
-    if (newRule != null) {
-      setState(() {
-        _recurrenceRule = newRule;
-      });
-    }
-  }
+    // ...
+  } 
+  */
 
   /// Rola a lista de dias horizontalmente.
   void _scrollDays(int direction) {
@@ -314,17 +312,17 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       curve: Curves.easeOut,
     );
   }
-  // --- FIM DA ALTERAÇÃO ---
+  // --- FIM DA ALTERA├ç├âO ---
 
   /// Faz o scroll horizontal na lista de dias (`_dateList`) para centralizar o `index` fornecido.
   void _scrollToIndexInCurrentMonth(int index, {bool animated = true}) {
-    // Verifica se o widget está montado, o controller está pronto e o índice é válido
+    // Verifica se o widget est├í montado, o controller est├í pronto e o ├¡ndice ├® v├ílido
     if (mounted &&
         _scrollController.hasClients &&
         index >= 0 &&
         index < _dateList.length) {
       final screenWidth = MediaQuery.of(context).size.width;
-      // Calcula o offset necessário para centralizar o item
+      // Calcula o offset necess├írio para centralizar o item
       final scrollOffset =
           (index * _datePillWidth) - (screenWidth / 2) + (_datePillWidth / 2);
       final maxScroll = _scrollController.position.maxScrollExtent;
@@ -333,10 +331,10 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
           scrollOffset.clamp(0.0, maxScroll < 0 ? 0.0 : maxScroll);
 
       if (!animated) {
-        _scrollController.jumpTo(targetOffset); // Scroll instantâneo
+        _scrollController.jumpTo(targetOffset); // Scroll instant├óneo
       } else {
         _scrollController.animateTo(
-          // Scroll com animação
+          // Scroll com anima├º├úo
           targetOffset,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
@@ -344,7 +342,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       }
     }
   }
-  // --- Fim Funções Helper ---
+  // --- Fim Fun├º├Áes Helper ---
 
   @override
   Widget build(BuildContext context) {
@@ -353,7 +351,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
       child: Padding(
-        // Empurra o conteúdo para cima quando o teclado aparece
+        // Empurra o conte├║do para cima quando o teclado aparece
         padding:
             EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
         child: Container(
@@ -368,7 +366,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
             ),
           ),
           constraints: BoxConstraints(
-            // Limita a altura máxima
+            // Limita a altura m├íxima
             maxHeight: MediaQuery.of(context).size.height * 0.9,
           ),
           // Adiciona Material para garantir contexto aos widgets filhos
@@ -376,48 +374,49 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
             type: MaterialType.transparency,
             child: Column(
               // Layout principal em coluna
-              mainAxisSize: MainAxisSize.min, // Encolhe para o conteúdo
+              mainAxisSize: MainAxisSize.min, // Encolhe para o conte├║do
               children: [
-                // Conteúdo rolável (calendários, botões de hora/recorrência)
+                // Conte├║do rol├ível (calend├írios, bot├Áes de hora/recorr├¬ncia)
                 Flexible(
-                  // Permite que o conteúdo interno cresça até o limite
+                  // Permite que o conte├║do interno cres├ºa at├® o limite
                   child: SingleChildScrollView(
-                    // Permite rolagem se o conteúdo exceder
+                    // Permite rolagem se o conte├║do exceder
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildDragHandle(), // Alça para fechar/expandir
-                        // Anima a transição entre visão compacta e expandida
+                        _buildDragHandle(), // Al├ºa para fechar/expandir
+                        // Anima a transi├º├úo entre vis├úo compacta e expandida
                         AnimatedCrossFade(
                           duration: const Duration(milliseconds: 300),
                           crossFadeState: _isExpanded
                               ? CrossFadeState
-                                  .showSecond // Mostra calendário completo
+                                  .showSecond // Mostra calend├írio completo
                               : CrossFadeState
                                   .showFirst, // Mostra scroller horizontal
                           firstChild: _buildCompactView(),
                           secondChild: _buildExpandedView(),
                         ),
-                        // Divisor antes dos botões de hora/recorrência
+                        // Divisor antes dos bot├Áes de hora/recorr├¬ncia
                         const Divider(
                             color: AppColors.border,
                             height: 24,
                             indent: 16,
                             endIndent: 16),
                         _buildTimePickerButton(
-                            context), // Botão para adicionar/editar hora
-                        _buildRecurrenceSection(
-                            context), // Botão para adicionar/editar recorrência
-                        const SizedBox(height: 16), // Espaçamento inferior
+                            context), // Bot├úo para adicionar/editar hora
+                        _buildReminderSection(context), // Se├º├úo de Lembretes
+                        /* _buildRecurrenceSection(
+                            context), */ // Bot├úo para adicionar/editar recorr├¬ncia
+                        const SizedBox(height: 16), // Espa├ºamento inferior
                       ],
                     ),
                   ),
                 ),
-                // Rodapé fixo com botões de ação
+                // Rodap├® fixo com bot├Áes de a├º├úo
                 const Divider(color: AppColors.border, height: 1),
                 Padding(
-                  // Botões Cancelar/Selecionar
+                  // Bot├Áes Cancelar/Selecionar
                   padding: const EdgeInsets.symmetric(
                       horizontal: 16.0, vertical: 12.0),
                   child: Row(
@@ -447,7 +446,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
                             padding: const EdgeInsets.symmetric(vertical: 14),
                           ),
                           onPressed:
-                              _confirmSelection, // Chama a função que retorna o resultado
+                              _confirmSelection, // Chama a fun├º├úo que retorna o resultado
                           child: const Text(
                             "Selecionar",
                             style: TextStyle(
@@ -461,13 +460,13 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
                     ],
                   ),
                 ),
-                // Espaçamento extra na base para safe area (entalhes, etc.)
+                // Espa├ºamento extra na base para safe area (entalhes, etc.)
                 SizedBox(
                     height: MediaQuery.of(context).padding.bottom > 0
                         ? MediaQuery.of(context)
                             .padding
                             .bottom // Usa o padding da safe area
-                        : 16) // Ou um padding padrão
+                        : 16) // Ou um padding padr├úo
               ],
             ),
           ),
@@ -478,7 +477,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
 
   // --- Widgets Internos ---
 
-  /// Constrói a alça ("drag handle") no topo do modal.
+  /// Constr├│i a al├ºa ("drag handle") no topo do modal.
   Widget _buildDragHandle() {
     return GestureDetector(
       onTap: _toggleExpand, // Toca para expandir/recolher
@@ -508,7 +507,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói o título "Definir Data".
+  /// Constr├│i o t├¡tulo "Definir Data".
   Widget _buildTitle(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
@@ -520,22 +519,22 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói a visão compacta (título, header do mês, scroller de dias).
+  /// Constr├│i a vis├úo compacta (t├¡tulo, header do m├¬s, scroller de dias).
   Widget _buildCompactView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // _buildTitle(context), // Título movido para fora do AnimatedCrossFade
+        // _buildTitle(context), // T├¡tulo movido para fora do AnimatedCrossFade
         _buildCompactHeader(context),
-        _buildDateScroller(context), // <<< Contém Material wrapper
+        _buildDateScroller(context), // <<< Cont├®m Material wrapper
       ],
     );
   }
 
-  /// Constrói o header da visão compacta (Setas < Mês/Ano >).
+  /// Constr├│i o header da vis├úo compacta (Setas < M├¬s/Ano >).
   Widget _buildCompactHeader(BuildContext context) {
-    // Formata o mês e ano focados (ex: "Outubro de 2025")
+    // Formata o m├¬s e ano focados (ex: "Outubro de 2025")
     final titleText =
         _capitalize(DateFormat.yMMMM('pt_BR').format(_calendarFocusedDay));
     return Padding(
@@ -544,14 +543,14 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         mainAxisAlignment:
             MainAxisAlignment.spaceBetween, // Alinha itens nas pontas
         children: [
-          // --- ALTERAÇÃO (TASK 1): Função da seta esquerda alterada ---
+          // --- ALTERA├ç├âO (TASK 1): Fun├º├úo da seta esquerda alterada ---
           _buildCompactNavButton(
             Icons.chevron_left,
             () => _scrollDays(-1), // Rola dias para a esquerda
           ),
-          // --- FIM DA ALTERAÇÃO ---
+          // --- FIM DA ALTERA├ç├âO ---
 
-          // Texto Mês/Ano clicável para abrir o seletor
+          // Texto M├¬s/Ano clic├ível para abrir o seletor
           InkWell(
             onTap: () => _showCustomMonthYearPicker(context),
             borderRadius: BorderRadius.circular(4),
@@ -579,18 +578,18 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
               ),
             ),
           ),
-          // --- ALTERAÇÃO (TASK 1): Função da seta direita alterada ---
+          // --- ALTERA├ç├âO (TASK 1): Fun├º├úo da seta direita alterada ---
           _buildCompactNavButton(
             Icons.chevron_right,
             () => _scrollDays(1), // Rola dias para a direita
           ),
-          // --- FIM DA ALTERAÇÃO ---
+          // --- FIM DA ALTERA├ç├âO ---
         ],
       ),
     );
   }
 
-  /// Constrói os botões de navegação de mês (< >) para a visão compacta.
+  /// Constr├│i os bot├Áes de navega├º├úo de m├¬s (< >) para a vis├úo compacta.
   Widget _buildCompactNavButton(IconData icon, VoidCallback onPressed) {
     return IconButton(
       icon: Icon(icon, color: AppColors.primaryText),
@@ -602,7 +601,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói o `ListView` horizontal com os `_DatePill` para a visão compacta.
+  /// Constr├│i o `ListView` horizontal com os `_DatePill` para a vis├úo compacta.
   Widget _buildDateScroller(BuildContext context) {
     // Envolve com Material para garantir contexto aos filhos do ListView.builder
     return Material(
@@ -611,13 +610,13 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         // Define a altura fixa do scroller
         height: 100,
         child: ListView.builder(
-          controller: _scrollController, // Controlador para scroll programático
+          controller: _scrollController, // Controlador para scroll program├ítico
           scrollDirection: Axis.horizontal, // Scroll horizontal
           padding: const EdgeInsets.symmetric(
-              horizontal: 16.0), // Espaçamento nas laterais
-          itemCount: _dateList.length, // Número de dias no mês
+              horizontal: 16.0), // Espa├ºamento nas laterais
+          itemCount: _dateList.length, // N├║mero de dias no m├¬s
           itemBuilder: (context, index) {
-            // Proteção contra índices inválidos
+            // Prote├º├úo contra ├¡ndices inv├ílidos
             if (index < 0 || index >= _dateList.length) {
               return const SizedBox.shrink();
             }
@@ -625,7 +624,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
             final data = _dateList[index]; // Pega os dados do dia
             final bool isSelected = _isSameDay(data.date, _selectedDate);
             final bool isToday = _isSameDay(data.date, _todayMidnight);
-            // Dia passado (e não hoje)
+            // Dia passado (e n├úo hoje)
             final bool isPastDay =
                 data.date.isBefore(_todayMidnight) && !isToday;
 
@@ -635,7 +634,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
               dayOfWeek = "Hoje";
             } else if (_isSameDay(
                 data.date, _todayMidnight.add(const Duration(days: 1)))) {
-              dayOfWeek = "Amanhã";
+              dayOfWeek = "Amanh├ú";
             } else {
               dayOfWeek = toBeginningOfSentenceCase(
                       DateFormat.E('pt_BR').format(data.date)) ??
@@ -664,19 +663,19 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói a visão expandida (título, calendário completo).
+  /// Constr├│i a vis├úo expandida (t├¡tulo, calend├írio completo).
   Widget _buildExpandedView() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildTitle(context), // Título "Definir Data"
-        _buildFullCalendarView(context), // <<< Contém Material wrapper
+        _buildTitle(context), // T├¡tulo "Definir Data"
+        _buildFullCalendarView(context), // <<< Cont├®m Material wrapper
       ],
     );
   }
 
-  /// Constrói o `TableCalendar` para a visão expandida.
+  /// Constr├│i o `TableCalendar` para a vis├úo expandida.
   Widget _buildFullCalendarView(BuildContext context) {
     // Envolve com Material para garantir contexto aos builders do TableCalendar
     return Material(
@@ -774,7 +773,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
                   TextButton(
                     onPressed: () {
                       HapticFeedback.lightImpact();
-                      // Seleciona hoje e foca no mês atual
+                      // Seleciona hoje e foca no m├¬s atual
                       _handleDateSelection(_todayMidnight);
                       setState(() {
                         final now = DateTime.now();
@@ -802,7 +801,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
                 ],
               );
             },
-            // Builders para as células dos dias
+            // Builders para as c├®lulas dos dias
             defaultBuilder: (context, day, focusedDay) {
               final personalDay = _engine.calculatePersonalDayForDate(day);
               final isToday = _isSameDay(day, _todayMidnight);
@@ -868,7 +867,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói a célula individual de um dia para o `TableCalendar`.
+  /// Constr├│i a c├®lula individual de um dia para o `TableCalendar`.
   Widget _buildCalendarDayCell({
     required DateTime day,
     required int personalDay,
@@ -877,7 +876,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     required bool isOutside,
     required bool isEnabled,
   }) {
-    // Lógica visual da célula (sem alterações)
+    // L├│gica visual da c├®lula (sem altera├º├Áes)
     Color borderColor = isOutside
         ? Colors.transparent
         : AppColors.border.withValues(alpha: 0.5);
@@ -930,7 +929,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
           : const SizedBox(height: 16, width: 16),
     );
 
-    // Retorna o Container (NÃO precisa mais do Material wrapper aqui)
+    // Retorna o Container (N├âO precisa mais do Material wrapper aqui)
     return Container(
       margin: const EdgeInsets.all(2.5),
       decoration: BoxDecoration(
@@ -958,11 +957,11 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói a linha para adicionar/editar o horário.
+  /// Constr├│i a linha para adicionar/editar o hor├írio.
   Widget _buildTimePickerButton(BuildContext context) {
     final String timeText = _selectedTime != null
         ? _selectedTime!.format(context)
-        : "Adicionar horário";
+        : "Adicionar hor├írio";
     final Color activeColor =
         _selectedTime != null ? AppColors.primary : AppColors.secondaryText;
     final FontWeight fontWeight =
@@ -1006,44 +1005,78 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-  /// Constrói a linha para adicionar/editar a recorrência.
-  Widget _buildRecurrenceSection(BuildContext context) {
-    final String recurrenceText = _recurrenceRule.getSummaryText();
+
+
+  // --- Lembretes Widget ---
+
+  Widget _buildReminderSection(BuildContext context) {
+    // S├│ mostra op├º├Áes de lembrete se uma hora estiver selecionada
+    if (_selectedTime == null) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: InkWell(
-        onTap: _showRecurrencePicker,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12.0),
-          child: Row(
-            children: [
-              const Icon(Icons.repeat,
-                  color: AppColors.secondaryText, size: 20),
-              const SizedBox(width: 16),
-              const Text(
-                "Repetir",
-                style: TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500),
-              ),
-              const Spacer(),
-              Text(
-                recurrenceText,
-                style: TextStyle(
-                    color: _recurrenceRule.type == RecurrenceType.none
-                        ? AppColors.secondaryText
-                        : AppColors.primary,
-                    fontSize: 16,
-                    fontWeight: _recurrenceRule.type == RecurrenceType.none
-                        ? FontWeight.w400
-                        : FontWeight.w500),
-              ),
-              const SizedBox(width: 4),
-              const Icon(Icons.chevron_right,
-                  color: AppColors.tertiaryText, size: 20),
-            ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+           // Separador antes dos lembretes
+          const Divider(color: AppColors.border, height: 1),
+          const SizedBox(height: 12),
+          Text(
+            "Lembrete",
+            style: TextStyle(
+              color: AppColors.primaryText,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildReminderChip("Sem lembrete", null),
+                const SizedBox(width: 8),
+                _buildReminderChip("Na hora", Duration.zero),
+                const SizedBox(width: 8),
+                _buildReminderChip("10 min antes", const Duration(minutes: 10)),
+                const SizedBox(width: 8),
+                _buildReminderChip("1 h antes", const Duration(hours: 1)),
+                const SizedBox(width: 8),
+                _buildReminderChip("1 dia antes", const Duration(days: 1)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReminderChip(String label, Duration? offset) {
+    final bool isSelected = _selectedReminderOffset == offset;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedReminderOffset = offset;
+        });
+        HapticFeedback.lightImpact();
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : AppColors.secondaryText,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 14,
           ),
         ),
       ),
@@ -1051,10 +1084,10 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
   }
 } // Fim da classe _CustomDatePickerModalState
 
-// --- Widget Auxiliar (_DatePill - com alterações) ---
+// --- Widget Auxiliar (_DatePill - com altera├º├Áes) ---
 
 class _DatePill extends StatelessWidget {
-  // Construtor e variáveis (sem alterações)
+  // Construtor e vari├íveis (sem altera├º├Áes)
   final String dayOfWeek;
   final String dayOfMonth;
   final int personalDay;
@@ -1076,19 +1109,19 @@ class _DatePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // --- LÓGICA DE CORES E OPACIDADE MODIFICADA ---
+    // --- L├ôGICA DE CORES E OPACIDADE MODIFICADA ---
     final double opacity = isPastDay ? 0.4 : 1.0;
 
     // Define cores base
     Color bgColor = AppColors
-        .cardBackground; // Padrão: fundo do modal (corrige "fundo preto")
+        .cardBackground; // Padr├úo: fundo do modal (corrige "fundo preto")
     Color baseTextColor = AppColors.secondaryText;
     Color baseDayNumColor = AppColors.primaryText;
     Color baseBorderColor = AppColors.border;
     double borderWidth = 1.0;
 
     if (isToday && !isSelected) {
-      // Estado "Hoje" (não selecionado)
+      // Estado "Hoje" (n├úo selecionado)
       baseTextColor = AppColors.primary;
       baseDayNumColor = AppColors.primary;
       baseBorderColor = AppColors.primary.withValues(alpha: 0.6);
@@ -1104,9 +1137,9 @@ class _DatePill extends StatelessWidget {
       borderWidth = 2.0;
     }
 
-    // O Opacity é aplicado no widget pai, então não precisamos
+    // O Opacity ├® aplicado no widget pai, ent├úo n├úo precisamos
     // aplicar .withValues(alpha: ) em cada cor individualmente.
-    // --- FIM DAS MODIFICAÇÕES ---
+    // --- FIM DAS MODIFICA├ç├òES ---
 
     return Opacity(
       opacity: opacity, // Aplica opacidade a tudo (para dias passados)
@@ -1144,7 +1177,7 @@ class _DatePill extends StatelessWidget {
                 Text(
                   dayOfMonth,
                   style: TextStyle(
-                    // Usa a cor base do número. O Opacity pai cuida do esmaecimento.
+                    // Usa a cor base do n├║mero. O Opacity pai cuida do esmaecimento.
                     color: baseDayNumColor,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,

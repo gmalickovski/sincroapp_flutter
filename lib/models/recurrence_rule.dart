@@ -1,4 +1,4 @@
-import 'package:intl/intl.dart';
+﻿import 'package:intl/intl.dart';
 
 enum RecurrenceType { none, daily, weekly, monthly }
 
@@ -65,7 +65,7 @@ class RecurrenceRule {
 
     if (endDate != null) {
       final formattedDate = DateFormat.yMd('pt_BR').format(endDate!);
-      summary += ", até $formattedDate";
+      summary += ", at├® $formattedDate";
     }
 
     return summary;

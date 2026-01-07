@@ -60,7 +60,12 @@ class _MentionInputFieldState extends State<MentionInputField> {
 
   void _onFocusChanged() {
     if (!widget.focusNode.hasFocus) {
-      _removeOverlay();
+      // Delay removal to allow 'onTap' events on suggestions to fire first
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (mounted && !widget.focusNode.hasFocus) {
+          _removeOverlay();
+        }
+      });
     }
   }
 
@@ -112,8 +117,6 @@ class _MentionInputFieldState extends State<MentionInputField> {
     setState(() => _isLoading = true);
     
     try {
-      // Se query vazia, pode mostrar recentes ou nada.
-      // Aqui vamos buscar autocomplete
       final results = await _supabaseService.searchUsersByUsername(query);
       
       if (mounted) {
@@ -152,22 +155,33 @@ class _MentionInputFieldState extends State<MentionInputField> {
 
   void _selectUser(UserModel user) {
     if (_mentionStartIndex == null || user.username == null) return;
+    
+    // Fallback: se _currentSearchTerm for nulo (não deveria), usa cursor
+    int replaceEnd;
+    if (_currentSearchTerm != null) {
+      replaceEnd = _mentionStartIndex! + 1 + _currentSearchTerm!.length;
+    } else {
+       replaceEnd = widget.controller.selection.baseOffset;
+       if (replaceEnd == -1) return; // Abortar se cursor inválido
+    }
 
     final text = widget.controller.text;
     final username = user.username!;
-    final cursorPos = widget.controller.selection.baseOffset;
     
+    // Safety check
+    if (replaceEnd > text.length) replaceEnd = text.length;
+
     // Substitui @query por @username + espaço
     final newText = text.replaceRange(
       _mentionStartIndex!, 
-      cursorPos, 
+      replaceEnd, 
       '@$username '
     );
 
     widget.controller.value = TextEditingValue(
       text: newText,
       selection: TextSelection.fromPosition(
-        TextPosition(offset: _mentionStartIndex! + username.length + 2), // +2 por causa do @ e espaço
+        TextPosition(offset: _mentionStartIndex! + username.length + 2), 
       ),
     );
 
@@ -178,13 +192,14 @@ class _MentionInputFieldState extends State<MentionInputField> {
     return OverlayEntry(
       builder: (context) {
         return Positioned(
-          width: 250, // Largura fixa ou relativa
+          width: 250, // Largura fixa
           child: CompositedTransformFollower(
             link: _layerLink,
             showWhenUnlinked: false,
-            offset: const Offset(0, 50), // Abaixo do input? Precisa calcular posição do cursor ideally
-            // Nota: calcular posição exata do cursor é complexo no Flutter sem usar hacks ou bibliotecas.
-            // Para simplificar, vamos mostrar abaixo do TextField (estilo Dropdown)
+            // Anchor top-left of overlay to bottom-left of target (input field)
+            targetAnchor: Alignment.bottomLeft,
+            followerAnchor: Alignment.topLeft,
+            offset: Offset.zero, 
             child: Material(
               elevation: 4,
               borderRadius: BorderRadius.circular(8),

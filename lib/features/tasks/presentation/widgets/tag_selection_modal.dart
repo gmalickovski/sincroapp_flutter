@@ -6,11 +6,13 @@ import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 
 class TagSelectionModal extends StatefulWidget {
   final String userId;
+  final List<String> initialSelectedTags;
   // --- REMOVIDO: onTagSelected callback ---
 
   const TagSelectionModal({
     super.key,
     required this.userId,
+    this.initialSelectedTags = const [],
     // required this.onTagSelected, // Removido
   });
 
@@ -308,25 +310,30 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.border,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
+          // 1. Header (Standardized)
           Padding(
-            padding: const EdgeInsets.only(left: 8, bottom: 16, top: 8),
-            child: Text(
-              _isCreatingNewTag ? 'Nova Tag' : 'Selecionar Tag',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryText,
-                    fontWeight: FontWeight.bold,
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 24),
+                  tooltip: 'Cancelar',
+                ),
+                Expanded(
+                  child: Text(
+                    _isCreatingNewTag ? 'Nova Tag' : 'Selecionar Tag',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.primaryText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ),
+                 // Empty icon for balance
+                const SizedBox(width: 48),
+              ],
             ),
           ),
           Flexible(

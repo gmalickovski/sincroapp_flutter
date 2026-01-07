@@ -1,7 +1,7 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 
-// Classe de retorno do modal, incluindo data/hora e regra de recorrência
+// Classe de retorno do modal, incluindo data/hora e regra de recorr├¬ncia
 class DatePickerResult {
   final DateTime dateTime;
   final RecurrenceRule recurrenceRule;

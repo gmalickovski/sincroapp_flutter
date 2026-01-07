@@ -2,450 +2,361 @@
 
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/models/contact_model.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_button.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'dart:async';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/features/contacts/presentation/add_contact_modal.dart';
 
 class ContactPickerModal extends StatefulWidget {
-  final String userId;
-  final List<String> initialSelectedUsernames;
+  final List<String> preSelectedUsernames;
+  final Function(List<String> selectedUsernames) onSelectionChanged;
+  final DateTime currentDate; // Required for compatibility check
+  final Function(DateTime newDate)? onDateChanged; // If compatibility suggests a new date
 
   const ContactPickerModal({
     super.key,
-    required this.userId,
-    this.initialSelectedUsernames = const [],
+    this.preSelectedUsernames = const [],
+    required this.onSelectionChanged,
+    required this.currentDate,
+    this.onDateChanged,
   });
 
   @override
   State<ContactPickerModal> createState() => _ContactPickerModalState();
 }
 
-class _ContactPickerModalState extends State<ContactPickerModal>
-    with SingleTickerProviderStateMixin {
-  final _supabaseService = SupabaseService();
-  final _searchController = TextEditingController();
-  Timer? _debounce;
+class _ContactPickerModalState extends State<ContactPickerModal> {
+  final SupabaseService _supabaseService = SupabaseService();
+  final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
   
-  late TabController _tabController;
+  // State
+  List<ContactModel> _contacts = [];
+  List<ContactModel> _filteredContacts = [];
+  Set<String> _selectedUsernames = {};
   
-  List<ContactModel> _myContacts = [];
-  List<UserModel> _searchResults = [];
-  final Set<String> _selectedUsernames = {};
+  // Search
+  final TextEditingController _searchController = TextEditingController();
   
-  bool _isLoadingContacts = true;
-  bool _isSearching = false;
+  // Compatibility
+  bool _calculatingCompatibility = false;
+  double _compatibilityScore = 1.0;
+  String _compatibilityStatus = 'good'; // good, bad
+  List<DateTime> _suggestedDates = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _selectedUsernames.addAll(widget.initialSelectedUsernames);
-    _loadMyContacts();
+    _selectedUsernames = widget.preSelectedUsernames.toSet();
+    _fetchContacts();
     
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _tabController.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
-
-  Future<void> _loadMyContacts() async {
-    setState(() => _isLoadingContacts = true);
-    try {
-      final contacts = await _supabaseService.getContacts(widget.userId);
-      if (mounted) {
-        setState(() {
-          _myContacts = contacts.where((c) => c.status == 'active').toList();
-          _isLoadingContacts = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Erro ao carregar contatos: $e');
-      if (mounted) setState(() => _isLoadingContacts = false);
+    // Initial calc if pre-selected
+    if (_selectedUsernames.isNotEmpty) {
+      _calculateCompatibility();
     }
   }
 
-  void _onSearchChanged() {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), () {
-      if (_searchController.text.trim().isNotEmpty) {
-        _performSearch(_searchController.text.trim());
-      } else {
-        setState(() {
-          _searchResults = [];
-          _isSearching = false;
-        });
-      }
-    });
-  }
-
-  Future<void> _performSearch(String query) async {
-    setState(() => _isSearching = true);
-    try {
-      final results = await _supabaseService.searchUsersByUsername(query);
-      if (mounted) {
-        setState(() {
-          _searchResults = results
-              // Remove o próprio usuário da busca
-              .where((u) => u.uid != widget.userId)
-              .toList();
-          _isSearching = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isSearching = false);
+  void _fetchContacts() async {
+    final contacts = await _supabaseService.getContacts(_currentUserId);
+    if (mounted) {
+      setState(() {
+        // Filter only active contacts
+        _contacts = contacts.where((c) => c.status == 'active').toList();
+        _filteredContacts = _contacts;
+      });
     }
   }
 
-  void _toggleSelection(String username) {
+  void _filterContacts(String query) {
     setState(() {
-      if (_selectedUsernames.contains(username)) {
-        _selectedUsernames.remove(username);
+      if (query.isEmpty) {
+        _filteredContacts = _contacts;
       } else {
-        _selectedUsernames.add(username);
+        _filteredContacts = _contacts
+            .where((c) =>
+                (c.displayName?.toLowerCase().contains(query.toLowerCase()) ?? false) ||
+                (c.username?.toLowerCase().contains(query.toLowerCase()) ?? false))
+            .toList();
       }
     });
   }
 
-  Future<void> _addContact(String contactUid) async {
-    try {
-      await _supabaseService.addContact(widget.userId, contactUid);
-      // Recarrega contatos e volta para aba de contatos
-      await _loadMyContacts();
-      _tabController.animateTo(0);
-      _searchController.clear();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Contato adicionado com sucesso!')),
-        );
+  void _toggleContact(ContactModel contact) {
+    if (contact.username == null) return;
+    
+    setState(() {
+      if (_selectedUsernames.contains(contact.username)) {
+        _selectedUsernames.remove(contact.username);
+      } else {
+        _selectedUsernames.add(contact.username!);
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro ao adicionar contato.')),
-        );
-      }
-    }
+    });
+    
+    // Notify parent immediately
+    widget.onSelectionChanged(_selectedUsernames.toList());
+    
+    // Recalculate compatibility
+    _calculateCompatibility();
+  }
+
+  void _calculateCompatibility() async {
+     setState(() {
+       _calculatingCompatibility = true;
+       _suggestedDates = [];
+     });
+
+     try {
+       // Need IDs for compatibility calc, but we have usernames selected.
+       // Convert usernames to IDs using the loaded contact list
+       final selectedIds = _contacts
+           .where((c) => _selectedUsernames.contains(c.username))
+           .map((c) => c.userId)
+           .toList();
+           
+       if (selectedIds.isEmpty) {
+         setState(() {
+           _compatibilityScore = 1.0;
+           _compatibilityStatus = 'good';
+           _calculatingCompatibility = false;
+         });
+         return;
+       }
+
+       final result = await _supabaseService.checkCompatibility(
+         contactIds: selectedIds,
+         date: widget.currentDate,
+         currentUserId: _currentUserId,
+       );
+
+       if (mounted) {
+         setState(() {
+           _compatibilityScore = (result['score'] as num).toDouble();
+           _compatibilityStatus = result['status'] as String;
+           _suggestedDates = (result['suggestions'] as List<dynamic>?)?.cast<DateTime>() ?? [];
+           _calculatingCompatibility = false;
+         });
+       }
+     } catch (e) {
+       debugPrint('Error calculating compatibility: $e');
+       if (mounted) setState(() => _calculatingCompatibility = false);
+     }
+  }
+  
+  void _openAddContactModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const AddContactModal(),
+    ).then((_) {
+      // Refresh contacts on return
+      _fetchContacts();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
-      child: Container(
-        width: 400, // Fixed width for desktop consistency
-        constraints: BoxConstraints(
-           maxHeight: MediaQuery.of(context).size.height * 0.8,
-           maxWidth: 500,
-        ),
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Adicionar Pessoas',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                  onPressed: () => Navigator.of(context).pop(),
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 24),
-            
-            // Tabs (Pill Style)
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.background,
-                borderRadius: BorderRadius.circular(100), // Pill shape container
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppColors.cardBackground, // STANDARD COLOR
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        top: 16,
+        left: 16,
+        right: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      height: MediaQuery.of(context).size.height * 0.85,
+      child: Column(
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close, color: AppColors.tertiaryText),
+                onPressed: () => Navigator.pop(context),
               ),
-              padding: const EdgeInsets.all(4),
-              child: TabBar(
-                controller: _tabController,
-                indicator: BoxDecoration(
-                  color: AppColors.primary, // Standard Purple
-                  borderRadius: BorderRadius.circular(100), // Pill shape indicator
+              const Text(
+                'Meus Contatos', // TITLE UPDATED
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
                 ),
-                indicatorSize: TabBarIndicatorSize.tab,
-                dividerColor: Colors.transparent,
-                labelColor: Colors.white,
-                unselectedLabelColor: AppColors.secondaryText,
-                tabs: const [
-                  Tab(text: 'Meus Contatos'),
-                  Tab(text: 'Buscar Global'),
-                ],
               ),
-            ),
-            
-            const SizedBox(height: 16),
+              IconButton( // Check button to confirm/close
+                icon: const Icon(Icons.check, color: AppColors.primary),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           
-          // Search Field (Visible mainly on Search tab, but useful on both maybe?)
-          // Vamos deixar visível apenas na aba de busca para não confundir, 
-          // ou um filtro local na aba de contatos. 
-          // Para simplificar, colocamos dentro do TabBarView ou mudamos dinamicamente.
-          // Vamos colocar aqui fora mesmo, mas mudando o hint.
-            // Search Field
-            TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Buscar por nome ou @username...',
-                hintStyle: const TextStyle(color: AppColors.secondaryText),
-                prefixIcon: const Icon(Icons.search, color: AppColors.secondaryText),
-                filled: true,
-                fillColor: AppColors.background,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // List Content
-            Expanded( // Changed to Expanded
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildMyContactsList(),
-                  _buildGlobalSearchList(),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Action Button
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(_selectedUsernames.toList());
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary, // Changed to Primary (Purple)
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(100), // Pill Shape
+          // Search & Add
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: _filterContacts,
+                  decoration: InputDecoration(
+                    hintText: 'Buscar nos meus contatos',
+                    hintStyle: const TextStyle(color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.tertiaryText),
+                    filled: true,
+                    fillColor: AppColors.background, // Contrast inside card
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30), // PILL SHAPE
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
                 ),
               ),
-              child: Text(
-                _selectedUsernames.isEmpty 
-                    ? 'Concluído' 
-                    : 'Adicionar ${_selectedUsernames.length} pessoa(s)',
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              const SizedBox(width: 12),
+              // ADD USER BUTTON
+              InkWell(
+                onTap: _openAddContactModal,
+                borderRadius: BorderRadius.circular(30), // ROUND
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle, // ROUND BUTTON
+                  ),
+                  child: const Icon(Icons.person_add_alt, color: Colors.white),
+                ),
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Contacts List
+          Expanded(
+            child: _contacts.isEmpty 
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.people_outline, size: 64, color: AppColors.tertiaryText),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Você ainda não tem contatos.',
+                        style: TextStyle(color: AppColors.secondaryText),
+                      ),
+                      TextButton(
+                        onPressed: _openAddContactModal, 
+                        child: const Text('Buscar novas pessoas', style: TextStyle(color: AppColors.primary))
+                      ),
+                    ],
+                  )
+                )
+              : ListView.separated(
+                  itemCount: _filteredContacts.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+                  itemBuilder: (context, index) {
+                    final contact = _filteredContacts[index];
+                    final isSelected = _selectedUsernames.contains(contact.username);
+                    return ListTile(
+                      onTap: () => _toggleContact(contact),
+                      leading: CircleAvatar(
+                        backgroundColor: AppColors.contact,
+                        child: Text(contact.displayName?[0].toUpperCase() ?? '?'),
+                      ),
+                      title: Text(
+                        contact.displayName ?? 'Sem nome',
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      subtitle: Text(
+                        '@${contact.username}',
+                        style: const TextStyle(color: AppColors.secondaryText),
+                      ),
+                      trailing: isSelected 
+                          ? const Icon(Icons.check_circle, color: AppColors.primary)
+                          : const Icon(Icons.circle_outlined, color: AppColors.tertiaryText),
+                    );
+                  },
+                ),
+          ),
+          
+          // Compatibility Widget Area
+          if (_selectedUsernames.isNotEmpty) ...[
+            const Divider(color: AppColors.border),
+            const SizedBox(height: 8),
+            _buildCompatibilitySection(),
           ],
-        ),
+        ],
       ),
     );
   }
-
-  Widget _buildMyContactsList() {
-    if (_isLoadingContacts) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.contact));
+  
+  Widget _buildCompatibilitySection() {
+    if (_calculatingCompatibility) {
+      return const Center(child: Padding(
+        padding: EdgeInsets.all(8.0),
+        child: LinearProgressIndicator(color: AppColors.primary),
+      ));
     }
+    
+    final bool isBad = _compatibilityStatus == 'bad' || _compatibilityScore < 0.6;
+    final Color statusColor = isBad ? Colors.redAccent : Colors.greenAccent;
+    final String statusText = isBad ? 'Ruim' : 'Boa';
+    final int percentage = (_compatibilityScore * 100).toInt();
 
-    // Filtra localmente se estiver na primeira aba e tiver texto
-    final filter = _tabController.index == 0 ? _searchController.text.trim().toLowerCase() : '';
-    final filteredContacts = filter.isEmpty 
-        ? _myContacts 
-        : _myContacts.where((c) => 
-            c.username.toLowerCase().contains(filter) || 
-            c.displayName.toLowerCase().contains(filter)
-          ).toList();
-
-    if (filteredContacts.isEmpty) {
-       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Icon(Icons.people_outline, size: 48, color: AppColors.secondaryText.withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            const Text(
-              'Nenhum contato encontrado',
-              style: TextStyle(color: AppColors.secondaryText),
+            const Icon(Icons.auto_awesome, color: AppColors.tertiaryText, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              'Sinergia do grupo: ',
+              style: TextStyle(color: Colors.white.withOpacity(0.8)),
             ),
-            if (_myContacts.isEmpty && filter.isEmpty)
-              TextButton(
-                onPressed: () => _tabController.animateTo(1),
-                child: const Text('Buscar novas pessoas', style: TextStyle(color: AppColors.primary)),
-              ),
+            Text(
+              '$percentage% ($statusText)',
+              style: TextStyle(color: statusColor, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
-      );
-    }
-
-    return ListView.separated(
-      itemCount: filteredContacts.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final contact = filteredContacts[index];
-        final isSelected = _selectedUsernames.contains(contact.username);
         
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.background.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
+        if (isBad && _suggestedDates.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'Datas melhores:',
+            style: TextStyle(color: AppColors.secondaryText, fontSize: 12),
           ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              splashColor: AppColors.primary.withOpacity(0.2),
-              hoverColor: AppColors.primary.withOpacity(0.1),
-              onTap: () {
-                 if (contact.username.isNotEmpty) {
-                   _toggleSelection(contact.username);
-                 }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.background,
-                    child: Text(
-                      contact.initials,
-                      style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-                    ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _suggestedDates.map((date) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ActionChip(
+                    backgroundColor: AppColors.cardBackground,
+                    labelStyle: const TextStyle(color: Colors.white),
+                    label: Text(DateFormat('dd/MM').format(date)),
+                    avatar: const Icon(Icons.calendar_today, size: 14, color: Colors.greenAccent),
+                    onPressed: () {
+                      if (widget.onDateChanged != null) {
+                        widget.onDateChanged!(date);
+                      }
+                    },
                   ),
-                  title: Text(
-                    contact.displayName, // ContactModel usually comes clean
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: contact.username.isNotEmpty 
-                      ? Text('@${contact.username}', style: const TextStyle(color: AppColors.primary))
-                      : null,
-                  trailing: isSelected 
-                      ? const Icon(Icons.check_circle, color: AppColors.primary)
-                      : const Icon(Icons.circle_outlined, color: AppColors.secondaryText),
-                ),
-              ),
+                );
+              }).toList(),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildGlobalSearchList() {
-    if (_isSearching) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.contact));
-    }
-
-    if (_searchResults.isEmpty) {
-      return Center(
-        child: Text(
-          _searchController.text.isEmpty 
-              ? 'Digite para buscar pessoas' 
-              : 'Nenhum usuário encontrado',
-          style: const TextStyle(color: AppColors.secondaryText),
-        ),
-      );
-    }
-
-    return ListView.separated(
-      itemCount: _searchResults.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 8),
-      itemBuilder: (context, index) {
-        final user = _searchResults[index];
-        final isSelected = _selectedUsernames.contains(user.username);
-        final isAlreadyContact = _myContacts.any((c) => c.userId == user.uid);
-        
-        // Lógica de nome mais limpa (evitar duplicidade e nomes muito longos)
-        String displayName = user.primeiroNome;
-        if (user.sobrenome.isNotEmpty) {
-           // Se o sobrenome já estiver no primeiro nome, ignora
-           if (!displayName.toLowerCase().contains(user.sobrenome.toLowerCase())) {
-             // Pega apenas o último sobrenome para privacidade/limpeza, ou usa tudo se curto
-             final lastNames = user.sobrenome.split(' ');
-             final lastName = lastNames.isNotEmpty ? lastNames.last : user.sobrenome;
-             displayName = '$displayName $lastName';
-           }
-        }
-        
-        // Se ainda vazio, usa email
-        if (displayName.trim().isEmpty) displayName = user.email;
-
-        final initials = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
-
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.background.withOpacity(0.5),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              splashColor: AppColors.primary.withOpacity(0.2),
-              hoverColor: AppColors.primary.withOpacity(0.1),
-              onTap: () {
-                if (user.username != null) {
-                  _toggleSelection(user.username!);
-                }
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                  leading: CircleAvatar(
-                    backgroundColor: AppColors.background,
-                    child: Text(
-                      initials,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  title: Text(
-                    displayName,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-                  ),
-                  subtitle: user.username != null 
-                      ? Text('@${user.username}', style: const TextStyle(color: AppColors.primary))
-                      : const Text('Sem username', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!isAlreadyContact)
-                        IconButton(
-                          icon: const Icon(Icons.person_add_alt_1, color: AppColors.secondaryText),
-                          onPressed: () => _addContact(user.uid),
-                          tooltip: 'Adicionar aos contatos',
-                        ),
-                      if (user.username != null)
-                        Checkbox(
-                          value: isSelected,
-                          activeColor: AppColors.primary,
-                          onChanged: (val) => _toggleSelection(user.username!),
-                          shape: const CircleBorder(),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-        );
-      },
+          )
+        ]
+      ],
     );
   }
 }

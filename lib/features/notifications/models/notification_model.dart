@@ -6,6 +6,9 @@ enum NotificationType {
   share,
   sincroAlert, // Alerta de compatibilidade
   reminder,
+  contactRequest, // Solicitação de amizade/contato
+  taskInvite,     // Convite para tarefa
+  taskUpdate,     // Atualização em tarefa compartilhada
 }
 
 class NotificationModel {
@@ -74,6 +77,9 @@ class NotificationModel {
       case 'share': return NotificationType.share;
       case 'sincro_alert': return NotificationType.sincroAlert;
       case 'reminder': return NotificationType.reminder;
+      case 'contact_request': return NotificationType.contactRequest;
+      case 'task_invite': return NotificationType.taskInvite;
+      case 'task_update': return NotificationType.taskUpdate;
       case 'system': 
       default: return NotificationType.system;
     }
@@ -83,6 +89,9 @@ class NotificationModel {
   static String typeToString(NotificationType type) {
     switch (type) {
       case NotificationType.sincroAlert: return 'sincro_alert';
+      case NotificationType.contactRequest: return 'contact_request';
+      case NotificationType.taskInvite: return 'task_invite';
+      case NotificationType.taskUpdate: return 'task_update';
       default: return type.name;
     }
   }

@@ -6,6 +6,7 @@ import 'package:sincro_app_flutter/features/notifications/models/notification_mo
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/compatibility_suggestion_modal.dart';
+import 'package:sincro_app_flutter/features/notifications/presentation/widgets/notification_detail_modal.dart';
 
 class NotificationCenterScreen extends StatelessWidget {
   final String userId;
@@ -124,8 +125,19 @@ class NotificationCenterScreen extends StatelessWidget {
       _supabaseService.markNotificationAsRead(notification.id);
     }
     
-    // 2. Ação baseada no tipo (Fase F vai expandir isso)
-    if (notification.type == NotificationType.sincroAlert) {
+    // 2. Ação baseada no tipo
+    if (notification.type == NotificationType.contactRequest || 
+        notification.type == NotificationType.taskInvite ||
+        notification.type == NotificationType.taskUpdate) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => NotificationDetailModal(notification: notification),
+      );
+    }
+    // Mantendo compatibilidade com sincroAlert antigo se necessário, ou migrando para DetailModal também
+    else if (notification.type == NotificationType.sincroAlert) {
       final meta = notification.metadata;
       // Validação básica dos dados necessários
       if (meta['userA_birth'] != null && meta['userB_birth'] != null) {
@@ -146,8 +158,12 @@ class NotificationCenterScreen extends StatelessWidget {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dados de compatibilidade indisponíveis.')),
+         // Fallback para Detail logic se faltar dados complexos
+         showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => NotificationDetailModal(notification: notification),
         );
       }
     }
@@ -247,6 +263,12 @@ class _NotificationTile extends StatelessWidget {
   
   _NotificationTheme _getThemeForType(NotificationType type) {
     switch (type) {
+      case NotificationType.contactRequest:
+        return _NotificationTheme(Icons.person_add, AppColors.primary);
+      case NotificationType.taskInvite:
+        return _NotificationTheme(Icons.event_available, Colors.orange);
+      case NotificationType.taskUpdate:
+        return _NotificationTheme(Icons.edit_calendar, Colors.blueAccent);
       case NotificationType.mention:
         return _NotificationTheme(Icons.alternate_email, AppColors.contact);
       case NotificationType.share:

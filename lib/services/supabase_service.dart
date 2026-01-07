@@ -353,18 +353,63 @@ class SupabaseService {
     }
   }
 
-  /// Adiciona um usuário aos contatos
+  /// Adiciona um usuário aos contatos (Status inicial: PENDING)
   Future<void> addContact(String uid, String contactUid) async {
     try {
-      await _supabase.schema('sincroapp').from('user_contacts').insert({
+      // Cria registro para o solicitante (user -> contact) como 'pending_outgoing'
+      await _supabase.schema('sincroapp').from('user_contacts').upsert({
         'user_id': uid,
         'contact_user_id': contactUid,
-        'status': 'active',
-      });
+        'status': 'pending', // Waiting for acceptance
+      }, onConflict: 'user_id, contact_user_id');
+
     } catch (e) {
-      // Ignora erro se já existir (devido à constraint UNIQUE)
-      if (e.toString().contains('unique constraint')) return;
       debugPrint('❌ [SupabaseService] Erro ao adicionar contato: $e');
+      rethrow;
+    }
+  }
+
+  /// Responde a uma solicitação de contato
+  Future<void> respondToContactRequest({
+    required String uid, 
+    required String contactUid, 
+    required bool accept,
+  }) async {
+    try {
+      if (accept) {
+        // 1. Atualiza quem solicitou (contact -> user)
+        // Isso assume que o solicitante criou um registro (verificar lógica de criação bidirecional ou única)
+        // Simplificando: Assumimos que a tabela é bidirecional ou gerenciamos 2 linhas.
+        // Para este MVP, vamos garantir que ambos tenham uma linha 'active'
+        
+        await _supabase.schema('sincroapp').from('user_contacts').upsert({
+          'user_id': uid,
+          'contact_user_id': contactUid,
+          'status': 'active',
+        }, onConflict: 'user_id, contact_user_id');
+
+         await _supabase.schema('sincroapp').from('user_contacts').upsert({
+          'user_id': contactUid,
+          'contact_user_id': uid,
+          'status': 'active',
+        }, onConflict: 'user_id, contact_user_id');
+
+      } else {
+        // Rejeitar: remove ambos os lados se existirem
+         await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .delete()
+          .match({'user_id': uid, 'contact_user_id': contactUid});
+          
+         await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .delete()
+          .match({'user_id': contactUid, 'contact_user_id': uid});
+      }
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao responder contato: $e');
       rethrow;
     }
   }
@@ -377,6 +422,8 @@ class SupabaseService {
           .from('user_contacts')
           .delete()
           .match({'user_id': uid, 'contact_user_id': contactUid});
+          
+      // Opcional: remover o reverso também para consistência
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao remover contato: $e');
       rethrow;
@@ -410,6 +457,84 @@ class SupabaseService {
       debugPrint('❌ [SupabaseService] Erro ao desbloquear contato: $e');
       rethrow;
     }
+  }
+  
+  // --- COMPATIBILITY HELPER ---
+  
+  /// Calcula score de compatibilidade e sugere datas
+  Future<Map<String, dynamic>> checkCompatibility({
+    required List<String> contactIds, 
+    required DateTime date,
+    required String currentUserId,
+  }) async {
+    if (contactIds.isEmpty) return {'score': 1.0, 'status': 'good'};
+    
+    // Pegar data nasc do owner
+    final ownerData = await _supabase.schema('sincroapp').from('users').select('birth_date').eq('uid', currentUserId).maybeSingle();
+    
+    if (ownerData == null || ownerData['birth_date'] == null) {
+       return {'score': 1.0, 'status': 'unknown_owner_birth'};
+    }
+    final ownerBirth = DateFormat('dd/MM/yyyy').parse(ownerData['birth_date']);
+    
+    // Pegar datas nasc dos contatos
+     final contactsResponse = await _supabase.schema('sincroapp').from('users').select('uid, birth_date').inFilter('uid', contactIds);
+     final List<dynamic> contactsData = contactsResponse;
+     
+     if (contactsData.isEmpty) return {'score': 1.0, 'status': 'good'};
+    
+    double totalScore = 0;
+    int count = 0;
+    
+    for (var c in contactsData) {
+       if (c['birth_date'] == null) continue;
+       final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
+       final score = NumerologyEngine.calculateCompatibilityScore(
+          date: date,
+          birthDateA: ownerBirth,
+          birthDateB: cBirth,
+       );
+       totalScore += score;
+       count++;
+    }
+    
+    final avgScore = count > 0 ? totalScore / count : 1.0;
+    
+    // Se score ruim (< 0.6), buscar 3 próximas datas boas
+    List<DateTime> suggestions = [];
+    if (avgScore < 0.6) {
+       DateTime candidate = date.add(const Duration(days: 1));
+       int found = 0;
+       int attempts = 0;
+       while (found < 3 && attempts < 30) {
+           double candTotal = 0;
+           int candCount = 0;
+           for (var c in contactsData) {
+             if (c['birth_date'] == null) continue;
+             final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
+             final score = NumerologyEngine.calculateCompatibilityScore(
+                date: candidate,
+                birthDateA: ownerBirth,
+                birthDateB: cBirth,
+             );
+             candTotal += score;
+             candCount++;
+          }
+          final candAvg = candCount > 0 ? candTotal / candCount : 0.0;
+          if (candAvg >= 0.8) { // Good score threshold
+             suggestions.add(candidate);
+             found++;
+          }
+          candidate = candidate.add(const Duration(days: 1));
+          attempts++;
+       }
+    }
+    
+    return {
+      'score': avgScore,
+      'status': avgScore >= 0.6 ? 'good' : 'bad',
+      'suggestions': suggestions,
+    };
   }
 
   // --- TASKS ---
@@ -497,6 +622,10 @@ class SupabaseService {
 
   Future<void> updateTask(String uid, TaskModel task) async {
     try {
+      // 1. Fetch current task state to compare
+      final currentTaskRes = await _supabase.schema('sincroapp').from('tasks').select().eq('id', task.id).single();
+      final currentTask = _mapTaskFromSupabase(currentTaskRes);
+
       final taskData = {
         'text': task.text,
         'completed': task.completed,
@@ -513,23 +642,67 @@ class SupabaseService {
         'shared_with': [
           ...task.sharedWith, 
           ...UsernameValidator.extractMentionsFromText(task.text)
-        ].toSet().toList(), // NOVO
+        ].toSet().toList(),
       };
+      
       await _supabase
           .schema('sincroapp')
           .from('tasks')
           .update(taskData)
           .eq('id', task.id);
 
-      // --- SINCRO MATCH LOGIC (INTERNAL) ---
-      // Verifica se houve compartilhamento novo e processa compatibilidade
-      final newSharedUsers = [
+      // --- SINCRO SHARE UPDATE LOGIC ---
+      final usersToNotify = [
           ...task.sharedWith, 
           ...UsernameValidator.extractMentionsFromText(task.text)
       ].toSet().toList();
+
+      if (usersToNotify.isNotEmpty) {
+          // Check for diffs
+          final List<String> changes = [];
+          if (currentTask.text != task.text) changes.add('Título');
+          if (currentTask.dueDate != task.dueDate) changes.add('Data');
+          if (currentTask.reminderTime != task.reminderTime) changes.add('Horário do lembrete');
+          
+          if (changes.isNotEmpty) {
+             final ownerData = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', uid).single();
+             final ownerName = ownerData['username'] ?? 'Alguém';
+             
+             for (final username in usersToNotify) {
+                final userData = await _supabase.schema('sincroapp').from('users').select('uid').eq('username', username).maybeSingle();
+                if (userData == null) continue;
+                
+                final contactUid = userData['uid'];
+                if (contactUid == uid) continue;
+
+                final sanitizedTitle = task.text.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+
+                await sendNotification(
+                  toUserId: contactUid,
+                  type: NotificationType.taskUpdate,
+                  title: 'Tarefa Atualizada',
+                  body: '$ownerName alterou: ${changes.join(", ")} em "$sanitizedTitle"',
+                  relatedItemId: task.id,
+                  relatedItemType: 'task',
+                  metadata: {
+                    'changes': changes,
+                    'task_title': sanitizedTitle,
+                    'updated_by': ownerName,
+                  }
+                );
+             }
+          }
+      }
+
+      // --- SINCRO MATCH LOGIC (For New Invites) ---
+      // Check for newly added people
+      final oldShared = currentTask.sharedWith.toSet();
+      final newShared = usersToNotify.toSet();
+      final addedUsers = newShared.difference(oldShared);
       
-      if (newSharedUsers.isNotEmpty && task.dueDate != null) {
-        _handleSincroMatchLogic(uid, task.id, task.text, task.dueDate!, newSharedUsers);
+      if (addedUsers.isNotEmpty && task.dueDate != null) {
+         // Send invites (Sincro Alert) only to new people
+        _handleSincroMatchLogic(uid, task.id, task.text, task.dueDate!, addedUsers.toList());
       }
       // -------------------------------------
 
@@ -572,11 +745,14 @@ class SupabaseService {
         // 4. Se for compatibilidade baixa/média, criar notificação Sincro Alert
         // AGORA: Sempre envia para permitir o fluxo de "Aceitar/Recusar"
         if (score < 0.9 || true) { // <--- Sempre enviar para testar o fluxo
+           
+           final sanitizedTitle = taskTitle.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+
            await sendNotification(
              toUserId: contactId, // Avisar o destinatário (User B)
-             type: NotificationType.sincroAlert,
-             title: 'Sincro: ${ownerData['username']} te convidou',
-             body: 'Novo agendamento: "$taskTitle". Toque para aceitar ou recusar.',
+             type: NotificationType.taskInvite,
+             title: 'Convite: $sanitizedTitle',
+             body: '${ownerData['username']} te convidou para uma tarefa no dia ${DateFormat('dd/MM').format(dueDate)}.',
              metadata: {
                'userA_name': ownerData['username'],
                'userA_birth': ownerBirth.toIso8601String(),
@@ -584,7 +760,7 @@ class SupabaseService {
                'userB_birth': contactBirth.toIso8601String(),
                'target_date': dueDate.toIso8601String(),
                'compatibility_score': score,
-               'task_title': taskTitle,
+               'task_title': sanitizedTitle, // Send clean title
                'task_id': taskId,      // Needed for response
                'owner_id': ownerId,    // Needed for response
              }

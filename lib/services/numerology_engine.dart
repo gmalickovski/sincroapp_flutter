@@ -1063,6 +1063,15 @@ class NumerologyEngine {
     return diaPessoal;
   }
 
+  /// Static helper for single-off calculations without instantiating the engine
+  static int calculatePersonalDay(DateTime date, String birthDate) {
+    // We create a temporary instance or just duplicate logic. 
+    // Since _reduzirNumero is an instance method (which is weird, should be static), 
+    // we'll instantiate a temporary engine.
+    final engine = NumerologyEngine(nomeCompleto: '', dataNascimento: birthDate);
+    return engine.calculatePersonalDayForDate(date);
+  }
+
   // === SINCRO MATCH LOGIC (COMPATIBILIDADE) ===
 
 

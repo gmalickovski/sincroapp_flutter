@@ -1,7 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_date_picker_modal.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_recurrence_picker_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
+import 'package:sincro_app_flutter/models/date_picker_result.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
@@ -12,6 +14,9 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tag_selec
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/common/widgets/mention_input_field.dart'; // NOVO
+import 'package:sincro_app_flutter/common/widgets/mention_text_editing_controller.dart'; // NOVO
+import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart'; // NOVO
 
 // --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
 
@@ -40,9 +45,9 @@ class TaskInputModal extends StatefulWidget {
 }
 
 class _TaskInputModalState extends State<TaskInputModal> {
-  // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-  late TextEditingController _textController;
-  // --- FIM DA MUDANÇA ---
+  // --- IN├ìCIO DA MUDAN├çA: Controller Padr├úo ---
+  late MentionTextEditingController _textController; // MUDAN├çA: Controller com Highlight
+  // --- FIM DA MUDAN├çA ---
 
   DateTime _selectedDateForPill = DateTime.now();
   int _personalDay = 0;
@@ -54,7 +59,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
   String? _selectedGoalId;
   String? _selectedGoalTitle;
   DateTime? _selectedDate; // Novo estado para a data
+
   List<String> _selectedTags = []; // Novo estado para as tags
+  List<String> _sharedWithUsernames = []; // NOVO: Usernames selecionados para compartilhar
+  Duration? _selectedReminderOffset; // Novo estado para o offset do lembrete
 
   bool get _isEditing => widget.taskToEdit != null;
 
@@ -62,19 +70,20 @@ class _TaskInputModalState extends State<TaskInputModal> {
   void initState() {
     super.initState();
 
-    // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-    _textController = TextEditingController();
-    // --- FIM DA MUDANÇA ---
+    // --- IN├ìCIO DA MUDAN├çA: Controller Padr├úo ---
+    _textController = MentionTextEditingController(); // MUDAN├çA
+    // --- FIM DA MUDAN├çA ---
 
     DateTime initialDateForPill = DateTime.now();
 
     if (_isEditing) {
       _textController.text = widget.taskToEdit!.text;
 
-      // --- INÍCIO DA MUDANÇA: Popula os "pills" em vez do texto ---
+      // --- IN├ìCIO DA MUDAN├çA: Popula os "pills" em vez do texto ---
       _selectedTags = List.from(widget.taskToEdit!.tags);
+      _sharedWithUsernames = List.from(widget.taskToEdit!.sharedWith); // NOVO
       _selectedDate = widget.taskToEdit!.dueDate?.toLocal();
-      // --- FIM DA MUDANÇA ---
+      // --- FIM DA MUDAN├çA ---
 
       initialDateForPill =
           widget.taskToEdit!.dueDate?.toLocal() ?? initialDateForPill;
@@ -88,27 +97,27 @@ class _TaskInputModalState extends State<TaskInputModal> {
       _selectedGoalId = widget.taskToEdit!.journeyId;
       _selectedGoalTitle = widget.taskToEdit!.journeyTitle;
     } else {
-      // Lógica para NOVAS tarefas
+      // L├│gica para NOVAS tarefas
       _textController.text = widget.initialTaskText ?? '';
       _selectedTime = null;
       _selectedRecurrenceRule = RecurrenceRule();
-      _selectedTags = []; // Começa vazio
-      _selectedDate = null; // Garante que o pill de data não apareça por padrão
+      _selectedTags = []; // Come├ºa vazio
+      _selectedDate = null; // Garante que o pill de data n├úo apare├ºa por padr├úo
 
-      // --- INÍCIO DA CORREÇÃO (Problema 1 e 2) ---
-      // Lógica condicional:
-      // Se uma meta é pré-selecionada, estamos na tela de metas.
-      // Se não, estamos no calendário ou foco.
+      // --- IN├ìCIO DA CORRE├ç├âO (Problema 1 e 2) ---
+      // L├│gica condicional:
+      // Se uma meta ├® pr├®-selecionada, estamos na tela de metas.
+      // Se n├úo, estamos no calend├írio ou foco.
       if (widget.preselectedGoal != null) {
-        // --- LÓGICA DA TELA DE METAS ---
+        // --- L├ôGICA DA TELA DE METAS ---
         _selectedGoalId = widget.preselectedGoal!.id;
         _selectedGoalTitle = widget.preselectedGoal!.title;
 
-        // --- INÍCIO DA CORREÇÃO ---
+        // --- IN├ìCIO DA CORRE├ç├âO ---
         // As linhas que adicionavam a tag automaticamente foram REMOVIDAS.
-        // --- FIM DA CORREÇÃO ---
+        // --- FIM DA CORRE├ç├âO ---
 
-        // Usa a data inicial APENAS para a pílula de vibração (Problema 1)
+        // Usa a data inicial APENAS para a p├¡lula de vibra├º├úo (Problema 1)
         if (widget.initialDueDate != null) {
           initialDateForPill = DateTime(
             widget.initialDueDate!.year,
@@ -116,12 +125,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
             widget.initialDueDate!.day,
           );
         }
-        // _selectedDate continua nulo, então o pill de data não aparece
+        // _selectedDate continua nulo, ent├úo o pill de data n├úo aparece
       } else {
-        // --- LÓGICA DO CALENDÁRIO / FOCO ---
-        // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
+        // --- L├ôGICA DO CALEND├üRIO / FOCO ---
+        // S├│ mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
         if (widget.initialDueDate != null) {
-          // CORREÇÃO: Usa os componentes da data para evitar shift de fuso horário (UTC -> Local)
+          // CORRE├ç├âO: Usa os componentes da data para evitar shift de fuso hor├írio (UTC -> Local)
           // Se widget.initialDueDate for 29/11 00:00 UTC, toLocal() viraria 28/11 21:00 (BRT).
           // Ao usar DateTime(y,m,d), criamos 29/11 00:00 Local, mantendo o dia correto.
           initialDateForPill = DateTime(
@@ -134,12 +143,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
           _selectedDate = initialDateForPill;
         }
       }
-      // --- FIM DA CORREÇÃO ---
+      // --- FIM DA CORRE├ç├âO ---
     }
 
     // --- REMOVIDO: _textController.addListener(_onTextChanged) ---
 
-    // Define a data para a pílula de vibração (usa data selecionada ou a data inicial)
+    // Define a data para a p├¡lula de vibra├º├úo (usa data selecionada ou a data inicial)
     _selectedDateForPill = _selectedDate ?? initialDateForPill;
     if (widget.userData != null) {
       _updateVibrationForDate(_selectedDateForPill);
@@ -199,7 +208,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   // --- REMOVIDO: _insertActionText ---
 
-  // _selectGoal (inalterada - já está correta)
+  // _selectGoal (inalterada - j├í est├í correta)
   void _selectGoal() async {
     if (widget.preselectedGoal != null) return;
     if (widget.userData == null) return;
@@ -229,7 +238,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
-  // _openCreateGoalWidget (inalterada - já está correta)
+  // _openCreateGoalWidget (inalterada - j├í est├í correta)
   void _openCreateGoalWidget() async {
     if (widget.userData == null) return;
 
@@ -262,7 +271,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
-  // --- INÍCIO DA MUDANÇA: _showTagSelectionModal atualizada ---
+  // --- IN├ìCIO DA MUDAN├çA: _showTagSelectionModal atualizada ---
   void _showTagSelectionModal() async {
     FocusScope.of(context).unfocus();
 
@@ -278,7 +287,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       },
     );
 
-    // Adiciona a tag ao estado se ela for válida e não existir
+    // Adiciona a tag ao estado se ela for v├ílida e n├úo existir
     if (tagName != null &&
         tagName.isNotEmpty &&
         !_selectedTags.contains(tagName)) {
@@ -287,17 +296,17 @@ class _TaskInputModalState extends State<TaskInputModal> {
       });
     }
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDAN├çA ---
 
-  // --- INÍCIO DA MUDANÇA: _showDatePickerModal atualizada ---
+  // --- IN├ìCIO DA MUDAN├çA: _showDatePickerModal atualizada ---
   void _showDatePickerModal() {
     FocusScope.of(context).unfocus();
     if (widget.userData == null) return;
 
-    // A data inicial é a data já selecionada, ou a data do "pill", ou hoje
+    // A data inicial ├® a data j├í selecionada, ou a data do "pill", ou hoje
     DateTime initialPickerDate = _selectedDate ?? _selectedDateForPill;
 
-    // Adiciona a hora (se já houver uma)
+    // Adiciona a hora (se j├í houver uma)
     initialPickerDate = DateTime(
       initialPickerDate.year,
       initialPickerDate.month,
@@ -312,10 +321,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CustomDatePickerModal(
+      builder: (context) => ScheduleTaskSheet(
         initialDate: initialPickerDate,
+        initialTime: _selectedTime,
+        initialRecurrence: ruleToPass,
         userData: widget.userData!,
-        initialRecurrenceRule: ruleToPass,
       ),
     ).then((result) {
       if (result != null) {
@@ -323,27 +333,34 @@ class _TaskInputModalState extends State<TaskInputModal> {
         final selectedDateMidnight = DateTime(selectedDateTime.year,
             selectedDateTime.month, selectedDateTime.day);
 
-        // --- REMOVIDO: Lógica de adicionar ao _textController ---
-
-        // Atualiza a pílula de vibração
+        // Atualiza a p├¡lula de vibra├º├úo
         _updateVibrationForDate(selectedDateMidnight);
 
         // Atualiza o estado
         setState(() {
-          _selectedDate = selectedDateMidnight; // Armazena a data selecionada
-          _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+          _selectedDate = selectedDateMidnight; // Armazena a data (meia-noite) para p├¡lulas e l├│gica
+          
+          // Se o usu├írio selecionou um hor├írio, extra├¡mos dele.
+          // Se n├úo (Dia Inteiro), fica null.
+          if (result.hasTime) {
+             _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+          } else {
+             _selectedTime = null;
+          }
+          
           _selectedRecurrenceRule = result.recurrenceRule;
+          _selectedReminderOffset = result.reminderOffset; // Captura offset
         });
       }
     });
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDAN├çA ---
 
-  // --- INÍCIO DA MUDANÇA: _submit atualizado ---
+  // --- IN├ìCIO DA MUDAN├çA: _submit atualizado ---
   void _submit() async {
     final rawText = _textController.text.trim();
 
-    // 1. Validação de texto obrigatório
+    // 1. Valida├º├úo de texto obrigat├│rio
     if (rawText.isEmpty) {
       // Mostra um feedback
       ScaffoldMessenger.of(context).showSnackBar(
@@ -357,26 +374,80 @@ class _TaskInputModalState extends State<TaskInputModal> {
       return;
     }
 
-    // 2. Parser simplificado (síncrono)
+    // 2. Parser simplificado (s├¡ncrono)
     final ParsedTask textParseResult = TaskParser.parse(rawText);
 
     // 3. Define a data
     final ParsedTask finalParsedTask = textParseResult.copyWith(
-      // cleanText já está correto vindo do parse
+      // cleanText j├í est├í correto vindo do parse
       dueDate: _selectedDate, // Envia a data do "pill" (pode ser null)
       reminderTime: _selectedTime,
       recurrenceRule: _selectedRecurrenceRule,
       tags: _selectedTags, // Envia a lista de tags
       journeyId: _selectedGoalId, // Envia o ID da meta
-      journeyTitle: _selectedGoalTitle, // Envia o Título da meta
-      // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
+      journeyTitle: _selectedGoalTitle, // Envia o T├¡tulo da meta
+      // O Dia Pessoal ser├í recalculado no foco_do_dia_screen com base na data
+    ).copyWith(
+        reminderAt: () {
+            // Calculate numeric reminderAt
+            if (_selectedDate == null) return null;
+            if (_selectedReminderOffset == null) return null;
+            
+            DateTime base = _selectedDate!; // Midnight
+            if (_selectedTime != null) {
+                base = DateTime(base.year, base.month, base.day, _selectedTime!.hour, _selectedTime!.minute);
+            }
+            return base.subtract(_selectedReminderOffset!);
+        }()
     );
 
     widget.onAddTask(finalParsedTask);
 
     if (mounted) Navigator.of(context).pop();
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDAN├çA ---
+
+  void _openContactPicker() async {
+    final result = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return ContactPickerModal(
+          preSelectedUsernames: _sharedWithUsernames,
+          currentDate: _selectedDate ?? DateTime.now(),
+          onSelectionChanged: (selectedUsernames) {
+            // Atualiza o estado com os usernames selecionados
+            setState(() {
+              _sharedWithUsernames = selectedUsernames;
+            });
+            // N├úo fecha o modal aqui, o usu├írio pode continuar selecionando
+          },
+        );
+      },
+    );
+
+    if (result != null && result.isNotEmpty) {
+      // Adiciona mentions no texto
+      String currentText = _textController.text;
+      
+      // Adiciona espa├ºo se n├úo tiver
+      if (currentText.isNotEmpty && !currentText.endsWith(' ')) {
+        currentText += ' ';
+      }
+
+      for (var username in result) {
+        currentText += '@$username ';
+      }
+
+      _textController.text = currentText;
+      
+      // Move cursor para o final
+      _textController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _textController.text.length),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -386,7 +457,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     super.dispose();
   }
 
-  // --- INÍCIO DA MUDANÇA: build() atualizado com "Pills" ---
+  // --- IN├ìCIO DA MUDAN├çA: build() atualizado com "Pills" ---
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
@@ -410,33 +481,30 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
+              // Substitu├¡do TextField por MentionInputField
+              MentionInputField(
+                controller: _textController,
                 focusNode: _textFieldFocusNode,
-                controller: _textController, // Controller padrão
-                style:
-                    const TextStyle(fontSize: 16, color: AppColors.primaryText),
+                onSubmitted: (_) => _submit(), // Chama o submit atualizado
+                hintText: _selectedGoalId != null
+                    ? "Adicionar novo marco... use @ para mencionar"
+                    : "Adicionar tarefa... use @ para mencionar",
                 decoration: InputDecoration(
-                  hintText: _selectedGoalId != null
-                      ? "Adicionar novo marco..."
-                      : "Adicionar tarefa...", // Hint simplificado
                   hintStyle: const TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
                 ),
-                onTap: () {},
-                onSubmitted: (_) => _submit(),
                 maxLines: null,
-                keyboardType: TextInputType.multiline,
-                textCapitalization: TextCapitalization.sentences,
               ),
 
-              // --- INÍCIO: ÁREA DE "PILLS" ---
+              // --- IN├ìCIO: ├üREA DE "PILLS" ---
               Padding(
                 padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
                 child: Wrap(
-                  spacing: 6.0, // Espaço horizontal entre os pills
-                  runSpacing: 4.0, // Espaço vertical entre as linhas de pills
+                  spacing: 6.0, // Espa├ºo horizontal entre os pills
+                  runSpacing: 4.0, // Espa├ºo vertical entre as linhas de pills
                   children: [
-                    // Pill da Meta (lógica que já tínhamos)
+                    // Pill da Meta (l├│gica que j├í t├¡nhamos)
                     if (_selectedGoalTitle != null &&
                         _selectedGoalTitle!.isNotEmpty)
                       _buildPill(
@@ -462,11 +530,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         onDeleted: () {
                           setState(() {
                             _selectedDate = null;
-                            _selectedTime = null; // Reseta a hora também
+                            _selectedTime = null; // Reseta a hora tamb├®m
                             _selectedRecurrenceRule =
-                                RecurrenceRule(); // Reseta recorrência
+                                RecurrenceRule(); // Reseta recorr├¬ncia
                             _updateVibrationForDate(
-                                DateTime.now()); // Atualiza pílula de vibração
+                                DateTime.now()); // Atualiza p├¡lula de vibra├º├úo
                           });
                         },
                       ),
@@ -487,7 +555,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   ],
                 ),
               ),
-              // --- FIM: ÁREA DE "PILLS" ---
+              // --- FIM: ├üREA DE "PILLS" ---
 
               const SizedBox(height: 12),
               const Divider(color: AppColors.border, height: 1),
@@ -506,13 +574,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     color: _selectedGoalId != null
                         ? Colors.cyanAccent
                         : (widget.preselectedGoal != null
-                            ? AppColors.tertiaryText.withValues(alpha: 0.3)
+                            ? AppColors.tertiaryText.withOpacity(0.3)
                             : AppColors.tertiaryText),
                   ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
                     onTap: _showDatePickerModal, // Chama o novo modal
                     color: _selectedDate != null ? Colors.orangeAccent : null,
+                  ),
+                  // NOVO: Bot├úo para abrir o Contact Picker
+                  _buildActionButton(
+                    icon: Icons.person_add_alt,
+                    onTap: _openContactPicker,
+                    color: null, // Cor padr├úo
                   ),
                   const Spacer(),
                   if (_personalDay > 0)
@@ -533,11 +607,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
                       onPressed: _submit, // Chama o submit atualizado
                       style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 10),
-                          minimumSize: const Size(44, 36)),
+                          shape: const CircleBorder(), // Bot├úo circular
+                          padding: const EdgeInsets.all(12), // Padding uniforme
+                          minimumSize: const Size(44, 44)), // Quadrado perfeito para c├¡rculo
                       child: Icon(
                         _isEditing ? Icons.check : Icons.arrow_upward,
                         color: Colors.white,
@@ -553,7 +625,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ),
     );
   }
-  // --- FIM DA MUDANÇA: build() ---
+  // --- FIM DA MUDAN├çA: build() ---
 
   // Helper _buildActionButton (modificado para aceitar cor opcional)
   Widget _buildActionButton(
@@ -573,7 +645,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     required String label,
     required IconData icon,
     required Color color,
-    VoidCallback? onDeleted, // torna a remoção opcional
+    VoidCallback? onDeleted, // torna a remo├º├úo opcional
   }) {
     return InputChip(
       label: Text(
@@ -604,14 +676,14 @@ class _TaskInputModalState extends State<TaskInputModal> {
     );
   }
 
-  // Formata data de forma legível: "12 de Dezembro" ou "12 de Dezembro de 2026"
-  // Inclui horário se _selectedTime estiver definido
+  // Formata data de forma leg├¡vel: "12 de Dezembro" ou "12 de Dezembro de 2026"
+  // Inclui hor├írio se _selectedTime estiver definido
   String _formatDateReadable(DateTime date) {
     final now = DateTime.now();
     final months = [
       'Janeiro',
       'Fevereiro',
-      'Março',
+      'Mar├ºo',
       'Abril',
       'Maio',
       'Junho',
@@ -633,11 +705,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
       dateStr = '$day de $month de ${date.year}';
     }
 
-    // Adiciona horário se houver
+    // Adiciona hor├írio se houver (e se n├úo for nulo)
     if (_selectedTime != null) {
       final hh = _selectedTime!.hour.toString().padLeft(2, '0');
       final mm = _selectedTime!.minute.toString().padLeft(2, '0');
-      dateStr += ' às $hh:$mm';
+      dateStr += ' ├ás $hh:$mm';
     }
 
     return dateStr;
