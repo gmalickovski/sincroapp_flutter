@@ -132,6 +132,10 @@ class _AddContactModalState extends State<AddContactModal> {
                     onPressed: _search,
                   ),
                 ),
+                autofillHints: null, // Hack to disable password manager
+                enableSuggestions: false,
+                keyboardType: TextInputType.text,
+                textInputAction: TextInputAction.search,
                 onSubmitted: (_) => _search(),
               ),
             ),

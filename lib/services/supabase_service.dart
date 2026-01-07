@@ -285,6 +285,26 @@ class SupabaseService {
     }
   }
 
+  Future<void> deleteNotifications(List<String> ids) async {
+    try {
+      await _supabase.schema('sincroapp').from('notifications').delete().in_('id', ids);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao deletar notificações: $e');
+    }
+  }
+
+  Future<void> markNotificationsAsRead(List<String> ids) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .update({'is_read': true})
+          .in_('id', ids);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao marcar notificações como lidas: $e');
+    }
+  }
+
   /// Método helper para criar notificação (Uso interno no app ao compartilhar/mencionar)
   /// Em um cenário ideal, isso seria feito via Database Trigger ou Edge Function,
   /// mas para o MVP faremos direto no client.

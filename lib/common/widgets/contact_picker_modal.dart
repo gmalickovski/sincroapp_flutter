@@ -214,8 +214,20 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                       borderRadius: BorderRadius.circular(30), // PILL SHAPE
                       borderSide: BorderSide.none,
                     ),
+                    hintStyle: const TextStyle(color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.tertiaryText),
+                    filled: true,
+                    fillColor: AppColors.background, // Contrast inside card
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30), // PILL SHAPE
+                      borderSide: BorderSide.none,
+                    ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                   ),
+                  autofillHints: null, // Hack to disable password manager
+                  enableSuggestions: false,
+                  keyboardType: TextInputType.text,
+                  textInputAction: TextInputAction.search,
                 ),
               ),
               const SizedBox(width: 12),
