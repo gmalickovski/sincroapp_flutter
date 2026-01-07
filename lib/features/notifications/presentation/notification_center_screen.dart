@@ -205,13 +205,22 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           ),
           const Spacer(),
           if (!_isSelectionMode)
-            TextButton.icon(
-              icon: const Icon(Icons.done_all, size: 18),
-              label: const Text('Ler tudo'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            IconButton(
+              icon: const Icon(Icons.checklist_rounded, color: AppColors.secondaryText),
+              tooltip: 'Selecionar',
+              onPressed: () => _toggleSelectionMode(null),
+            )
+          else
+            TextButton(
               onPressed: () {
-                 _supabaseService.markAllNotificationsAsRead(widget.userId);
+                // Get all notification ids from current stream (would need to pass them)
+                // For now, this just toggles off
+                setState(() {
+                  _isSelectionMode = false;
+                  _selectedIds.clear();
+                });
               },
+              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
             ),
         ],
       ),
