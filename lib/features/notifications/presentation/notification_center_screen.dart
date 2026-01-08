@@ -137,6 +137,16 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final notif = filtered[index];
+                      
+                      // Auto-marcar como lida se for notificação simples (sem ação de aceite)
+                      if (!notif.isRead && _isSimpleNotification(notif.type)) {
+                         WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) { 
+                               _supabaseService.markNotificationAsRead(notif.id);
+                            }
+                         });
+                      }
+
                       return _NotificationTile(
                         notification: notif,
                         isSelected: _selectedIds.contains(notif.id),
@@ -358,6 +368,15 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         builder: (context) => NotificationDetailModal(notification: notification),
       );
     }
+  }
+
+  bool _isSimpleNotification(NotificationType type) {
+    return type == NotificationType.system ||
+           type == NotificationType.mention ||
+           type == NotificationType.share ||
+           type == NotificationType.contactAccepted ||
+           type == NotificationType.reminder || 
+           type == NotificationType.taskUpdate;
   }
 }
 

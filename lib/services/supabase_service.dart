@@ -803,6 +803,7 @@ class SupabaseService {
     }
   }
   /// Responde a um convite de tarefa (Aceitar/Recusar)
+  /// Responde a um convite de tarefa (Aceitar/Recusar)
   Future<void> respondToInvitation({
     required String taskId,
     required String ownerId,
@@ -812,6 +813,9 @@ class SupabaseService {
     // Dados da tarefa vindos do metadata (para bypass de RLS)
     String? taskText,
     String? targetDate,
+    String? senderUsername, // Username de quem compartilhou
+    String? notificationId, // ID da notificação (para marcar como respondida)
+    Map<String, dynamic>? currentMetadata, // Metadata atual (para preservar)
   }) async {
     try {
       // 1. Notificar o dono da tarefa
@@ -842,20 +846,58 @@ class SupabaseService {
           debugPrint('⚠️ [SupabaseService] Erro ao buscar tarefa (RLS?): $e');
         }
         
-        // Criar nova tarefa para o usuário que aceitou
+        // 3. Calcular o dia pessoal do USUÁRIO QUE ACEITA (não do dono)
+        int? personalDay;
+        DateTime? dueDate;
+        
+        final dateStr = taskResponse?['due_date'] ?? targetDate;
+        if (dateStr != null) {
+          dueDate = DateTime.tryParse(dateStr is String ? dateStr : dateStr.toString());
+        }
+        
+        if (dueDate != null) {
+          // Buscar data de nascimento do usuário que está aceitando
+          try {
+            final responderData = await _supabase.schema('sincroapp').from('users')
+                .select('birth_date')
+                .eq('uid', responderUid)
+                .maybeSingle();
+            
+            if (responderData != null && responderData['birth_date'] != null) {
+              final birthDateStr = responderData['birth_date'] as String;
+              personalDay = NumerologyEngine.calculatePersonalDay(dueDate, birthDateStr);
+              debugPrint('✅ [SupabaseService] Dia pessoal calculado: $personalDay');
+            }
+          } catch (e) {
+            debugPrint('⚠️ [SupabaseService] Erro ao calcular dia pessoal: $e');
+          }
+        }
+        
+        // 4. Preparar texto da tarefa com @mention do sender
+        String finalText = taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada';
+        final sender = senderUsername ?? '';
+        if (sender.isNotEmpty && !finalText.contains('@$sender')) {
+          // Adicionar @sender no início se ainda não estiver presente
+          finalText = '@$sender $finalText';
+        }
+        
+        // 5. Criar nova tarefa para o usuário que aceitou
         final String newTaskId = Uuid().v4();
         
-        // Se conseguiu buscar a original, usar dados completos
-        // Senão, usar dados do metadata da notificação
         final Map<String, dynamic> newTaskData = {
           'id': newTaskId,
           'user_id': responderUid, // Nova tarefa pertence ao usuário que aceitou
-          'text': taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada',
+          'text': finalText,
           'due_date': taskResponse?['due_date'] ?? targetDate,
           'tags': taskResponse?['tags'] ?? [],
           'shared_with': [],
           'created_at': DateTime.now().toUtc().toIso8601String(),
         };
+        
+        // Adicionar personalDay se calculado
+        if (personalDay != null && personalDay > 0) {
+          newTaskData['personalDay'] = personalDay;
+        }
         
         // Adicionar campos opcionais apenas se existirem
         if (taskResponse != null) {
@@ -868,7 +910,7 @@ class SupabaseService {
         
         try {
           await _supabase.schema('sincroapp').from('tasks').insert(newTaskData);
-          debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid');
+          debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid com personalDay=$personalDay');
         } catch (insertError) {
           debugPrint('❌ [SupabaseService] Erro ao inserir tarefa: $insertError');
         }
@@ -899,6 +941,21 @@ class SupabaseService {
           await _supabase.schema('sincroapp').from('tasks').update({'shared_with': newShared}).eq('id', taskId);
         }
       }
+      
+      // Atualizar metadata da notificação para marcar como respondida
+      if (notificationId != null) {
+        final newMeta = Map<String, dynamic>.from(currentMetadata ?? {});
+        newMeta['action_taken'] = true;
+        
+        try {
+          await _supabase.schema('sincroapp').from('notifications')
+              .update({'metadata': newMeta, 'is_read': true}) // Também marca como lida
+              .eq('id', notificationId);
+        } catch (e) {
+          debugPrint('⚠️ [SupabaseService] Erro ao atualizar status da notificação: $e');
+        }
+      }
+
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');
     }

@@ -99,6 +99,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         final ownerId = meta['owner_id'] as String?;
         final taskText = meta['task_text'] as String?;
         final targetDateStr = meta['target_date'] as String?;
+        final senderUsername = meta['sender_username'] as String?; // Username de quem compartilhou
         final userData = await _supabaseService.getUserData(currentUid);
         
         // Passar os dados da tarefa diretamente (evita problema de RLS)
@@ -111,6 +112,9 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
           // Dados da tarefa vindos do metadata (bypass RLS)
           taskText: taskText,
           targetDate: targetDateStr,
+          senderUsername: senderUsername, // Quem compartilhou
+          notificationId: widget.notification.id,
+          currentMetadata: widget.notification.metadata,
         );
       }
       
@@ -346,6 +350,31 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
   }
 
   Widget _buildActionButtons() {
+    // Verificar se já foi respondido
+    final actionTaken = widget.notification.metadata['action_taken'] == true;
+    
+    if (actionTaken) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Column(
+          children: [
+            Icon(Icons.check_circle, color: AppColors.tertiaryText, size: 32),
+            SizedBox(height: 8),
+            Text(
+              'Você já respondeu a este convite',
+              style: TextStyle(color: AppColors.secondaryText, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Row(
       children: [
         Expanded(
