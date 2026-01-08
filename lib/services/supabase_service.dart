@@ -896,7 +896,7 @@ class SupabaseService {
         
         // Adicionar personalDay se calculado
         if (personalDay != null && personalDay > 0) {
-          newTaskData['personalDay'] = personalDay;
+          newTaskData['personal_day'] = personalDay;
         }
         
         // Adicionar campos opcionais apenas se existirem
