@@ -1,5 +1,5 @@
 // lib/features/tasks/models/task_model.dart
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:flutter/material.dart';
 
@@ -115,10 +115,15 @@ class TaskModel {
     );
   }
 
-  // fromFirestore atualizado para ler os novos campos
-  factory TaskModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is String) return DateTime.tryParse(value);
+    // Fallback if needed
+    return null;
+  }
 
+  // fromMap atualizado para ler os novos campos
+  factory TaskModel.fromMap(Map<String, dynamic> data) {
     RecurrenceType recType = RecurrenceType.none;
     if (data['recurrenceType'] != null && data['recurrenceType'] is String) {
       recType = RecurrenceType.values.firstWhere(
@@ -152,8 +157,8 @@ class TaskModel {
         reminder = null;
       }
     } else {
-      // Se não, tentamos extrair do dueDate
-      DateTime? due = (data['dueDate'] as Timestamp?)?.toDate();
+      // Se não, tentamos extrair do dueDate (parse string if needed)
+      DateTime? due = _parseDate(data['dueDate']);
       if (due != null) {
           final localDue = due.toLocal();
           if (localDue.hour != 0 || localDue.minute != 0) {
@@ -163,11 +168,11 @@ class TaskModel {
     }
 
     return TaskModel(
-      id: doc.id,
+      id: data['id'] ?? data['id'] ?? '', // Assume ID is generic or passed
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
-      createdAt: (data['createdAt'] as Timestamp? ?? Timestamp.now()).toDate(),
-      dueDate: (data['dueDate'] as Timestamp?)?.toDate(),
+      createdAt: _parseDate(data['createdAt']) ?? DateTime.now(),
+      dueDate: _parseDate(data['dueDate']),
       tags: List<String>.from(data['tags'] ?? []),
       sharedWith: List<String>.from(data['sharedWith'] ?? []), // NOVO
       journeyId: data['journeyId'],
@@ -176,19 +181,19 @@ class TaskModel {
       recurrenceType: recType,
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
-      recurrenceEndDate: (data['recurrenceEndDate'] as Timestamp?)?.toDate(),
+      recurrenceEndDate: _parseDate(data['recurrenceEndDate']),
       reminderTime: reminder,
       recurrenceId: data['recurrenceId'],
       goalId: data['goalId'],
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      completedAt: _parseDate(data['completedAt']),
       // --- FIM DA MUDANÇA ---
-      reminderAt: (data['reminder_at'] as Timestamp?)?.toDate(),
+      reminderAt: _parseDate(data['reminder_at']),
     );
   }
 
-  // toFirestore atualizado para salvar os novos campos
-  Map<String, dynamic> toFirestore() {
+  // toMap atualizado para salvar os novos campos
+  Map<String, dynamic> toMap() {
     String? recurrenceTypeString;
     if (recurrenceType != RecurrenceType.none) {
       recurrenceTypeString = recurrenceType.toString();
@@ -200,9 +205,9 @@ class TaskModel {
     return {
       'text': text,
       'completed': completed,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
       // Salva o dueDate completo (com hora)
-      'dueDate': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
+      'dueDate': dueDate?.toIso8601String(),
       'tags': tags,
       'sharedWith': sharedWith, // NOVO
       'journeyId': journeyId,
@@ -211,16 +216,13 @@ class TaskModel {
       'recurrenceType': recurrenceTypeString,
       'recurrenceInterval': recurrenceInterval,
       'recurrenceDaysOfWeek': recurrenceDaysOfWeek,
-      'recurrenceEndDate': recurrenceEndDate != null
-          ? Timestamp.fromDate(recurrenceEndDate!)
-          : null,
+      'recurrenceEndDate': recurrenceEndDate?.toIso8601String(),
       'recurrenceId': recurrenceId,
       'goalId': goalId,
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
-      'completedAt':
-          completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt': completedAt?.toIso8601String(),
       // --- FIM DA MUDANÇA ---
-      'reminder_at': reminderAt != null ? Timestamp.fromDate(reminderAt!) : null,
+      'reminder_at': reminderAt?.toIso8601String(),
     };
   }
   // --- INÍCIO DA MUDANÇA (Solicitação 2) ---

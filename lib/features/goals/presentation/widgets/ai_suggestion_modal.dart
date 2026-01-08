@@ -1,6 +1,5 @@
 // lib/features/goals/presentation/widgets/ai_suggestion_modal.dart
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -11,6 +10,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/ai_service.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum AiModalState {
   fetchingContext,
@@ -65,7 +65,7 @@ class _AiSuggestionModalState extends State<AiSuggestionModal> {
       _errorMessage = '';
     });
     try {
-      final userId = FirebaseAuth.instance.currentUser?.uid;
+      final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId == null) {
         throw Exception("Usuário não autenticado.");
       }

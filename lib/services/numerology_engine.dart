@@ -929,6 +929,69 @@ class NumerologyEngine {
     return {'status': 'Neutro', 'descricao': 'Relação sem fortes influências numerológicas diretas.'};
   }
 
+  /// Calcula a compatibilidade amorosa (Sinastria) entre dois perfis.
+  /// Retorna um Map com score (0-100), status e descrição básica.
+  static Map<String, dynamic> calculateSynastry({
+    required NumerologyResult profileA,
+    required NumerologyResult profileB,
+  }) {
+    // 1. Harmonia Conjugal (Baseado na tabela existente)
+    final harmoniaA = profileA.numeros['harmoniaConjugal'] ?? 0;
+    final harmoniaB = profileB.numeros['harmoniaConjugal'] ?? 0;
+    final match = checkCompatibility(harmoniaA, harmoniaB);
+    
+    double score = 50.0; // Base neutra
+    
+    switch (match['status']) {
+      case 'Compatíveis (Vibram juntos)':
+      case 'Compatíveis (Monotonia)':
+      case 'Vibram Juntos':
+        score = 95.0;
+        break;
+      case 'Atração':
+        score = 85.0;
+        break;
+      case 'Opostos':
+        score = 65.0; // Opostos podem ser bons, mas desafiadores
+        break;
+      case 'Passivo':
+        score = 40.0;
+        break;
+      case 'Neutro':
+      default:
+        score = 50.0;
+    }
+
+    // 2. Ajuste Fino: Destino (Propósito de Vida)
+    // Se destinos forem iguais ou compatíveis, bônus.
+    final destinoA = profileA.numeros['destino']!;
+    final destinoB = profileB.numeros['destino']!;
+    
+    // Matriz simplificada de destinos compatíveis
+    // (Poderíamos expandir, mas vamos usar lógica simples de pares/ímpares como proxy simplificado de energia por enquanto)
+    if (destinoA == destinoB) {
+      score += 5; 
+    } else if ((destinoA % 2) == (destinoB % 2)) {
+      // Mesma polaridade (ambos pares ou ambos ímpares) geralmente se entendem melhor
+      score += 2;
+    }
+
+    // Cap em 100 e Floor em 0
+    if (score > 100) score = 100;
+    if (score < 0) score = 0;
+
+    return {
+      'score': score.toInt(),
+      'status': match['status'],
+      'description': match['descricao'], // Texto curto local
+      'details': {
+        'numA': harmoniaA,
+        'numB': harmoniaB,
+        'destinyMatch': (destinoA == destinoB),
+      }
+    };
+  }
+
   // === FIM DOS NOVOS MÉTODOS ===
 
   NumerologyResult? calcular() {

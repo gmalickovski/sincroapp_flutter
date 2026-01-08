@@ -1,6 +1,5 @@
 // lib/models/user_model.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 
 class UserModel {
@@ -54,9 +53,7 @@ class UserModel {
         'respostaSubconsciente',
       ];
 
-  factory UserModel.fromFirestore(DocumentSnapshot<Object?> doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
+  factory UserModel.fromMap(Map<String, dynamic> data) {
     // Lógica para dashboardCardOrder
     final List<dynamic> rawOrder =
         data['dashboardCardOrder'] ?? defaultCardOrder;
@@ -70,7 +67,7 @@ class UserModel {
     // Lê dados de subscription
     SubscriptionModel subscription;
     if (data['subscription'] != null && data['subscription'] is Map) {
-      subscription = SubscriptionModel.fromFirestore(
+      subscription = SubscriptionModel.fromMap(
         Map<String, dynamic>.from(data['subscription']),
       );
     } else {
@@ -79,7 +76,7 @@ class UserModel {
     }
 
     return UserModel(
-      uid: doc.id,
+      uid: data['uid'] ?? data['id'] ?? '',
       email: data['email'] ?? '',
       photoUrl: data['photoUrl'],
       username: data['username'], // NOVO: pode ser null se usuário ainda não criou

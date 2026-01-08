@@ -31,14 +31,13 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      debugPrint(
-          '[LoginScreen] Tentando login para ${_emailController.text.trim()}');
+      // debugPrint('[LoginScreen] Tentando login para ${_emailController.text.trim()}');
       await _authRepository.signInWithEmailAndPassword(
         email: _emailController.text,
         password: _passwordController.text,
       );
     } on AuthException catch (e) {
-      debugPrint('[LoginScreen] AuthException: ${e.message}');
+      // debugPrint('[LoginScreen] AuthException: ${e.message}');
       if (e.message.contains('Invalid login credentials')) {
         _errorMessage = 'Email ou senha inválidos.';
       } else {

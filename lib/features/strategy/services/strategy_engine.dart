@@ -1,11 +1,12 @@
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
-import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
+// import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart'; // REMOVED (or keep comment)
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter/material.dart'; // Add this import for debugPrint
+import 'package:flutter/material.dart';
+import 'package:sincro_app_flutter/features/strategy/services/strategy_n8n_service.dart'; // NOVO
 
 class StrategyEngine {
   static StrategyRecommendation getRecommendation(int personalDay) {
@@ -158,29 +159,39 @@ class StrategyEngine {
       );
     }
 
-    // 3. Circuit Breaker: Check daily API call limit
+  // 3. Circuit Breaker: Check daily API call limit
     final apiCallCount = await _getApiCallCount(user.uid);
-    if (apiCallCount >= 3) {
-      debugPrint("⚠️ Circuit Breaker: Daily limit reached for Strategy AI. Returning base/cached.");
+    // 🚀 RESTRICTION: Limit to 1 call per day to control costs/tokens
+    if (apiCallCount >= 1) {
+      debugPrint("⚠️ Circuit Breaker: Daily limit reached for Strategy N8N (1/day). Returning base/cached.");
       return StrategyRecommendation(
         mode: base.mode,
         reason: base.reason,
         tips: base.tips,
         methodologyName: base.methodologyName,
-        aiSuggestions: cached ?? [], // Return cached if available, even if partial
+        aiSuggestions: cached ?? [], // Return cached if available
       );
     }
 
-    // 4. Call AI to generate suggestions
+    // 4. Call N8N Service to generate suggestions
     try {
-      // Increment counter BEFORE calling to prevent race conditions in tight loops
+      // Increment counter BEFORE calling to prevent race conditions
       await _incrementApiCallCount(user.uid);
 
-      final suggestions = await AssistantService.generateStrategySuggestions(
+      final tasksCompact = tasks.map((t) => {
+          'title': t.text,
+          'dueDate': t.dueDate?.toIso8601String().split('T').first,
+          'hasTime': t.reminderTime != null,
+          'isGoal': t.journeyId != null,
+        }).toList();
+
+      final suggestions = await StrategyN8NService.fetchStrategyRecommendation(
         user: user,
-        tasks: tasks,
         personalDay: personalDay,
         mode: base.mode,
+        tasksCompact: tasksCompact,
+        modeTitle: getModeTitle(base.mode),
+        modeDescription: getModeDescription(base.mode),
       );
 
       // Cache the result
@@ -196,8 +207,8 @@ class StrategyEngine {
         aiSuggestions: suggestions,
       );
     } catch (e) {
-      debugPrint("Erro ao carregar estratégia IA: $e");
-      // Fallback to base if AI fails
+      debugPrint("❌ Erro ao carregar estratégia N8N: $e");
+      // Fallback to base if N8N fails
       return base;
     }
   }

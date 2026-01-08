@@ -51,9 +51,9 @@ class SupabaseService {
       // Upsert: Insere se não existir, atualiza se existir (baseado na PK user_id)
       await _supabase.schema('sincroapp').from('users').upsert(userData, onConflict: 'uid');
       
-      debugPrint('✅ [SupabaseService] Dados do usuário salvos com sucesso.');
+      // debugPrint('✅ [SupabaseService] Dados do usuário salvos com sucesso.');
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao salvar dados do usuário: $e');
+      // debugPrint('❌ [SupabaseService] Erro ao salvar dados do usuário: $e');
       rethrow;
     }
   }
@@ -69,7 +69,7 @@ class SupabaseService {
           .maybeSingle();
 
       if (response == null) {
-        debugPrint('⚠️ [SupabaseService] Usuário não encontrado no Supabase: $uid');
+        // debugPrint('⚠️ [SupabaseService] Usuário não encontrado no Supabase: $uid');
         return null;
       }
 
@@ -97,7 +97,7 @@ class SupabaseService {
             : SubscriptionModel.free(),
       );
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao buscar usuário: $e');
+      // debugPrint('❌ [SupabaseService] Erro ao buscar usuário: $e');
       rethrow;
     }
   }
@@ -799,7 +799,7 @@ class SupabaseService {
         }
       }
     } catch (e) {
-      debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
+      // debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
     }
   }
   /// Responde a um convite de tarefa (Aceitar/Recusar)
@@ -832,8 +832,10 @@ class SupabaseService {
           }
         );
         
+        
         // 2. CRITICAL: Criar uma cópia da tarefa para o usuário que aceitou
-        debugPrint('🔍 [SupabaseService] Tentando buscar tarefa $taskId...');
+        // debugPrint('🔍 [SupabaseService] Tentando buscar tarefa $taskId...');
+        
         
         // Tentar buscar tarefa original (pode falhar por RLS)
         Map<String, dynamic>? taskResponse;
@@ -843,7 +845,7 @@ class SupabaseService {
               .eq('id', taskId)
               .maybeSingle();
         } catch (e) {
-          debugPrint('⚠️ [SupabaseService] Erro ao buscar tarefa (RLS?): $e');
+          // debugPrint('⚠️ [SupabaseService] Erro ao buscar tarefa (RLS?): $e');
         }
         
         // 3. Calcular o dia pessoal do USUÁRIO QUE ACEITA (não do dono)
@@ -866,10 +868,10 @@ class SupabaseService {
             if (responderData != null && responderData['birth_date'] != null) {
               final birthDateStr = responderData['birth_date'] as String;
               personalDay = NumerologyEngine.calculatePersonalDay(dueDate, birthDateStr);
-              debugPrint('✅ [SupabaseService] Dia pessoal calculado: $personalDay');
+              // debugPrint('✅ [SupabaseService] Dia pessoal calculado: $personalDay');
             }
           } catch (e) {
-            debugPrint('⚠️ [SupabaseService] Erro ao calcular dia pessoal: $e');
+            // debugPrint('⚠️ [SupabaseService] Erro ao calcular dia pessoal: $e');
           }
         }
         
@@ -910,9 +912,9 @@ class SupabaseService {
         
         try {
           await _supabase.schema('sincroapp').from('tasks').insert(newTaskData);
-          debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid com personalDay=$personalDay');
+          // debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid com personalDay=$personalDay');
         } catch (insertError) {
-          debugPrint('❌ [SupabaseService] Erro ao inserir tarefa: $insertError');
+          // debugPrint('❌ [SupabaseService] Erro ao inserir tarefa: $insertError');
         }
         
       } else {
@@ -952,12 +954,12 @@ class SupabaseService {
               .update({'metadata': newMeta, 'is_read': true}) // Também marca como lida
               .eq('id', notificationId);
         } catch (e) {
-          debugPrint('⚠️ [SupabaseService] Erro ao atualizar status da notificação: $e');
+          // debugPrint('⚠️ [SupabaseService] Erro ao atualizar status da notificação: $e');
         }
       }
 
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');
+      // debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');
     }
   }
 
@@ -969,7 +971,7 @@ class SupabaseService {
           .delete()
           .eq('id', taskId);
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao deletar tarefa: $e');
+      // debugPrint('❌ [SupabaseService] Erro ao deletar tarefa: $e');
       rethrow;
     }
   }

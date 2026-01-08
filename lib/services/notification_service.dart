@@ -1,11 +1,9 @@
 // lib/services/notification_service.dart
 import 'dart:io';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/firebase_options.dart';
+// import 'package:sincro_app_flutter/firebase_options.dart'; // Removido
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart'; // Para TimeOfDay
@@ -20,7 +18,7 @@ import 'package:timezone/timezone.dart' as tz;
 // para funcionar em background no Android.
 @pragma('vm:entry-point')
 Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
-  // Precisamos inicializar o Firebase aqui para acesso em background
+  // Precisamos inicializar o binding aqui para acesso em background
   WidgetsFlutterBinding.ensureInitialized();
   
   // Inicializa Supabase para uso em background
@@ -32,16 +30,12 @@ Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
       ),
       anonKey: const String.fromEnvironment(
         'SUPABASE_ANON_KEY',
-        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a',
+        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a', // Ajustar se necessário, ou confiar que será injetado
       ),
     );
   } catch (e) {
      debugPrint('Supabase já inicializado ou erro: $e');
   }
-
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
 
   final String? userId = response.payload;
   if (userId == null || userId.isEmpty) return;
@@ -75,8 +69,7 @@ class NotificationService {
 
   final fln.FlutterLocalNotificationsPlugin _localNotifications =
       fln.FlutterLocalNotificationsPlugin();
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-
+  
   // IDs dos Canais (Android)
   static const String _channelIdReminder = 'task_reminders';
   static const String _channelNameReminder = 'Lembretes de Tarefas';
@@ -119,19 +112,12 @@ class NotificationService {
 
     // Cria os canais Android
     await _createAndroidChannels();
-
-    // Inicializa o Firebase Messaging
-    await _fcm.requestPermission();
   }
 
   /// Solicita permissões de notificação usando permission_handler
   Future<void> _requestPermissions() async {
     if (Platform.isIOS) {
-      await _fcm.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+       // IOS permissions are handled by DarwinInitializationSettings requestAlertPermission
     } else if (Platform.isAndroid) {
       // Para Android 13 (API 33) ou superior, precisamos pedir permissão
       await Permission.notification.request();

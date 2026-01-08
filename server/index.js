@@ -291,7 +291,7 @@ app.get('/api/faq', async (req, res) => {
     }
 });
 
-const FEEDBACK_WEBHOOK_URL = "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
+const FEEDBACK_WEBHOOK_URL = process.env.FEEDBACK_WEBHOOK_URL || "https://n8n.studiomlk.com.br/webhook/sincroapp-feedback";
 
 app.post('/api/feedback', async (req, res) => {
     try {
@@ -506,8 +506,8 @@ app.get('/api/about', async (req, res) => {
     }
 });
 
-const N8N_PASSWORD_RESET_WEBHOOK = "https://n8n.studiomlk.com.br/webhook/sincroapp-password-reset"; // Replace with actual if different
-const N8N_TRANSACTION_WEBHOOK = "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
+const N8N_PASSWORD_RESET_WEBHOOK = process.env.N8N_PASSWORD_RESET_WEBHOOK || "https://n8n.studiomlk.com.br/webhook/sincroapp-password-reset";
+const N8N_TRANSACTION_WEBHOOK = process.env.N8N_TRANSACTION_WEBHOOK || "https://n8n.webhook.sincroapp.com.br/webhook/stripe-events";
 
 // --- STRIPE CUSTOMER PORTAL ---
 app.post('/api/stripe/portal-session', async (req, res) => {

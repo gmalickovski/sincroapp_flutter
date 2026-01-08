@@ -1,15 +1,14 @@
 import 'dart:io';
-import 'package:supabase_flutter/supabase_flutter.dart'; // For Supabase Functions
+import 'package:supabase_flutter/supabase_flutter.dart'; 
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:image_picker/image_picker.dart'; // For XFile
 import '../features/feedback/models/feedback_model.dart';
 
 class FeedbackService {
   // final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(region: 'us-central1'); // Removed
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   Future<void> sendFeedback({
     required FeedbackModel feedback,
@@ -37,7 +36,9 @@ class FeedbackService {
       
       // 2. Upload Attachment
       if (attachment != null) {
-        attachmentUrl = await _uploadFile(attachment, feedback.userId ?? 'anonymous');
+        // Fallback for user ID if null
+        final uid = feedback.userId ?? 'anonymous';
+        attachmentUrl = await _uploadFile(attachment, uid);
       }
 
       // 3. Update Feedback Model with gathered data
@@ -53,13 +54,13 @@ class FeedbackService {
       );
 
       // 4. Call Supabase Edge Function
-      await Supabase.instance.client.functions.invoke(
+      await _supabase.functions.invoke(
         'feedback-proxy',
         body: fullFeedback.toJson(),
       );
 
     } catch (e) {
-      print('Error sending feedback: $e');
+      if (kDebugMode) print('Error sending feedback: $e');
       rethrow;
     }
   }
@@ -67,19 +68,27 @@ class FeedbackService {
   Future<String> _uploadFile(XFile file, String userId) async {
     try {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = '${timestamp}_feedback.jpg';
-      final ref = _storage.ref().child('feedback_uploads/$userId/$fileName');
+      final fileName = '${timestamp}_feedback_${file.name}';
+      final path = '$userId/$fileName';
       
       // Universal Upload (Web & Mobile) - Reads into memory (acceptable for feedback images)
       final bytes = await file.readAsBytes();
-      final metadata = SettableMetadata(contentType: 'image/jpeg');
       
-      final uploadTask = ref.putData(bytes, metadata);
-      final snapshot = await uploadTask;
-      return await snapshot.ref.getDownloadURL();
+      // Upload using Supabase Storage
+      // Assuming 'feedback-attachments' bucket exists and is public or has appropriate policies
+      await _supabase.storage.from('feedback-attachments').uploadBinary(
+            path,
+            bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'), // Adjust if needed
+          );
+
+      // Get Public URL
+      return _supabase.storage.from('feedback-attachments').getPublicUrl(path);
     } catch (e) {
-      print('Error uploading file: $e');
-      throw Exception('Falha ao enviar imagem.');
+      if (kDebugMode) print('Error uploading file: $e');
+      // If upload fails, we swallow it for now to allow feedback to be sent without image? 
+      // Or throw? Let's throw to match previous behavior but maybe log it.
+      throw Exception('Falha ao enviar imagem. Verifique se o bucket de armazenamento existe.');
     }
   }
 }

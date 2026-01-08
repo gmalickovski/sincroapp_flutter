@@ -1,7 +1,6 @@
 // lib/features/goals/models/goal_model.dart
-// (Arquivo existente, código completo atualizado)
 
-import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:equatable/equatable.dart';
 // --- CORREÇÃO AQUI ---
 import 'package:meta/meta.dart'; // Importa o pacote para @immutable
@@ -38,14 +37,14 @@ class SubTask extends Equatable {
     );
   }
 
-  // Métodos de (de)serialização para Firestore
+  // Métodos de (de)serialização
   factory SubTask.fromMap(Map<String, dynamic> map, String defaultId) {
     DateTime? parsedDeadline;
-    if (map['deadline'] is Timestamp) {
-      parsedDeadline = (map['deadline'] as Timestamp).toDate();
-    } else if (map['deadline'] is String) {
-      // Tenta fazer parse de String (se vier da web ou outro formato)
+    if (map['deadline'] is String) {
+      // Tenta fazer parse de String (ISO 8601 do Supabase)
       parsedDeadline = DateTime.tryParse(map['deadline']);
+    } else if (map['deadline'] is DateTime) {
+      parsedDeadline = map['deadline'];
     }
 
     return SubTask(
@@ -61,7 +60,7 @@ class SubTask extends Equatable {
       'id': id,
       'title': title,
       'isCompleted': isCompleted,
-      'deadline': deadline != null ? Timestamp.fromDate(deadline!) : null,
+      'deadline': deadline?.toIso8601String(),
     };
   }
 
@@ -98,15 +97,11 @@ class Goal extends Equatable {
     this.imageUrl,
   });
 
-  // Constrói uma instância de Goal a partir de um documento do Firestore
-  factory Goal.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
+  // Constrói uma instância de Goal a partir de um Map
+  factory Goal.fromMap(Map<String, dynamic> data) {
+    
     DateTime? parseDate(dynamic dateValue) {
       if (dateValue == null) return null;
-      if (dateValue is Timestamp) {
-        return dateValue.toDate();
-      }
       if (dateValue is String) {
         return DateTime.tryParse(dateValue);
       }
@@ -119,25 +114,21 @@ class Goal extends Equatable {
         List<dynamic> subTasksData = data['subTasks'] as List<dynamic>;
         loadedSubTasks = subTasksData.map((taskData) {
           final taskMap = taskData as Map<String, dynamic>;
-          return SubTask.fromMap(
-              taskMap, FirebaseFirestore.instance.collection('temp').doc().id);
+          // Usando um ID temporário se não vier
+          return SubTask.fromMap(taskMap, DateTime.now().millisecondsSinceEpoch.toString()); 
         }).toList();
       } catch (e) {
-        loadedSubTasks =
-            []; // Falha ao carregar, retorna lista vazia por segurança
+        loadedSubTasks = []; 
       }
     }
 
     return Goal(
-      id: doc.id,
+      id: data['id'] ?? '', // ID deve vir no map
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       targetDate: parseDate(data['targetDate']),
-      // Usa o progresso salvo ou calcula se não existir/for zero? (Decisão de design)
-      // Por ora, vamos usar o valor salvo. O cálculo pode ser feito na UI se necessário.
       progress: (data['progress'] ?? 0).toInt(),
-      createdAt: parseDate(data['createdAt']) ??
-          DateTime.now(), // Usa now() como fallback
+      createdAt: parseDate(data['createdAt']) ?? DateTime.now(),
       userId: data['userId'] ?? '',
       category: data['category'] as String?,
       subTasks: loadedSubTasks,
@@ -145,8 +136,8 @@ class Goal extends Equatable {
     );
   }
 
-  // Converte a instância de Goal para um Map para salvar no Firestore
-  Map<String, dynamic> toFirestore() {
+  // Converte a instância de Goal para um Map
+  Map<String, dynamic> toMap() {
     // Calcula o progresso atual baseado nas subtarefas
     final completedCount = subTasks.where((task) => task.isCompleted).length;
     final currentProgress = subTasks.isNotEmpty
@@ -156,9 +147,9 @@ class Goal extends Equatable {
     return {
       'title': title,
       'description': description,
-      'targetDate': targetDate != null ? Timestamp.fromDate(targetDate!) : null,
-      'progress': currentProgress, // Salva o progresso calculado
-      'createdAt': Timestamp.fromDate(createdAt),
+      'targetDate': targetDate?.toIso8601String(),
+      'progress': currentProgress, 
+      'createdAt': createdAt.toIso8601String(),
       'userId': userId,
       'category': category,
       'subTasks': subTasks.map((task) => task.toMap()).toList(),

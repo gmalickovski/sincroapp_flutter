@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 class N8nService {
-  static const String _webhookUrl = 'https://n8n.studiomlk.com.br/webhook/sincroflow';
+  // Agora lê do arquivo .env
+  static String get _webhookUrl => dotenv.env['ASSISTANT_WEBHOOK_URL'] ?? '';
 
   /// Envia o prompt para o n8n e retorna a resposta bruta (String)
   Future<String> chat({
@@ -11,6 +14,9 @@ class N8nService {
     required String userId,
   }) async {
     try {
+      if (_webhookUrl.isEmpty) {
+        throw Exception('ASSISTANT_WEBHOOK_URL not configured in .env');
+      }
       debugPrint('[N8nService] Enviando prompt para $_webhookUrl...');
       
       final response = await http.post(

@@ -1,0 +1,21 @@
+=== VERIFICATION: GUILHERME ===
+destino: 8
+expressao: 6
+motivacao: 4
+impressao: 2
+missao: 14
+talentoOculto: 1
+psiquico: 5
+harmoniaConjugal: 5
+Harmonia Conjugal (Calculated): 5
+
+=== VERIFICATION: CLÁUDIA ===
+destino: 11
+expressao: 6
+motivacao: 3
+impressao: 3
+missao: 17
+talentoOculto: 9
+psiquico: 4
+harmoniaConjugal: 8
+Harmonia Conjugal (Calculated): 8

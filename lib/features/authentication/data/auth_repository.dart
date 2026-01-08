@@ -23,12 +23,12 @@ class AuthRepository {
     required String password,
   }) async {
     try {
-      debugPrint('[AuthRepository] Iniciando signIn email=${email.trim()}');
+      // debugPrint('[AuthRepository] Iniciando signIn email=${email.trim()}');
       final response = await _auth.signInWithPassword(
         email: email.trim(),
         password: password.trim(),
       );
-      debugPrint('[AuthRepository] signIn concluído. currentUser=${response.user?.id}');
+      // debugPrint('[AuthRepository] signIn concluído. currentUser=${response.user?.id}');
       return response;
     } catch (e) {
       debugPrint('[AuthRepository] Erro no signIn: $e');

@@ -3,7 +3,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:http/http.dart' as http;
@@ -11,6 +10,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/constants/stripe_constants.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// Serviço centralizado de pagamentos com Stripe
 class PaymentService {
@@ -47,7 +47,7 @@ class PaymentService {
 
   Future<void> openCustomerPortal() async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw 'Usuário não autenticado';
 
       const returnUrl = 'https://sincroapp.com.br'; 
@@ -61,7 +61,7 @@ class PaymentService {
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'userId': user.uid,
+          'userId': user.id,
           'email': user.email,
           'returnUrl': returnUrl,
         }),

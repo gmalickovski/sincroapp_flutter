@@ -1,7 +1,5 @@
 // lib/models/subscription_model.dart
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// Enum para os 3 níveis de plano do SincroApp
 enum SubscriptionPlan {
   free, // Sincro Essencial (Gratuito)
@@ -63,7 +61,7 @@ class SubscriptionModel {
   }
 
   /// Converte de Firestore ou Map
-  factory SubscriptionModel.fromFirestore(Map<String, dynamic> data) {
+  factory SubscriptionModel.fromMap(Map<String, dynamic> data) {
     final planName = data['plan'] ?? 'free';
     final plan = SubscriptionPlan.values.firstWhere(
       (e) => e.name == planName,
@@ -89,9 +87,12 @@ class SubscriptionModel {
     );
   }
 
+  // Mantido para compatibilidade se houver chamadas antigas, mas redireciona para fromMap
+  factory SubscriptionModel.fromFirestore(Map<String, dynamic> data) => SubscriptionModel.fromMap(data);
+
   static DateTime? _parseDate(dynamic value) {
     if (value == null) return null;
-    if (value is Timestamp) return value.toDate().toUtc();
+    // Removido Timestamp pois removemos Firestore
     if (value is String) return DateTime.tryParse(value)?.toUtc();
     return null;
   }

@@ -1,12 +1,12 @@
 // lib/features/settings/presentation/tabs/account_settings_tab.dart
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/utils/username_validator.dart'; // NOVO
 import 'package:sincro_app_flutter/features/settings/presentation/widgets/contact_management_modal.dart'; // NOVO
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AccountSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -18,7 +18,7 @@ class AccountSettingsTab extends StatefulWidget {
 
 class _AccountSettingsTabState extends State<AccountSettingsTab> {
   final _supabaseService = SupabaseService();
-  final _auth = FirebaseAuth.instance;
+  final _supabase = Supabase.instance.client;
   final _formKeyInfo = GlobalKey<FormState>();
   final _formKeyPassword = GlobalKey<FormState>();
 
@@ -119,18 +119,27 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
     }
     setState(() => _isSavingPassword = true);
     try {
-      final user = _auth.currentUser;
-      final cred = EmailAuthProvider.credential(
-          email: user!.email!, password: _currentPasswordController.text);
-      await user.reauthenticateWithCredential(cred);
-      await user.updatePassword(_newPasswordController.text);
+      final user = _supabase.auth.currentUser;
+      if (user == null || user.email == null) throw 'Usuário não logado';
+
+      // Re-autenticar para segurança antes de mudar senha
+      await _supabase.auth.signInWithPassword(
+        email: user.email, 
+        password: _currentPasswordController.text
+      );
+      
+      // Atualizar senha
+      await _supabase.auth.updateUser(
+        UserAttributes(password: _newPasswordController.text)
+      );
+
       _showFeedback('Senha alterada com sucesso!');
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
-    } on FirebaseAuthException catch (e) {
-      _showFeedback(
-          'Erro ao alterar a senha: ${e.code == 'wrong-password' ? 'Senha atual incorreta.' : 'Tente novamente.'}',
+    } on AuthException catch (e) {
+       _showFeedback(
+          'Erro ao alterar a senha: ${e.message}',
           isError: true);
     } catch (e) {
       _showFeedback('Ocorreu um erro inesperado.', isError: true);
@@ -145,19 +154,37 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
 
     setState(() => _isDeleting = true);
     try {
-      final user = _auth.currentUser;
-      final cred =
-          EmailAuthProvider.credential(email: user!.email!, password: password);
-      await user.reauthenticateWithCredential(cred);
-      await user.delete();
-      // Em um app real, aqui você navegaria para a tela de login
-      _showFeedback('Conta deletada com sucesso.');
-    } on FirebaseAuthException catch (e) {
-      _showFeedback(
-          'Erro ao deletar conta: ${e.code == 'wrong-password' ? 'Senha incorreta.' : 'Tente novamente.'}',
+      final user = _supabase.auth.currentUser;
+      if (user == null || user.email == null) throw 'Usuário não logado';
+
+      // Re-autenticar para confirmar que sabe a senha
+      await _supabase.auth.signInWithPassword(
+        email: user.email, 
+        password: password
+      );
+      
+      // Como o Client Side do Supabase não permite deletar usuário por padrão (security),
+      // e ainda não configuramos uma Edge Function para isso, vamos apenas exibir um aviso
+      // ou implementar Soft Delete se tivermos essa lógica.
+      // Por enquanto, vamos avisar para contactar suporte ou lançar erro amigável.
+      
+      // await _supabase.functions.invoke('delete-account'); // Exemplo futuro
+      
+      _showFeedback('Funcionalidade indisponível temporariamente. Contate o suporte.', isError: false);
+
+      /* 
+      // Em um cenário ideal com permissão ou Edge Function:
+      await _supabase.rpc('soft_delete_account'); 
+      await _supabase.auth.signOut();
+      // Navigate to login...
+      */
+      
+    } on AuthException catch (e) {
+       _showFeedback(
+          'Senha incorreta ou erro de autenticação: ${e.message}',
           isError: true);
     } catch (e) {
-      _showFeedback('Ocorreu um erro inesperado ao deletar a conta.',
+      _showFeedback('Ocorreu um erro inesperado ao processar.',
           isError: true);
     } finally {
       if (mounted) setState(() => _isDeleting = false);

@@ -42,6 +42,8 @@ import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.da
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
+import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart'; // NEW IMPORT
+
 
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -1153,6 +1155,26 @@ class _DashboardScreenState extends State<DashboardScreen>
               isEditMode: _isEditMode,
               dragHandle:
                   _isEditMode ? _buildDragHandle('harmoniaConjugal') : null,
+              bottomAction: _isEditMode ? null : SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
+                    );
+                  },
+                  icon: const Icon(Icons.favorite, size: 16),
+                  label: const Text('Fazer teste de compatibilidade'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.pink.shade400,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    elevation: 0,
+                  ),
+                ),
+              ),
               onTap: () => _showNumerologyDetail(
                     title: "Harmonia Conjugal",
                     number:

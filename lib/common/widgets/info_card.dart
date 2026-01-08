@@ -14,6 +14,7 @@ class InfoCard extends StatefulWidget {
   final bool isEditMode;
   final Widget? dragHandle;
   final bool isDesktopLayout;
+  final Widget? bottomAction; // New parameter
 
   const InfoCard({
     super.key,
@@ -26,6 +27,7 @@ class InfoCard extends StatefulWidget {
     this.isEditMode = false,
     this.dragHandle,
     this.isDesktopLayout = false,
+    this.bottomAction,
   });
 
   @override
@@ -302,113 +304,116 @@ class _InfoCardState extends State<InfoCard> {
             }).toList(),
           ),
         ],
+        if (widget.bottomAction != null) ...[
+          const SizedBox(height: 16),
+          widget.bottomAction!,
+        ],
       ],
     );
   }
 
   Widget _buildDesktopLayout(String displayTitle) {
+    // Tenta encontrar um título mais curto se disponível
+    final displayTitle = widget.info.titulo;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(widget.icon, color: AppColors.primaryAccent, size: 24),
-            const SizedBox(width: 12),
-            Text(widget.title,
-                style: const TextStyle(
-                    color: AppColors.primaryText,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16)),
-          ],
-        ),
         Expanded(
-          child: Center(
-            child:
-                Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
-              Text(
-                widget.number,
-                style: TextStyle(
-                  fontSize: 64,
-                  fontWeight: FontWeight.bold,
-                  color: widget.color,
-                  height: 1,
-                  shadows: [
-                    Shadow(
-                        color: widget.color.withValues(alpha: 0.5),
-                        blurRadius: 15)
-                  ],
-                ),
-              ),
-              Container(
-                  height: 60,
-                  width: 1,
-                  margin: const EdgeInsets.symmetric(horizontal: 20.0),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (widget.icon != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [
-                    AppColors.primaryAccent.withValues(alpha: 0.0),
-                    AppColors.primaryAccent.withValues(alpha: 0.3),
-                    AppColors.primaryAccent.withValues(alpha: 0.0)
-                  ], begin: Alignment.topCenter, end: Alignment.bottomCenter))),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(displayTitle,
-                        style: const TextStyle(
-                            color: AppColors.secondaryText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 4),
-                    _buildDescriptionRich(widget.info.descricaoCurta),
-                  ],
+                    color: widget.color?.withValues(alpha: 0.1) ??
+                        AppColors.primaryAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    widget.icon,
+                    color: widget.color ?? AppColors.primaryAccent,
+                    size: 24,
+                  ),
                 ),
-              ),
-            ]),
+                if (widget.icon != null) const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        displayTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      // Número grande
+                      if (widget.number.isNotEmpty && widget.number != '-')
+                        Text(widget.number,
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: widget.color ?? AppColors.primaryAccent,
+                              height: 1.0,
+                            )),
+                      const SizedBox(height: 8),
+                      _buildDescriptionRich(widget.info.descricaoCurta),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        if (widget.info.tags.isNotEmpty)
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            children: widget.info.tags.map((tag) {
-              // Detecta se a tag é um período (anos: "1991 a 2017", "até 36 anos", etc.)
-              final isPeriodTag = RegExp(
-                      r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos')
-                  .hasMatch(tag);
-
-              return Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
-                decoration: BoxDecoration(
-                    color: AppColors.primaryAccent.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(20.0),
-                    border: Border.all(
-                        color: AppColors.primaryAccent.withValues(alpha: 0.3))),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isPeriodTag) ...[
-                      const Icon(
-                        Icons.access_time,
-                        size: 14,
-                        color: Color(0xffe9d5ff),
+        
+        // Tags e Botão na parte inferior
+        Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (widget.info.tags.isNotEmpty)
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 8.0,
+                  children: widget.info.tags.map((tag) {
+                     final isPeriodTag = RegExp(r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos').hasMatch(tag);
+                     return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
+                      decoration: BoxDecoration(
+                          color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20.0),
+                          border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3))),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (isPeriodTag) ...[
+                            const Icon(Icons.access_time, size: 14, color: Color(0xffe9d5ff)),
+                            const SizedBox(width: 4),
+                          ],
+                          Text(tag, style: const TextStyle(color: Color(0xffe9d5ff), fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
                       ),
-                      const SizedBox(width: 4),
-                    ],
-                    Text(tag,
-                        style: const TextStyle(
-                            color: Color(0xffe9d5ff),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
-                  ],
+                    );
+                  }).toList(),
                 ),
-              );
-            }).toList(),
+                
+              if (widget.bottomAction != null) ...[
+                const SizedBox(height: 16),
+                widget.bottomAction!,
+              ],
+            ],
           ),
+        ),
       ],
     );
   }
