@@ -877,8 +877,8 @@ class SupabaseService {
         String finalText = taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada';
         final sender = senderUsername ?? '';
         if (sender.isNotEmpty && !finalText.contains('@$sender')) {
-          // Adicionar @sender no início se ainda não estiver presente
-          finalText = '@$sender $finalText';
+          // Adicionar @sender no final se ainda não estiver presente
+          finalText = '$finalText @$sender';
         }
         
         // 5. Criar nova tarefa para o usuário que aceitou
