@@ -173,11 +173,15 @@ flutter pub get
 log_success "Dependências Flutter atualizadas"
 
 # 8. ATUALIZAR DEPENDÊNCIAS FIREBASE FUNCTIONS
-log_info "Atualizando dependências Firebase Functions..."
-cd "$INSTALL_DIR/functions"
-npm install
-cd "$INSTALL_DIR"
-log_success "Dependências Firebase Functions atualizadas"
+if [ -f "$INSTALL_DIR/functions/package.json" ]; then
+    log_info "Atualizando dependências Firebase Functions..."
+    cd "$INSTALL_DIR/functions"
+    npm install
+    cd "$INSTALL_DIR"
+    log_success "Dependências Firebase Functions atualizadas"
+else
+    log_warning "functions/package.json não encontrado. Pulando atualização de dependências Firebase Functions."
+fi
 
 
 
@@ -277,7 +281,29 @@ if [ -d "$INSTALL_DIR/server" ]; then
     
     log_success "Backend API reiniciado"
 fi
-# ... rest of file (same as full_update_script) logic ...
+
+# 17. FIREBASE (LOGIN/USE/DEPLOY OPCIONAL)
+# ... Código original mantido, mas com deploy automático desativado por padrão ...
+if command_exists firebase; then
+    log_info "Autenticando no Firebase (use --no-localhost se necessário)..."
+    firebase login --no-localhost || log_warning "Login Firebase pulado/sem sucesso; continue se já estiver autenticado."
+    FIREBASE_PROJECT="sincroapp-529cc"
+    log_info "Selecionando projeto: $FIREBASE_PROJECT"
+    firebase use "$FIREBASE_PROJECT" || log_warning "Falha ao selecionar projeto; verifique permissões."
+
+    if [ "$AUTO_DEPLOY_FUNCTIONS" -eq 1 ]; then
+        log_info "Deploy automático das Firebase Functions ativado (AUTO_DEPLOY_FUNCTIONS=1)"
+        cd "$INSTALL_DIR/functions"
+        npm install || log_warning "npm install em functions falhou"
+        cd "$INSTALL_DIR"
+        firebase deploy --only functions || log_warning "Deploy das Functions falhou. Verifique autenticação e permissões."
+    else
+        log_warning "Deploy automático desativado. Para deploy manual:"
+        log_warning "  cd $INSTALL_DIR && firebase deploy --only functions"
+    fi
+else
+    log_warning "Firebase CLI não encontrado. Pule esta etapa ou instale com: npm i -g firebase-tools"
+fi
 
 # 18. VERIFICAR SERVIÇOS
 log_info "Verificando status dos serviços..."

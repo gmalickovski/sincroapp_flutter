@@ -173,11 +173,15 @@ flutter pub get
 log_success "Dependências Flutter atualizadas"
 
 # 8. ATUALIZAR DEPENDÊNCIAS FIREBASE FUNCTIONS
-log_info "Atualizando dependências Firebase Functions..."
-cd "$INSTALL_DIR/functions"
-npm install
-cd "$INSTALL_DIR"
-log_success "Dependências Firebase Functions atualizadas"
+if [ -f "$INSTALL_DIR/functions/package.json" ]; then
+    log_info "Atualizando dependências Firebase Functions..."
+    cd "$INSTALL_DIR/functions"
+    npm install
+    cd "$INSTALL_DIR"
+    log_success "Dependências Firebase Functions atualizadas"
+else
+    log_warning "functions/package.json não encontrado. Pulando atualização de dependências Firebase Functions."
+fi
 
 
 
