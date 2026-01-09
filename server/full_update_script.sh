@@ -107,11 +107,6 @@ fi
 # Parar PM2 (Novo Backend API)
 # Parar PM2 (Backend API)
 log_info "Parando Backend API..."
-# Limpar processos antigos/errados
-pm2 delete sincro-backend 2>/dev/null || true
-pm2 delete sincroapp-backend 2>/dev/null || true
-pm2 delete sincroapp-notifications 2>/dev/null || true
-
 # Parar o processo correto se estiver rodando
 pm2 stop sincroapp-server 2>/dev/null || true
 
@@ -276,10 +271,7 @@ if [ -d "$INSTALL_DIR/server" ]; then
     log_info "Reiniciando Backend API (sincroapp-server)..."
     cd "$INSTALL_DIR/server"
     
-    # Garantir que processos antigos ou com nomes errados sejam removidos
-    pm2 delete sincroapp-backend 2>/dev/null || true
-    pm2 delete sincroapp-notifications 2>/dev/null || true
-    pm2 delete sincro-backend 2>/dev/null || true
+    # Garantir restart limpo
     pm2 delete sincroapp-server 2>/dev/null || true # Reiniciar do zero para garantir configs novas
     
     # Iniciar processo correto
@@ -326,8 +318,6 @@ fi
 
 if pm2 list | grep -q sincroapp-server; then
     log_success "Backend API (sincroapp-server): Ativo ✓"
-elif pm2 list | grep -q sincroapp-backend; then
-     log_warning "Backend API: Ativo com nome antigo (sincroapp-backend) - Será corrigido no próximo deploy"
 else
     log_warning "Backend API: Não encontrado"
 fi
