@@ -50,6 +50,7 @@ echo "║        SINCROAPP - ATUALIZAÇÃO DO SISTEMA WEB              ║"
 echo "╚════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
+
 # 1. VERIFICAR SE ESTÁ RODANDO COMO ROOT
 log_info "Verificando permissões..."
 if [ "$EUID" -ne 0 ]; then 
@@ -57,6 +58,19 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 log_success "Executando como root"
+
+# 1.1 VERIFICAR VARIÁVEIS DE AMBIENTE CRÍTICAS (.env)
+if [ -f "$INSTALL_DIR/.env" ]; then
+    log_info "Verificando .env..."
+    if ! grep -q "COMPATIBILITY_WEBHOOK" "$INSTALL_DIR/.env"; then
+        log_warning "Variável COMPATIBILITY_WEBHOOK não encontrada no .env!"
+        log_warning "A funcionalidade de Compatibilidade Amorosa (IA) pode não funcionar."
+        log_warning "Adicione: COMPATIBILITY_WEBHOOK=seu_webhook_n8n no arquivo .env"
+        # Opcional: pausar ou perguntar? Por enquanto apenas avisa.
+    fi
+else
+    log_warning "Arquivo .env não encontrado em $INSTALL_DIR. Certifique-se de que as variáveis de ambiente estão configuradas."
+fi
 
 # 2. VERIFICAR SE O DIRETÓRIO EXISTE
 if [ ! -d "$INSTALL_DIR" ]; then
@@ -147,7 +161,12 @@ git config --global --add safe.directory /opt/flutter || true
 if [ -f /etc/profile.d/flutter.sh ]; then
     . /etc/profile.d/flutter.sh || true
 fi
-export PATH="$PATH:/opt/flutter/bin"
+
+# Tentar encontrar o binário flutter se não estiver no PATH
+if ! command -v flutter &> /dev/null; then
+    export PATH="$PATH:/opt/flutter/bin:/usr/local/flutter/bin:/snap/bin"
+fi
+
 flutter pub get
 log_success "Dependências Flutter atualizadas"
 
@@ -158,22 +177,25 @@ npm install
 cd "$INSTALL_DIR"
 log_success "Dependências Firebase Functions atualizadas"
 
-# 9. ATUALIZAR DEPENDÊNCIAS SERVIÇO DE NOTIFICAÇÕES
-if [ -d "$INSTALL_DIR/notification-service" ]; then
-    log_info "Atualizando dependências do Serviço de Notificações..."
-    cd "$INSTALL_DIR/notification-service"
-    npm install
-    cd "$INSTALL_DIR"
-    log_success "Dependências do Serviço de Notificações atualizadas"
-fi
+
 
 # 9.1 ATUALIZAR DEPENDÊNCIAS DO BACKEND API (NOVO)
 if [ -d "$INSTALL_DIR/server" ]; then
     log_info "Atualizando dependências da API Backend..."
     cd "$INSTALL_DIR/server"
-    npm install
+    if [ -f "package-lock.json" ]; then
+        npm ci
+    else
+        npm install
+    fi
     cd "$INSTALL_DIR"
     log_success "Dependências da API Backend atualizadas"
+fi
+
+# 9.2 VERIFICAR MIGRATIONS (MANUAL)
+if [ -f "$INSTALL_DIR/database_migrations.sql" ]; then
+    log_warning "Arquivo 'database_migrations.sql' detectado."
+    log_warning "Se houver alterações no banco de dados, execute as queries manualmente no Supabase SQL Editor ou via psql."
 fi
 
 # 10. LIMPAR BUILD ANTERIOR
@@ -237,20 +259,7 @@ log_info "Recarregando Nginx..."
 systemctl reload nginx
 log_success "Nginx recarregado"
 
-# 16. REINICIAR SERVIÇO DE NOTIFICAÇÕES
-if [ -d "$INSTALL_DIR/notification-service" ]; then
-    log_info "Reiniciando Serviço de Notificações..."
-    cd "$INSTALL_DIR/notification-service"
-    
-    # Parar e remover processo antigo
-    pm2 delete sincroapp-notifications 2>/dev/null || true
-    
-    # Iniciar novo processo
-    pm2 start index.js --name sincroapp-notifications --time
-    pm2 save
-    
-    log_success "Serviço de Notificações reiniciado"
-fi
+
 
 # 16.1 REINICIAR BACKEND API (NOVO)
 if [ -d "$INSTALL_DIR/server" ]; then
@@ -300,12 +309,7 @@ else
     log_error "Nginx: Inativo ✗"
 fi
 
-# PM2 Services
-if pm2 list | grep -q sincroapp-notifications; then
-    log_success "Serviço de Notificações: Ativo ✓"
-else
-    log_warning "Serviço de Notificações: Não encontrado"
-fi
+
 
 if pm2 list | grep -q sincroapp-backend; then
     log_success "Backend API: Ativo ✓"
@@ -347,7 +351,7 @@ echo -e "  ${BLUE}└─${NC} Domínio: https://$DOMAIN"
 echo ""
 log_info "COMANDOS ÚTEIS:"
 echo -e "  ${BLUE}├─${NC} Verificar logs Nginx: ${BLUE}tail -f /var/log/nginx/error.log${NC}"
-echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (Notif): ${BLUE}pm2 logs sincroapp-notifications${NC}"
+echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-backend${NC}"
 echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-backend${NC}"
 echo -e "  ${BLUE}├─${NC} Reverter para backup: ${BLUE}cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "  ${BLUE}└─${NC} Monitorar serviços: ${BLUE}pm2 monit${NC}"
@@ -359,7 +363,7 @@ echo -e "  ${YELLOW}1.${NC} Para reverter para o backup:"
 echo -e "     ${BLUE}sudo rm -rf $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo systemctl reload nginx${NC}"
-echo -e "     ${BLUE}sudo pm2 restart sincroapp-notifications${NC}"
+
 echo -e "     ${BLUE}sudo pm2 restart sincroapp-backend${NC}"
 echo ""
 
