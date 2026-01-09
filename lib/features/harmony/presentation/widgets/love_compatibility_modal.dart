@@ -300,6 +300,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     final score = _result!['score'] as int;
     final status = _result!['status'] as String;
     final description = _result!['description'] as String;
+    final detailedDescription = _result!['details']['detailedDescription'] as String?;
     
     // Static Analysis Data
     final harmoniaA = _result!['details']['numA'] as int?;
@@ -350,11 +351,31 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
           ),
           const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              description,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            child: Column(
+              children: [
+                Text(
+                  description,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+                ),
+                if (detailedDescription != null) ...[
+                   const SizedBox(height: 24),
+                   Container(
+                     padding: const EdgeInsets.all(20),
+                     decoration: BoxDecoration(
+                       color: AppColors.primary.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(16),
+                       border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                     ),
+                     child: Text(
+                       detailedDescription,
+                       textAlign: TextAlign.center,
+                       style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.6, fontStyle: FontStyle.italic),
+                     ),
+                   ),
+                ]
+              ],
             ),
           ),
 

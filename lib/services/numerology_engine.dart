@@ -901,32 +901,64 @@ class NumerologyEngine {
     8: {'vibra': [2], 'atrai': [1, 4], 'oposto': [3, 6], 'passivo': [5, 7, 9]},
     9: {'vibra': [1], 'atrai': [2, 3, 5, 6], 'oposto': [7], 'passivo': [4, 8]},
   };
+  
+  static const Map<String, String> _detailedDescriptions = {
+    'vibra': 'A sintonia entre vocês é imediata e natural. Vocês tendem a enxergar o mundo sob a mesma ótica, o que facilita enormemente a compreensão mútua e a convivência. É uma relação fluida, onde o apoio e a parceria acontecem sem esforço excessivo, criando um ambiente de paz e crescimento conjunto.',
+    'atrai': 'Existe uma química poderosa e um interesse genuíno entre vocês. As qualidades de um estimulam o outro, gerando admiração e desejo. É uma dinâmica de aprendizado constante, onde as diferenças atuam como um ímã, mantendo a relação excitante e em constante movimento.',
+    'oposto': 'Uma relação de opostos traz desafios, mas também oportunidades únicas de evolução. Vocês veem a vida de ângulos contrários, o que exige diálogo, paciência e negociação. Quando bem trabalhada, essa dupla se torna imbatível, pois juntos vocês cobrem todas as perspectivas possíveis.',
+    'passivo': 'Uma relação tranquila e estável, sem grandes turbulências. Vocês se sentem confortáveis juntos, mas cuidado para não caírem na monotonia. O desafio aqui é manter a chama acesa ativamente, buscando novas aventuras e saindo da zona de conforto para oxigenar a união.',
+    'monotonia': 'Vocês são como espelhos um do outro. O conforto e a identificação são imediatos, mas existe o risco de se isolarem em uma bolha. Para que a relação prospere, é essencial buscarem estímulos externos e novidades que quebrem a rotina e tragam frescor ao convívio.',
+  };
 
   static Map<String, dynamic> checkCompatibility(int harmonia1, int harmonia2) {
     if (harmonia1 == harmonia2) {
       if (harmonia1 == 5) {
-        return {'status': 'Compatíveis (Vibram juntos)', 'descricao': 'Vocês possuem o mesmo número (5). Um completa o outro, excelente compatibilidade!'};
+        return {
+           'status': 'Compatíveis (Vibram juntos)', 
+           'descricao': 'Vocês possuem o mesmo número (5). Um completa o outro, excelente compatibilidade!',
+           'detailedDescription': _detailedDescriptions['vibra']
+        };
       }
-      return {'status': 'Compatíveis (Monotonia)', 'descricao': 'Vocês possuem o mesmo número ($harmonia1). São compatíveis e harmônicos, mas o relacionamento tende a tornar-se monótono com o tempo se não houver novidades.'};
+      return {
+          'status': 'Compatíveis (Monotonia)', 
+          'descricao': 'Vocês possuem o mesmo número ($harmonia1). São compatíveis e harmônicos, mas o relacionamento tende a tornar-se monótono com o tempo.',
+          'detailedDescription': _detailedDescriptions['monotonia']
+      };
     }
 
     final regras = _tabelaHarmonia[harmonia1];
-    if (regras == null) return {'status': 'Desconhecido', 'descricao': ''};
+    if (regras == null) return {'status': 'Desconhecido', 'descricao': '', 'detailedDescription': ''};
 
     if ((regras['vibra'] as List).contains(harmonia2)) {
-      return {'status': 'Vibram Juntos', 'descricao': 'Excelente compatibilidade! O número $harmonia1 vibra em sintonia com o $harmonia2.'};
+      return {
+          'status': 'Vibram Juntos', 
+          'descricao': 'Excelente compatibilidade! O número $harmonia1 vibra em sintonia com o $harmonia2.',
+          'detailedDescription': _detailedDescriptions['vibra']
+      };
     }
     if ((regras['atrai'] as List).contains(harmonia2)) {
-      return {'status': 'Atração', 'descricao': 'Existe uma forte atração entre os números $harmonia1 e $harmonia2.'};
+      return {
+          'status': 'Atração', 
+          'descricao': 'Existe uma forte atração entre os números $harmonia1 e $harmonia2.',
+          'detailedDescription': _detailedDescriptions['atrai']
+      };
     }
     if ((regras['oposto'] as List).contains(harmonia2)) {
-      return {'status': 'Opostos', 'descricao': 'Os números $harmonia1 e $harmonia2 são opostos. Podem ter um excelente relacionamento se houver consciência e sabedoria para lidar com as diferenças.'};
+      return {
+          'status': 'Opostos', 
+          'descricao': 'Os números $harmonia1 e $harmonia2 são opostos. Podem ter um excelente relacionamento se houver sabedoria.',
+          'detailedDescription': _detailedDescriptions['oposto']
+      };
     }
     if ((regras['passivo'] as List).contains(harmonia2)) {
-      return {'status': 'Passivo', 'descricao': 'A relação entre $harmonia1 e $harmonia2 é passiva. Exige esforço mútuo para manter a chama acesa.'};
+      return {
+          'status': 'Passivo', 
+          'descricao': 'A relação entre $harmonia1 e $harmonia2 é passiva. Exige esforço mútuo.',
+          'detailedDescription': _detailedDescriptions['passivo']
+      };
     }
 
-    return {'status': 'Neutro', 'descricao': 'Relação sem fortes influências numerológicas diretas.'};
+    return {'status': 'Neutro', 'descricao': 'Relação sem fortes influências numerológicas diretas.', 'detailedDescription': 'Uma relação aberta, influenciada principalmente pelas escolhas diárias de cada um, sem fortes tendências numerológicas pré-determinadas.'};
   }
 
   /// Calcula a compatibilidade amorosa (Sinastria) entre dois perfis.
@@ -988,6 +1020,7 @@ class NumerologyEngine {
         'numA': harmoniaA,
         'numB': harmoniaB,
         'destinyMatch': (destinoA == destinoB),
+        'detailedDescription': match['detailedDescription'],
       }
     };
   }
