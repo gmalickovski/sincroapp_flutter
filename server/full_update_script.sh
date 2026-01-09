@@ -105,11 +105,15 @@ fi
 # Parar PM2 (Novo Backend API)
 # Parar PM2 (Novo Backend API)
 # Parar PM2 (Novo Backend API)
+# Parar PM2 (Backend API)
 log_info "Parando Backend API..."
-# Migração: Parar e remover nome antigo se existir
+# Limpar processos antigos/errados
 pm2 delete sincro-backend 2>/dev/null || true
-# Parar nome novo se existir
-pm2 stop sincroapp-backend 2>/dev/null || true
+pm2 delete sincroapp-backend 2>/dev/null || true
+pm2 delete sincroapp-notifications 2>/dev/null || true
+
+# Parar o processo correto se estiver rodando
+pm2 stop sincroapp-server 2>/dev/null || true
 
 # 5. ATUALIZAR CÓDIGO DO GITHUB
 log_info "Atualizando código do GitHub (branch: $BRANCH)..."
@@ -267,19 +271,22 @@ log_success "Nginx recarregado"
 
 
 
-# 16.1 REINICIAR BACKEND API (NOVO)
+# 16.1 REINICIAR BACKEND API (sincroapp-server)
 if [ -d "$INSTALL_DIR/server" ]; then
-    log_info "Reiniciando Backend API..."
+    log_info "Reiniciando Backend API (sincroapp-server)..."
     cd "$INSTALL_DIR/server"
     
-    # Parar e remover processo antigo (garante atualização do código)
+    # Garantir que processos antigos ou com nomes errados sejam removidos
     pm2 delete sincroapp-backend 2>/dev/null || true
+    pm2 delete sincroapp-notifications 2>/dev/null || true
+    pm2 delete sincro-backend 2>/dev/null || true
+    pm2 delete sincroapp-server 2>/dev/null || true # Reiniciar do zero para garantir configs novas
     
-    # Iniciar novo processo
-    pm2 start index.js --name sincroapp-backend --time
+    # Iniciar processo correto
+    pm2 start index.js --name sincroapp-server --time
     pm2 save
     
-    log_success "Backend API reiniciado"
+    log_success "Backend API (sincroapp-server) reiniciado"
 fi
 
 # 17. FIREBASE (LOGIN/USE/DEPLOY OPCIONAL)
@@ -317,10 +324,10 @@ fi
 
 
 
-if pm2 list | grep -q sincroapp-backend; then
-    log_success "Backend API: Ativo ✓"
-elif pm2 list | grep -q sincro-backend; then
-     log_warning "Backend API: Ativo (Nome Antigo: sincro-backend) - Será atualizado no próximo deploy"
+if pm2 list | grep -q sincroapp-server; then
+    log_success "Backend API (sincroapp-server): Ativo ✓"
+elif pm2 list | grep -q sincroapp-backend; then
+     log_warning "Backend API: Ativo com nome antigo (sincroapp-backend) - Será corrigido no próximo deploy"
 else
     log_warning "Backend API: Não encontrado"
 fi
@@ -357,8 +364,7 @@ echo -e "  ${BLUE}└─${NC} Domínio: https://$DOMAIN"
 echo ""
 log_info "COMANDOS ÚTEIS:"
 echo -e "  ${BLUE}├─${NC} Verificar logs Nginx: ${BLUE}tail -f /var/log/nginx/error.log${NC}"
-echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-backend${NC}"
-echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-backend${NC}"
+echo -e "  ${BLUE}├─${NC} Verificar logs PM2 (API): ${BLUE}pm2 logs sincroapp-server${NC}"
 echo -e "  ${BLUE}├─${NC} Reverter para backup: ${BLUE}cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "  ${BLUE}└─${NC} Monitorar serviços: ${BLUE}pm2 monit${NC}"
 echo ""
@@ -370,7 +376,7 @@ echo -e "     ${BLUE}sudo rm -rf $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo cp -r $BACKUP_PATH $INSTALL_DIR${NC}"
 echo -e "     ${BLUE}sudo systemctl reload nginx${NC}"
 
-echo -e "     ${BLUE}sudo pm2 restart sincroapp-backend${NC}"
+echo -e "     ${BLUE}sudo pm2 restart sincroapp-server${NC}"
 echo ""
 
 log_success "Atualização concluída! Acesse https://$DOMAIN para verificar"
