@@ -10,6 +10,7 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // Supabase
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
@@ -72,6 +73,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _scrollController = ScrollController();
   final _supabase = SupabaseService(); // Usando Supabase
   final _speechService = SpeechService();
+  final _harmonyService = HarmonyService();
   final _inputFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {}; // Track messages that have already animated
 
@@ -721,7 +723,7 @@ Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qua
       // 3. Check Compatibility
       final userHarmonia = userNumerology.numeros['harmoniaConjugal'] ?? 0;
       final partnerHarmonia = partnerProfile.numeros['harmoniaConjugal'] ?? 0;
-      final compatibility = NumerologyEngine.checkCompatibility(userHarmonia, partnerHarmonia);
+      final compatibility = _harmonyService.checkCompatibility(userHarmonia, partnerHarmonia);
 
       // 4. Update message to mark action as executed and add confirmation
       if (messageIndex < _messages.length) {

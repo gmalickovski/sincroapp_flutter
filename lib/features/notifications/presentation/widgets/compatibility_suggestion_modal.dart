@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class CompatibilitySuggestionModal extends StatefulWidget {
@@ -45,19 +45,21 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
     _calculateLogic();
   }
 
+  final _harmonyService = HarmonyService();
+  
   void _calculateLogic() async {
     // Simulate slight delay for smooth UX transition if needed
     await Future.delayed(const Duration(milliseconds: 300));
 
     if (!mounted) return;
 
-    final score = NumerologyEngine.calculateCompatibilityScore(
+    final score = _harmonyService.calculateCompatibilityScore(
       date: widget.targetDate,
       birthDateA: widget.userABirth,
       birthDateB: widget.userBBirth,
     );
 
-    final nextDates = NumerologyEngine.findNextCompatibleDates(
+    final nextDates = _harmonyService.findNextCompatibleDates(
       startDate: DateTime.now(),
       birthDateA: widget.userABirth,
       birthDateB: widget.userBBirth,

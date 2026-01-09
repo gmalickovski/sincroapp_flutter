@@ -13,6 +13,7 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/common/utils/username_validator.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 import 'package:uuid/uuid.dart';
@@ -20,6 +21,7 @@ import 'package:uuid/uuid.dart';
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
+  final _harmonyService = HarmonyService();
 
   // Singleton instance
   static final SupabaseService _instance = SupabaseService._internal();
@@ -521,7 +523,7 @@ class SupabaseService {
     for (var c in contactsData) {
        if (c['birth_date'] == null) continue;
        final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
-       final score = NumerologyEngine.calculateCompatibilityScore(
+       final score = _harmonyService.calculateCompatibilityScore(
           date: date,
           birthDateA: ownerBirth,
           birthDateB: cBirth,
@@ -544,7 +546,7 @@ class SupabaseService {
            for (var c in contactsData) {
              if (c['birth_date'] == null) continue;
              final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
-             final score = NumerologyEngine.calculateCompatibilityScore(
+             final score = _harmonyService.calculateCompatibilityScore(
                 date: candidate,
                 birthDateA: ownerBirth,
                 birthDateB: cBirth,
@@ -768,7 +770,7 @@ class SupabaseService {
         final contactBirth = DateFormat('dd/MM/yyyy').parse(userData['birth_date']);
 
         // 3. Calcular Compatibilidade
-        final score = NumerologyEngine.calculateCompatibilityScore(
+        final score = _harmonyService.calculateCompatibilityScore(
           date: dueDate,
           birthDateA: ownerBirth,
           birthDateB: contactBirth,

@@ -8,6 +8,8 @@ talentoOculto: 1
 psiquico: 5
 harmoniaConjugal: 5
 Harmonia Conjugal (Calculated): 5
+CHECK: Destino (8) + Expressão (6) = 14
+Synastry Score: 40 - Passivo
 
 === VERIFICATION: CLÁUDIA ===
 destino: 11
@@ -19,3 +21,16 @@ talentoOculto: 9
 psiquico: 4
 harmoniaConjugal: 8
 Harmonia Conjugal (Calculated): 8
+CHECK: Destino (11) + Expressão (6) = 17
+
+=== VERIFICATION: CLAUDIA (SEM ACENTOS) ===
+destino: 11
+expressao: 11
+motivacao: 8
+impressao: 3
+missao: 22
+talentoOculto: 1
+psiquico: 4
+harmoniaConjugal: 4
+Harmonia Conjugal (Calculated): 4
+CHECK: Destino (11) + Expressão (11) = 22

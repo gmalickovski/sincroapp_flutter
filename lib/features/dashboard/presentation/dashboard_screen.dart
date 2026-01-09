@@ -1170,7 +1170,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     backgroundColor: Colors.pink.shade400,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: const StadiumBorder(),
                     elevation: 0,
                   ),
                 ),

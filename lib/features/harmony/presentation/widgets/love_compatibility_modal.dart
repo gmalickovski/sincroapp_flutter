@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 // import 'package:sincro_app_flutter/common/widgets/custom_text_field.dart'; // Removed missing import
 import 'package:sincro_app_flutter/features/harmony/services/love_compatibility_service.dart';
+import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -22,6 +23,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final _service = LoveCompatibilityService();
+  final _harmonyService = HarmonyService();
   
   // Inputs
   final _nameController = TextEditingController();
@@ -64,7 +66,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
 
     // 1. Calculate Profiles Local
     final engineA = NumerologyEngine(
-      nomeCompleto: '${widget.currentUser.primeiroNome} ${widget.currentUser.sobrenome}',
+      nomeCompleto: widget.currentUser.nomeAnalise,
       dataNascimento: widget.currentUser.dataNasc,
     );
     final profileA = engineA.calculateProfile();
@@ -76,7 +78,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     final profileB = engineB.calculateProfile();
 
     // 2. Synastry
-    final synastry = NumerologyEngine.calculateSynastry(
+    final synastry = _harmonyService.calculateSynastry(
       profileA: profileA, 
       profileB: profileB
     );
@@ -87,7 +89,10 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
       _isLoading = false;
     });
     
-    _tabController.animateTo(1); // Move to Result Tab
+    // _tabController.animateTo(1); // Removed as we are not using TabController for swiping anymore
+    // Since we use conditional rendering on the index, we simply update the state above
+    // And ensure the TabController index is updated for the TabBar
+    _tabController.animateTo(1);
   }
 
   Future<void> _requestAIAnalysis() async {
@@ -97,7 +102,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
 
     try {
       final engineA = NumerologyEngine(
-        nomeCompleto: '${widget.currentUser.primeiroNome} ${widget.currentUser.sobrenome}',
+        nomeCompleto: widget.currentUser.nomeAnalise,
         dataNascimento: widget.currentUser.dataNasc,
       );
       final profileA = engineA.calculateProfile();
@@ -150,10 +155,13 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               : EdgeInsets.zero, // Fullscreen on mobile
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           child: Container(
-            width: width,
-            height: height,
+            constraints: BoxConstraints(
+              maxWidth: width,
+              maxHeight: isDesktop ? 700.0 : constraints.maxHeight,
+            ),
             padding: const EdgeInsets.all(24),
             child: Column(
+              mainAxisSize: MainAxisSize.min, // Adaptive Height
               children: [
                 // Header
                 Row(
@@ -197,18 +205,17 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                        ],
                      ),
                      const SizedBox(height: 24),
-                     Expanded(
-                       child: TabBarView(
-                         controller: _tabController,
-                         children: [
-                           _buildInputForm(isDesktop),
-                           _buildResultView(),
-                         ],
-                       ),
+                     const SizedBox(height: 24),
+                     Flexible(
+                       fit: FlexFit.loose,
+                       child: _tabController.index == 0 
+                          ? _buildInputForm(isDesktop)
+                          : _buildResultView(context), // Pass context for Theme lookup if needed
                      ),
                 ],
               ],
             ),
+
           ),
         );
       }
@@ -216,12 +223,12 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
   }
 
   Widget _buildInputForm(bool isDesktop) {
-    // Input Decoration
+    // Keep SingleChildScrollView but wrap in Flexible in parent
     final inputDecoration = InputDecoration(
       filled: true,
       fillColor: Colors.white.withOpacity(0.05),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide(color: Colors.white10)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Colors.white10)),
       focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: AppColors.primary)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       labelStyle: const TextStyle(color: Colors.white70),
@@ -229,6 +236,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
 
     return SingleChildScrollView(
       child: Column(
+        mainAxisSize: MainAxisSize.min, // Adaptive height
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
@@ -242,6 +250,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             style: const TextStyle(color: Colors.white),
             decoration: inputDecoration.copyWith(
               labelText: 'Nome Completo da Pessoa',
+              helperText: 'Use acentos se houver, pois pode interferir no resultado.',
+              helperStyle: const TextStyle(color: Colors.white30, fontSize: 11),
               prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 8), child: Icon(Icons.person_outline, color: AppColors.primary)),
             ),
           ),
@@ -258,7 +268,6 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
           ),
           
           const SizedBox(height: 16),
-          // Placeholder for Contact Picker
           OutlinedButton.icon(
             onPressed: () {
                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Seletor de contatos em breve!')));
@@ -279,9 +288,9 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             onPressed: _isLoading ? null : _calculate,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white, // White text
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: const StadiumBorder(), // Pill shape
+              shape: const StadiumBorder(),
               elevation: 4,
               shadowColor: AppColors.primary.withOpacity(0.4),
             ),
@@ -294,15 +303,13 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     );
   }
 
-  Widget _buildResultView() {
+  Widget _buildResultView(BuildContext context) {
     if (_result == null) return const SizedBox.shrink();
 
     final score = _result!['score'] as int;
     final status = _result!['status'] as String;
     final description = _result!['description'] as String;
     final detailedDescription = _result!['details']['detailedDescription'] as String?;
-    
-    // Static Analysis Data
     final harmoniaA = _result!['details']['numA'] as int?;
     final rules = _result!['details']['rules'] as Map<String, dynamic>?;
 
@@ -311,136 +318,202 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     else if (score >= 60) scoreColor = Colors.amberAccent;
     else scoreColor = Colors.redAccent;
 
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          // Gauge Section with extra padding to avoid cutoff
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20.0),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 180,
-                  height: 180,
-                  child: CircularProgressIndicator(
-                    value: score / 100,
-                    strokeWidth: 16,
-                    color: scoreColor,
-                    backgroundColor: Colors.white10,
-                    strokeCap: StrokeCap.round,
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$score%',
-                      style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: scoreColor),
-                    ),
-                    const Text('Sinergia', style: TextStyle(color: Colors.white54, fontSize: 14)),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          
-          Text(
-            status.toUpperCase(),
-            style: TextStyle(color: scoreColor, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+    // Check if premium to show/hide sections
+    final isPremium = widget.currentUser.subscription.plan == SubscriptionPlan.premium;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Scrollable Content
+        Flexible(
+          fit: FlexFit.loose,
+          child: SingleChildScrollView(
             child: Column(
+              mainAxisSize: MainAxisSize.min, // Adaptive height inside scrollView
               children: [
-                Text(
-                  description,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
-                ),
-                if (detailedDescription != null) ...[
-                   const SizedBox(height: 24),
-                   Container(
-                     padding: const EdgeInsets.all(20),
-                     decoration: BoxDecoration(
-                       color: AppColors.primary.withOpacity(0.1),
-                       borderRadius: BorderRadius.circular(16),
-                       border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                     ),
-                     child: Text(
-                       detailedDescription,
-                       textAlign: TextAlign.center,
-                       style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.6, fontStyle: FontStyle.italic),
-                     ),
-                   ),
-                ]
-              ],
-            ),
-          ),
-
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32.0),
-            child: Divider(color: Colors.white12),
-          ),
-
-          // --- STATIC ANALYSIS SECTION (Hybrid Plan) ---
-          // Shows fixed texts explaining the relationship dynamics
-          if (rules != null) ...[
-             _buildStaticAnalysisSection(rules),
-             const SizedBox(height: 32),
-             const Divider(color: Colors.white12),
-             const SizedBox(height: 32),
-          ],
-
-          // --- AI SECTION (Premium Only) ---
-          if (_aiAnalysis != null) ...[
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.03),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   Row(
+                // Gauge Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 24.0),
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                       const FaIcon(FontAwesomeIcons.robot, size: 18, color: AppColors.primary),
-                       const SizedBox(width: 8),
-                       const Text('Análise do Sincro AI', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+                      SizedBox(
+                        width: 180,
+                        height: 180,
+                        child: CircularProgressIndicator(
+                          value: score / 100,
+                          strokeWidth: 16,
+                          color: scoreColor,
+                          backgroundColor: Colors.white10,
+                          strokeCap: StrokeCap.round,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '$score%',
+                            style: TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: scoreColor),
+                          ),
+                          const Text('Sinergia', style: TextStyle(color: Colors.white54, fontSize: 14)),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  // Markdown Rendering
-                  MarkdownBody(
-                    data: _aiAnalysis!,
-                    styleSheet: MarkdownStyleSheet(
-                      p: const TextStyle(color: Colors.white, height: 1.5, fontSize: 15),
-                      strong: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
-                      h1: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                      h2: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                      h3: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                      listBullet: const TextStyle(color: AppColors.primary),
+                ),
+                
+                Text(
+                  status.toUpperCase(),
+                  style: TextStyle(color: scoreColor, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 1.5),
+                ),
+                const SizedBox(height: 16),
+                
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                  child: Column(
+                    children: [
+                      Text(
+                        description.replaceFirst('entre os números', 'entre os Números de Harmonia'),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+                      ),
+                      if (detailedDescription != null) ...[
+                         const SizedBox(height: 24),
+                         Container(
+                           padding: const EdgeInsets.all(24),
+                           decoration: BoxDecoration(
+                             color: AppColors.primary.withOpacity(0.1),
+                             borderRadius: BorderRadius.circular(16),
+                             border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                           ),
+                           child: Text(
+                             detailedDescription,
+                             textAlign: TextAlign.center,
+                             style: const TextStyle(color: Colors.white, fontSize: 15, height: 1.6, fontStyle: FontStyle.italic),
+                           ),
+                         ),
+                      ]
+                    ],
+                  ),
+                ),
+
+                const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 32.0),
+                    child: Divider(color: Colors.white12),
+                ),
+
+                // --- STATIC ANALYSIS SECTION ---
+                if (rules != null) ...[
+                   _buildStaticAnalysisSection(rules),
+                   const SizedBox(height: 24),
+                   
+                   Theme(
+                     data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                     child: ExpansionTile(
+                       title: const Text('Entenda os Números (Detalhes Técnicos)', style: TextStyle(color: Colors.white60, fontSize: 13)),
+                       iconColor: Colors.white60,
+                       collapsedIconColor: Colors.white60,
+                       children: [
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8)),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildDetailRow('Você', widget.currentUser.primeiroNome, _result!['details']['destinyA'], _result!['details']['expressionA'], _result!['details']['numA']),
+                                const Divider(color: Colors.white10),
+                                _buildDetailRow('Parceiro(a)', _nameController.text, _result!['details']['destinyB'], _result!['details']['expressionB'], _result!['details']['numB']),
+                                const SizedBox(height: 8),
+                                const Text(
+                                  '* Harmonia Conjugal = (Destino + Expressão) reduzido a 1-9.',
+                                  style: TextStyle(color: Colors.white38, fontSize: 11, fontStyle: FontStyle.italic),
+                                ),
+                              ],
+                            ),
+                          )
+                       ],
+                     ),
+                   ),
+                ],
+
+                // --- AI ANALYSIS CONTENT (If available) ---
+                if (_aiAnalysis != null) ...[
+                  const SizedBox(height: 24),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.03),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                         Row(
+                          children: [
+                             const FaIcon(FontAwesomeIcons.robot, size: 18, color: AppColors.primary),
+                             const SizedBox(width: 8),
+                             const Text('Análise do Sincro AI', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        MarkdownBody(
+                          data: _aiAnalysis!,
+                          styleSheet: MarkdownStyleSheet(
+                            p: const TextStyle(color: Colors.white, height: 1.5, fontSize: 15),
+                            strong: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
+                            h1: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                            h2: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+                            h3: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                            listBullet: const TextStyle(color: AppColors.primary),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
+                  const SizedBox(height: 32), // Spacer end of content
+                ] else ...[
+                   // Spacer for fixed footer
+                   const SizedBox(height: 32),
                 ],
+              ],
+            ),
+          ),
+        ),
+
+        // --- FIXED FOOTER (CTA) ---
+        // Only show CTA if AI Analysis is NOT showing or if it's the trigger button
+        if (_aiAnalysis == null) ...[
+            Container(
+              padding: const EdgeInsets.only(top: 24, bottom: 8), // Padding above CTA
+              decoration: BoxDecoration(
+                color: isDesktop ? AppColors.cardBackground : AppColors.background, // Match background to cover scroll
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(0, -10),
+                  )
+                ]
+              ),
+              child: Column(
+                 mainAxisSize: MainAxisSize.min,
+                 children: [
+                    Text(
+                      'Quer saber a dinâmica profunda da relação e dicas de como conviver melhor?',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white60, fontStyle: FontStyle.italic, fontSize: 14),
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity, // Full width button
+                      child: _buildAiButton(),
+                    ),
+                 ],
               ),
             ),
-          ] else ...[
-            Text(
-              'Quer saber a dinâmica profunda da relação e dicas de como conviver melhor?',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white60, fontStyle: FontStyle.italic, fontSize: 14),
-            ),
-            const SizedBox(height: 16),
-            _buildAiButton(),
-          ],
-          
-          const SizedBox(height: 24),
-        ],
-      ),
+        ]
+      ],
     );
   }
   Widget _buildAiButton() {
@@ -515,11 +588,23 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     );
   }
 
+  Widget _buildDetailRow(String label, String name, int dest, int exp, int harm) {
+     return Column(
+       crossAxisAlignment: CrossAxisAlignment.start,
+       children: [
+         Text('$label: $name', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+         const SizedBox(height: 4),
+         Text('Destino ($dest) + Expressão ($exp) = Harmonia ($harm)', style: const TextStyle(color: Colors.white70, fontSize: 13)),
+       ],
+     );
+  }
+
   static const Map<String, String> _staticExplanations = {
     'vibra': 'Excelente compatibilidade! Vocês vibram na mesma sintonia, facilitando a compreensão mútua e o fluxo natural da relação.',
     'atrai': 'Existe uma forte atração magnética entre vocês. Perfis que estimulam o crescimento, a admiração e o desejo de estar junto.',
     'oposto': 'São opostos que podem se atrair ou repelir. A relação exige negociação consciente, paciência e respeito às diferenças de ritmo.',
     'passivo': 'Relação mais neutra ou passiva. A dinâmica é suave, mas pode cair na rotina se não houver esforço mútuo para manter a chama acesa.',
+    'monotonia': 'A relação pode se tornar monótona se não houver esforço para inovar e buscar novas experiências juntos.',
   };
 
   void _showUpgradeDialog() {

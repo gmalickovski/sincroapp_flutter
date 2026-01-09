@@ -2,6 +2,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/services/harmony_service.dart';
 
 void main() {
   test('Verify Profiles', () async {
@@ -15,10 +16,12 @@ void main() {
     r1.numeros.forEach((k, v) => buffer.writeln('$k: $v'));
     buffer.writeln('Harmonia Conjugal (Calculated): ${r1.numeros['harmoniaConjugal']}');
     
-    final harmonia1 = r1.estruturas['harmoniaConjugal'];
-    if (harmonia1 != null) {
-       buffer.writeln('Harmonia Rule: Vibra: ${harmonia1['vibra']}, Atrai: ${harmonia1['atrai']}, Oposto: ${harmonia1['oposto']}');
-    }
+    buffer.writeln('CHECK: Destino (${r1.numeros['destino']}) + Expressão (${r1.numeros['expressao']}) = ${r1.numeros['destino']! + r1.numeros['expressao']!}');
+    
+    // Test Harmony Service
+    final hs = HarmonyService();
+    final syn = hs.calculateSynastry(profileA: r1, profileB: NumerologyEngine(nomeCompleto: 'Cláudia Delanni Vitória', dataNascimento: '31/05/1991').calculateProfile()!);
+    buffer.writeln('Synastry Score: ${syn['score']} - ${syn['status']}');
 
     buffer.writeln('\n=== VERIFICATION: CLÁUDIA ===');
     final n2 = NumerologyEngine(
@@ -28,10 +31,17 @@ void main() {
     final r2 = n2.calculateProfile()!;
     r2.numeros.forEach((k, v) => buffer.writeln('$k: $v'));
     buffer.writeln('Harmonia Conjugal (Calculated): ${r2.numeros['harmoniaConjugal']}');
-    final harmonia2 = r2.estruturas['harmoniaConjugal'];
-    if (harmonia2 != null) {
-       buffer.writeln('Harmonia Rule: Vibra: ${harmonia2['vibra']}, Atrai: ${harmonia2['atrai']}, Oposto: ${harmonia2['oposto']}');
-    }
+    buffer.writeln('CHECK: Destino (${r2.numeros['destino']}) + Expressão (${r2.numeros['expressao']}) = ${r2.numeros['destino']! + r2.numeros['expressao']!}');
+    
+    buffer.writeln('\n=== VERIFICATION: CLAUDIA (SEM ACENTOS) ===');
+    final n3 = NumerologyEngine(
+      nomeCompleto: 'Claudia Delanni Vitoria',
+      dataNascimento: '31/05/1991',
+    );
+    final r3 = n3.calculateProfile()!;
+    r3.numeros.forEach((k, v) => buffer.writeln('$k: $v'));
+    buffer.writeln('Harmonia Conjugal (Calculated): ${r3.numeros['harmoniaConjugal']}');
+    buffer.writeln('CHECK: Destino (${r3.numeros['destino']}) + Expressão (${r3.numeros['expressao']}) = ${r3.numeros['destino']! + r3.numeros['expressao']!}');
     
     final file = File('test/verification_output.txt');
     await file.writeAsString(buffer.toString());
