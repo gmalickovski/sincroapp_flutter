@@ -350,10 +350,48 @@ class SupabaseService {
 
   // --- EVENTS (Calendar) ---
 
-  /// Busca a lista de contatos do usuário
+  /// Busca a lista de contatos do usuário (Retorna UserModel para features avançadas)
+  Future<List<UserModel>> getUserContacts(String uid) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('user_contacts')
+          .select('contact_user_id, status, users!contact_user_id(*)') 
+          .eq('user_id', uid)
+          .eq('status', 'active')
+          .order('created_at');
+
+      final List<UserModel> contacts = [];
+
+      for (final item in response) {
+        final userData = item['users'];
+        if (userData != null) {
+          contacts.add(UserModel(
+            uid: userData['uid'],
+            email: userData['email'] ?? '',
+            photoUrl: userData['photo_url'],
+            username: userData['username'],
+            primeiroNome: userData['primeiro_nome'] ?? userData['first_name'] ?? '',
+            sobrenome: userData['sobrenome'] ?? userData['last_name'] ?? '',
+            nomeAnalise: userData['nome_analise'] ?? userData['analysis_name'] ?? '',
+            dataNasc: userData['birth_date'] ?? '',
+            isAdmin: userData['is_admin'] ?? false,
+            plano: 'essencial', // Default for contact view
+            // Mock or Default for subscription since it's just a contact view
+            subscription: SubscriptionModel.free(),
+          ));
+        }
+      }
+      return contacts;
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar contatos (UserModel): $e');
+      return [];
+    }
+  }
+
+  /// Busca a lista de contatos do usuário (Retorna ContactModel para compatibilidade legacy)
   Future<List<ContactModel>> getContacts(String uid) async {
     try {
-      // Faz join com a tabela de users para pegar os dados do contato
       final response = await _supabase
           .schema('sincroapp')
           .from('user_contacts')
@@ -367,12 +405,8 @@ class SupabaseService {
         final userData = item['users'] as Map<String, dynamic>;
         final status = item['status'] as String;
         
-        // Reconstrói UserModel simplificado para criar ContactModel
-        // Limita a 2 nomes para evitar duplicação visual (primeiro nome + sobrenome)
         final firstName = (userData['first_name'] ?? '').toString().trim();
         final lastName = (userData['last_name'] ?? '').toString().trim();
-        
-        // Pega apenas o primeiro sobrenome se houver mais de um
         final firstLastNamePart = lastName.split(' ').first;
         
         String displayName;
@@ -385,14 +419,14 @@ class SupabaseService {
         }
 
         return ContactModel(
-          userId: userData['uid'],
+          userId: item['contact_user_id'],
           username: userData['username'] ?? '',
           displayName: displayName,
           status: status,
         );
       }).toList();
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao buscar contatos: $e');
+      debugPrint('❌ [SupabaseService] Erro ao buscar contatos (ContactModel): $e');
       return [];
     }
   }
@@ -1418,15 +1452,17 @@ class SupabaseService {
          });
          
          if (!mapped.containsKey('updated_at')) {
-           mapped['updated_at'] = DateTime.now().toIso8601String();
+             mapped['updated_at'] = DateTime.now().toIso8601String();
          }
 
-         await _supabase.schema('sincroapp').from('journal_entries').update(mapped).eq('id', entryId);
+         await _supabase.schema('sincroapp').from('journal_entries').update(mapped).eq('user_id', uid).eq('id', entryId);
       } catch (e) {
-         debugPrint('❌ [SupabaseService] Erro ao atualizar diário: $e');
-         rethrow;
+          debugPrint('❌ [SupabaseService] Erro ao atualizar diário: $e');
+          rethrow;
       }
   }
+
+  // --- JOURNAL ---
 
   Future<void> deleteJournalEntry(String uid, String entryId) async {
      await _supabase.schema('sincroapp').from('journal_entries').delete().eq('id', entryId);

@@ -24,8 +24,9 @@ class LoveCompatibilityService {
 
     try {
       final payload = {
+        'instructions': 'CRITICAL: You are an expert Numerologist. You MUST use the pre-calculated numbers provided in this JSON under "profile" and "synastry". DO NOT recalculate them based on names/dates. The provided numbers (Destiny, Expression, Synastry Score) are the ABSOLUTE TRUTH for this analysis. Ignore any internal calculation that differs. Focus on interpreting the provided numbers.',
         'user': {
-          'name': '${currentUser.primeiroNome} ${currentUser.sobrenome}',
+          'name': currentUser.nomeAnalise, // Use explicit analysis name to avoid duplication
           'birthDate': currentUser.dataNasc,
           'profile': currentUserProfile.numeros,
         },
@@ -42,6 +43,10 @@ class LoveCompatibilityService {
         if (relationshipRules != null) 'relationshipRules': relationshipRules,
         'requestTime': DateTime.now().toIso8601String(),
       };
+
+      print('--- AI REQUEST PAYLOAD ---');
+      print(jsonEncode(payload));
+      print('--------------------------');
 
       final response = await http.post(
         Uri.parse(_webhookUrl),
