@@ -377,6 +377,7 @@ class SupabaseService {
             dataNasc: userData['birth_date'] ?? '',
             isAdmin: userData['is_admin'] ?? false,
             plano: 'essencial', // Default for contact view
+            dashboardCardOrder: [], // Default empty for contacts
             // Mock or Default for subscription since it's just a contact view
             subscription: SubscriptionModel.free(),
           ));
