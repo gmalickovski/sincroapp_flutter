@@ -71,7 +71,11 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
       return;
     }
 
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _result = null;
+      _aiAnalysis = null;
+    });
 
     // 1. Calculate Profiles Local
     final engineA = NumerologyEngine(
@@ -162,82 +166,104 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 600;
-        final width = isDesktop ? 600.0 : constraints.maxWidth;
-        final height = isDesktop ? 700.0 : constraints.maxHeight;
-
-        return Dialog(
-          backgroundColor: isDesktop ? AppColors.cardBackground : AppColors.background,
-          insetPadding: isDesktop 
-              ? const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0) 
-              : EdgeInsets.zero, // Fullscreen on mobile
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-          child: Container(
-            constraints: BoxConstraints(
-              maxWidth: width,
-              maxHeight: isDesktop ? 700.0 : constraints.maxHeight,
+        final isDesktop = MediaQuery.of(context).size.width > 600;
+        
+        if (isDesktop) {
+          // Desktop: Original Modal Dialog
+          return Dialog(
+            backgroundColor: AppColors.cardBackground,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
+              padding: const EdgeInsets.all(24),
+              child: _buildModalContent(context, isDesktop: true), // Extract content logic
             ),
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // Adaptive Height
-              children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Harmonia Conjugal ❤️',
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white70),
-                      onPressed: () => Navigator.pop(context),
-                    )
-                  ],
-                ),
-                const SizedBox(height: 8), // Reduced spacing
-                
-                // Tabs
-                if (_result == null) ...[
-                     // Only Input View if no result yet
-                     Flexible(fit: FlexFit.loose, child: _buildInputForm(isDesktop)),
-                ] else ...[
-                     // Tabs if result exists
-                     TabBar(
-                       controller: _tabController,
-                       // Removed onTap to persist result when switching tabs
-                       indicatorColor: AppColors.primary,
-                       dividerColor: Colors.transparent,
-                       indicatorSize: TabBarIndicatorSize.tab,
-                       // Pill indicator style
-                       splashBorderRadius: BorderRadius.circular(50),
-                       indicator: BoxDecoration(
-                           borderRadius: BorderRadius.circular(50),
-                           color: AppColors.primary.withOpacity(0.2), 
-                           border: Border.all(color: AppColors.primary)
-                       ),
-                       labelColor: Colors.white,
-                       unselectedLabelColor: Colors.white70,
-                       labelPadding: const EdgeInsets.symmetric(horizontal: 12),
-                       tabs: const [
-                         Tab(text: 'Dados'),
-                         Tab(text: 'Resultado'),
-                       ],
-                     ),
-                     const SizedBox(height: 16),
-                     Flexible(
-                       fit: FlexFit.loose,
-                       child: _tabController.index == 0 
-                          ? _buildInputForm(isDesktop)
-                          : _buildResultView(context, isDesktop), // Pass context and isDesktop
-                     ),
-                ],
-              ],
+          );
+        } else {
+          // Mobile: Full Screen Scaffold
+          return Scaffold(
+            backgroundColor: AppColors.background,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              title: const Text('Harmonia Conjugal ❤️', style: TextStyle(color: Colors.white, fontSize: 18)),
+              centerTitle: true,
             ),
-
-          ),
-        );
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: _buildModalContent(context, isDesktop: false),
+              ),
+            ),
+          );
+        }
       }
+    );
+  }
+
+  Widget _buildModalContent(BuildContext context, {required bool isDesktop}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min, 
+      children: [
+        // Header (Only for Desktop, Mobile uses AppBar)
+        if (isDesktop) ...[
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Harmonia Conjugal ❤️',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white70),
+                onPressed: () => Navigator.pop(context),
+              )
+            ],
+          ),
+          const SizedBox(height: 8),
+        ],
+        
+        // Tabs
+        if (_result == null) ...[
+             // Only Input View if no result yet
+             Flexible(fit: FlexFit.loose, child: _buildInputForm(isDesktop)),
+        ] else ...[
+             // Tabs if result exists
+             // Mobile usually prefers no tabs if content is short? But here result is long.
+             // We keep tabs for consistency.
+             TabBar(
+               controller: _tabController,
+               indicatorColor: AppColors.primary,
+               dividerColor: Colors.transparent,
+               indicatorSize: TabBarIndicatorSize.tab,
+               splashBorderRadius: BorderRadius.circular(50),
+               indicator: BoxDecoration(
+                   borderRadius: BorderRadius.circular(50),
+                   color: AppColors.primary.withOpacity(0.2), 
+                   border: Border.all(color: AppColors.primary)
+               ),
+               labelColor: Colors.white,
+               unselectedLabelColor: Colors.white70,
+               labelPadding: const EdgeInsets.symmetric(horizontal: 12),
+               tabs: const [
+                 Tab(text: 'Dados'),
+                 Tab(text: 'Resultado'),
+               ],
+             ),
+             const SizedBox(height: 16),
+             Flexible(
+               fit: FlexFit.loose,
+               child: _tabController.index == 0 
+                  ? _buildInputForm(isDesktop)
+                  : _buildResultView(context, isDesktop),
+             ),
+        ],
+      ],
     );
   }
 

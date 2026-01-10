@@ -1159,10 +1159,19 @@ class _DashboardScreenState extends State<DashboardScreen>
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
-                    );
+                    if (MediaQuery.of(context).size.width > 600) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
+                      );
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
+                          fullscreenDialog: true,
+                        ),
+                      );
+                    }
                   },
                   icon: const Icon(Icons.favorite, size: 16),
                   label: const Text('Fazer teste de compatibilidade'),
