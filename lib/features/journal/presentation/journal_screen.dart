@@ -15,8 +15,9 @@ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_pan
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/journal_filter_panel.dart';
-
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+
+enum JournalViewScope { todas }
 
 class JournalScreen extends StatefulWidget {
   final UserModel userData;
@@ -30,6 +31,7 @@ class _JournalScreenState extends State<JournalScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final GlobalKey _filterButtonKey = GlobalKey();
 
+  JournalViewScope _currentScope = JournalViewScope.todas;
   DateTime? _dateFilter;
   int? _vibrationFilter;
   int? _moodFilter;
@@ -74,11 +76,13 @@ class _JournalScreenState extends State<JournalScreen> {
             top: offset.dy + size.height + 8,
             right: MediaQuery.of(context).size.width - (offset.dx + size.width),
             child: JournalFilterPanel(
+              initialScope: _currentScope,
               initialDate: _dateFilter,
               initialVibration: _vibrationFilter,
               initialMood: _moodFilter,
-              onApply: (date, vibration, mood) {
+              onApply: (scope, date, vibration, mood) {
                 setState(() {
+                  _currentScope = scope;
                   _dateFilter = date;
                   _vibrationFilter = vibration;
                   _moodFilter = mood;
@@ -87,6 +91,7 @@ class _JournalScreenState extends State<JournalScreen> {
               },
               onClearInPanel: () {
                 setState(() {
+                  _currentScope = JournalViewScope.todas;
                   _dateFilter = null;
                   _vibrationFilter = null;
                   _moodFilter = null;

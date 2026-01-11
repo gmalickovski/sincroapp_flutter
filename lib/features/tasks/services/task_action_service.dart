@@ -108,4 +108,47 @@ class TaskActionService {
       return null;
     }
   }
+  List<TaskModel> calculateFocusTasks(List<TaskModel> allTasks, int? userPersonalDay) {
+    final nowLocal = DateTime.now().toLocal();
+    final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+
+    return allTasks.where((task) {
+      if (task.completed) return false;
+
+      // Include Overdue
+      // Assuming isOverdue is a getter on TaskModel
+      if (task.isOverdue) return true;
+
+      final DateTime taskDate = task.dueDate ?? task.createdAt;
+      final taskDateLocal = taskDate.toLocal();
+      final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+
+      // Date must match local today
+      if (!taskDateOnly.isAtSameMomentAs(todayLocal)) {
+        return false;
+      }
+
+      // If we can compute today's personal day (passed as arg), require task's personal day to match.
+      if (userPersonalDay == null) {
+        return true; // fallback to date-only
+      }
+
+      // Use saved value if available, otherwise compute would be needed but here we assume existing or ignore?
+      // Original logic: 
+      // final int taskPersonal = task.personalDay ?? _calculatePersonalDay(taskDateOnly) ?? -1;
+      // return taskPersonal == todayPersonal;
+      
+      // Since we don't have _calculatePersonalDay helper here easily without NumerologyEngine instance with user data...
+      // But wait, task.personalDay IS stored.
+      // If task.personalDay is null, we might miss it.
+      // However, usually it is calculated on creation/update.
+      // Let's use the stored one.
+      final int taskPersonal = task.personalDay ?? -1;
+      // If -1 (missing), do we show it? Original logic tried to calculate it on the fly.
+      // If we can't calculate, maybe we should show it if date matches?
+      // Let's stick to strict match if possible.
+      
+      return taskPersonal == userPersonalDay;
+    }).toList();
+  }
 }

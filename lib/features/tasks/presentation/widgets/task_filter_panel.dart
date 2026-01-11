@@ -1,45 +1,43 @@
-// lib/features/journal/presentation/widgets/journal_filter_panel.dart
 
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // To access TaskFilterType enum
+import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
+import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 
-import 'package:sincro_app_flutter/features/journal/presentation/journal_screen.dart'; // For JournalViewScope
-
-class JournalFilterPanel extends StatefulWidget {
-  final JournalViewScope initialScope;
-  final DateTime? initialDate;
+class TaskFilterPanel extends StatefulWidget {
+  final TaskViewScope initialScope;
+  final DateTime? initialDate; 
   final int? initialVibration;
-  final int? initialMood;
-  final Function(JournalViewScope, DateTime?, int?, int?) onApply;
+  final String? initialTag;
+  final List<String> availableTags;
+  final UserModel? userData;
+  final Function(TaskViewScope, DateTime?, int?, String?) onApply;
   final VoidCallback onClearInPanel;
-  final bool isBottomSheet;
-  final UserModel userData;
-
-  const JournalFilterPanel({
+  
+  const TaskFilterPanel({
     super.key,
     required this.initialScope,
     this.initialDate,
     this.initialVibration,
-    this.initialMood,
+    this.initialTag,
+    required this.availableTags,
+    this.userData,
     required this.onApply,
     required this.onClearInPanel,
-    this.isBottomSheet = false,
-    required this.userData,
   });
 
   @override
-  State<JournalFilterPanel> createState() => _JournalFilterPanelState();
+  State<TaskFilterPanel> createState() => _TaskFilterPanelState();
 }
 
-class _JournalFilterPanelState extends State<JournalFilterPanel> {
-  late JournalViewScope _tempScope;
+class _TaskFilterPanelState extends State<TaskFilterPanel> {
+  late TaskViewScope _tempScope;
   late DateTime? _tempDate;
   late int? _tempVibration;
-  late int? _tempMood;
+  late String? _tempTag;
 
   @override
   void initState() {
@@ -47,42 +45,49 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
     _tempScope = widget.initialScope;
     _tempDate = widget.initialDate;
     _tempVibration = widget.initialVibration;
-    _tempMood = widget.initialMood;
+    _tempTag = widget.initialTag;
   }
 
-  String _getScopeLabel(JournalViewScope type) {
-    if (type == JournalViewScope.todas) return 'Todas as Anotações';
-    return '';
+  String _getScopeLabel(TaskViewScope type) {
+    switch (type) {
+      case TaskViewScope.focoDoDia: return 'Foco do Dia';
+      case TaskViewScope.todas: return 'Todas as Tarefas';
+      case TaskViewScope.concluidas: return 'Concluídas';
+      case TaskViewScope.atrasadas: return 'Atrasadas';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Material(
+    return Material( // Added Material to fix "No Material widget found" error
       type: MaterialType.transparency,
       child: Container(
-      width: 350,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-          )
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Removed title as requested
-              // 1. SCOPE DROPDOWN
+        width: 350,
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+            )
+          ],
+        ),
+        child: Padding(
+          // Reduced top padding as requested
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Removed title as requested
+              // Removed extra SizedBox here as padding handles it better
+              
+              // 1. SCOPE DROPDOWN (O que ver?)
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.view_agenda_outlined, color: AppColors.secondaryText),
-                title: DropdownButton<JournalViewScope>(
+                title: DropdownButton<TaskViewScope>(
                   value: _tempScope,
                   isExpanded: true,
                   isDense: true,
@@ -93,7 +98,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                   onChanged: (value) {
                      if (value != null) setState(() => _tempScope = value);
                   },
-                  items: JournalViewScope.values.map((type) {
+                  items: TaskViewScope.values.map((type) {
                     final bool isSelected = _tempScope == type;
                     return DropdownMenuItem(
                       value: type,
@@ -113,13 +118,14 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
               const Text("Refinar por...", style: TextStyle(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
 
-              // 2. FILTERS
-              // Date Filter
+              // 2. FILTERS (Date, Tag, Vib)
+              // Date Filter Button
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.calendar_today, color: AppColors.secondaryText),
                 title: InkWell(
                   onTap: () async {
+                       if (widget.userData == null) return;
                        final DateTime firstDate = DateTime(2020);
                        final DateTime lastDate = DateTime.now().add(const Duration(days: 365));
                        DateTime initial = _tempDate ?? DateTime.now();
@@ -133,7 +139,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                           initialDate: initial,
                           firstDate: firstDate,
                           lastDate: lastDate,
-                          userData: widget.userData,
+                          userData: widget.userData!,
                         ),
                       );
 
@@ -171,24 +177,22 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
 
               // Vibration Filter
               ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.star_border, color: AppColors.secondaryText),
-                  title: DropdownButton<int?>(
-                    value: _tempVibration,
-                    isExpanded: true,
-                    isDense: true,
-                    underline: const SizedBox.shrink(),
-                    hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText)),
-                    dropdownColor: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(16),
-                    style: const TextStyle(color: Colors.white),
-                    onChanged: (value) {
-                      setState(() => _tempVibration = value);
-                    },
-                    selectedItemBuilder: (BuildContext context) {
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.star_border, color: AppColors.secondaryText),
+                title: DropdownButton<int?>(
+                  value: _tempVibration,
+                  isExpanded: true,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText)),
+                  dropdownColor: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: (value) => setState(() => _tempVibration = value),
+                  selectedItemBuilder: (BuildContext context) {
                     return [
-                      null,
-                      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
+                      null, // Null item
+                      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22] // Vibration numbers
                     ].map((int? v) {
                       if (v == null) {
                          return const Text('Dias Pessoais', style: TextStyle(color: Colors.white));
@@ -202,13 +206,13 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                       );
                     }).toList();
                   },
-                    items: [
-                      const DropdownMenuItem<int?>(
+                  items: [
+                    const DropdownMenuItem<int?>(
                         value: null, child: Text('Dias Pessoais')),
-                      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) {
-                         final isSelected = _tempVibration == v;
-                         return DropdownMenuItem<int?>(
-                            value: v,
+                    ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) {
+                       final bool isSelected = _tempVibration == v;
+                       return DropdownMenuItem<int?>(
+                            value: v, 
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -231,108 +235,88 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                                       child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
                                     ),
                                   ),
-                              ]
+                              ],
                             ));
-                      }).toList(),
-                    ],
-                  ),
+                    }),
+                  ],
                 ),
+              ),
 
-
-              // Mood Selector
-              Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: _MoodSelector(
-                    selectedMood: _tempMood,
-                    onMoodSelected: (mood) {
-                      setState(() => _tempMood = (_tempMood == mood) ? null : mood);
-                    },
-                  ),
+              // Tags Filter
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: const Icon(Icons.label_outline, color: AppColors.secondaryText),
+                title: DropdownButton<String?>(
+                  value: _tempTag,
+                  isExpanded: true,
+                  isDense: true,
+                  underline: const SizedBox.shrink(),
+                  hint: const Text('Por Tag', style: TextStyle(color: AppColors.secondaryText)),
+                  dropdownColor: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(16),
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: (value) => setState(() => _tempTag = value),
+                   items: [
+                    const DropdownMenuItem<String?>(
+                        value: null, child: Text('Tags')),
+                    ...widget.availableTags.map((tag) {
+                      final bool isSelected = _tempTag == tag;
+                      return DropdownMenuItem<String?>(
+                            value: tag, 
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(tag, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.primary : null)),
+                                if (isSelected)
+                                  InkWell(
+                                    onTap: () {
+                                      setState(() => _tempTag = null);
+                                      Navigator.pop(context);
+                                    },
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(4.0),
+                                      child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
+                                    ),
+                                  ),
+                              ],
+                            ));
+                    }),
+                  ],
                 ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                TextButton(
-                    onPressed: () {
-                    widget.onClearInPanel();
-                     setState(() {
-                        _tempScope = JournalViewScope.todas;
-                        _tempDate = null;
-                        _tempVibration = null;
-                        _tempMood = null;
-                     });
-                    Navigator.pop(context);
-                  },
-                    child: const Text('Limpar Filtros',
-                        style: TextStyle(color: AppColors.primary))),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: () =>
-                      widget.onApply(_tempScope, _tempDate, _tempVibration, _tempMood),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary),
-                  child: const Text('Aplicar',
-                      style: TextStyle(color: Colors.white)),
-                )
-              ],
-            )
-          ],
+              ),
+
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  TextButton(
+                      onPressed: () {
+                        widget.onClearInPanel();
+                        setState(() {
+                             _tempScope = TaskViewScope.todas;
+                             _tempDate = null;
+                             _tempVibration = null;
+                             _tempTag = null;
+                        });
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Limpar Filtros',
+                          style: TextStyle(color: AppColors.primary))),
+                  const Spacer(),
+                  ElevatedButton(
+                    onPressed: () =>
+                        widget.onApply(_tempScope, _tempDate, _tempVibration, _tempTag),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary),
+                    child: const Text('Aplicar',
+                        style: TextStyle(color: Colors.white)),
+                  )
+                ],
+              )
+            ],
+          ),
         ),
       ),
-      ),
-    );
-  }
-}
-
-class _MoodSelector extends StatelessWidget {
-  final int? selectedMood;
-  final ValueChanged<int> onMoodSelected;
-
-  const _MoodSelector({this.selectedMood, required this.onMoodSelected});
-
-  @override
-  Widget build(BuildContext context) {
-    final moods = {1: '😔', 2: '😟', 3: '😐', 4: '😊', 5: '😄'};
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: moods.entries.map((entry) {
-        final moodId = entry.key;
-        final emoji = entry.value;
-        final isSelected = selectedMood == moodId;
-
-        return GestureDetector(
-          onTap: () => onMoodSelected(moodId),
-          child: AnimatedScale(
-            scale: isSelected ? 1.2 : 1.0,
-            duration: const Duration(milliseconds: 200),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: isSelected
-                    ? AppColors.primary.withValues(alpha: 0.3)
-                    : Colors.transparent,
-                border: isSelected
-                    ? Border.all(color: AppColors.primary, width: 1)
-                    : null,
-              ),
-              // *** INÍCIO DA CORREÇÃO: Cor dos Emoticons ***
-              // Envolvemos o Text com um DefaultTextStyle para "proteger" a cor do emoji
-              // do tema do popover.
-              child: DefaultTextStyle(
-                style: const TextStyle(),
-                child: Text(
-                  emoji,
-                  style: const TextStyle(fontSize: 24),
-                ),
-              ),
-              // *** FIM DA CORREÇÃO ***
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

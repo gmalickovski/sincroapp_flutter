@@ -191,9 +191,44 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () => Navigator.of(context).pop(),
               ),
-              title: const Text('Harmonia Conjugal ❤️', style: TextStyle(color: Colors.white, fontSize: 18)),
+              title: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Harmonia Conjugal', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.favorite, color: Colors.pink.shade400, size: 22),
+                ],
+              ),
               centerTitle: true,
             ),
+            bottomNavigationBar: !isDesktop
+                ? AnimatedBuilder(
+                    animation: _tabController,
+                    builder: (context, child) {
+                      // Hide button if we have a result and are on the Result tab (index 1)
+                      if (_result != null && _tabController.index == 1) {
+                        return const SizedBox.shrink();
+                      }
+                      return Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _calculate,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: const StadiumBorder(),
+                            elevation: 4,
+                            shadowColor: AppColors.primary.withOpacity(0.4),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                              : const Text('Calcular compatibilidade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        ),
+                      );
+                    },
+                  )
+                : null,
             body: SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -212,20 +247,39 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
       children: [
         // Header (Only for Desktop, Mobile uses AppBar)
         if (isDesktop) ...[
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Harmonia Conjugal ❤️',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white70),
-                onPressed: () => Navigator.pop(context),
-              )
-            ],
+          SizedBox(
+            width: double.infinity,
+            height: 40, // Height constraint for the header area
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // Centered Title
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Harmonia Conjugal',
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.favorite, color: Colors.pink.shade400, size: 24),
+                  ],
+                ),
+                // Close Button (Right Aligned)
+                Positioned(
+                  right: 0,
+                  // Adjusting position to be cleaner (offsetting padding slightly if needed)
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(context),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 32),
         ],
         
         // Tabs
@@ -255,7 +309,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                  Tab(text: 'Resultado'),
                ],
              ),
-             const SizedBox(height: 16),
+             const SizedBox(height: 32),
              Flexible(
                fit: FlexFit.loose,
                child: _tabController.index == 0 
@@ -321,11 +375,12 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
         mainAxisSize: MainAxisSize.min, // Adaptive height
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'Com quem você quer verificar a compatibilidade?',
-            style: TextStyle(color: Colors.white70, fontSize: 14),
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white, fontSize: 18),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 40),
           
           TextFormField(
             controller: _nameController,
@@ -389,22 +444,23 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             ),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 48),
           
-          ElevatedButton(
-            onPressed: _isLoading ? null : _calculate,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: const StadiumBorder(),
-              elevation: 4,
-              shadowColor: AppColors.primary.withOpacity(0.4),
+          if (isDesktop)
+            ElevatedButton(
+              onPressed: _isLoading ? null : _calculate,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: const StadiumBorder(),
+                elevation: 4,
+                shadowColor: AppColors.primary.withOpacity(0.4),
+              ),
+              child: _isLoading 
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Calcular compatibilidade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1)),
             ),
-            child: _isLoading 
-                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('CALCULAR COMPATIBILIDADE', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1)),
-          ),
         ],
       ),
     );
@@ -435,8 +491,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
 
         // 1. Scrollable Content (Behind)
         SingleChildScrollView(
-          // Less padding if AI content is shown, otherwise adjust for footer type
-          padding: EdgeInsets.only(bottom: _aiAnalysis != null ? 32 : (isPremium ? 100 : 180)),
+          // Less padding if AI content is shown, otherwise adjust for footer type. INCREASED for mobile scrolling.
+          padding: EdgeInsets.only(bottom: _aiAnalysis != null ? 32 : (isPremium ? 150 : 250)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [

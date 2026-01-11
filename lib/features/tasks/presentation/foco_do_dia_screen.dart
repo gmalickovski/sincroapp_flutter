@@ -1,6 +1,6 @@
 // lib/features/tasks/presentation/foco_do_dia_screen.dart
 import 'package:flutter/material.dart';
-// import 'package:intl/intl.dart';
+import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
@@ -22,10 +22,11 @@ import 'package:sincro_app_flutter/models/subscription_model.dart';
 // --- INÍCIO DA MUDANÇA: Importar o motor de numerologia ---
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
+import 'widgets/task_filter_panel.dart';
 // --- FIM DA MUDANÇA ---
 
 // --- INÍCIO DA MUDANÇA (Solicitação 2): Adicionado 'concluidas' ---
-enum TaskFilterType { focoDoDia, todas, vibracao, concluidas, atrasadas }
+enum TaskViewScope { focoDoDia, todas, concluidas, atrasadas }
 // --- FIM DA MUDANÇA ---
 
 class FocoDoDiaScreen extends StatefulWidget {
@@ -41,7 +42,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   late final String _userId;
   final Uuid _uuid = const Uuid();
 
-  TaskFilterType _selectedFilter = TaskFilterType.todas;
+  TaskViewScope _currentScope = TaskViewScope.todas;
+  DateTime? _selectedDate; // NOVO: Filtro de data
   int? _selectedVibrationNumber;
   final List<int> _vibrationNumbers = List.generate(9, (i) => i + 1) + [11, 22];
 
@@ -414,99 +416,89 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   // --- FIM DA MUDANÇA ---
 
   // --- INÍCIO DA MUDANÇA (Solicitação 2 & 3): Lógica de filtro atualizada ---
-  List<TaskModel> _filterTasks(List<TaskModel> allTasks) {
-    List<TaskModel> baseTasks;
+  List<TaskModel> _filterTasks(List<TaskModel> allTasks, int? userPersonalDay) {
+    List<TaskModel> filteredTasks;
 
-    // 1. Filtro Principal (Foco, Todas, Vibração, Concluídas)
-    switch (_selectedFilter) {
-      case TaskFilterType.focoDoDia:
-        // Show only tasks for TODAY (local date) and that match today's
-        // personal day. If user data is missing (can't compute personal day),
-        // fall back to date-only matching.
-        final nowLocal = DateTime.now().toLocal();
-        final todayLocal =
-            DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
-
-        final int? todayPersonal = _calculatePersonalDay(todayLocal);
-
-        DateTime? localDateOnly(DateTime? d) {
-          if (d == null) return null;
-          final dl = d.toLocal();
-          return DateTime(dl.year, dl.month, dl.day);
-        }
-
-        baseTasks = allTasks.where((task) {
-          if (task.completed) return false;
-
-          // --- INÍCIO DA MUDANÇA (Solicitação 2): Incluir Atrasadas no Foco do Dia ---
-          if (task.isOverdue) return true;
-          // --- FIM DA MUDANÇA ---
-
-          final DateTime taskDate = task.dueDate ?? task.createdAt;
-          final taskDateOnly = localDateOnly(taskDate);
-          if (taskDateOnly == null) return false;
-
-          // Date must match local today
-          if (!(taskDateOnly.year == todayLocal.year &&
-              taskDateOnly.month == todayLocal.month &&
-              taskDateOnly.day == todayLocal.day)) {
-            return false;
-          }
-
-          // If we can compute today's personal day, require task's personal day
-          // to match. Use saved value if available, otherwise compute from date.
-          if (todayPersonal == null) {
-            return true; // fallback to date-only
-          }
-
-          final int taskPersonal =
-              task.personalDay ?? _calculatePersonalDay(taskDateOnly) ?? -1;
-          return taskPersonal == todayPersonal;
-        }).toList();
+    // 1. SCOPE FILTERING (O que ver?)
+    switch (_currentScope) {
+      case TaskViewScope.focoDoDia:
+        filteredTasks = _taskActionService.calculateFocusTasks(allTasks, userPersonalDay);
         break;
+      case TaskViewScope.concluidas:
+        filteredTasks = allTasks.where((task) => task.completed).toList();
+        break;
+      case TaskViewScope.atrasadas:
+         final now = DateTime.now();
+         final todayStart = DateTime(now.year, now.month, now.day);
+         filteredTasks = allTasks.where((task) {
+           if (task.completed) return false;
+           if (task.dueDate == null) return false;
+           return task.dueDate!.isBefore(todayStart);
+         }).toList();
+         break;
+      case TaskViewScope.todas:
+      default:
+        // 'Todas' excludes completed by default unless explicitly asked? 
+        // Usually 'Todas' means 'Active Tasks'. 
+        // If users want completed, they go to 'Concluidas'.
+        filteredTasks = allTasks.where((task) => !task.completed).toList();
+        break;
+    }
 
-      case TaskFilterType.vibracao:
-        if (_selectedVibrationNumber == null) {
-          baseTasks = [];
-        } else {
-          baseTasks = allTasks.where((task) {
-            return !task.completed && // <-- Apenas pendentes
-                task.personalDay == _selectedVibrationNumber;
+    // 2. REFINEMENT FILTERING (Refinar por...)
+    
+    // Date Filter
+    if (_selectedDate != null) {
+      filteredTasks = filteredTasks.where((task) {
+        if (task.dueDate == null) return false;
+        return isSameDay(task.dueDate!, _selectedDate!);
+      }).toList();
+    }
+
+    // Vibration Filter
+    if (_selectedVibrationNumber != null) {
+       // Assuming vibration calculation happens or is stored
+       // For now, filtering by date's vibration if applicable or task property?
+       // TaskModel doesn't have vibration? 
+       // Usually vibration implies filtering tasks that MATCH a date with that vibration?
+       // Or filtering users who matched?
+       // Let's assume the previous logic: Filter tasks falling on dates that have this personal day.
+       if (widget.userData != null) {
+          filteredTasks = filteredTasks.where((task) {
+              if (task.dueDate == null) return false;
+              // Calculate PD for the task date
+              // This acts as "Tasks that are good for vibration X"
+              // Reusing helper if possible or simple calc
+               // Calculate PD for the task date
+               // This acts as "Tasks that are good for vibration X"
+               // Reusing helper if possible or simple calc
+               int? pd;
+                if (widget.userData?.nomeAnalise.isNotEmpty == true && widget.userData?.dataNasc.isNotEmpty == true) {
+                     final engine = NumerologyEngine(
+                          nomeCompleto: widget.userData!.nomeAnalise,
+                          dataNascimento: widget.userData!.dataNasc,
+                       );
+                     pd = engine.calculatePersonalDayForDate(task.dueDate!);
+                }
+               return pd == _selectedVibrationNumber;
           }).toList();
-        }
-        break;
-
-      case TaskFilterType.concluidas:
-        // Novo filtro: mostra apenas tarefas concluídas
-        baseTasks = allTasks.where((task) => task.completed).toList();
-
-        // Ordena tarefas concluídas por data de conclusão/criação
-        baseTasks.sort((a, b) {
-          final aDate = a.completedAt ?? a.createdAt;
-          final bDate = b.completedAt ?? b.createdAt;
-          return bDate.compareTo(aDate); // Mais recentes primeiro
-        });
-        // --- FIM DA CORREÇÃO ---
-        break;
-
-      case TaskFilterType.atrasadas:
-        baseTasks = allTasks.where((task) => !task.completed && task.isOverdue).toList();
-        break;
-
-      case TaskFilterType.todas:
-        // Filtro "Todas" agora significa "Todas as Pendentes"
-        baseTasks = allTasks.where((task) => !task.completed).toList();
-        break;
+       }
     }
 
-    // 2. Filtro Secundário (Tag)
-    // Não aplica filtro de tag se estivermos vendo as concluídas
-    if (_selectedTag != null && _selectedFilter != TaskFilterType.concluidas) {
-      baseTasks =
-          baseTasks.where((task) => task.tags.contains(_selectedTag!)).toList();
+    // Tag Filter
+    if (_selectedTag != null) {
+      filteredTasks = filteredTasks.where((task) => task.tags.contains(_selectedTag)).toList();
     }
 
-    return baseTasks;
+    // Sorting (Default: by Date)
+    filteredTasks.sort((a, b) {
+        if (a.dueDate == null && b.dueDate == null) return 0;
+        if (a.dueDate == null) return 1;
+        if (b.dueDate == null) return -1;
+        return a.dueDate!.compareTo(b.dueDate!);
+    });
+
+    return filteredTasks;
   }
   // --- FIM DA MUDANÇA ---
 
@@ -577,7 +569,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     if (newDate != null) {
       // Lógica de remoção visual baseada no filtro
-      if (_selectedFilter == TaskFilterType.focoDoDia) {
+      if (_currentScope == TaskViewScope.focoDoDia) {
         // Se estava no Foco do Dia (Hoje), e mudou a data (para Amanhã), remove.
         // Se era Atrasada e veio para Hoje, mantém (mas a lista deve atualizar via stream).
         // Como o reschedule sempre joga para o futuro (exceto atrasada -> hoje),
@@ -589,7 +581,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         if (!newDateOnly.isAtSameMomentAs(today)) {
            return true; // Remove visualmente
         }
-      } else if (_selectedFilter == TaskFilterType.atrasadas) {
+      } else if (_currentScope == TaskViewScope.atrasadas) {
          // Se estava em Atrasadas e foi reagendada (para Hoje ou Futuro), sai da lista de Atrasadas.
          return true;
       }
@@ -627,11 +619,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header (título e filtros principais)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: _buildHeader(isMobile: isMobile),
-                  ),
+
 
                   Expanded(
                     child: StreamBuilder<List<TaskModel>>(
@@ -640,14 +628,34 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                         if (snapshot.connectionState ==
                                 ConnectionState.waiting &&
                             !snapshot.hasData) {
-                          return const Center(child: CustomLoadingSpinner());
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: _buildHeader(isMobile: isMobile, availableTags: []),
+                              ),
+                              const Expanded(child: Center(child: CustomLoadingSpinner())),
+                            ],
+                          );
                         }
                         if (snapshot.hasError) {
                           debugPrint(
                               "Erro no Stream de Tarefas: ${snapshot.error}");
-                          return Center(
-                              child: Text(
-                                  'Erro ao carregar tarefas: ${snapshot.error}'));
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: _buildHeader(isMobile: isMobile, availableTags: []),
+                              ),
+                              Expanded(
+                                child: Center(
+                                    child: Text(
+                                        'Erro ao carregar tarefas: ${snapshot.error}')),
+                              ),
+                            ],
+                          );
                         }
 
                         final allTasks = snapshot.data ?? [];
@@ -661,39 +669,46 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                             .toList();
                         allTags.sort(); // Ordena alfabeticamente
 
-                        final tasksToShow = _filterTasks(allTasks);
+                        int? personalDay;
+                        if (widget.userData?.nomeAnalise.isNotEmpty == true && widget.userData?.dataNasc.isNotEmpty == true) {
+                             final engine = NumerologyEngine(
+                                  nomeCompleto: widget.userData!.nomeAnalise,
+                                  dataNascimento: widget.userData!.dataNasc,
+                               );
+                             personalDay = engine.calculatePersonalDayForDate(DateTime.now());
+                        }
+                        final tasksToShow = _filterTasks(allTasks, personalDay);
                         // --- FIM DA MUDANÇA ---
 
                         // Lógica de mensagens de "lista vazia" (atualizada)
                         String emptyMsg = 'Tudo limpo por aqui!';
                         String emptySubMsg = 'Nenhuma tarefa encontrada.';
 
-                        if (_selectedFilter == TaskFilterType.focoDoDia &&
+                        if (_currentScope == TaskViewScope.focoDoDia &&
                             tasksToShow.isEmpty) {
                           emptyMsg = 'Foco do dia concluído!';
                           emptySubMsg =
                               'Você não tem tarefas pendentes para hoje.';
-                        } else if (_selectedFilter == TaskFilterType.vibracao &&
-                            tasksToShow.isEmpty) {
-                          emptyMsg = 'Nenhuma tarefa encontrada.';
-                          emptySubMsg = _selectedVibrationNumber != null
-                              ? 'Não há tarefas pendentes para o dia pessoal $_selectedVibrationNumber.'
-                              : 'Selecione um número de dia pessoal acima.';
-                        } else if (_selectedFilter == TaskFilterType.todas &&
+                        } else if (_currentScope == TaskViewScope.todas &&
                             tasksToShow.isEmpty) {
                           emptyMsg = 'Caixa de entrada vazia!';
                           emptySubMsg = 'Você não tem nenhuma tarefa pendente.';
-                        } else if (_selectedFilter ==
-                                TaskFilterType.concluidas &&
+                        } else if (_currentScope ==
+                                TaskViewScope.concluidas &&
                             tasksToShow.isEmpty) {
                           emptyMsg = 'Nenhuma tarefa concluída.';
                           emptySubMsg = 'Complete tarefas para vê-las aqui.';
+                        } else if (_currentScope == TaskViewScope.atrasadas &&
+                            tasksToShow.isEmpty) {
+                          emptyMsg = 'Nenhuma tarefa atrasada.';
+                          emptySubMsg = 'Parabéns! Você está em dia com suas tarefas.';
                         }
+
 
                         // Se um filtro de tag estiver ativo e a lista vazia
                         if (_selectedTag != null &&
                             tasksToShow.isEmpty &&
-                            _selectedFilter != TaskFilterType.concluidas) {
+                            _currentScope != TaskViewScope.concluidas) {
                           emptyMsg = 'Nenhuma tarefa encontrada.';
                           emptySubMsg =
                               'Não há tarefas pendentes com a tag "$_selectedTag".';
@@ -701,15 +716,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
                         return Column(
                           children: [
-                            // --- INÍCIO DA MUDANÇA (Solicitação 1 & 3): Barras Dinâmicas ---
-                            // 1. Filtros de Tag (só aparece se não estiver selecionando)
-                            if (!_isSelectionMode)
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: _buildTagFilters(allTags,
-                                    isMobile: isMobile),
-                              ),
+                             // Header (título e filtros principais) - Moved inside to access allTags
+                             Padding(
+                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                               child: _buildHeader(isMobile: isMobile, availableTags: allTags),
+                             ),
+
 
                             // 2. Controles de Seleção (nova UI)
                             // Sempre mostrar os controles de seleção, independente do filtro
@@ -808,280 +820,176 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   // _buildHeader (original) MODIFICADO para (Solicitação 1 e 3)
-  Widget _buildHeader({required bool isMobile}) {
-    final double titleFontSize = isMobile ? 28 : 32;
-    // --- INÍCIO DA CORREÇÃO (Problema 2) ---
-    // Padronizando o espaçamento
-    const double chipSpacing = 8.0;
-    // --- FIM DA CORREÇÃO ---
+  final GlobalKey _filterButtonKey = GlobalKey();
+  
+  // Removed duplicate _selectedDate
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+  bool get _isFilterActive {
+    return _currentScope != TaskViewScope.todas ||
+        _selectedDate != null ||
+        _selectedVibrationNumber != null ||
+        _selectedTag != null;
+  }
+
+  void _openFilterUI(List<String> availableTags) {
+    final RenderBox? renderBox =
+        _filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final offset = renderBox != null
+        ? renderBox.localToGlobal(Offset.zero)
+        : const Offset(0, 0);
+    final size = renderBox?.size ?? const Size(0, 0);
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => Stack(
         children: [
-          const SizedBox(height: 16),
-          // --- INÍCIO DA MUDANÇA (Solicitação 1): Botão de Seleção REMOVIDO ---
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Tarefas',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: titleFontSize,
-                      fontWeight: FontWeight.bold)),
-              // O botão de seleção foi MOVIDO para _buildSelectionControls
-            ],
-          ),
-          // --- FIM DA MUDANÇA ---
-          const SizedBox(height: 16),
-
-          // Linha 1: Filtros principais
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                // --- INÍCIO DA CORREÇÃO (Problema 2) ---
-                // 'Wrap' removido, 'Row' agora contém os filhos diretamente
-                // com espaçamento consistente
-                // --- FIM DA CORREÇÃO ---
-                ...TaskFilterType.values.map((filterType) {
-                  String label;
-                  late IconData icon;
-                  switch (filterType) {
-                    case TaskFilterType.focoDoDia:
-                      label = 'Foco do Dia';
-                      icon = Icons.star_border_rounded;
-                      break;
-                    case TaskFilterType.todas:
-                      label = 'Todas';
-                      icon = Icons.inbox_rounded;
-                      break;
-                    case TaskFilterType.vibracao:
-                      label = 'Dia Pessoal';
-                      icon = Icons.wb_sunny_rounded;
-                      break;
-                    case TaskFilterType.concluidas:
-                      label = 'Concluídas';
-                      icon = Icons.check_circle_outline_rounded;
-                      break;
-                    case TaskFilterType.atrasadas:
-                      label = 'Atrasadas';
-                      icon = Icons.warning_amber_rounded;
-                      break;
-                  }
-
-                  final isSelected = _selectedFilter == filterType;
-
-                  return Padding(
-                    padding: const EdgeInsets.only(
-                        right: chipSpacing), // Espaçamento
-                    child: ChoiceChip(
-                      label: Text(label,
-                          style: const TextStyle(
-                              fontSize: 14)), // Consistent text size
-                      avatar: Icon(
-                        icon,
-                        size: 16, // Smaller icon size
-                        color:
-                            isSelected ? Colors.white : AppColors.secondaryText,
-                      ),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        if (selected) {
-                          setState(() {
-                            // --- INÍCIO DA MUDANÇA (Solicitação 1) ---
-                            // Cancela o modo de seleção ao trocar de filtro
-                            _clearSelection();
-                            // --- FIM DA MUDANÇA ---
-                            _selectedFilter = filterType;
-                            if (filterType != TaskFilterType.vibracao) {
-                              _selectedVibrationNumber = null;
-                            }
-                            _selectedTag = null;
-                          });
-                        }
-                      },
-                      backgroundColor: AppColors.cardBackground,
-                      selectedColor: AppColors.primary,
-                      labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.white
-                              : AppColors.secondaryText,
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal),
-                      showCheckmark: false,
-                      side: BorderSide.none,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6), // Reduced padding
-                    ),
-                  );
-                }),
-
-                // --- INÍCIO DA CORREÇÃO (Problema 2) ---
-                // SizedBox(width: 12) removido
-                // --- FIM DA CORREÇÃO ---
-
-                // Tag filter (opens modal) - keep visible regardless of selection mode
-                Padding(
-                  padding: const EdgeInsets.only(right: chipSpacing),
-                  child: ChoiceChip(
-                    label: Text(_selectedTag ?? 'Tags',
-                        style: const TextStyle(fontSize: 14)),
-                    avatar: const Icon(Icons.label_outline, size: 16),
-                    selected: _selectedTag != null,
-                    onSelected: (selected) async {
-                      final selectedTag = await showModalBottomSheet<String?>(
-                        context: context,
-                        isScrollControlled: true,
-                        backgroundColor: Colors.transparent,
-                        builder: (ctx) => TagSelectionModal(userId: _userId),
-                      );
-                      if (selectedTag != null) {
-                        setState(() {
-                          _selectedTag = selectedTag;
-                          _clearSelection();
-                        });
-                      }
-                    },
-                    backgroundColor: AppColors.cardBackground,
-                    selectedColor: AppColors.primary,
-                    labelStyle: TextStyle(
-                        color: _selectedTag != null
-                            ? Colors.white
-                            : AppColors.secondaryText,
-                        fontWeight: _selectedTag != null
-                            ? FontWeight.bold
-                            : FontWeight.normal),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    // --- INÍCIO DA CORREÇÃO (Problema 1) ---
-                    // Adicionado 'side' para corresponder aos outros chips
-                    side: BorderSide.none,
-                    // --- FIM DA CORREÇÃO ---
-                  ),
-                ),
-              ],
+          Positioned(
+            top: offset.dy + size.height + 8,
+            right: MediaQuery.of(context).size.width - (offset.dx + size.width),
+            child: TaskFilterPanel(
+              initialScope: _currentScope,
+              initialDate: _selectedDate,
+              initialVibration: _selectedVibrationNumber,
+              initialTag: _selectedTag,
+              availableTags: availableTags,
+              userData: widget.userData,
+              onApply: (scope, date, vibration, tag) {
+                setState(() {
+                  _currentScope = scope;
+                  _selectedDate = date;
+                  _selectedVibrationNumber = vibration;
+                  _selectedTag = tag;
+                   _clearSelection();
+                });
+                Navigator.pop(context);
+              },
+              onClearInPanel: () {
+                setState(() {
+                    _currentScope = TaskViewScope.todas;
+                    _selectedDate = null;
+                    _selectedVibrationNumber = null;
+                    _selectedTag = null;
+                });
+              },
             ),
           ),
-          // --- FIM DA MUDANÇA (Solicitação 3) ---
-
-          AnimatedSize(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: Visibility(
-              visible: _selectedFilter == TaskFilterType.vibracao,
-              maintainState: true,
-              maintainAnimation: true,
-              maintainSize: true,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 12.0),
-                child: (_selectedFilter == TaskFilterType.vibracao)
-                    // --- INÍCIO DA MUDANÇA (Solicitação 3): Rolagem Horizontal ---
-                    ? SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        physics: const ClampingScrollPhysics(),
-                        child: Row(
-                          children: _vibrationNumbers.map((number) {
-                            final isSelected =
-                                _selectedVibrationNumber == number;
-                            final colors = getColorsForVibration(number);
-
-                            return Padding(
-                              padding: const EdgeInsets.only(
-                                  right: chipSpacing), // Espaçamento
-                              child: ChoiceChip(
-                                label: Text('$number'),
-                                selected: isSelected,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    // --- INÍCIO DA MUDANÇA (Solicitação 1) ---
-                                    _clearSelection(); // Cancela seleção
-                                    // --- FIM DA MUDANÇA ---
-                                    if (!selected) {
-                                      _selectedVibrationNumber = null;
-                                    } else {
-                                      _selectedVibrationNumber = number;
-                                    }
-                                  });
-                                },
-                                backgroundColor:
-                                    colors.background.withValues(alpha: 0.2),
-                                selectedColor: colors.background,
-                                labelStyle: TextStyle(
-                                  color: isSelected
-                                      ? colors.text
-                                      : colors.background
-                                          .withValues(alpha: 0.9),
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.normal,
-                                  fontSize: 12,
-                                ),
-                                shape: StadiumBorder(
-                                    side: BorderSide(
-                                        color: colors.background
-                                            .withValues(alpha: 0.5))),
-                                showCheckmark: false,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      )
-                    // --- FIM DA MUDANÇA (Solicitação 3) ---
-                    : const SizedBox.shrink(),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Divider(color: AppColors.border, height: 1),
         ],
       ),
     );
   }
 
+  Widget _buildHeader({required bool isMobile, required List<String> availableTags}) {
+    final double titleFontSize = isMobile ? 28 : 32;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Tarefas',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold)),
+            
+            // Buttons Row: Selection + Filters
+            Row(
+              children: [
+                _buildSelectionButton(),
+                const SizedBox(width: 8),
+                Badge(
+                  key: _filterButtonKey,
+                  isLabelVisible: _isFilterActive,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _openFilterUI(availableTags),
+                    icon: const Icon(Icons.filter_list, size: 18),
+                    label: const Text("Filtros"),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.secondaryText,
+                      side: BorderSide(
+                          color: _isFilterActive
+                              ? AppColors.primary
+                              : AppColors.border),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Active Filters Display (Optional, similar to Journal's "Limpar Filtros" chip if needed)
+        // If filters are active, maybe show a chip to clear them easily?
+        // Active Filters Display (Optional, similar to Journal's "Limpar Filtros" chip if needed)
+        // If filters are active, maybe show a chip to clear them easily?
+        if (_isFilterActive) // Note: _isFilterActive logic needs update to include date check
+           Padding(
+             padding: const EdgeInsets.only(bottom: 16),
+             child: Wrap(
+               spacing: 8,
+               children: [
+                 ActionChip(
+                   avatar: const Icon(Icons.clear, size: 16, color: Colors.white),
+                   label: const Text('Limpar Filtros'),
+                   labelStyle: const TextStyle(color: Colors.white),
+                   backgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                     onPressed: () {
+                      setState(() {
+                        _currentScope = TaskViewScope.todas;
+                        _selectedDate = null;
+                        _selectedVibrationNumber = null;
+                        _selectedTag = null;
+                      });
+                     },
+                   side: BorderSide.none,
+                 ),
+                  // Show what is active
+                  if (_currentScope != TaskViewScope.todas)
+                     Chip(label: Text(_getScopeLabel(_currentScope)), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
+                  if (_selectedDate != null)
+                     Chip(label: Text(DateFormat('dd/MM').format(_selectedDate!)), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
+                  if (_selectedVibrationNumber != null)
+                     Chip(label: Text('Dia Pessoal $_selectedVibrationNumber'), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
+                  if (_selectedTag != null)
+                     Chip(label: Text('#$_selectedTag'), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
+                ],
+              ),
+            ),
+
+         const Divider(color: AppColors.border, height: 1),
+       ],
+     );
+   }
+   
+   String _getScopeLabel(TaskViewScope type) {
+     switch (type) {
+       case TaskViewScope.focoDoDia: return 'Foco do Dia';
+       case TaskViewScope.todas: return 'Todas';
+       case TaskViewScope.concluidas: return 'Concluídas';
+       case TaskViewScope.atrasadas: return 'Atrasadas';
+     }
+   }
+
+
   // --- INÍCIO DA MUDANÇA (Solicitação 1 & 3): Widgets de UI refatorados ---
 
-  /// (Solicitação 3) Constrói a barra de filtro de tags e controles
-  Widget _buildTagFilters(List<String> allTags, {required bool isMobile}) {
-    // Always show the selection button in the tasks header, regardless of filter
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Padding(
-          // Pequeno padding esquerdo para alinhar visualmente com os itens da lista
-          padding: const EdgeInsets.only(left: 8.0),
-          child: _buildSelectionButton(),
-        ),
-      ),
-    );
-  }
+
 
   /// Constrói o botão de seleção de tarefas
   Widget _buildSelectionButton() {
-    return OutlinedButton.icon(
-      icon: const Icon(Icons.check_box_outline_blank_rounded,
-          color: AppColors.secondaryText, size: 20),
-      label: const Text('Selecionar Tarefas',
-          style: TextStyle(
-              color: AppColors.secondaryText, fontWeight: FontWeight.normal)),
+    return IconButton(
       onPressed: _toggleSelectionMode,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: AppColors.secondaryText,
-        side: const BorderSide(color: AppColors.border),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      icon: const Icon(Icons.check_box_outline_blank_rounded, color: AppColors.secondaryText),
+      tooltip: 'Selecionar Tarefas',
+      style: IconButton.styleFrom(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0),
+           borderRadius: BorderRadius.circular(8),
+           side: const BorderSide(color: AppColors.border),
         ),
-        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
       ),
     );
   }
@@ -1167,3 +1075,4 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     return const SizedBox(height: 8);
   }
 }
+bool isSameDay(DateTime? a, DateTime? b) { if (a == null || b == null) return false; return a.year == b.year && a.month == b.month && a.day == b.day; }

@@ -1174,7 +1174,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     }
                   },
                   icon: const Icon(Icons.favorite, size: 16),
-                  label: const Text('Fazer teste de compatibilidade'),
+                  label: const Text('Fazer teste de compatibilidade', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink.shade400,
                     foregroundColor: Colors.white,

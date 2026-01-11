@@ -121,19 +121,31 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // *** SEÇÃO DO TÍTULO E DIVISOR REMOVIDA CONFORME SOLICITADO ***
-            /*
+            // Header com X e Check
             Padding(
-              padding: const EdgeInsets.fromLTRB(24.0, 20.0, 24.0, 12.0),
-              child: Text(
-                "Selecionar Data Final",
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.primaryText, fontWeight: FontWeight.bold),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                   IconButton(
+                     onPressed: () => Navigator.pop(context),
+                     icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                     tooltip: 'Cancelar',
+                   ),
+                   Text(
+                     "Selecionar Data",
+                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                         color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 18),
+                   ),
+                   IconButton(
+                     onPressed: () => Navigator.pop(context, _selectedDate),
+                     icon: const Icon(Icons.check, color: AppColors.primary), // Check de confirmação
+                     tooltip: 'Confirmar',
+                   ),
+                ],
               ),
             ),
             const Divider(color: AppColors.border, height: 1),
-            */
-            // *** FIM DA REMOÇÃO ***
 
             Flexible(
               child: SingleChildScrollView(
@@ -142,52 +154,8 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
                 child: _buildFullCalendarView(context),
               ),
             ),
-            const Divider(color: AppColors.border, height: 1),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context), // Pop sem valor
-                      child: const Text(
-                        "Cancelar",
-                        style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: () {
-                        // Retorna a data selecionada
-                        Navigator.pop(context, _selectedDate);
-                      },
-                      child: const Text(
-                        "OK",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Bottom buttons removed per request
+            const SizedBox(height: 16),
           ],
         ),
       ),
