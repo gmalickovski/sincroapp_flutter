@@ -81,7 +81,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
               // 1. SCOPE DROPDOWN
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.view_agenda_outlined, color: AppColors.secondaryText),
+                leading: const Icon(Icons.menu_book_outlined, color: AppColors.secondaryText, size: 20),
                 title: DropdownButton<JournalViewScope>(
                   value: _tempScope,
                   isExpanded: true,
@@ -102,6 +102,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                         style: TextStyle(
                           color: isSelected ? AppColors.primary : Colors.white,
                           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          fontFamily: 'Poppins',
                         ),
                       ),
                     );
@@ -110,14 +111,14 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
               ),
 
               const SizedBox(height: 16),
-              const Text("Refinar por...", style: TextStyle(color: AppColors.secondaryText, fontSize: 12, fontWeight: FontWeight.bold)),
+              const Text("Refinar", style: TextStyle(color: AppColors.secondaryText, fontSize: 16, fontWeight: FontWeight.normal, fontFamily: 'Poppins')),
               const SizedBox(height: 8),
 
               // 2. FILTERS
               // Date Filter
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today, color: AppColors.secondaryText),
+                leading: const Icon(Icons.calendar_today, color: AppColors.secondaryText, size: 20),
                 title: InkWell(
                   onTap: () async {
                        final DateTime firstDate = DateTime(2020);
@@ -143,7 +144,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    // padding: const EdgeInsets.symmetric(vertical: 8), 
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -152,6 +153,8 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                           style: TextStyle(
                             color: _tempDate != null ? AppColors.primary : Colors.white,
                             fontWeight: _tempDate != null ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 14,
+                            fontFamily: 'Poppins',
                           ),
                         ),
                         if (_tempDate != null)
@@ -172,16 +175,16 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
               // Vibration Filter
               ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.star_border, color: AppColors.secondaryText),
+                  leading: const Icon(Icons.wb_sunny_outlined, color: AppColors.secondaryText, size: 20),
                   title: DropdownButton<int?>(
                     value: _tempVibration,
                     isExpanded: true,
                     isDense: true,
                     underline: const SizedBox.shrink(),
-                    hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText)),
+                    hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontFamily: 'Poppins')),
                     dropdownColor: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(16),
-                    style: const TextStyle(color: Colors.white),
+                    style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
                     onChanged: (value) {
                       setState(() => _tempVibration = value);
                     },
@@ -191,20 +194,20 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                       ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
                     ].map((int? v) {
                       if (v == null) {
-                         return const Text('Dias Pessoais', style: TextStyle(color: Colors.white));
+                         return const Text('Dias Pessoais', style: TextStyle(color: Colors.white, fontFamily: 'Poppins'));
                       }
                       return Row(
                         children: [
                           VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
                           const SizedBox(width: 12),
-                          Text('Dia Pessoal $v', style: const TextStyle(color: Colors.white)),
+                          Text('Dia Pessoal $v', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
                         ],
                       );
                     }).toList();
                   },
                     items: [
                       const DropdownMenuItem<int?>(
-                        value: null, child: Text('Dias Pessoais')),
+                        value: null, child: Text('Dias Pessoais', style: TextStyle(fontFamily: 'Poppins'))),
                       ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) {
                          final isSelected = _tempVibration == v;
                          return DropdownMenuItem<int?>(
@@ -216,7 +219,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                                   children: [
                                     VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
                                     const SizedBox(width: 12),
-                                    Text('Dia Pessoal $v', style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.primary : null)),
+                                    Text('Dia Pessoal $v', style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.primary : null, fontFamily: 'Poppins')),
                                   ],
                                 ),
                                 if (isSelected)
@@ -264,7 +267,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                     Navigator.pop(context);
                   },
                     child: const Text('Limpar Filtros',
-                        style: TextStyle(color: AppColors.primary))),
+                        style: TextStyle(color: AppColors.primary, fontFamily: 'Poppins'))),
                 const Spacer(),
                 ElevatedButton(
                   onPressed: () =>
@@ -272,7 +275,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
                   style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary),
                   child: const Text('Aplicar',
-                      style: TextStyle(color: Colors.white)),
+                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
                 )
               ],
             )

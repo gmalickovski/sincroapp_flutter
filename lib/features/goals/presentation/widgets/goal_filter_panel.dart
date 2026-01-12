@@ -1,13 +1,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // To access TaskFilterType enum
+import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // To access TaskViewScope
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 
-class TaskFilterPanel extends StatefulWidget {
+class GoalFilterPanel extends StatefulWidget {
   final TaskViewScope initialScope;
   final DateTime? initialDate; 
   final int? initialVibration;
@@ -17,7 +17,7 @@ class TaskFilterPanel extends StatefulWidget {
   final Function(TaskViewScope, DateTime?, int?, String?) onApply;
   final VoidCallback onClearInPanel;
   
-  const TaskFilterPanel({
+  const GoalFilterPanel({
     super.key,
     required this.initialScope,
     this.initialDate,
@@ -30,10 +30,10 @@ class TaskFilterPanel extends StatefulWidget {
   });
 
   @override
-  State<TaskFilterPanel> createState() => _TaskFilterPanelState();
+  State<GoalFilterPanel> createState() => _GoalFilterPanelState();
 }
 
-class _TaskFilterPanelState extends State<TaskFilterPanel> {
+class _GoalFilterPanelState extends State<GoalFilterPanel> {
   late TaskViewScope _tempScope;
   late DateTime? _tempDate;
   late int? _tempVibration;
@@ -59,7 +59,7 @@ class _TaskFilterPanelState extends State<TaskFilterPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Material( // Added Material to fix "No Material widget found" error
+    return Material(
       type: MaterialType.transparency,
       child: Container(
         width: 350,
@@ -74,16 +74,13 @@ class _TaskFilterPanelState extends State<TaskFilterPanel> {
           ],
         ),
         child: Padding(
-          // Reduced top padding as requested
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Removed title as requested
-              // Removed extra SizedBox here as padding handles it better
               
-              // 1. SCOPE DROPDOWN (O que ver?)
+              // 1. SCOPE DROPDOWN
               ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.view_agenda_outlined, color: AppColors.secondaryText, size: 20),
@@ -150,7 +147,6 @@ class _TaskFilterPanelState extends State<TaskFilterPanel> {
                   },
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
-                    // padding: const EdgeInsets.symmetric(vertical: 8), // Removed vertical padding to match height
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -304,7 +300,7 @@ class _TaskFilterPanelState extends State<TaskFilterPanel> {
                         Navigator.pop(context);
                       },
                       child: const Text('Limpar Filtros',
-                          style: TextStyle(color: AppColors.primary))),
+                          style: TextStyle(color: AppColors.primary, fontFamily: 'Poppins'))),
                   const Spacer(),
                   ElevatedButton(
                     onPressed: () =>
@@ -312,7 +308,7 @@ class _TaskFilterPanelState extends State<TaskFilterPanel> {
                     style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary),
                     child: const Text('Aplicar',
-                        style: TextStyle(color: Colors.white)),
+                        style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
                   )
                 ],
               )

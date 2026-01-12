@@ -56,17 +56,24 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         }
 
         final stats = snapshot.data ?? {};
+        // KPIs
         final int totalUsers = stats['totalUsers'] ?? 0;
+        final double grossMrr = (stats['estimatedMRR'] ?? 0.0).toDouble();
+        final double totalAiCost = (stats['totalAiCost'] ?? 0.0).toDouble();
+        final double netProfit = (stats['netProfit'] ?? 0.0).toDouble();
+        
+        // Users Breakdown
         final int freeUsers = stats['freeUsers'] ?? 0;
         final int plusUsers = stats['plusUsers'] ?? 0;
         final int premiumUsers = stats['premiumUsers'] ?? 0;
-        final int activeSubscriptions = stats['activeSubscriptions'] ?? 0;
-        final double mrr = (stats['estimatedMRR'] ?? 0.0).toDouble();
-        final double arr = mrr * 12;
-
-        final int paidUsers = plusUsers + premiumUsers;
-        final double conversionRate =
-            totalUsers > 0 ? (paidUsers / totalUsers) * 100 : 0.0;
+        
+        // Demographics
+        final Map<String, dynamic> demographics = stats['demographics'] ?? {};
+        final Map<String, int> ageBuckets = Map<String, int>.from(demographics['age'] ?? {});
+        final Map<String, int> sexDistribution = Map<String, int>.from(demographics['sex'] ?? {});
+        
+        // AI Stats
+        final int totalAiUsed = stats['totalAiUsed'] ?? 0;
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -74,67 +81,79 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             await _statsFuture;
           },
           child: ListView(
-            padding: EdgeInsets.all(isDesktop ? 32 : 16),
+            padding: EdgeInsets.all(isDesktop ? 24 : 16),
             children: [
-              // 1. KPI Cards Row
+              // 1. Header & Financial Overview
+              Text(
+                'Visão Geral Financeira',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: isDesktop ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildKpiGrid(
                 totalUsers: totalUsers,
-                mrr: mrr,
-                arr: arr,
-                conversionRate: conversionRate,
+                grossMrr: grossMrr,
+                netProfit: netProfit,
+                aiCost: totalAiCost,
                 isDesktop: isDesktop,
               ),
               const SizedBox(height: 32),
 
-              // 2. Financial Analysis
-              // Note: AdminFinancialCard may need migration if it fetches data, checking that next.
-              // For now passing stats map which should be compatible if keys match.
-              AdminFinancialCard(stats: stats, isDesktop: isDesktop),
+              // 2. AI Usage & Costs
+              _buildAiUsageSection(totalAiUsed, totalAiCost, isDesktop),
               const SizedBox(height: 32),
-
-              // 3. Charts & Breakdown Row
+              
+              // 3. Demographics Row (Age & Sex)
+              Text(
+                'Demografia do Usuário',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: isDesktop ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 3,
-                      child: _buildPlanDistributionChart(
-                        free: freeUsers,
-                        plus: plusUsers,
-                        premium: premiumUsers,
-                        total: totalUsers,
-                        isDesktop: isDesktop,
-                      ),
-                    ),
+                    Expanded(child: _buildAgeDistributionCard(ageBuckets)),
                     const SizedBox(width: 24),
-                    Expanded(
-                      flex: 2,
-                      child: _buildSubscriptionStatus(
-                        active: activeSubscriptions,
-                        expired: stats['expiredSubscriptions'] ?? 0,
-                      ),
-                    ),
+                    Expanded(child: _buildSexDistributionCard(sexDistribution)),
                   ],
                 )
               else ...[
-                _buildPlanDistributionChart(
-                  free: freeUsers,
-                  plus: plusUsers,
-                  premium: premiumUsers,
-                  total: totalUsers,
-                  isDesktop: isDesktop,
-                ),
-                const SizedBox(height: 24),
-                _buildSubscriptionStatus(
-                  active: activeSubscriptions,
-                  expired: stats['expiredSubscriptions'] ?? 0,
-                ),
+                _buildAgeDistributionCard(ageBuckets),
+                const SizedBox(height: 16),
+                _buildSexDistributionCard(sexDistribution),
               ],
+              
+              const SizedBox(height: 32),
+
+              // 4. Plan Distribution & Subscriptions (Existing, polished)
+              Text(
+                'Distribuição de Planos',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: isDesktop ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              _buildPlanDistributionChart(
+                free: freeUsers,
+                plus: plusUsers,
+                premium: premiumUsers,
+                total: totalUsers,
+                isDesktop: isDesktop,
+              ),
 
               const SizedBox(height: 32),
 
-              // 4. Site Control
+              // 5. Site Control
               _buildSiteControlSection(isDesktop),
             ],
           ),
@@ -145,9 +164,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
 
   Widget _buildKpiGrid({
     required int totalUsers,
-    required double mrr,
-    required double arr,
-    required double conversionRate,
+    required double grossMrr,
+    required double netProfit,
+    required double aiCost,
     required bool isDesktop,
   }) {
     final cards = [
@@ -156,32 +175,32 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         value: totalUsers.toString(),
         icon: Icons.people_alt_outlined,
         color: Colors.blue,
-        trend: '+12% este mês', // Placeholder trend
+        trend: '+12% este mês', 
         trendUp: true,
       ),
       _buildStatCard(
-        title: 'MRR (Mensal)',
-        value: _currencyFormat.format(mrr),
+        title: 'MRR Bruto',
+        value: _currencyFormat.format(grossMrr),
         icon: Icons.attach_money,
         color: Colors.green,
-        trend: '+5% este mês',
+        trend: 'Receita Total',
         trendUp: true,
       ),
       _buildStatCard(
-        title: 'ARR (Anual)',
-        value: _currencyFormat.format(arr),
-        icon: Icons.trending_up,
+        title: 'Custo IA',
+        value: _currencyFormat.format(aiCost),
+        icon: Icons.psychology, 
+        color: Colors.redAccent,
+        trend: 'Gasto Estimado',
+        trendUp: false, 
+      ),
+      _buildStatCard(
+        title: 'Lucro Líquido',
+        value: _currencyFormat.format(netProfit),
+        icon: Icons.account_balance_wallet,
         color: Colors.purple,
-        trend: 'Projeção',
-        trendUp: true,
-      ),
-      _buildStatCard(
-        title: 'Conversão',
-        value: '${conversionRate.toStringAsFixed(1)}%',
-        icon: Icons.pie_chart_outline,
-        color: Colors.orange,
-        trend: 'Média do setor: 3%',
-        trendUp: conversionRate > 3,
+        trend: 'Após custos IA',
+        trendUp: netProfit > 0,
       ),
     ];
 
@@ -483,6 +502,189 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               fontWeight: FontWeight.bold,
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAiUsageSection(int totalAiUsed, double totalAiCost, bool isDesktop) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Uso de Inteligência Artificial',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: Colors.purple.withOpacity(0.3)),
+                ),
+                child: Text(
+                  '${NumberFormat.compact().format(totalAiUsed)} Sugestões',
+                  style: const TextStyle(
+                    color: Colors.purple,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniMetric(
+                  "Sugestões Totais", 
+                  totalAiUsed.toString(), 
+                  Icons.chat_bubble_outline, 
+                  Colors.purple
+                ),
+              ),
+             if (isDesktop) const SizedBox(width: 16),
+             if (isDesktop) Expanded(
+                child: _buildMiniMetric(
+                  "Custo Estimado", 
+                  _currencyFormat.format(totalAiCost), 
+                  Icons.money_off, 
+                  Colors.redAccent
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+  
+  Widget _buildMiniMetric(String label, String value, IconData icon, Color color) {
+    return Container(
+       padding: const EdgeInsets.all(16),
+       decoration: BoxDecoration(
+         color: AppColors.background,
+         borderRadius: BorderRadius.circular(12),
+       ),
+       child: Row(
+         children: [
+           Icon(icon, color: color, size: 28),
+           const SizedBox(width: 16),
+           Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+               Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+               Text(value, style: const TextStyle(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
+             ],
+           )
+         ],
+       ),
+    );
+  }
+
+  Widget _buildAgeDistributionCard(Map<String, int> buckets) {
+    return _buildDemographicPieCard("Distribuição por Idade", buckets, [
+      Colors.blue.shade200,
+      Colors.blue.shade400,
+      Colors.blue.shade600,
+      Colors.blue.shade800,
+      Colors.indigo.shade900,
+      Colors.grey,
+    ]);
+  }
+
+  Widget _buildSexDistributionCard(Map<String, int> distribution) {
+     return _buildDemographicPieCard("Distribuição por Sexo", distribution, [
+      Colors.blueAccent,
+      Colors.pinkAccent,
+      Colors.purpleAccent, // Outro
+      Colors.grey,
+    ]);
+  }
+
+  Widget _buildDemographicPieCard(String title, Map<String, int> data, List<Color> colors) {
+    int total = data.values.fold(0, (sum, val) => sum + val);
+    
+    // Convert to Chart Sections
+    int colorIndex = 0;
+    List<PieChartSectionData> sections = [];
+    
+    data.forEach((key, value) {
+        if (value > 0) {
+           final double percentage = (value / total) * 100;
+           sections.add(
+             PieChartSectionData(
+               color: colors[colorIndex % colors.length],
+               value: value.toDouble(),
+               title: '${percentage.toStringAsFixed(0)}%',
+               radius: 40,
+               titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+             )
+           );
+        }
+        colorIndex++;
+    });
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              // Chart
+              SizedBox(
+                height: 150,
+                width: 150,
+                child: total > 0 
+                  ? PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 30,
+                        sections: sections,
+                      ),
+                    )
+                  : const Center(child: Text("Sem dados")),
+              ),
+              const SizedBox(width: 24),
+              // Legend
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: data.entries.map((entry) {
+                    // Match color logic
+                    final index = data.keys.toList().indexOf(entry.key);
+                    final color = colors[index % colors.length];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: _buildLegendItem(entry.key, entry.value, color),
+                    );
+                  }).toList(),
+                ),
+              )
+            ],
+          )
         ],
       ),
     );

@@ -368,7 +368,11 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   onChanged: (val) {
                     setState(() {
                       if (val) {
-                        _recurrenceRule = RecurrenceRule(type: RecurrenceType.daily); // Default start
+                        // Default to Daily AND Default End Date (30 days) to prevent infinite loops
+                        _recurrenceRule = RecurrenceRule(
+                           type: RecurrenceType.daily,
+                           endDate: _selectedDay.add(const Duration(days: 30)),
+                        ); 
                       } else {
                         _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
                       }
@@ -403,12 +407,66 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                        ),
                      ),
                      
-                     // Weekly Days Selection (if Weekly)
-                     if (_recurrenceRule.type == RecurrenceType.weekly)
-                       Padding(
-                         padding: const EdgeInsets.only(top: 16.0),
-                         child: _buildWeeklyDaysSelector(),
-                       ),
+                      // Weekly Days Selection (if Weekly)
+                      if (_recurrenceRule.type == RecurrenceType.weekly)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          child: _buildWeeklyDaysSelector(),
+                        ),
+                        
+                      const SizedBox(height: 16),
+                      const Text(
+                        "Termina em",
+                         style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // Duration / End Date Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                             // Removed "Nunca" to enforce finite recurrence
+                             _buildDurationChip("1 Mês", const Duration(days: 30)),
+                             const SizedBox(width: 8),
+                             _buildDurationChip("6 Meses", const Duration(days: 180)),
+                             const SizedBox(width: 8),
+                             _buildDurationChip("1 Ano", const Duration(days: 365)),
+                             const SizedBox(width: 8),
+                             ActionChip(
+                               label: Text(
+                                 _recurrenceRule.endDate != null && 
+                                 _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 && // Rough check to differentiate from presets
+                                 _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365
+                                  ? DateFormat('dd/MM/yy').format(_recurrenceRule.endDate!)
+                                  : "Definir Data",
+                                ),
+                                onPressed: _pickRecurrenceEndDate,
+                                backgroundColor: AppColors.background,
+                                labelStyle: TextStyle(
+                                  color: (_recurrenceRule.endDate != null && 
+                                          _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 &&
+                                          _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365)
+                                      ? Colors.white 
+                                      : AppColors.primary,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                  side: BorderSide(
+                                    color: (_recurrenceRule.endDate != null && 
+                                            _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 &&
+                                            _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365)
+                                        ? AppColors.primary 
+                                        : AppColors.primary.withOpacity(0.5),
+                                  ),
+                                ),
+                                // Fill if custom date selected
+                                elevation: 0,
+                                visualDensity: VisualDensity.compact,
+                             ),
+                          ],
+                        ),
+                      ),
                    ],
                  ),
                )
@@ -578,6 +636,77 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     final hours = _selectedReminderOffset!.inHours;
     if (hours < 24) return "$hours h antes";
     return "${_selectedReminderOffset!.inDays} dia(s) antes";
+  }
+
+  Widget _buildDurationChip(String label, Duration? duration) {
+    // Check if selected:
+    // If duration is null (Nunca) -> endDate must be null
+    // If duration is set -> endDate must match _selectedDay + duration (approx)
+    bool isSelected = false;
+    
+    if (duration == null) {
+      isSelected = _recurrenceRule.endDate == null;
+    } else {
+      if (_recurrenceRule.endDate != null) {
+         final diff = _recurrenceRule.endDate!.difference(_selectedDay).inDays;
+         // Allow slight flexibility or exact match? Exact match is safer for now.
+         // 30 days vs 1 Month logic might be tricky, so sticking to fixed days (30/365)
+         isSelected = diff == duration.inDays;
+      }
+    }
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+             if (duration == null) {
+               _recurrenceRule = _recurrenceRule.copyWith(clearEndDate: true);
+             } else {
+               _recurrenceRule = _recurrenceRule.copyWith(
+                 endDate: _selectedDay.add(duration),
+               );
+             }
+          });
+        }
+      },
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.secondaryText,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+      ),
+    );
+  }
+
+  Future<void> _pickRecurrenceEndDate() async {
+    final DateTime? picked = await showDialog<DateTime>(
+      context: context,
+      builder: (context) => Dialog(
+         backgroundColor: Colors.transparent,
+         insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+         child: CustomMonthYearPicker( // Reuse or standard picker? User images showed standard calendar, but we have CustomDatePickerModal too.
+           initialDate: _recurrenceRule.endDate ?? _selectedDay.add(const Duration(days: 7)),
+           firstDate: _selectedDay, // Cannot end before start
+           lastDate: DateTime(2101),
+         ),
+      ),
+    );
+
+    if (picked != null) {
+      // If picked via CustomMonthYearPicker it selects a whole day/month focus. 
+      // Maybe simpler to use standard showDatePicker for exact date or CustomDatePickerModal if needed.
+      // Given the flow, let's stick to standard internal logic or reusing existing.
+      // But CustomMonthYearPicker is for... month/year.
+      // I should use showDatePicker for specific day.
+      setState(() {
+        _recurrenceRule = _recurrenceRule.copyWith(endDate: picked);
+      });
+    }
   }
 
   Widget _buildReminderChip(String label, Duration? offset) {

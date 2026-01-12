@@ -9,7 +9,6 @@ import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/ai_suggestion_modal.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -23,6 +22,8 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upl
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // For TaskViewScope
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -48,6 +49,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
+  
+  // Filter States
+  TaskViewScope _currentScope = TaskViewScope.todas;
+  DateTime? _filterDate;
+  int? _filterVibration;
+  String? _filterTag;
+  
+  // Selection Mode States
+  bool _isSelectionMode = false;
+  Set<String> _selectedTaskIds = {}; // IDs of selected tasks
+
+  OverlayEntry? _filterOverlay;
+  final LayerLink _filterLayerLink = LayerLink();
 
   @override
   void initState() {
@@ -224,26 +238,116 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  void _openAiSuggestions(Goal goal) {
-    if (_isLoading) return;
-    debugPrint("GoalDetailScreen: Abrindo modal de sugestões da IA...");
+  // --- SELECTION MODE LOGIC ---
+  void _toggleSelectionMode() {
+    setState(() {
+      _isSelectionMode = !_isSelectionMode;
+      _selectedTaskIds.clear();
+    });
+  }
 
-    showModalBottomSheet(
+  void _onTaskSelected(String taskId, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedTaskIds.add(taskId);
+      } else {
+        _selectedTaskIds.remove(taskId);
+      }
+    });
+  }
+  
+  // Bulk Delete
+  Future<void> _deleteSelectedTasks() async {
+      if (_selectedTaskIds.isEmpty) return;
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppColors.cardBackground,
+          title: Text('Excluir ${_selectedTaskIds.length} marcos?', style: const TextStyle(color: Colors.white)),
+          content: const Text(
+              'Tem certeza que deseja excluir os marcos selecionados? Esta ação não pode ser desfeita.',
+              style: TextStyle(color: AppColors.secondaryText)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppColors.secondaryText)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Excluir',
+                  style: TextStyle(color: Colors.redAccent)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true) {
+         try {
+           for (var id in _selectedTaskIds) {
+             await _supabaseService.deleteTask(widget.userData.uid, id);
+           }
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcos excluídos com sucesso!'), backgroundColor: AppColors.success));
+             _toggleSelectionMode(); // Exit selection mode
+           }
+         } catch (e) {
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red));
+           }
+         }
+      }
+  }
+
+  void _openFilterUI() {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) {
-        return AiSuggestionModal(
-          goal: goal,
-          onAddSuggestions: (suggestions) {
-            debugPrint(
-                "GoalDetailScreen: Recebeu ${suggestions.length} sugestões do modal.");
-            _addSuggestionsAsTasks(suggestions, goal);
-          },
-        );
-      },
+      barrierColor: Colors.transparent, // Transparent barrier
+      builder: (context) => Stack(
+        children: [
+          // Use Follower to align with the button
+          Positioned(
+              // Position matches the button, adjusted via offset
+           child: CompositedTransformFollower(
+              link: _filterLayerLink,
+              showWhenUnlinked: false,
+              offset: const Offset(-300, 40), 
+              child: GoalFilterPanel(
+                initialScope: _currentScope,
+                initialDate: _filterDate,
+                initialVibration: _filterVibration,
+                initialTag: _filterTag,
+                availableTags: const [], // TODO: Tags
+                userData: widget.userData,
+                onApply: (scope, date, vibe, tag) {
+                  setState(() {
+                    _currentScope = scope;
+                    _filterDate = date;
+                    _filterVibration = vibe;
+                    _filterTag = tag;
+                  });
+                  Navigator.pop(context); // Close dialog
+                },
+                onClearInPanel: () {
+                   setState(() {
+                     _currentScope = TaskViewScope.todas;
+                     _filterDate = null;
+                     _filterVibration = null;
+                     _filterTag = null;
+                   });
+                   // goal_filter_panel handles pop on Clear internally
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  // _closeFilterUI removed as showDialog manages dismissal
+
 
   void _handleImageTap(Goal goal) {
     final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
@@ -269,88 +373,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // _refreshGoal removed as stream handles updates
 
-  Future<void> _addSuggestionsAsTasks(
-      List<Map<String, String>> suggestions, Goal goal) async {
-    if (suggestions.isEmpty) {
-      debugPrint(
-          "GoalDetailScreen: Nenhuma sugestão selecionada para adicionar.");
-      return;
-    }
 
-    setState(() {
-      _isLoading = true;
-    });
-    
-    NumerologyEngine? engine;
-    if (widget.userData.dataNasc.isNotEmpty &&
-        widget.userData.nomeAnalise.isNotEmpty) {
-      engine = NumerologyEngine(
-        nomeCompleto: widget.userData.nomeAnalise,
-        dataNascimento: widget.userData.dataNasc,
-      );
-    }
-
-    List<TaskModel> tasksToAdd = [];
-
-    for (final sug in suggestions) {
-      DateTime? deadline;
-      try {
-        if (sug['date'] != null && sug['date']!.isNotEmpty) {
-          deadline = DateTime.tryParse(sug['date']!);
-        }
-      } catch (e) {
-        deadline = null;
-      }
-
-      int? personalDay;
-      if (engine != null) {
-        final dateForCalc = deadline ?? DateTime.now();
-        personalDay = engine.calculatePersonalDayForDate(dateForCalc);
-      }
-
-      final newTask = TaskModel(
-        id: '', 
-        text: sug['title'] ?? 'Marco sem título',
-        completed: false,
-        createdAt: DateTime.now().toUtc(), 
-        dueDate: deadline?.toUtc(), 
-        tags: [],
-        journeyId: goal.id, 
-        journeyTitle: goal.title,
-        personalDay: personalDay,
-      );
-      tasksToAdd.add(newTask);
-    }
-
-    try {
-      for (var task in tasksToAdd) {
-        await _supabaseService.addTask(widget.userData.uid, task);
-      }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text("Marcos adicionados com sucesso!"),
-              backgroundColor: Colors.green),
-        );
-      }
-    } catch (e) {
-      debugPrint("GoalDetailScreen: ERRO ao salvar os marcos sugeridos: $e");
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text("Erro ao salvar os marcos: $e"),
-              backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
-  }
 
   int? _calculatePersonalDay(DateTime? date) {
     if (widget.userData.dataNasc.isEmpty ||
@@ -478,13 +501,40 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           style: const TextStyle(color: Colors.red))));
             }
 
-            final milestones = snapshot.data ?? [];
+            var milestones = snapshot.data ?? [];
             final int progress = milestones.isEmpty
                 ? 0
                 : (milestones.where((m) => m.completed).length /
                         milestones.length *
                         100)
                     .round();
+
+            // Apply Filters locally
+            if (_currentScope == TaskViewScope.concluidas) {
+              milestones = milestones.where((t) => t.completed).toList();
+            } else if (_currentScope == TaskViewScope.atrasadas) {
+               final now = DateTime.now();
+               // Simple overdue logic: due date in past and not completed
+               milestones = milestones.where((t) => !t.completed && t.dueDate != null && t.dueDate!.isBefore(now)).toList();
+            } 
+            // FocoDoDia ignored for now or handled as All
+
+            if (_filterDate != null) {
+              milestones = milestones.where((t) {
+                if (t.dueDate == null) return false;
+                final tDate = t.dueDate!.toLocal();
+                final fDate = _filterDate!;
+                return tDate.year == fDate.year && tDate.month == fDate.month && tDate.day == fDate.day;
+              }).toList();
+            }
+
+            if (_filterVibration != null) {
+              milestones = milestones.where((t) => t.personalDay == _filterVibration).toList();
+            }
+
+            if (_filterTag != null && _filterTag!.isNotEmpty) {
+              milestones = milestones.where((t) => t.tags.contains(_filterTag)).toList();
+            }
 
             return Scaffold(
           backgroundColor: AppColors.background,
@@ -612,11 +662,30 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                             SliverToBoxAdapter(
                               child: Padding(
                                 padding: EdgeInsets.fromLTRB(horizontalPadding,
-                                    8.0, horizontalPadding, 16.0),
+                                    8.0, horizontalPadding, 8.0),
                                 child: _buildMilestonesHeader(currentGoal),
                               ),
                             ),
                             
+                            // Selection Actions (only if active)
+                             if (_isSelectionMode)
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8.0),
+                                    child: Row(
+                                      children: [
+                                        Text('${_selectedTaskIds.length} selecionados', style: const TextStyle(color: Colors.white70)),
+                                        const Spacer(),
+                                        IconButton(
+                                          onPressed: _selectedTaskIds.isEmpty ? null : _deleteSelectedTasks, 
+                                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                                          tooltip: 'Excluir Selecionados',
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
                             _buildMilestonesListSliver(
                                 milestones: milestones,
                                 horizontalPadding: listHorizontalPadding),
@@ -673,10 +742,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     },
                     onClose: () {},
                     userData: widget.userData,
-                    onSuggestWithAI: widget.userData.subscription.plan ==
-                            SubscriptionPlan.premium
-                        ? () => _openAiSuggestions(currentGoal)
-                        : null,
+                    onSuggestWithAI: null,
                   ),
 
                 if (_isLoading)
@@ -734,12 +800,43 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // AI Suggestion Button (Icon Only)
-            if (widget.userData.subscription.plan == SubscriptionPlan.premium)
-              IconButton(
-                onPressed: () => _openAiSuggestions(goal),
-                icon: const Icon(Icons.auto_awesome, color: AppColors.primary),
-                tooltip: 'Sugerir com IA',
+            // Selection Button
+            IconButton(
+              onPressed: _toggleSelectionMode,
+              icon: Icon(
+                  _isSelectionMode ? Icons.close : Icons.checklist_rounded,
+                  color: _isSelectionMode ? Colors.white : AppColors.secondaryText,
               ),
+              tooltip: _isSelectionMode ? 'Cancelar' : 'Selecionar',
+               style: IconButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                   borderRadius: BorderRadius.circular(8),
+                   side: BorderSide(color: _isSelectionMode ? Colors.white : AppColors.border),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Filter Button
+            CompositedTransformTarget(
+              link: _filterLayerLink,
+              child: IconButton(
+                onPressed: _openFilterUI,
+                icon: Icon(
+                  Icons.filter_alt_outlined, // Funnel Icon
+                  color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) 
+                      ? AppColors.primary 
+                      : AppColors.secondaryText,
+                ),
+                tooltip: 'Filtrar',
+                 style: IconButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                     borderRadius: BorderRadius.circular(8),
+                     side: BorderSide(color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) ? AppColors.primary : AppColors.border),
+                  ),
+                ),
+              ),
+            ),
             
             // Expand/Collapse Button (Mobile Only)
             if (!isDesktop)
@@ -794,6 +891,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             showGoalIconFlag: false,
             showTagsIconFlag: true,
             showVibrationPillFlag: true,
+            selectionMode: _isSelectionMode,
+            selectedTaskIds: _selectedTaskIds,
+            onTaskSelected: _onTaskSelected,
             onToggle: (isCompleted) async {
               final messenger = ScaffoldMessenger.of(context);
               try {
@@ -846,53 +946,55 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             final task = milestones[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-              child: Dismissible(
-                key: Key(task.id),
-                direction: DismissDirection.horizontal,
-                confirmDismiss: (direction) async {
-                  if (direction == DismissDirection.endToStart) {
-                    return await _handleSwipeLeft(task);
-                  } else {
-                    return await _handleSwipeRight(task); 
+            child: Dismissible(
+              key: Key(task.id),
+              direction: _isSelectionMode ? DismissDirection.none : DismissDirection.horizontal,
+              confirmDismiss: (direction) async {
+                if (direction == DismissDirection.endToStart) {
+                  return await _handleSwipeLeft(task);
+                } else {
+                  return await _handleSwipeRight(task); 
+                }
+              },
+              background: Container(
+                alignment: Alignment.centerLeft,
+                padding: const EdgeInsets.only(left: 20.0),
+                decoration: BoxDecoration(
+                  color: Colors.orangeAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.schedule, color: Colors.white),
+              ),
+              secondaryBackground: Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 20.0),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.delete, color: Colors.white),
+              ),
+              child: TaskItem(
+                key: ValueKey(task.id),
+                task: task,
+                showGoalIconFlag: false,
+                showTagsIconFlag: true,
+                showVibrationPillFlag: true, 
+                selectionMode: _isSelectionMode,
+                selectedTaskIds: _selectedTaskIds,
+                onTaskSelected: _onTaskSelected,
+                onToggle: (isCompleted) async {
+                  try {
+                    await _supabaseService.updateTaskCompletion(
+                        widget.userData.uid, task.id,
+                        completed: isCompleted);
+                  } catch (e) {
+                     // handled
                   }
                 },
-                background: Container(
-                  alignment: Alignment.centerLeft,
-                  padding: const EdgeInsets.only(left: 20.0),
-                  decoration: BoxDecoration(
-                    color: Colors.orangeAccent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.schedule, color: Colors.white),
-                ),
-                secondaryBackground: Container(
-                  alignment: Alignment.centerRight,
-                  padding: const EdgeInsets.only(right: 20.0),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                child: TaskItem(
-                  key: ValueKey(task.id),
-                  task: task,
-                  showGoalIconFlag: false,
-                  showTagsIconFlag: true,
-                  showVibrationPillFlag: true, 
-                  onToggle: (isCompleted) async {
-                    try {
-                      await _supabaseService.updateTaskCompletion(
-                          widget.userData.uid, task.id,
-                          completed: isCompleted);
-                    } catch (e) {
-                       // handled
-                    }
-                  },
-                  onTap: () => _handleMilestoneTap(task),
-
-                ),
+                onTap: () => _handleMilestoneTap(task),
               ),
+            ),
             );
           },
           childCount: milestones.length,

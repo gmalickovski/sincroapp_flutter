@@ -23,20 +23,26 @@ enum BillingCycle {
 
 /// Modelo de assinatura do usuário
 class SubscriptionModel {
-  final SubscriptionPlan plan;
+  final SubscriptionPlan? stripePlan; // Plano conforme Stripe/Pagamento
+  final SubscriptionPlan? systemPlan; // Plano definido manualmente pelo Admin (Override)
+  
+  // O plano efetivo é o System (se houver) ou Stripe, fallback para Free
+  SubscriptionPlan get plan => systemPlan ?? stripePlan ?? SubscriptionPlan.free;
+
   final SubscriptionStatus status;
-  final BillingCycle billingCycle; // Novo campo
-  final DateTime? validUntil; // null = permanente (free ou vitalício)
+  final BillingCycle billingCycle; 
+  final DateTime? validUntil; 
   final DateTime startedAt;
-  final int aiSuggestionsUsed; // Contador mensal
-  final int aiSuggestionsLimit; // Limite do plano
-  final DateTime? lastAiReset; // Última vez que resetou o contador
-  final String? stripeId; // ID do cliente no Stripe
+  final int aiSuggestionsUsed; 
+  final int aiSuggestionsLimit; 
+  final DateTime? lastAiReset; 
+  final String? stripeId;
 
   const SubscriptionModel({
-    required this.plan,
+    this.stripePlan,
+    this.systemPlan,
     required this.status,
-    this.billingCycle = BillingCycle.monthly, // Default
+    this.billingCycle = BillingCycle.monthly, 
     this.validUntil,
     required this.startedAt,
     this.aiSuggestionsUsed = 0,
@@ -48,13 +54,14 @@ class SubscriptionModel {
   /// Cria assinatura gratuita padrão
   factory SubscriptionModel.free() {
     return SubscriptionModel(
-      plan: SubscriptionPlan.free,
+      stripePlan: SubscriptionPlan.free,
+      systemPlan: null,
       status: SubscriptionStatus.active,
       billingCycle: BillingCycle.monthly,
-      validUntil: null, // Gratuito não expira
+      validUntil: null, 
       startedAt: DateTime.now().toUtc(),
       aiSuggestionsUsed: 0,
-      aiSuggestionsLimit: 0, // Essencial não tem IA
+      aiSuggestionsLimit: 0, 
       lastAiReset: DateTime.now().toUtc(),
       stripeId: null,
     );
@@ -62,13 +69,22 @@ class SubscriptionModel {
 
   /// Converte de Firestore ou Map
   factory SubscriptionModel.fromMap(Map<String, dynamic> data) {
-    final planName = data['plan'] ?? 'free';
-    final plan = SubscriptionPlan.values.firstWhere(
-      (e) => e.name == planName,
-      orElse: () => SubscriptionPlan.free,
-    );
+    // Legacy support: read 'plan' if 'stripe_plan' is missing
+    final legacyPlanName = data['plan'] ?? 'free';
+    final stripePlanName = data['stripe_plan'] ?? legacyPlanName;
+    final systemPlanName = data['system_plan'];
+
     return SubscriptionModel(
-      plan: plan,
+      stripePlan: SubscriptionPlan.values.firstWhere(
+        (e) => e.name == stripePlanName,
+        orElse: () => SubscriptionPlan.free,
+      ),
+      systemPlan: systemPlanName != null 
+          ? SubscriptionPlan.values.firstWhere(
+              (e) => e.name == systemPlanName,
+              orElse: () => SubscriptionPlan.free,
+            )
+          : null,
       status: SubscriptionStatus.values.firstWhere(
         (e) => e.name == (data['status'] ?? 'active'),
         orElse: () => SubscriptionStatus.active,
@@ -80,8 +96,7 @@ class SubscriptionModel {
       validUntil: _parseDate(data['validUntil']),
       startedAt: _parseDate(data['startedAt']) ?? DateTime.now().toUtc(),
       aiSuggestionsUsed: data['aiSuggestionsUsed'] ?? 0,
-      aiSuggestionsLimit:
-          data['aiSuggestionsLimit'] ?? PlanLimits.getAiLimit(plan),
+      aiSuggestionsLimit: data['aiSuggestionsLimit'] ?? 0, // Will settle in constructor or usage
       lastAiReset: _parseDate(data['lastAiReset']),
       stripeId: data['stripeId'],
     );
@@ -100,7 +115,9 @@ class SubscriptionModel {
   /// Converte para Map (compatível com JSON)
   Map<String, dynamic> toFirestore() {
     return {
-      'plan': plan.name,
+      'stripe_plan': stripePlan?.name,
+      'system_plan': systemPlan?.name,
+      'plan': plan.name, // Keep for backward compatibility/indexes
       'status': status.name,
       'billingCycle': billingCycle.name,
       'validUntil': validUntil?.toIso8601String(),
@@ -171,7 +188,9 @@ class SubscriptionModel {
 
   /// Copia com modificações
   SubscriptionModel copyWith({
-    SubscriptionPlan? plan,
+    SubscriptionPlan? stripePlan,
+    SubscriptionPlan? systemPlan,
+    bool clearSystemPlan = false, // Helper to clear manual override
     SubscriptionStatus? status,
     BillingCycle? billingCycle,
     DateTime? validUntil,
@@ -179,9 +198,11 @@ class SubscriptionModel {
     int? aiSuggestionsUsed,
     int? aiSuggestionsLimit,
     DateTime? lastAiReset,
+    String? stripeId,
   }) {
     return SubscriptionModel(
-      plan: plan ?? this.plan,
+      stripePlan: stripePlan ?? this.stripePlan,
+      systemPlan: clearSystemPlan ? null : (systemPlan ?? this.systemPlan),
       status: status ?? this.status,
       billingCycle: billingCycle ?? this.billingCycle,
       validUntil: validUntil ?? this.validUntil,
@@ -189,7 +210,7 @@ class SubscriptionModel {
       aiSuggestionsUsed: aiSuggestionsUsed ?? this.aiSuggestionsUsed,
       aiSuggestionsLimit: aiSuggestionsLimit ?? this.aiSuggestionsLimit,
       lastAiReset: lastAiReset ?? this.lastAiReset,
-      stripeId: stripeId ?? stripeId,
+      stripeId: stripeId ?? this.stripeId,
     );
   }
 }

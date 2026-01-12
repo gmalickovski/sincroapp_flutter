@@ -23,7 +23,7 @@ class UserEditDialog extends StatefulWidget {
 
 class _UserEditDialogState extends State<UserEditDialog> {
   final SupabaseService _supabaseService = SupabaseService();
-  late SubscriptionPlan _selectedPlan;
+  SubscriptionPlan? _selectedSystemPlan;
   late SubscriptionStatus _selectedStatus;
   late DateTime? _validUntil;
   bool _isLoading = false;
@@ -31,7 +31,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
   @override
   void initState() {
     super.initState();
-    _selectedPlan = widget.user.subscription.plan;
+    _selectedSystemPlan = widget.user.subscription.systemPlan;
     _selectedStatus = widget.user.subscription.status;
     _validUntil = widget.user.subscription.validUntil;
   }
@@ -40,19 +40,19 @@ class _UserEditDialogState extends State<UserEditDialog> {
     setState(() => _isLoading = true);
 
     try {
-      // Calcula o novo limite de IA baseado no plano
-      final int aiLimit = PlanLimits.getAiLimit(_selectedPlan);
+      // Determine effective plan for limits
+      final effectivePlan = _selectedSystemPlan ?? widget.user.subscription.stripePlan ?? SubscriptionPlan.free;
+      final int aiLimit = PlanLimits.getAiLimit(effectivePlan);
 
       // Cria nova subscription
       final newSubscription = widget.user.subscription.copyWith(
-        plan: _selectedPlan,
+        systemPlan: _selectedSystemPlan,
+        clearSystemPlan: _selectedSystemPlan == null,
         status: _selectedStatus,
         validUntil: _validUntil,
         aiSuggestionsLimit: aiLimit,
       );
 
-      // Atualiza no Supabase
-      // Passamos 'subscription' para que o Service mapeie para 'subscription_data'
       await _supabaseService.updateUserData(
         widget.user.uid,
         {'subscription': newSubscription.toFirestore()},
@@ -81,8 +81,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
     }
   }
 
+  // ... (Keep existing helpers: _selectValidUntil, etc. if they are outside this block, but I am replacing the build method too)
+
   Future<void> _selectValidUntil() async {
-    final picked = await showDatePicker(
+     final picked = await showDatePicker(
       context: context,
       initialDate: _validUntil ?? DateTime.now().add(const Duration(days: 30)),
       firstDate: DateTime.now(),
@@ -111,7 +113,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy');
-
+    final stripePlanName = widget.user.subscription.stripePlan != null 
+        ? PlanLimits.getPlanName(widget.user.subscription.stripePlan!) 
+        : 'Nenhum';
+    
     return Dialog(
       backgroundColor: AppColors.cardBackground,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -122,7 +127,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // Header (Same as before)
             Row(
               children: [
                 const Icon(Icons.edit, color: AppColors.primary),
@@ -132,7 +137,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Editar Usuário',
+                        'Editar Usuário (Admin)',
                         style: TextStyle(
                           color: AppColors.primaryText,
                           fontSize: 20,
@@ -158,17 +163,41 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const Divider(height: 32, color: AppColors.border),
 
-            // Formulário
+            // Stripe Plan Info (Read Only)
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                   const Icon(Icons.payment, color: Colors.blue, size: 20),
+                   const SizedBox(width: 12),
+                   Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       const Text('Plano Contratado (Stripe)', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
+                       Text(stripePlanName, style: const TextStyle(color: AppColors.primaryText, fontSize: 14)),
+                     ],
+                   )
+                ],
+              ),
+            ),
+
+            // System Plan Override
             const Text(
-              'Plano de Assinatura',
+              'Plano no Sistema (Manual Override)',
               style: TextStyle(
                 color: AppColors.secondaryText,
                 fontSize: 14,
               ),
             ),
             const SizedBox(height: 8),
-            DropdownButtonFormField<SubscriptionPlan>(
-              value: _selectedPlan,
+            DropdownButtonFormField<SubscriptionPlan?>(
+              value: _selectedSystemPlan,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -179,21 +208,25 @@ class _UserEditDialogState extends State<UserEditDialog> {
               ),
               dropdownColor: AppColors.cardBackground,
               style: const TextStyle(color: AppColors.primaryText),
-              items: SubscriptionPlan.values.map((plan) {
-                return DropdownMenuItem(
-                  value: plan,
-                  child: Text(PlanLimits.getPlanName(plan)),
-                );
-              }).toList(),
+              items: [
+                const DropdownMenuItem<SubscriptionPlan?>(
+                   value: null,
+                   child: Text('Usar Plano do Stripe (Automático)'),
+                ),
+                ...SubscriptionPlan.values.map((plan) {
+                  return DropdownMenuItem<SubscriptionPlan?>(
+                    value: plan,
+                    child: Text(PlanLimits.getPlanName(plan)),
+                  );
+                }),
+              ],
               onChanged: (value) {
-                if (value != null) {
-                  setState(() => _selectedPlan = value);
-                }
+                 setState(() => _selectedSystemPlan = value);
               },
             ),
             const SizedBox(height: 16),
 
-            // Status
+            // Status match existing logic
             const Text(
               'Status da Assinatura',
               style: TextStyle(
@@ -275,7 +308,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 16),
 
-            // Info sobre o plano
+            // Info sobre o plano SELECIONADO (Efetivo)
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -293,7 +326,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _getPlanInfo(_selectedPlan),
+                      _getPlanInfo(_selectedSystemPlan ?? widget.user.subscription.stripePlan ?? SubscriptionPlan.free),
                       style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 12,

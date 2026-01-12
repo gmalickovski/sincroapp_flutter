@@ -901,19 +901,18 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
               children: [
                 _buildSelectionButton(),
                 const SizedBox(width: 8),
-                Badge(
+                IconButton(
                   key: _filterButtonKey,
-                  isLabelVisible: _isFilterActive,
-                  child: OutlinedButton.icon(
-                    onPressed: () => _openFilterUI(availableTags),
-                    icon: const Icon(Icons.filter_list, size: 18),
-                    label: const Text("Filtros"),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.secondaryText,
-                      side: BorderSide(
-                          color: _isFilterActive
-                              ? AppColors.primary
-                              : AppColors.border),
+                  onPressed: () => _openFilterUI(availableTags),
+                  icon: Icon(
+                    Icons.filter_alt_outlined, 
+                    color: _isFilterActive ? AppColors.primary : AppColors.secondaryText,
+                  ),
+                  tooltip: 'Filtros',
+                  style: IconButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      side: BorderSide(color: _isFilterActive ? AppColors.primary : AppColors.border),
                     ),
                   ),
                 ),
@@ -922,11 +921,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        // Active Filters Display (Optional, similar to Journal's "Limpar Filtros" chip if needed)
-        // If filters are active, maybe show a chip to clear them easily?
-        // Active Filters Display (Optional, similar to Journal's "Limpar Filtros" chip if needed)
-        // If filters are active, maybe show a chip to clear them easily?
-        if (_isFilterActive) // Note: _isFilterActive logic needs update to include date check
+        
+        if (_isFilterActive) 
            Padding(
              padding: const EdgeInsets.only(bottom: 16),
              child: Wrap(
@@ -956,9 +952,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                      Chip(label: Text('Dia Pessoal $_selectedVibrationNumber'), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
                   if (_selectedTag != null)
                      Chip(label: Text('#$_selectedTag'), backgroundColor: AppColors.cardBackground, side: BorderSide.none),
-                ],
-              ),
-            ),
+               ],
+             ),
+           ),
 
          const Divider(color: AppColors.border, height: 1),
        ],
@@ -983,12 +979,15 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   Widget _buildSelectionButton() {
     return IconButton(
       onPressed: _toggleSelectionMode,
-      icon: const Icon(Icons.check_box_outline_blank_rounded, color: AppColors.secondaryText),
-      tooltip: 'Selecionar Tarefas',
+      icon: Icon(
+          _isSelectionMode ? Icons.close : Icons.checklist_rounded, 
+          color: _isSelectionMode ? Colors.white : AppColors.secondaryText
+      ),
+      tooltip: _isSelectionMode ? 'Cancelar Seleção' : 'Selecionar Tarefas',
       style: IconButton.styleFrom(
         shape: RoundedRectangleBorder(
            borderRadius: BorderRadius.circular(8),
-           side: const BorderSide(color: AppColors.border),
+           side: BorderSide(color: _isSelectionMode ? Colors.white : AppColors.border),
         ),
       ),
     );

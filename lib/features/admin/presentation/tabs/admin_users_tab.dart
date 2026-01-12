@@ -410,6 +410,11 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                             isActive: isActiveSubscription
                           ),
                           const SizedBox(width: 8),
+                          if (user.subscription.systemPlan != null)
+                             _buildMiniBadge('Sistema (Manual)', Colors.amber.shade700, isActive: true),
+                          if (user.subscription.systemPlan != null)
+                             const SizedBox(width: 8),
+                          
                           if (!isActiveSubscription)
                              _buildMiniBadge('Expirado', Colors.red, isActive: true)
                         ],

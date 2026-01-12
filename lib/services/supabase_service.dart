@@ -125,7 +125,16 @@ class SupabaseService {
       
       mappedData['updated_at'] = DateTime.now().toIso8601String();
 
-      await _supabase.schema('sincroapp').from('users').update(mappedData).eq('uid', uid);
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .update(mappedData)
+          .eq('uid', uid)
+          .select();
+      
+      if (response.isEmpty) {
+        throw Exception('Nenhum registro atualizado. Verifique se o UID está correto ou se você tem permissão (RLS).');
+      }
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao atualizar usuário: $e');
       rethrow;
@@ -1503,31 +1512,89 @@ class SupabaseService {
        int premiumCount = 0;
        int activeCount = 0;
        int expiredCount = 0;
-       double mrr = 0.0;
        
-       // Logica copiada e adaptada do FirestoreService
+       double grossMrr = 0.0;
+       
+       int totalAiUsed = 0;
+       
+       // Demographics
+       final Map<String, int> ageBuckets = {
+         '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55+': 0, 'N/A': 0
+       };
+       final Map<String, int> sexDistribution = {
+         'Masculino': 0, 'Feminino': 0, 'Outro': 0, 'N/A': 0
+       };
+       
+       final now = DateTime.now();
+
        for (final user in users) {
+          // 1. Plan & Financials logic
           final plan = user.subscription.plan;
-          switch (plan) {
-            case SubscriptionPlan.free:
-              freeCount++;
-              break;
-            case SubscriptionPlan.plus:
-              plusCount++;
-              if (user.subscription.isActive) mrr += 19.90;
-              break;
-            case SubscriptionPlan.premium:
-              premiumCount++;
-              if (user.subscription.isActive) mrr += 39.90;
-              break;
-          }
           
           if (user.subscription.isActive) {
              activeCount++;
+             switch (plan) {
+               case SubscriptionPlan.free:
+                 freeCount++; 
+                 break;
+               case SubscriptionPlan.plus:
+                 plusCount++;
+                 grossMrr += 19.90;
+                 break;
+               case SubscriptionPlan.premium:
+                 premiumCount++;
+                 grossMrr += 39.90;
+                 break;
+             }
           } else {
+             // Conta usuários expirados baseado no último plano conhecido ou fallback
+             switch (plan) {
+               case SubscriptionPlan.free: freeCount++; break;
+               case SubscriptionPlan.plus: plusCount++; break;
+               case SubscriptionPlan.premium: premiumCount++; break;
+             }
              expiredCount++;
           }
+          
+          // 2. AI Usage
+          totalAiUsed += user.subscription.aiSuggestionsUsed;
+
+          // 3. Demographics - Age
+          if (user.dataNasc.isNotEmpty) {
+             try {
+               // Formato esperado DD/MM/YYYY
+               final parts = user.dataNasc.split('/');
+               if (parts.length == 3) {
+                 final birthDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+                 final age = now.year - birthDate.year;
+                 
+                 if (age >= 18 && age <= 24) ageBuckets['18-24'] = (ageBuckets['18-24'] ?? 0) + 1;
+                 else if (age >= 25 && age <= 34) ageBuckets['25-34'] = (ageBuckets['25-34'] ?? 0) + 1;
+                 else if (age >= 35 && age <= 44) ageBuckets['35-44'] = (ageBuckets['35-44'] ?? 0) + 1;
+                 else if (age >= 45 && age <= 54) ageBuckets['45-54'] = (ageBuckets['45-54'] ?? 0) + 1;
+                 else if (age >= 55) ageBuckets['55+'] = (ageBuckets['55+'] ?? 0) + 1;
+                 else ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1; // Menor de 18 ou erro
+               } else {
+                 ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
+               }
+             } catch (e) {
+               ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
+             }
+          } else {
+            ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
+          }
+
+          // 3. Demographics - Sex
+          // Supõe-se campo 'genre' ou similar no futuro, por enquanto usando lógica básica se existir ou N/A
+          // Se não houver campo sexo no UserModel, deixamos N/A ou Mock por enquanto para o User preencher
+          sexDistribution['N/A'] = (sexDistribution['N/A'] ?? 0) + 1;
        }
+       
+       // Cost Estimations
+       // Custo estimado por call IA: ~R$0.05 (GPT-4o-mini ou similar)
+       const double costPerAiCall = 0.05;
+       final double totalAiCost = totalAiUsed * costPerAiCall;
+       final double netProfit = grossMrr - totalAiCost;
        
        return {
           'totalUsers': users.length,
@@ -1536,12 +1603,21 @@ class SupabaseService {
           'premiumUsers': premiumCount,
           'activeSubscriptions': activeCount,
           'expiredSubscriptions': expiredCount,
-          'estimatedMRR': mrr,
+          
+          'estimatedMRR': grossMrr,
+          'totalAiUsed': totalAiUsed,
+          'totalAiCost': totalAiCost,
+          'netProfit': netProfit,
+          
+          'demographics': {
+             'age': ageBuckets,
+             'sex': sexDistribution,
+          },
+          
           'lastUpdated': DateTime.now().toUtc(),
        };
     } catch (e) {
        debugPrint('❌ [SupabaseService] Erro ao calcular stats: $e');
-       // Retorna zerado
        return {
           'totalUsers': 0, 'estimatedMRR': 0.0,
        };
