@@ -386,6 +386,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             controller: _nameController,
             style: const TextStyle(color: Colors.white),
             enabled: _selectedUser == null,
+            autofillHints: const [AutofillHints.name], // Tip for browser
+            textInputAction: TextInputAction.next,
             decoration: inputDecoration.copyWith(
               labelText: 'Nome Completo da Pessoa',
               helperText: 'Use acentos se houver, pois pode interferir no resultado.',
@@ -400,6 +402,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             style: const TextStyle(color: Colors.white),
             keyboardType: TextInputType.datetime,
             enabled: _selectedUser == null,
+            autofillHints: const [AutofillHints.birthday], // Tip for browser
+            textInputAction: TextInputAction.done,
             decoration: inputDecoration.copyWith(
               labelText: 'Data de Nascimento (dd/mm/aaaa)',
               hintText: 'ex: 25/12/1990',
@@ -624,10 +628,11 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                           // Use MantraBuilder for blockquotes (Mantra) to give it a unique box.
                           builders: {
                             'blockquote': MantraBuilder(),
+                            'strong': MantraEmphasisBuilder(),
                           },
                           styleSheet: MarkdownStyleSheet(
                             p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
-                            strong: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.w800), // Cyan Highlights
+                            // Strong removed from here as it is handled by builder
                             h1: const TextStyle(color: Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold), 
                             h2: const TextStyle(color: Color(0xFFFFD700), fontSize: 22, fontWeight: FontWeight.bold),
                             h3: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.bold, height: 2), // Gold
@@ -885,6 +890,50 @@ class MantraBuilder extends MarkdownElementBuilder {
           const SizedBox(height: 12),
           const FaIcon(FontAwesomeIcons.quoteRight, size: 20, color: Color(0xFFB388FF)),
         ],
+      ),
+    );
+  }
+}
+
+class MantraEmphasisBuilder extends MarkdownElementBuilder {
+  @override
+  Widget? visitElement(md.Element element, TextStyle? preferredStyle, TextStyle? parentStyle) {
+    return Container(
+      width: double.infinity, // Force full width to look like a block (capsule)
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.2),
+            Colors.cyanAccent.withOpacity(0.1),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20), // Rounded corners
+        border: Border.all(
+          color: Colors.cyanAccent.withOpacity(0.5),
+          width: 1.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.cyanAccent.withOpacity(0.1),
+            blurRadius: 10,
+            spreadRadius: 1,
+          )
+        ]
+      ),
+      child: Text(
+        element.textContent,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Colors.cyanAccent, // Keep cyan text
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          fontStyle: FontStyle.italic,
+          height: 1.4,
+        ),
       ),
     );
   }
