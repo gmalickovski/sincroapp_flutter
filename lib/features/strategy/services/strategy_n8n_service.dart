@@ -45,10 +45,15 @@ class StrategyN8NService {
     try {
       debugPrint('🚀 Sending Strategy Request to N8N: $webhookUrl');
       
+      final encodedPayload = jsonEncode(payload);
+      print('--- STRATEGY AI PAYLOAD ---');
+      print(encodedPayload);
+      print('---------------------------');
+
       final response = await http.post(
         Uri.parse(webhookUrl),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
+        body: encodedPayload,
       ).timeout(const Duration(seconds: 45)); // N8N might take time with AI
 
       if (response.statusCode == 200) {

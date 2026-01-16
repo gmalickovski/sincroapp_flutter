@@ -63,13 +63,14 @@ class LoveCompatibilityService {
       };
 
       print('--- AI REQUEST PAYLOAD ---');
-      print(jsonEncode(payload));
+      final encodedPayload = jsonEncode(payload);
+      print(encodedPayload);
       print('--------------------------');
 
       final response = await http.post(
         Uri.parse(_webhookUrl),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
+        body: encodedPayload,
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
