@@ -42,7 +42,8 @@ import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.da
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
-import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart'; // NEW IMPORT
+import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart';
+import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart'; // NEW IMPORT
 
 
 // Comportamento de scroll (inalterado)
@@ -966,18 +967,21 @@ class _DashboardScreenState extends State<DashboardScreen>
               dragHandle: _isEditMode
                   ? _buildDragHandle('aptidoesProfissionais')
                   : null,
-              onTap: () => _showNumerologyDetail(
-                    title: "Aptidões Profissionais",
-                    number:
-                        (_numerologyData!.numeros['aptidoesProfissionais'] ?? 0)
-                            .toString(),
-                    content: _getAptidoesProfissionaisContent(
-                        _numerologyData!.numeros['aptidoesProfissionais'] ?? 0),
-                    color: Colors.cyan.shade300,
-                    icon: Icons.work_outline,
-                    categoryIntro:
-                        "As Aptidões Profissionais mostram áreas de maior potencial de atuação, talentos naturais e estilos de trabalho mais favoráveis. Aqui utilizamos a vibração da Expressão como referência prática.",
-                  )),
+              onTap: () {
+                if (MediaQuery.of(context).size.width > 600) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
+                  );
+                } else {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
+                      fullscreenDialog: true,
+                    ),
+                  );
+                }
+              }),
           'desafios': InfoCard(
             // CARD CORRIGIDO
             key: const ValueKey('desafios'),

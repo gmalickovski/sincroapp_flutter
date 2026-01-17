@@ -4,6 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class StrategyN8NService {
   static const String _webhookEnvKey = 'SINCROFLOW_WEBHOOK';
@@ -69,6 +70,62 @@ class StrategyN8NService {
         } else {
            debugPrint('⚠️ Unexpected N8N response format: ${response.body}');
            throw Exception('Invalid response format from N8N.');
+        }
+      } else {
+        debugPrint('❌ N8N Error: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to communicate with N8N (Status: ${response.statusCode})');
+      }
+    } catch (e) {
+      debugPrint('❌ Error contacting N8N: $e');
+      rethrow;
+    }
+  }
+
+  /// Analyzes professional compatibility using AI via N8N.
+  static Future<String> analyzeProfessionCompatibility({
+    required UserModel user,
+    required NumerologyProfile profile,
+    required String professionName,
+  }) async {
+    final webhookUrl = dotenv.env['PROFESSIONAL_APTITUDE_WEBHOOK'];
+
+    if (webhookUrl == null || webhookUrl.isEmpty) {
+      debugPrint('⚠️ Professional Aptitude Webhook URL not found in .env');
+      throw Exception('Configuration Error: Webhook URL missing.');
+    }
+
+    final payload = {
+      'user': {
+        'name': user.primeiroNome,
+        'numerology': {
+          'expression': profile.expressionNumber,
+          'destiny': profile.destinyNumber,
+          'path': profile.lifePathNumber, // Mission
+        }
+      },
+      'profession': professionName,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+
+    try {
+      debugPrint('🚀 Sending Professional Aptitude Request to N8N: $webhookUrl');
+      
+      final response = await http.post(
+        Uri.parse(webhookUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 60));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+        
+        if (data.containsKey('analysis') && data['analysis'] is String) {
+          return data['analysis'];
+        } else if (data.containsKey('output') && data['output'] is String) {
+           return data['output'];
+        } else {
+           debugPrint('⚠️ Unexpected N8N response format: ${response.body}');
+           throw Exception('Invalid response format from AI.');
         }
       } else {
         debugPrint('❌ N8N Error: ${response.statusCode} - ${response.body}');

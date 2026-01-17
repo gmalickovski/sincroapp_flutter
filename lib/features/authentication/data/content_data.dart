@@ -2104,6 +2104,98 @@ class ContentData {
     ),
   };
 
+  /// Textos de Aptidões Profissionais por número (1–9, 11, 22)
+  static final Map<int, VibrationContent> textosAptidoesProfissionais = {
+    1: const VibrationContent(
+      titulo: 'Liderança e Inovação',
+      descricaoCurta: 'Pioneirismo, gestão executiva e empreendedorismo independente.',
+      descricaoCompleta:
+          'Sua vibração profissional é a do líder nato. Você possui uma capacidade inata de abrir novos caminhos, gerenciar equipes e assumir riscos calculados. Ambientes onde você pode exercer autonomia e tomar decisões rápidas são ideais.\n\nVocê se destaca em posições de chefia, como CEO, diretor ou gerente de projetos. O empreendedorismo é uma via natural, pois você não gosta de receber ordens e prefere criar suas próprias regras. Carreiras que exigem inovação, coragem e visão de futuro, como start-ups, aviação, engenharia ou política, são altamente favoráveis.\n\nPara o sucesso pleno, evite funções rotineiras ou subordinadas que não ofereçam perspectiva de crescimento. Seu talento é iniciar, motivar e comandar. Abrace sua originalidade e não tenha medo de ser o primeiro em sua área.',
+      inspiracao: 'Onde outros veem barreiras, você constrói caminhos.',
+      tags: ['Liderança', 'Empreendedorismo', 'Inovação'],
+    ),
+    2: const VibrationContent(
+      titulo: 'Diplomacia e Parceria',
+      descricaoCurta: 'Trabalho em equipe, mediação e suporte estratégico.',
+      descricaoCompleta:
+          'Sua aptidão profissional reside na arte da colaboração e da diplomacia. Você é o "pacificador" e o estrategista que atua nos bastidores, garantindo que tudo funcione em harmonia. Sua sensibilidade aos detalhes e às pessoas o torna indispensável em qualquer grupo.\n\nVocê brilha em carreiras que envolvem mediação, psicologia, assistência social, diplomacia, contabilidade ou secretariado executivo. Sua capacidade de ouvir e de negociar acordos faz de você um excelente consultor ou árbitro. Trabalhar em parceria ou em sociedades é frequentemente mais frutífero do que atuar isoladamente.\n\nBusque ambientes cooperativos e evite a competitividade agressiva. Seu poder está na sutileza e na capacidade de unir pontas soltas. Valorize sua intuição e seu tato, pois eles são ferramentas poderosas para resolver conflitos e construir alianças duradouras.',
+      inspiracao: 'A força da união é maior que o esforço solitário.',
+      tags: ['Diplomacia', 'Parceria', 'Estratégia'],
+    ),
+    3: const VibrationContent(
+      titulo: 'Comunicação e Criatividade',
+      descricaoCurta: 'Expressão artística, vendas e interação social.',
+      descricaoCompleta:
+          'Você vibra na frequência da autoexpressão e da criatividade. Sua aptidão profissional está ligada à palavra, seja falada, escrita ou representada. Você precisa de um palco, figurativo ou literal, onde possa inspirar, entreter e persuadir.\n\nCarreiras ideais incluem marketing, publicidade, jornalismo, vendas, artes cênicas, design ou qualquer área do entretenimento. Sua habilidade natural para socializar abre muitas portas, e você se destaca em funções que exigem contato com o público. A rotina rígida e o silêncio são seus inimigos; você precisa de movimento e troca de ideias.\n\nUse seu otimismo e seu carisma para vender ideias e produtos. Seu talento é trazer cor e alegria ao ambiente de trabalho. Foque sua energia dispersa em objetivos claros e você alcançará o reconhecimento que tanto almeja.',
+      inspiracao: 'Sua voz tem o poder de colorir o mundo.',
+      tags: ['Criatividade', 'Comunicação', 'Vendas'],
+    ),
+    4: const VibrationContent(
+      titulo: 'Organização e Construção',
+      descricaoCurta: 'Estruturação, planejamento e rigor técnico.',
+      descricaoCompleta:
+          'Sua aptidão profissional é a da construção sólida e do método. Você é o pilar que sustenta as estruturas, dotado de uma capacidade de trabalho incansável e de uma atenção meticulosa aos detalhes. Onde há caos, você traz ordem.\n\nVocê se realiza em carreiras que exigem precisão e disciplina, como engenharia, arquitetura, contabilidade, administração, militarismo ou construção civil. A área técnica e científica também o atrai. Você prefere resultados tangíveis e previsíveis a especulações arriscadas.\n\nBusque ambientes que valorizem a lealdade e a constância. Seu sucesso vem da persistência e da qualidade impecável do seu trabalho. Lembre-se, porém, de ser flexível; a rigidez excessiva pode limitar suas oportunidades. Construa com solidez, mas deixe espaço para a inovação.',
+      inspiracao: 'A disciplina é a base de toda grande obra.',
+      tags: ['Organização', 'Construção', 'Método'],
+    ),
+    5: const VibrationContent(
+      titulo: 'Versatilidade e Liberdade',
+      descricaoCurta: 'Vendas, viagens, comunicação e inovação ágil.',
+      descricaoCompleta:
+          'Você possui a aptidão dos espíritos livres e versáteis. A rotina é uma prisão para você; seu talento floresce na mudança, na variedade e no contato com o novo. Você é um excelente promotor de ideias e produtos, capaz de se adaptar a qualquer cenário.\n\nCarreiras que envolvem viagens, turismo, vendas externas, comércio internacional, jornalismo investigativo ou profissões que lidam com o público em massa são ideais. Sua curiosidade insaciável pode levá-lo também à pesquisa ou à tecnologia de ponta. Você precisa de liberdade de ação e de horários flexíveis.\n\nUse seu magnetismo pessoal e sua inteligência rápida para abrir portas. Seu desafio é o foco; evite pular de galho em galho sem aprofundar raízes. Abrace a aventura, mas com propósito, e sua carreira será uma jornada fascinante de descobertas.',
+      inspiracao: 'O mundo é vasto e sua mente não tem fronteiras.',
+      tags: ['Liberdade', 'Vendas', 'Inovação'],
+    ),
+    6: const VibrationContent(
+      titulo: 'Cuidado e Responsabilidade',
+      descricaoCurta: 'Bem-estar, educação, saúde e harmonia comunitária.',
+      descricaoCompleta:
+          'Sua vibração profissional é a do guardião e do educador. Você encontra realização servindo à comunidade, cuidando do bem-estar alheio e promovendo a harmonia. O senso de responsabilidade e justiça guia suas escolhas.\n\nÁreas como medicina, enfermagem, psicologia, terapia, ensino, direito de família, decoração ou recursos humanos são perfeitas para você. Você tem um talento natural para aconselhar e para criar ambientes acolhedores e belos. O serviço público ou o trabalho em ONGs também podem ser muito gratificantes.\n\nBusque funções onde possa exercer sua compaixão de forma prática. Cuidado apenas para não assumir responsabilidades excessivas que não lhe pertencem. Seu sucesso vem do equilíbrio entre o ato de servir e o autocuidado. Onde você está, a cura e o conforto se manifestam.',
+      inspiracao: 'Servir com amor é a mais nobre das missões.',
+      tags: ['Cuidado', 'Educação', 'Harmonia'],
+    ),
+    7: const VibrationContent(
+      titulo: 'Análise e Especialização',
+      descricaoCurta: 'Ciência, tecnologia, filosofia e pesquisa profunda.',
+      descricaoCompleta:
+          'Sua aptidão profissional é a do especialista e do pensador profundo. Você não se contenta com a superfície; precisa entender o "porquê" das coisas. Sua mente analítica e intuitiva é sua maior ferramenta de trabalho.\n\nCarreiras científicas, tecnologia da informação, pesquisa acadêmica, filosofia, teologia, ou qualquer campo que exija alta especialização técnica são ideais. Você trabalha melhor sozinho ou em ambientes silenciosos onde possa se concentrar. A qualidade e a perfeição são seus padrões, não a quantidade.\n\nEvite ambientes barulhentos ou superficiais. Seu reconhecimento virá pela sua autoridade no assunto e pela profundidade do seu conhecimento. Confie em sua intuição tanto quanto em sua lógica; a união de ambas o levará a desvendar mistérios que outros nem percebem.',
+      inspiracao: 'O conhecimento profundo é a chave da verdadeira autoridade.',
+      tags: ['Análise', 'Tecnologia', 'Especialização'],
+    ),
+    8: const VibrationContent(
+      titulo: 'Gestão e Poder Material',
+      descricaoCurta: 'Finanças, executivo de alto nível e grandes empreendimentos.',
+      descricaoCompleta:
+          'Você vibra na frequência do poder e da realização material. Sua aptidão é para o comando de grandes estruturas, a gestão financeira e a execução de planos ambiciosos. Você tem o toque de Midas para os negócios, se agir com ética e justiça.\n\nPosições de alta liderança corporativa, mercado financeiro, banco, indústria, direito corporativo ou grandes empreendimentos imobiliários são seu terreno natural. Você lida bem com pressão e responsabilidade em larga escala. A organização e a eficiência são seus lemas.\n\nBusque desafios que testem sua capacidade de julgamento e execução. O sucesso material é uma consequência natural do seu esforço, mas lembre-se de usá-lo para beneficiar o coletivo. Sua carreira é um veículo para demonstrar que a prosperidade pode e deve ser construída com solidez e integridade.',
+      inspiracao: 'Ambição com propósito constrói impérios duradouros.',
+      tags: ['Gestão', 'Finanças', 'Poder'],
+    ),
+    9: const VibrationContent(
+      titulo: 'Humanitarismo e Arte Universal',
+      descricaoCurta: 'Filantropia, artes, medicina e causas globais.',
+      descricaoCompleta:
+          'Sua aptidão profissional abrange o universal. Você é movido por ideais elevados e pelo desejo de contribuir para um mundo melhor. Sua visão é ampla, sem fronteiras ou preconceitos, o que lhe permite atuar em diversos campos com empatia.\n\nCarreiras ligadas à filantropia, direitos humanos, medicina sem fronteiras, artes (música, literatura), ou ensino superior são vocações naturais. Você também pode se destacar em profissões que exijam contato com culturas estrangeiras ou viagens internacionais. O importante é sentir que seu trabalho tem um propósito nobre.\n\nEvite trabalhos puramente comerciais que visem apenas o lucro sem um fim social. Sua realização vem de tocar vidas e inspirar mudanças. Seja generoso com seus talentos e o universo retribuirá. Você é um cidadão do mundo a serviço da humanidade.',
+      inspiracao: 'Seu trabalho é uma semente de amor no mundo.',
+      tags: ['Humanitarismo', 'Artes', 'Propósito'],
+    ),
+    11: const VibrationContent(
+      titulo: 'Inspiração e Visão Espiritual',
+      descricaoCurta: 'Liderança espiritual, invenção e idealismo visionário.',
+      descricaoCompleta:
+          'Como número mestre, sua aptidão transcende o convencional. Você é um visionário, capaz de enxergar potenciais invisíveis para a maioria. Sua carreira deve servir como um canal de inspiração e elevação para os outros.\n\nVocê pode se destacar como líder religioso ou espiritual, inventor, artista visionário, palestrante motivacional ou reformador social. A intuição é sua guia mestra; confie nela para tomar decisões profissionais. Você traz "luz" por onde passa, revelando verdades e abrindo consciências.\n\nO desafio é manter os pés no chão enquanto a cabeça está nas estrelas. Evite o fanatismo ou a impraticidade. Quando você alinha sua visão elevada com uma ação prática, torna-se um líder carismático capaz de transformar a realidade ao seu redor.',
+      inspiracao: 'Iluminar caminhos é a mais alta forma de liderança.',
+      tags: ['Visão', 'Espiritualidade', 'Inspiração'],
+    ),
+    22: const VibrationContent(
+      titulo: 'Mestre Construtor',
+      descricaoCurta: 'Realização de projetos globais e impacto estrutural.',
+      descricaoCompleta:
+          'Sua vibração é a do arquiteto do futuro. Você possui a visão do 11 combinada com a praticidade do 4, o que lhe dá a capacidade única de transformar sonhos grandiosos em realidade concreta. Sua aptidão é para projetos de larga escala e impacto duradouro.\n\nDiplomacia internacional, grandes obras de engenharia, liderança governamental ou corporativa global são áreas onde você pode florescer. Você pensa em termos de décadas e séculos, não dias. Sua missão é criar sistemas e estruturas que beneficiem a coletividade por gerações.\n\nA responsabilidade é imensa, mas sua capacidade também o é. Não se contente com o pequeno. Trabalhe duro, planeje com visão sistêmica e use seu poder para construir um legado que transcenda sua própria existência. Você é, verdadeiramente, um construtor de mundos.',
+      inspiracao: 'Sonhar grande e construir sólido é o seu legado.',
+      tags: ['Construção', 'Impacto Global', 'Legado'],
+    ),
+  };
+
   /// Textos completos de Harmonia Conjugal por número (1–9)
   static const Map<int, String> textosHarmoniaConjugal = {
     1: 'No amor, a pessoa de número 1 é intensa, leal e tende a assumir a liderança na relação. Precisa de um(a) parceiro(a) que admire sua força, mas que também tenha sua própria individualidade, para que não haja uma dinâmica de dominação. Gosta de novidades e detesta a rotina, por isso busca sempre inovar e manter a chama da paixão acesa através de novas experiências.\n\nA independência é crucial, e precisa de seu próprio espaço para se sentir completo(a). A barreira no relacionamento pode surgir do excesso de egocentrismo ou da dificuldade em ceder. Para que a relação floresça, precisa aprender a compartilhar o comando e a ouvir as necessidades do outro com a mesma atenção que dá às suas.',
