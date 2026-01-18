@@ -7,7 +7,7 @@
 ---
 
 ## O que é
-A ferramenta de **Aptidões Profissionais** é o seu consultor de carreira pessoal, uma bússola vocacional que une a precisão matemática da numerologia à capacidade analítica da **Sincro IA**. Ela foi desenhada para responder a uma das perguntas mais angustiantes da vida adulta: *"Eu estou no caminho certo?"*. Ao analisar a ressonância vibracional entre o seu ser (seu Mapa Numerológico) e o fazer (a Profissão), o Sincro revela se você está nadando a favor ou contra a correnteza do seu destino.
+A ferramenta de **Aptidões Profissionais** é o seu consultor de carreira pessoal, uma bússola vocacional que une a precisão matemática da numerologia à capacidade analítica da **Sincro IA**. Ela foi desenhada para responder a uma das perguntas mais angustiantes da vida adulta: *"Eu estou no caminho certo?"*. Ao analisar a ressonância vibracional entre o seu ser (seu Mapa Numerológico) e o fazer (a Profissão), o **SincroApp** revela se você está nadando a favor ou contra a correnteza do seu destino.
 
 ## Para que serve (Vantagens)
 - **Recalcular a Rota:** Perfeito para transição de carreira. Descubra se aquela nova área que você paquera tem realmente a ver com sua missão de alma.
@@ -28,7 +28,7 @@ Na Numerologia Cabalística e Pitagórica, o sucesso profissional não é sorte;
 3.  **Número de Missão (Sua Realização):** O propósito maior, o "legado" que você deve deixar. É o que traz, no final do dia, a sensação de dever cumprido.
 
 ### O Algoritmo de Ressonância Vibracional
-O Sincro utiliza um processo exclusivo para verificar a compatibilidade:
+O **SincroApp** utiliza um processo exclusivo para verificar a compatibilidade:
 
 1.  **Decodificação Vibracional da Profissão:** Diferente de testes estáticos, a **Sincro IA** primeiro analisa a **energia intrínseca da profissão** digitada.
     *   *Caso Prático:* Você digita "Advogado Criminalista". A IA identifica as palavras-chave e arquétipos: Justiça (8), Defesa/Proteção (6), Oratória/Argumentação (3), Estrutura/Lei (4). A "Vibração da Profissão" é composta por esses números (8, 6, 3, 4).

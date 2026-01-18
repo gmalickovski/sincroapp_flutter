@@ -393,36 +393,10 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
             ),
           ),
           
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           
-          // AI Response Text (before circle)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: MarkdownBody(
-              data: _aiAnalysis!,
-              builders: {
-                'blockquote': ProfessionalMantraBuilder(),
-                'strong': NumerologyTermBuilder(),
-              },
-              styleSheet: MarkdownStyleSheet(
-                p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
-                h1: TextStyle(color: Colors.cyan.shade300, fontSize: 24, fontWeight: FontWeight.bold),
-                h2: TextStyle(color: Colors.cyan.shade300, fontSize: 22, fontWeight: FontWeight.bold),
-                h3: TextStyle(color: Colors.cyan.shade300, fontSize: 20, fontWeight: FontWeight.bold, height: 2),
-                listBullet: TextStyle(color: Colors.cyan.shade300),
-                blockSpacing: 20,
-                // Reset blockquote decoration to let custom builder handle it
-                blockquote: const TextStyle(color: Colors.transparent),
-                blockquoteDecoration: const BoxDecoration(),
-                blockquotePadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          
-          // Score Circle Section (after text analysis)
+          // Score Circle Section (MOVED TO TOP)
           if (score > 0) ...[
-            const SizedBox(height: 32),
-            
             // Score Title
             Text(
               'Score de Compatibilidade',
@@ -465,7 +439,35 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
               scoreLabel.toUpperCase(),
               style: TextStyle(color: scoreColor, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
             ),
+            
+            const SizedBox(height: 32),
+            const Divider(color: Colors.white12),
+            const SizedBox(height: 24),
           ],
+          
+          // AI Response Text
+          Align(
+            alignment: Alignment.centerLeft,
+            child: MarkdownBody(
+              data: _aiAnalysis!,
+              builders: {
+                'blockquote': ProfessionalMantraBuilder(),
+                'strong': NumerologyTermBuilder(),
+              },
+              styleSheet: MarkdownStyleSheet(
+                p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
+                h1: TextStyle(color: Colors.cyan.shade300, fontSize: 24, fontWeight: FontWeight.bold),
+                h2: TextStyle(color: Colors.cyan.shade300, fontSize: 22, fontWeight: FontWeight.bold),
+                h3: TextStyle(color: Colors.cyan.shade300, fontSize: 20, fontWeight: FontWeight.bold, height: 2),
+                listBullet: TextStyle(color: Colors.cyan.shade300),
+                blockSpacing: 20,
+                // Reset blockquote decoration to let custom builder handle it
+                blockquote: const TextStyle(color: Colors.transparent),
+                blockquoteDecoration: const BoxDecoration(),
+                blockquotePadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
           
           const SizedBox(height: 32),
           
@@ -496,13 +498,26 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
 
   /// Parse score percentage from AI analysis text (searches for patterns like "80%")
   int _parseScoreFromAnalysis(String text) {
-    // Look for patterns like "80%", "80 %", "é de 80%"
-    final regex = RegExp(r'(\d{1,3})\s*%');
-    final match = regex.firstMatch(text);
-    if (match != null) {
-      final value = int.tryParse(match.group(1)!) ?? 0;
+    // 1. Try to find explicit "compatibilidade é de XX%" pattern
+    final specificRegex = RegExp(r'compatibilidade.*?(\d{1,3})\s*%', caseSensitive: false);
+    final specificMatch = specificRegex.firstMatch(text);
+    if (specificMatch != null) {
+      final value = int.tryParse(specificMatch.group(1)!) ?? 0;
       return value.clamp(0, 100);
     }
+
+    // 2. Fallback: Find ALL percentage matches and use the LAST one
+    // (Usually the final score is stated at the end or in the summary)
+    final regex = RegExp(r'(\d{1,3})\s*%');
+    final matches = regex.allMatches(text);
+    if (matches.isNotEmpty) {
+      // Filter out small percentages unlikely to be the score (e.g. 5%, 10% adjustments) 
+      // if we have multiple. But simplest is trust the last one which is the total.
+      final lastMatch = matches.last;
+      final value = int.tryParse(lastMatch.group(1)!) ?? 0;
+      return value.clamp(0, 100);
+    }
+    
     return 0;
   }
   
@@ -525,50 +540,19 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
 }
 
 /// Builder for numerology terms (e.g., "Expressão 6", "Destino 8")
-/// Highlights numerology-specific terms with amber color (different from regular bold cyan)
+/// Highlights ALL bold terms to ensure visibility
 class NumerologyTermBuilder extends MarkdownElementBuilder {
   @override
   Widget? visitText(md.Text text, TextStyle? preferredStyle) {
-    final content = text.textContent.trim();
-    final lowerContent = content.toLowerCase();
-    
-    // Check if text contains numerology patterns using simple contains check
-    // More robust than regex for handling accent variations
-    final isNumerologyTerm = 
-        lowerContent.contains('express') ||  // Expressão
-        lowerContent.contains('destino') ||  // Destino
-        lowerContent.contains('missão') || lowerContent.contains('missao') ||  // Missão
-        lowerContent.contains('motiva') ||   // Motivação
-        lowerContent.contains('alma') ||     // Número da Alma
-        lowerContent.contains('personalidade') ||  // Personalidade
-        lowerContent.contains('caminho de vida') ||
-        lowerContent.contains('número de') || lowerContent.contains('numero de') ||
-        lowerContent.contains('desafio') ||  // Desafios
-        lowerContent.contains('ciclo') ||    // Ciclos
-        lowerContent.contains('harmonia') || // Harmonia
-        RegExp(r'\\d+').hasMatch(content);  // Any number pattern like "6", "8"
-    
-    if (isNumerologyTerm) {
-      // Numerology term: Highlighted with AMBER color (stands out from regular bold)
-      return Text(
-        content,
-        style: const TextStyle(
-          color: Colors.amber,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-        ),
-      );
-    } else {
-      // Regular bold: Cyan text
-      return Text(
-        content,
-        style: const TextStyle(
-          color: Colors.cyanAccent,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
-        ),
-      );
-    }
+    // Apply Amber color to ALL bold text to ensure it stands out from white body text
+    return Text(
+      text.text,
+      style: const TextStyle(
+        color: Colors.amber, 
+        fontWeight: FontWeight.bold,
+        fontSize: 15,
+      ),
+    );
   }
 }
 

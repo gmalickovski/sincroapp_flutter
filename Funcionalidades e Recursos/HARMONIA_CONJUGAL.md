@@ -21,7 +21,7 @@ A **Harmonia Conjugal** é a ferramenta definitiva para quem busca compreender a
 ### Embasamento Numerológico Científico
 A análise se baseia na premissa de que cada letra do seu nome e cada número da sua data de nascimento emitem uma frequência vibratória específica (de 1 a 9, além dos números mestres 11 e 22). Quando duas pessoas se relacionam, suas frequências interagem criando uma terceira energia: a energia do relacionamento.
 
-O Sincro App utiliza a **Tabela de Harmonização Universal**, um sistema complexo que categoriza a interação entre os Números Principais (Core Numbers) em cinco tipos de conexão:
+O **SincroApp** utiliza a **Tabela de Harmonização Universal**, um sistema complexo que categoriza a interação entre os Números Principais (Core Numbers) em cinco tipos de conexão:
 
 1.  **Vibra (Harmonia Pura):** Números que "cantam" na mesma tonalidade. Traz facilidade, fluxo natural e compreensão mútua sem esforço.
 2.  **Atrai (Complementar):** Opostos que se atraem magneticamente. Gera muita paixão e química, onde um complementa a falta do outro (ex: um Líder nato com um Apoiador nato).
@@ -30,7 +30,7 @@ O Sincro App utiliza a **Tabela de Harmonização Universal**, um sistema comple
 5.  **Cármico/Oposto:** Ligações profundas, muitas vezes vindas de outras existências, destinadas a resolver pendências ou ensinar lições de vida cruciais.
 
 ### O Cálculo do Score e Processo de Análise
-O algoritmo do Sincro não olha apenas para um número, mas realiza uma "triangulação energética" completa:
+O algoritmo do **SincroApp** não olha apenas para um número, mas realiza uma "triangulação energética" completa:
 
 1.  **Cálculo do Mapa Individual:**
     *   Primeiro, o sistema decodifica o mapa completo de ambos (Usuário e Parceiro), identificando o **Número de Destino** (Caminho de Vida), **Expressão** (Personalidade Ativa), **Motivação** (Desejos da Alma) e **Impressão** (Como o mundo os vê).

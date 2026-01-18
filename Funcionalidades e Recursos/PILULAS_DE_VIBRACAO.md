@@ -6,7 +6,7 @@
 ---
 
 ## O Que São?
-As "Pílulas de Vibração" são o coração visual do Sincro. Elas são pequenas cápsulas coloridas e numeradas que aparecem em quase todas as telas do aplicativo (Calendário, Tarefas, Anotações, Dashboard).
+As "Pílulas de Vibração" são o coração visual do **SincroApp**. Elas são pequenas cápsulas coloridas e numeradas que aparecem em quase todas as telas do aplicativo (Calendário, Tarefas, Anotações, Dashboard).
 
 Elas não são meros enfeites; são **sinais de trânsito para sua vida**.
 Cada número (de 1 a 9, além dos mestres 11 e 22) carrega uma "vibração" — um tipo específico de energia que facilita ou dificulta certas ações.

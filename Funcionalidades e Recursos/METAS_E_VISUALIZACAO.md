@@ -36,7 +36,7 @@ Uma meta grande pode paralisar pelo medo. O segredo é dividir para conquistar.
 ## Geração com Sincro IA
 Está travado? Não sabe quais são os passos para "Abrir uma Empresa"?
 *   Use o botão **"Sugerir Marcos com Sincro IA"**.
-*   O Sincro analisa seu objetivo e gera automaticamente uma lista de 5 a 10 Marcos lógicos e sequenciais para você apenas seguir o plano.
+*   O **SincroApp** analisa seu objetivo e gera automaticamente uma lista de 5 a 10 Marcos lógicos e sequenciais para você apenas seguir o plano.
 
 ## Resumo
 **Meta** é o destino. **Imagem** é a motivação. **Marcos** são o mapa. O Sincro une tudo isso no seu bolso.

@@ -6,7 +6,7 @@
 ---
 
 ## Uma Fusão de História e Matemática
-O Sincro não utiliza "aleatoriedade". Todo o sistema é construído sobre os pilares da **Numerologia Cabalística**, uma ciência ancestral com mais de 4.000 anos, originalmente usada por sábios para decodificar os segredos do universo através da **Gematria** (a geometria sagrada dos números e letras).
+O **SincroApp** não utiliza "aleatoriedade". Todo o sistema é construído sobre os pilares da **Numerologia Cabalística**, uma ciência ancestral com mais de 4.000 anos, originalmente usada por sábios para decodificar os segredos do universo através da **Gematria** (a geometria sagrada dos números e letras).
 
 Nós digitalizamos essa sabedoria. Transformamos tabelas antigas e cálculos complexos em um algoritmo instantâneo, unindo a profundidade mística à precisão da computação moderna.
 
@@ -35,14 +35,14 @@ O cálculo segue uma hierarquia cósmica rigorosa:
 3.  **Dia Pessoal:** A vibração exata de hoje. É a soma reduzida do `Mês Pessoal + Dia Atual`.
 
 *Por que isso importa?*
-Porque tentar iniciar projetos (Energia 1) em um Dia de Conclusão (Energia 9) é como tentar plantar sementes no inverno: exige esforço triplo para resultado zero. O Sincro alinha sua agenda (Tarefas) com esse ritmo natural.
+Porque tentar iniciar projetos (Energia 1) em um Dia de Conclusão (Energia 9) é como tentar plantar sementes no inverno: exige esforço triplo para resultado zero. O **SincroApp** alinha sua agenda (Tarefas) com esse ritmo natural.
 
 ---
 
 ## Gerenciando a Vida com Propósito
 A Numerologia Cabalística não é fatalista; ela não diz "o que vai acontecer". Ela diz **"o que está favorável para acontecer"**.
 
-*   **Propósito de Vida (Missão):** O Sincro cruza seu Destino (Data) com sua Expressão (Nome) para revelar sua Missão. Isso serve como uma bússola de longo prazo. Todas as suas Metas e Projetos no app devem, idealmente, apontar para esse Norte.
+*   **Propósito de Vida (Missão):** O **SincroApp** cruza seu Destino (Data) com sua Expressão (Nome) para revelar sua Missão. Isso serve como uma bússola de longo prazo. Todas as suas Metas e Projetos no app devem, idealmente, apontar para esse Norte.
 *   **Gestão de Tarefas:** Ao classificar suas tarefas por "tipo de energia" e cruzá-las com seu Dia Pessoal, o sistema garante que você use a ferramenta certa no momento certo. É a diferença entre trabalhar **muito** e trabalhar **com sabedoria**.
 
 ## Resumo Técnico
@@ -50,4 +50,4 @@ A Numerologia Cabalística não é fatalista; ela não diz "o que vai acontecer"
 *   **Tratamento de Mestres:** O sistema preserva e identifica Números Mestres (11 e 22), não os reduzindo a 2 e 4, pois representam potenciais elevados de intuição e construção.
 *   **Atualização:** O cálculo do Dia Pessoal roda diariamente à meia-noite, recalibrando todo o seu Dashboard (SincroFlow, Pílulas, Sugestões) para a nova realidade energética.
 
-Use o Sincro não como um oráculo, mas como um **Painel de Controle Existencial**. Nós damos os dados; você pilota o destino.
+Use o **SincroApp** não como um oráculo, mas como um **Painel de Controle Existencial**. Nós damos os dados; você pilota o destino.

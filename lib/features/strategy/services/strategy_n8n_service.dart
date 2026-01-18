@@ -107,6 +107,15 @@ class StrategyN8NService {
         }
       },
       'profession': professionName,
+      'formatting_instructions': '''
+1. Calcule o Score de Compatibilidade em degraus de 5% (ex: 55%, 60%, 85%...).
+2. Forneça a análise detalhada como de costume.
+3. CONDICIONAL "Profissões Ideais":
+   - Se Score >= 90%: NÃO inclua esta seção.
+   - Se Score 50%-85%: Sugira 3 profissões.
+   - Se Score < 50%: Sugira 5 profissões.
+   Misture áreas correlatas e distintas.
+''',
       'timestamp': DateTime.now().toIso8601String(),
     };
 

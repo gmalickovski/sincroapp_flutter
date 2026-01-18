@@ -7,7 +7,7 @@
 
 
 ## O que é um Agendamento?
-No Sincro, diferenciamos "fazer algo" (Tarefa) de "estar em algum lugar" (Agendamento). Um Agendamento é um compromisso inadiável, com hora marcada, que envolve sua presença e, geralmente, outras pessoas.
+No **SincroApp**, diferenciamos "fazer algo" (Tarefa) de "estar em algum lugar" (Agendamento). Um Agendamento é um compromisso inadiável, com hora marcada, que envolve sua presença e, geralmente, outras pessoas.
 
 ## Como Realizar um Agendamento
 1.  **Acesse o Calendário:** Toque no ícone de calendário na barra de navegação.
@@ -16,14 +16,14 @@ No Sincro, diferenciamos "fazer algo" (Tarefa) de "estar em algum lugar" (Agenda
     *   **Título:** O nome do evento (ex: "Consulta Dentista").
     *   **Data e Hora:** Role os seletores para definir o início e fim.
     *   **Local:** (Opcional) Onde será?
-    *   **Lembretes:** Ative "Lembrar-me" e escolha *quando* (ex: 1 hora antes, 30 min antes). O Sincro enviará uma notificação push para você não esquecer.
+    *   **Lembretes:** Ative "Lembrar-me" e escolha *quando* (ex: 1 hora antes, 30 min antes). O **SincroApp** enviará uma notificação push para você não esquecer.
 
 ## Recorrência (Repetição Automática)
 Tem terapia toda terça-feira? Reunião de equipe toda segunda?
 *   Ative a chave **"Repetir"**.
 *   Escolha a frequência: **Diária, Semanal, Mensal ou Anual**.
 *   Defina até quando essa repetição vai (ou deixe "Para sempre").
-*   *Vantagem:* Você cria uma vez e o Sincro preenche sua agenda futura automaticamente.
+*   *Vantagem:* Você cria uma vez e o **SincroApp** preenche sua agenda futura automaticamente.
 
 ## A Visualização Inteligente
 Na tela de Calendário, você vê não só seus agendamentos, mas também:

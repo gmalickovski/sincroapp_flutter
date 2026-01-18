@@ -9,7 +9,7 @@
 Esta é a sua central de execução. Onde o planejamento vira realidade.
 
 ## O Que Aparece Aqui?
-Nesta tela única, o Sincro unifica todas as suas pendências para evitar que você precise abrir mil abas. Você verá:
+Nesta tela única, o **SincroApp** unifica todas as suas pendências para evitar que você precise abrir mil abas. Você verá:
 1.  **Tarefas Avulsas:** Coisas rápidas do dia a dia.
 2.  **Passos de Metas (Marcos):** As subtarefas dos seus grandes objetivos que vencem hoje.
 3.  **Agendamentos:** Compromissos com hora marcada (aparecem no topo ou integrados na lista, com ícone de relógio).
@@ -20,7 +20,7 @@ Nesta tela única, o Sincro unifica todas as suas pendências para evitar que vo
 
 ## O "Foco do Dia"
 No topo da tela, você pode alternar entre visões. A principal é o **Foco do Dia**.
-*   **Filosofia:** O Sincro esconde tudo o que não é para hoje. Se você tem 50 tarefas, mas só 5 são para hoje, o "Foco do Dia" mostra apenas essas 5.
+*   **Filosofia:** O **SincroApp** esconde tudo o que não é para hoje. Se você tem 50 tarefas, mas só 5 são para hoje, o "Foco do Dia" mostra apenas essas 5.
 *   **Objetivo:** Zerar essa lista. Ao completar tudo, você recebe uma mensagem de parabéns e pode descansar sem culpa.
 
 ## Filtros Poderosos

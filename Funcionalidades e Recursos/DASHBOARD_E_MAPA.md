@@ -7,7 +7,7 @@
 
 
 ## O Painel de Controle (Dashboard)
-O Dashboard é o coração do Sincro. Diferente de uma lista de tarefas comum, ele é um **"Centro de Comando Vibracional"**. Ele foi desenhado para mostrar apenas o que é essencial para o seu *agora*, filtrando o ruído do dia a dia através da lente da sua numerologia.
+O Dashboard é o coração do **SincroApp**. Diferente de uma lista de tarefas comum, ele é um **"Centro de Comando Vibracional"**. Ele foi desenhado para mostrar apenas o que é essencial para o seu *agora*, filtrando o ruído do dia a dia através da lente da sua numerologia.
 
 ### Funcionalidades do Dashboard
 - **Foco do Dia:** Um card dinâmico que muda diariamente. Ele diz qual a energia regente de hoje (baseada no seu Ano, Mês e Dia Pessoal) e sugere a melhor atitude a tomar.

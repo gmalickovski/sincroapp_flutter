@@ -22,7 +22,7 @@ Ele lê sua lista de tarefas pendentes.
 *   *Exemplo:* "Revisar contrato", "Criar nova campanha de marketing", "Organizar arquivos".
 
 ### 3. O Cruzamento (A Estratégia)
-A IA cruza os dados.
+A **Sincro IA** cruza os dados.
 *   *Análise:* "Fazer 'Revisar contrato' (que exige foco/detalhe - Energia 4) num Dia 5 (que é disperso/criativo) vai custar o dobro de energia mental."
 *   *Resultado:* O SincroFlow sugere que você priorize "Criar nova campanha" (energia 5 compatível) e deixe a revisão para um momento de menor pico de criatividade, ou aplica o **Modo Aterramento** para te ajudar a focar.
 
@@ -42,7 +42,7 @@ O sistema classifica seu dia automaticamente em um dos 4 modos estratégicos:
 ### ⚓ Modo Aterramento (Grounding)
 *   **Ativado em:** Dias 3, 5.
 *   **A Energia:** Criativa, Comunicativa, Dispersa.
-*   **A Estratégia:** Sua mente está mil por hora, gerando ideias incríveis, mas com dificuldade de focar em uma só. O Sincro recomenda usar listas rígidas e "blocos de tempo" para não se perder. Ótimo dia para vender e comunicar, péssimo para rotinas monótonas.
+*   **A Estratégia:** Sua mente está mil por hora, gerando ideias incríveis, mas com dificuldade de focar em uma só. O **SincroApp** recomenda usar listas rígidas e "blocos de tempo" para não se perder. Ótimo dia para vender e comunicar, péssimo para rotinas monótonas.
 
 ### 🧘 Modo Resgate (Rescue)
 *   **Ativado em:** Dias 7, 11, 22.
@@ -62,5 +62,5 @@ Além de definir o modo, o card do SincroFlow no seu Dashboard oferece **3 suges
 
 *   *Exemplo:* "Hoje é um Dia 8 (Justiça/Poder). Sugestão: Aproveite a manhã para aquela reunião difícil com a chefia; sua autoridade natural está amplificada."
 
----
-**Resumo:** O SincroFlow garante que você nunca mais nade contra a maré. Você passa a surfar a onda do dia.
+## Resumo
+O **SincroApp** garante que você nunca mais nade contra a maré. Você passa a surfar a onda do dia.
