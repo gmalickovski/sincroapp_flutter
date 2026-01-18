@@ -189,13 +189,20 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
               }
             },
           ),
-          title: const Text('Analisar Profissão',
-              style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+          title: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.work_outline, color: Colors.cyan.shade300, size: 24),
+              const SizedBox(width: 8),
+              const Text('Analisar Profissão',
+                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+            ],
+          ),
           centerTitle: true,
         ),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             child: _buildContent(context, isDesktop: false),
           ),
         ),
@@ -226,7 +233,7 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.psychology, size: 28, color: Colors.cyan.shade300),
+                    Icon(Icons.work_outline, size: 28, color: Colors.cyan.shade300),
                     const SizedBox(width: 12),
                     const Text('Analisar Profissão com IA',
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
@@ -254,100 +261,97 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
   }
 
   Widget _buildInputView(bool isDesktop) {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: isDesktop ? 0 : 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 16),
-          
-          // Subtitle
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.cyan.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.cyan.withOpacity(0.2)),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.cyan.shade300, size: 20),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    'Descubra se uma profissão ou área de atuação é compatível com seu perfil numerológico.',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
-                  ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        
+        // Subtitle
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.cyan.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.cyan.withOpacity(0.2)),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.cyan.shade300, size: 20),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  'Descubra se uma profissão ou área de atuação é compatível com seu perfil numerológico.',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 32),
+        
+        // Input Field
+        TextField(
+          controller: _professionController,
+          style: const TextStyle(color: Colors.white),
+          textCapitalization: TextCapitalization.words,
+          decoration: InputDecoration(
+            labelText: 'Qual profissão você quer analisar?',
+            labelStyle: const TextStyle(color: Colors.white70),
+            hintText: 'Ex: Advogado, Designer, Engenheiro...',
+            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+            filled: true,
+            fillColor: Colors.white.withOpacity(0.05),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16),
+              borderSide: BorderSide(color: Colors.cyan.shade300, width: 2),
+            ),
+            prefixIcon: Icon(Icons.work_outline, color: Colors.cyan.shade300),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+          ),
+          onSubmitted: (_) => _analyzeProfession(),
+        ),
+        
+        const SizedBox(height: 24),
+        
+        // Helper Text
+        Text(
+          '💡 Dica: Você pode digitar uma profissão específica (ex: "Arquiteto") ou uma área de atuação (ex: "Tecnologia", "Saúde").',
+          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+        ),
+        
+        const SizedBox(height: 32),
+        
+        // Analyze Button
+        SizedBox(
+          width: double.infinity,
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _analyzeProfession,
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.psychology, size: 20),
+            label: Text(_isLoading ? 'Analisando...' : 'Analisar Compatibilidade',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.cyan.shade400,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              elevation: 0,
             ),
           ),
-          
-          const SizedBox(height: 32),
-          
-          // Input Field
-          TextField(
-            controller: _professionController,
-            style: const TextStyle(color: Colors.white),
-            textCapitalization: TextCapitalization.words,
-            decoration: InputDecoration(
-              labelText: 'Qual profissão você quer analisar?',
-              labelStyle: const TextStyle(color: Colors.white70),
-              hintText: 'Ex: Advogado, Designer, Engenheiro...',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-              filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(color: Colors.cyan.shade300, width: 2),
-              ),
-              prefixIcon: Icon(Icons.work_outline, color: Colors.cyan.shade300),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-            ),
-            onSubmitted: (_) => _analyzeProfession(),
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Helper Text
-          Text(
-            '💡 Dica: Você pode digitar uma profissão específica (ex: "Arquiteto") ou uma área de atuação (ex: "Tecnologia", "Saúde").',
-            style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Analyze Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isLoading ? null : _analyzeProfession,
-              icon: _isLoading
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.psychology, size: 20),
-              label: Text(_isLoading ? 'Analisando...' : 'Analisar Compatibilidade',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.cyan.shade400,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 16),
-        ],
-      ),
+        ),
+        
+        const SizedBox(height: 16),
+      ],
     );
   }
 

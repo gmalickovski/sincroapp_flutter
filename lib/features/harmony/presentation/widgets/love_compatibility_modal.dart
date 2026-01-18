@@ -195,9 +195,9 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               title: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Harmonia Conjugal', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 8),
                   Icon(Icons.favorite, color: Colors.pink.shade400, size: 22),
+                  const SizedBox(width: 8),
+                  const Text('Harmonia Conjugal', style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                 ],
               ),
               centerTitle: true,

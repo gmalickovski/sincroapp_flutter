@@ -972,7 +972,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 _userData?.subscription?.plan == SubscriptionPlan.premium
                   ? SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton.icon(
+                      child: ElevatedButton(
                         onPressed: () {
                           if (MediaQuery.of(context).size.width > 600) {
                             showDialog(
@@ -988,8 +988,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                             );
                           }
                         },
-                        icon: const Icon(Icons.psychology, size: 16),
-                        label: const Text('Analisar Profissão com IA', style: TextStyle(fontWeight: FontWeight.bold)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.cyan.shade400,
                           foregroundColor: Colors.white,
@@ -997,6 +995,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           shape: const StadiumBorder(),
                           elevation: 0,
                         ),
+                        child: const Text('Analisar Profissão com IA', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     )
                   : null // No AI button for free and plus plans
@@ -1188,7 +1187,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _isEditMode ? _buildDragHandle('harmoniaConjugal') : null,
               bottomAction: _isEditMode ? null : SizedBox(
                 width: double.infinity,
-                child: ElevatedButton.icon(
+                child: ElevatedButton(
                   onPressed: () {
                     if (MediaQuery.of(context).size.width > 600) {
                       showDialog(
@@ -1204,8 +1203,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                       );
                     }
                   },
-                  icon: const Icon(Icons.favorite, size: 16),
-                  label: const Text('Fazer teste de compatibilidade', style: TextStyle(fontWeight: FontWeight.bold)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink.shade400,
                     foregroundColor: Colors.white,
@@ -1213,6 +1210,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     shape: const StadiumBorder(),
                     elevation: 0,
                   ),
+                  child: const Text('Fazer teste de compatibilidade', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               onTap: () => _showNumerologyDetail(

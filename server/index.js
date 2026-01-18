@@ -99,8 +99,8 @@ app.get('/thankyou', (req, res) => {
 // Serve Landing Page (Home) at Root
 app.use(express.static(path.join(__dirname, '../web/home')));
 
-// Serve Global Assets (Images, Fonts, etc.)
-app.use('/assets', express.static(path.join(__dirname, '../web/assets')));
+// Serve Global Assets (Images, Fonts, etc.) - Allow dotfiles for .env loading
+app.use('/assets', express.static(path.join(__dirname, '../web/assets'), { dotfiles: 'allow' }));
 
 // Content Security Policy (Optional - preventing errors in browser log)
 app.use((req, res, next) => {
