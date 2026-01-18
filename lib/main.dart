@@ -19,6 +19,7 @@ import 'package:sincro_app_flutter/services/notification_service.dart';
 import 'package:sincro_app_flutter/services/payment_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Import completo (User vem daqui)
 import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:sincro_app_flutter/core/theme/app_theme.dart'; // IMPORT APP THEME
 // --- FIM DAS NOVAS IMPORTAÇÕES ---
 
 Future<void> main() async {
@@ -97,53 +98,7 @@ class SincroApp extends StatelessWidget {
       supportedLocales: const [
         Locale('pt', 'BR'),
       ],
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: AppColors.background,
-        primaryColor: AppColors.primaryAccent,
-        fontFamily: 'Poppins',
-        splashFactory: NoSplash.splashFactory,
-        highlightColor: Colors.transparent,
-        textTheme: const TextTheme().apply(
-          bodyColor: AppColors.primaryText,
-          displayColor: AppColors.primaryText,
-        ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryAccent,
-            foregroundColor: AppColors.primaryText,
-            shape: const StadiumBorder(),
-          ),
-        ),
-        popupMenuTheme: PopupMenuThemeData(
-          color: const Color(0xFF2a2141),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-          textStyle: const TextStyle(
-            color: AppColors.primaryText,
-            fontFamily: 'Poppins',
-            fontSize: 16,
-          ),
-          elevation: 4,
-        ),
-        dividerTheme: const DividerThemeData(
-          color: AppColors.border,
-          space: 1,
-          thickness: 1,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: AppColors.background,
-          elevation: 0,
-          iconTheme: IconThemeData(color: AppColors.primary),
-          titleTextStyle: TextStyle(
-            color: AppColors.primaryText,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-            fontFamily: 'Poppins',
-          ),
-        ),
-      ),
+      theme: AppTheme.darkTheme,
       home: const AuthCheck(),
     );
   }

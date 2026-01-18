@@ -225,6 +225,8 @@ class TaskModel {
       'reminder_at': reminderAt?.toIso8601String(),
     };
   }
+
+  Map<String, dynamic> toJson() => toMap();
   // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
   bool get isOverdue {
     if (completed || dueDate == null) return false;

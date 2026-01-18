@@ -63,6 +63,7 @@ class LoveCompatibilityService {
       };
 
       print('--- AI REQUEST PAYLOAD ---');
+      // REVERTED: Send payload directly to body (no chatInput wrapper)
       final encodedPayload = jsonEncode(payload);
       print(encodedPayload);
       print('--------------------------');

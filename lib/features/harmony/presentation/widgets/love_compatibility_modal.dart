@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/core/theme/ai_modal_theme.dart';
 // import 'package:sincro_app_flutter/common/widgets/custom_text_field.dart'; // Removed missing import
 import 'package:sincro_app_flutter/features/harmony/services/love_compatibility_service.dart';
 import 'package:sincro_app_flutter/services/harmony_service.dart';
@@ -249,7 +250,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
         if (isDesktop) ...[
           SizedBox(
             width: double.infinity,
-            height: 40, // Height constraint for the header area
+            height: 44, // Standardized height
             child: Stack(
               alignment: Alignment.center,
               children: [
@@ -259,27 +260,23 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                   children: [
                     const Text(
                       'Harmonia Conjugal',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                     Icon(Icons.favorite, color: Colors.pink.shade400, size: 24),
                   ],
                 ),
-                // Close Button (Right Aligned)
+                // Close Button (Right Aligned) - Using standardized button
                 Positioned(
                   right: 0,
-                  // Adjusting position to be cleaner (offsetting padding slightly if needed)
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white70),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                  child: AIModalTheme.closeButton(onPressed: () => Navigator.pop(context)),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 16),
         ],
         
         // Tabs
@@ -292,14 +289,14 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
              // We keep tabs for consistency.
              TabBar(
                controller: _tabController,
-               indicatorColor: AppColors.primary,
+               indicatorColor: AppColors.harmonyPink,
                dividerColor: Colors.transparent,
                indicatorSize: TabBarIndicatorSize.tab,
-               splashBorderRadius: BorderRadius.circular(50),
+               splashBorderRadius: BorderRadius.circular(16),
                indicator: BoxDecoration(
-                   borderRadius: BorderRadius.circular(50),
-                   color: AppColors.primary.withOpacity(0.2), 
-                   border: Border.all(color: AppColors.primary)
+                   borderRadius: BorderRadius.circular(16),
+                   color: AppColors.harmonyPink.withOpacity(0.2), 
+                   border: Border.all(color: AppColors.harmonyPink)
                ),
                labelColor: Colors.white,
                unselectedLabelColor: Colors.white70,
@@ -359,10 +356,10 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     final inputDecoration = InputDecoration(
       filled: true,
       fillColor: Colors.white.withOpacity(0.05),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: Colors.white10)),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(30), borderSide: const BorderSide(color: AppColors.primary)),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.harmonyPink, width: 2)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       labelStyle: const TextStyle(color: Colors.white70),
     );
 
@@ -392,7 +389,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               labelText: 'Nome Completo da Pessoa',
               helperText: 'Use acentos se houver, pois pode interferir no resultado.',
               helperStyle: const TextStyle(color: Colors.white30, fontSize: 11),
-              prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 8), child: Icon(Icons.person_outline, color: AppColors.primary)),
+              prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 8), child: Icon(Icons.person_outline, color: AppColors.harmonyPink)),
             ),
             onChanged: (value) => setState(() {}),
           ),
@@ -407,7 +404,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             decoration: inputDecoration.copyWith(
               labelText: 'Data de Nascimento (dd/mm/aaaa)',
               hintText: 'ex: 25/12/1990',
-              prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 8), child: Icon(Icons.cake_outlined, color: AppColors.primary)),
+              prefixIcon: const Padding(padding: EdgeInsets.only(left: 16, right: 8), child: Icon(Icons.cake_outlined, color: AppColors.harmonyPink)),
             ),
             onChanged: (value) => setState(() {}),
           ),
@@ -442,28 +439,28 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               style: OutlinedButton.styleFrom(
                 foregroundColor: _selectedUser != null ? Colors.redAccent : Colors.white70,
                 side: BorderSide(color: _selectedUser != null ? Colors.redAccent.withOpacity(0.5) : Colors.white24),
-                shape: const StadiumBorder(),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
             ),
           ),
 
-          const SizedBox(height: 48),
+          const SizedBox(height: 32),
           
           if (isDesktop)
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: _isLoading ? null : _calculate,
+              icon: _isLoading 
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.favorite, size: 20),
+              label: Text(_isLoading ? 'Calculando...' : 'Calcular compatibilidade', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: AppColors.harmonyPink,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: const StadiumBorder(),
-                elevation: 4,
-                shadowColor: AppColors.primary.withOpacity(0.4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                elevation: 0,
               ),
-              child: _isLoading 
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Calcular compatibilidade', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1.1)),
             ),
         ],
       ),
@@ -605,49 +602,62 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                 // --- AI ANALYSIS CONTENT (If available) ---
                 if (_aiAnalysis != null) ...[
                   const SizedBox(height: 24),
+                  
+                  // Gradient Header (same style as Professional Modal)
                   Container(
-                    padding: const EdgeInsets.all(20),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.03),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                      gradient: LinearGradient(
+                        colors: [AppColors.harmonyPink.withOpacity(0.9), AppColors.harmonyPink.withOpacity(0.6)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
                       children: [
-                        Row(
-                          children: [
-                             const FaIcon(FontAwesomeIcons.robot, size: 24, color: Colors.white),
-                             const SizedBox(width: 12),
-                             const Text('Análise do Sincro AI', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary, fontSize: 20)),
-                          ],
-                        ),
-                        const SizedBox(height: 24),
-                        MarkdownBody(
-                          data: _aiAnalysis!,
-                          // Use MantraBuilder for blockquotes (Mantra) to give it a unique box.
-                          builders: {
-                            'blockquote': MantraBuilder(),
-                            'strong': MantraEmphasisBuilder(),
-                          },
-                          styleSheet: MarkdownStyleSheet(
-                            p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
-                            // Strong removed from here as it is handled by builder
-                            h1: const TextStyle(color: Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold), 
-                            h2: const TextStyle(color: Color(0xFFFFD700), fontSize: 22, fontWeight: FontWeight.bold),
-                            h3: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.bold, height: 2), // Gold
-                            listBullet: const TextStyle(color: Color(0xFFFFD700)),
-                            blockquote: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                            blockquoteDecoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1), // Subtle Rounded Background
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                            ),
-                            blockquotePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                            blockSpacing: 20,
+                        const FaIcon(FontAwesomeIcons.robot, size: 24, color: Colors.white),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('Análise do Sincro AI',
+                                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+                              const SizedBox(height: 4),
+                              Text('Casal: ${widget.currentUser.primeiroNome} e ${_nameController.text.isNotEmpty ? _nameController.text : _selectedUser?.primeiroNome ?? "Parceiro(a)"}',
+                                  style: const TextStyle(color: Colors.white70, fontSize: 14)),
+                            ],
                           ),
                         ),
                       ],
+                    ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // AI Analysis Content
+                  MarkdownBody(
+                    data: _aiAnalysis!,
+                    builders: {
+                      'blockquote': MantraBuilder(),
+                      'strong': MantraEmphasisBuilder(),
+                    },
+                    styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
+                      h1: TextStyle(color: AppColors.harmonyPink, fontSize: 24, fontWeight: FontWeight.bold), 
+                      h2: TextStyle(color: AppColors.harmonyPink, fontSize: 22, fontWeight: FontWeight.bold),
+                      h3: TextStyle(color: AppColors.harmonyPink, fontSize: 20, fontWeight: FontWeight.bold, height: 2),
+                      listBullet: TextStyle(color: AppColors.harmonyPink),
+                      blockquote: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+                      blockquoteDecoration: BoxDecoration(
+                        color: AppColors.harmonyPink.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.harmonyPink.withOpacity(0.3)),
+                      ),
+                      blockquotePadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                      blockSpacing: 20,
                     ),
                   ),
                 ],
@@ -741,12 +751,12 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                  : 'DESBLOQUEAR ANÁLISE COMPLETA', // More direct CTA
        ),
        style: ElevatedButton.styleFrom(
-         backgroundColor: isPremium ? AppColors.primary : const Color(0xFFD4AF37), // Gold button for upsell
+         backgroundColor: isPremium ? AppColors.harmonyPink : const Color(0xFFD4AF37), // Gold button for upsell
          foregroundColor: isPremium ? Colors.white : Colors.black, // High contrast black on gold
          disabledForegroundColor: Colors.white38,
          disabledBackgroundColor: Colors.grey.withOpacity(0.1),
          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-         shape: const StadiumBorder(),
+         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
          elevation: 8,
          shadowColor: isPremium ? AppColors.primary.withOpacity(0.5) : const Color(0xFFD4AF37).withOpacity(0.5),
        ),
@@ -897,45 +907,64 @@ class MantraBuilder extends MarkdownElementBuilder {
 
 class MantraEmphasisBuilder extends MarkdownElementBuilder {
   @override
-  Widget? visitElement(md.Element element, TextStyle? preferredStyle, TextStyle? parentStyle) {
-    return Container(
-      width: double.infinity, // Force full width to look like a block (capsule)
-      margin: const EdgeInsets.symmetric(vertical: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.2),
-            Colors.cyanAccent.withOpacity(0.1),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  Widget? visitText(md.Text text, TextStyle? preferredStyle) {
+    // Check if text is a quote/mantra (starts and ends with quotes)
+    final content = text.textContent;
+    final isMantra = content.startsWith('"') || content.startsWith('"') || content.startsWith('«');
+    
+    if (isMantra) {
+      // Mantra/Quote style: Block with rounded background
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withOpacity(0.2),
+              Colors.cyanAccent.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.cyanAccent.withOpacity(0.5),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.cyanAccent.withOpacity(0.1),
+              blurRadius: 10,
+              spreadRadius: 1,
+            )
+          ]
         ),
-        borderRadius: BorderRadius.circular(20), // Rounded corners
-        border: Border.all(
-          color: Colors.cyanAccent.withOpacity(0.5),
-          width: 1.5,
+        child: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: Colors.cyanAccent,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            fontStyle: FontStyle.italic,
+            height: 1.4,
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.cyanAccent.withOpacity(0.1),
-            blurRadius: 10,
-            spreadRadius: 1,
-          )
-        ]
-      ),
-      child: Text(
-        element.textContent,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Colors.cyanAccent, // Keep cyan text
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          fontStyle: FontStyle.italic,
-          height: 1.4,
+      );
+    } else {
+      // Regular bold: Inline cyan text (no block)
+      return RichText(
+        text: TextSpan(
+          text: content,
+          style: const TextStyle(
+            color: Colors.cyanAccent,
+            fontWeight: FontWeight.bold,
+            fontSize: 15,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 }
 

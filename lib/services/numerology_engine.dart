@@ -15,6 +15,15 @@ class NumerologyResult {
     required this.estruturas,
     required this.listas,
   });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'idade': idade,
+      'numeros': numeros,
+      'estruturas': estruturas,
+      'listas': listas,
+    };
+  }
 }
 
 class NumerologyEngine {

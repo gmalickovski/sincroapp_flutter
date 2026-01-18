@@ -967,21 +967,48 @@ class _DashboardScreenState extends State<DashboardScreen>
               dragHandle: _isEditMode
                   ? _buildDragHandle('aptidoesProfissionais')
                   : null,
-              onTap: () {
-                if (MediaQuery.of(context).size.width > 600) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
-                  );
-                } else {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
-                      fullscreenDialog: true,
-                    ),
-                  );
-                }
-              }),
+              bottomAction: _isEditMode ? null : (
+                // AI Analysis button - Only for Sinergia (premium) plan
+                _userData?.subscription?.plan == SubscriptionPlan.premium
+                  ? SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          if (MediaQuery.of(context).size.width > 600) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
+                            );
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
+                                fullscreenDialog: true,
+                              ),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.psychology, size: 16),
+                        label: const Text('Analisar Profissão com IA', style: TextStyle(fontWeight: FontWeight.bold)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.cyan.shade400,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: const StadiumBorder(),
+                          elevation: 0,
+                        ),
+                      ),
+                    )
+                  : null // No AI button for free and plus plans
+              ),
+              onTap: () => _showNumerologyDetail(
+                    title: "Aptidões Profissionais",
+                    number: (_numerologyData!.numeros['aptidoesProfissionais'] ?? 0).toString(),
+                    content: _getAptidoesProfissionaisContent(
+                        _numerologyData!.numeros['aptidoesProfissionais'] ?? 0),
+                    color: Colors.cyan.shade300,
+                    icon: Icons.work_outline,
+                  )),
           'desafios': InfoCard(
             // CARD CORRIGIDO
             key: const ValueKey('desafios'),

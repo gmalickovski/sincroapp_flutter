@@ -26,6 +26,7 @@ class StrategyN8NService {
       throw Exception('Configuration Error: N8N Webhook URL missing.');
     }
 
+    // Construct the Structured Payload (Sincroflow expects this at root)
     final payload = {
       'user': {
         'name': user.primeiroNome,
@@ -46,6 +47,8 @@ class StrategyN8NService {
     try {
       debugPrint('🚀 Sending Strategy Request to N8N: $webhookUrl');
       
+      // REVERTED: Send payload directly to body (no chatInput wrapper)
+      // This is the format that was working on January 15th commit.
       final encodedPayload = jsonEncode(payload);
       print('--- STRATEGY AI PAYLOAD ---');
       print(encodedPayload);
@@ -84,7 +87,7 @@ class StrategyN8NService {
   /// Analyzes professional compatibility using AI via N8N.
   static Future<String> analyzeProfessionCompatibility({
     required UserModel user,
-    required NumerologyProfile profile,
+    required NumerologyResult profile,
     required String professionName,
   }) async {
     final webhookUrl = dotenv.env['PROFESSIONAL_APTITUDE_WEBHOOK'];
@@ -98,9 +101,9 @@ class StrategyN8NService {
       'user': {
         'name': user.primeiroNome,
         'numerology': {
-          'expression': profile.expressionNumber,
-          'destiny': profile.destinyNumber,
-          'path': profile.lifePathNumber, // Mission
+          'expression': profile.numeros['expressao'],
+          'destiny': profile.numeros['destino'],
+          'path': profile.numeros['missao'], // Mission
         }
       },
       'profession': professionName,
@@ -110,6 +113,7 @@ class StrategyN8NService {
     try {
       debugPrint('🚀 Sending Professional Aptitude Request to N8N: $webhookUrl');
       
+      // REVERTED: Send payload directly to body (no chatInput wrapper)
       final response = await http.post(
         Uri.parse(webhookUrl),
         headers: {'Content-Type': 'application/json'},

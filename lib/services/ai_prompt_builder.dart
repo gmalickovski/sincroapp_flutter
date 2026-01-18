@@ -17,7 +17,7 @@ class AIPromptBuilder {
   static String _getDesc(String type, int? number) {
     if (number == null) return "Não disponível.";
     VibrationContent? content;
-    Map<dynamic, VibrationContent>? sourceMap;
+    Map<dynamic, dynamic>? sourceMap;
 
     // Arcanos descontinuados: removido o branch que buscava 'arcanos'.
     if (type == 'ciclosDeVida') {
@@ -27,7 +27,7 @@ class AIPromptBuilder {
     }
 
     if (sourceMap == null) return "Tipo de vibração desconhecido: $type";
-    content = sourceMap[number] ?? sourceMap[number.toString()];
+    content = (sourceMap[number] ?? sourceMap[number.toString()]) as VibrationContent?;
     if (content == null) return "Descrição não encontrada para $type $number.";
     // Usamos o .descricaoCompleta que parece ser o padrão no seu app
     return "${content.titulo}: ${content.descricaoCompleta}";

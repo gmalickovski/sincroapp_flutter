@@ -1,10 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
-import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
+import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -244,15 +245,48 @@ class _AssistantPanelState extends State<AssistantPanel>
       final recentJournal =
           await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
 
-      final ans = await AssistantService.ask(
-        question: q,
-        user: user,
-        numerology: numerology!,
-        tasks: tasks,
-        goals: goals,
-        recentJournal: recentJournal,
-        chatHistory: _messages,
-      );
+      // --- REPLACEMENT FOR AssistantService.ask ---
+      // 1. Construct Context
+      final contextData = {
+        'user': user.toJson(),
+        'numerology': numerology?.toJson(),
+        'tasks': tasks.map((e) => e.toJson()).toList(),
+        'goals': goals.map((e) => e.toJson()).toList(),
+        'recentJournal': recentJournal.map((e) => e.toJson()).toList(),
+      };
+      
+      // 2. Serialize Input (Question + Context)
+      final fullInput = jsonEncode({
+        'question': q,
+        'context': contextData,
+      });
+
+      // 3. Call N8N
+      final n8n = N8nService();
+      final text = await n8n.chat(prompt: fullInput, userId: user.uid);
+      
+      // 4. Log Usage (Optional, keeping consistent with legacy behavior)
+      // _logUsage(user.uid, 'assistant_chat', fullInput.length, text.length); 
+
+      // 5. Parse Response (JSON or Text)
+      final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
+      final startIndex = cleanText.indexOf('{');
+      final endIndex = cleanText.lastIndexOf('}');
+
+      AssistantAnswer ans;
+      if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
+        try {
+          final jsonStr = cleanText.substring(startIndex, endIndex + 1);
+          final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+          ans = AssistantAnswer.fromJson(data);
+        } catch (e) {
+          debugPrint('Error parsing N8N JSON: $e');
+          ans = AssistantAnswer(answer: cleanText, actions: []); // Fallback to raw text
+        }
+      } else {
+         ans = AssistantAnswer(answer: cleanText, actions: []);
+      }
+      // ---------------------------------------------
 
       final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
 
@@ -481,6 +515,7 @@ class _AssistantPanelState extends State<AssistantPanel>
            });
            await _scrollToBottom();
         }
+
       }
 
       if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
@@ -527,6 +562,8 @@ class _AssistantPanelState extends State<AssistantPanel>
       await _scrollToBottom();
     }
   }
+
+
 
   String _buildHarmonyAnalysis(String partnerName, String partnerDob) {
     try {
@@ -792,16 +829,40 @@ INSTRUÇÕES:
       final recentJournal = await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
 
       // 8. Ask AI
-      final ans = await AssistantService.ask(
-        question: prompt,
-        user: user,
-        numerology: userNumerology,
-        tasks: tasks,
-        goals: goals,
-        recentJournal: recentJournal,
-        chatHistory: _messages,
-      );
+      // --- REPLACEMENT FOR AssistantService.ask (Compatibility) ---
+      final contextData = {
+        'user': user.toJson(),
+        'numerology': userNumerology!.toJson(),
+        'tasks': tasks.map((e) => e.toJson()).toList(),
+        'goals': goals.map((e) => e.toJson()).toList(),
+        'recentJournal': recentJournal.map((e) => e.toJson()).toList(),
+      };
 
+      final fullInput = jsonEncode({
+        'question': prompt, // The prompt built above
+        'context': contextData,
+      });
+
+      final n8n = N8nService();
+      final text = await n8n.chat(prompt: fullInput, userId: user.uid);
+
+      final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
+      final startIndex = cleanText.indexOf('{');
+      final endIndex = cleanText.lastIndexOf('}');
+       
+      AssistantAnswer ans;
+      if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
+        try {
+           final jsonStr = cleanText.substring(startIndex, endIndex + 1);
+           final data = jsonDecode(jsonStr) as Map<String, dynamic>;
+           ans = AssistantAnswer.fromJson(data);
+        } catch (e) {
+           ans = AssistantAnswer(answer: cleanText, actions: []);
+        }
+      } else {
+         ans = AssistantAnswer(answer: cleanText, actions: []);
+      }
+      // -----------------------------------------------------------
       final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
 
       if (mounted) {

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
-import 'package:sincro_app_flutter/features/assistant/services/assistant_prompt_builder.dart';
 import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
@@ -73,26 +72,31 @@ class AssistantService {
   }) async {
     final isFirstOfDay = _isFirstMessageOfDay();
 
-    final prompt = AssistantPromptBuilder.build(
-      question: question,
-      user: user,
-      numerology: numerology,
-      tasks: tasks,
-      goals: goals,
-      recentJournal: recentJournal,
-      isFirstMessageOfDay: isFirstOfDay,
-      chatHistory: chatHistory,
-    );
+    // Construir objeto de contexto com dados relevantes
+    final contextData = {
+      'user': user.toJson(),
+      'numerology': numerology.toJson(),
+      'tasks': tasks.map((e) => e.toJson()).toList(),
+      'goals': goals.map((e) => e.toJson()).toList(),
+      'recentJournal': recentJournal.map((e) => e.toJson()).toList(),
+    };
+    
+    // Serializar contexto e pergunta
+    // O N8N receberá isso e o Agente terá a pergunta + dados
+    final fullInput = jsonEncode({
+      'question': question,
+      'context': contextData,
+    });
 
     final n8n = N8nService();
-    // Chama o n8n passando o prompt completo (incluindo contexto)
-    final text = await n8n.chat(prompt: prompt, userId: user.uid);
+    // Chama o n8n passando o input com dados
+    final text = await n8n.chat(prompt: fullInput, userId: user.uid);
     
     // Log Usage AFTER response
     _logUsage(
       userId: user.uid,
       type: 'assistant_chat',
-      promptLength: prompt.length,
+      promptLength: fullInput.length,
       outputLength: text.length,
     );
 
@@ -132,12 +136,13 @@ class AssistantService {
     required int personalDay,
     required StrategyMode mode,
   }) async {
-    final prompt = AssistantPromptBuilder.buildStrategyPrompt(
-      user: user,
-      tasks: tasks,
-      personalDay: personalDay,
-      mode: mode,
-    );
+    final contextData = {
+      'user': user.toJson(),
+      'tasks': tasks.map((t) => t.toJson()).toList(),
+      'personalDay': personalDay,
+      'mode': mode.toString(),
+    };
+    final prompt = jsonEncode(contextData);
 
     try {
       final n8n = N8nService();

@@ -39,4 +39,6 @@ class JournalEntry {
       'mood': mood?.toString(),
     };
   }
+
+  Map<String, dynamic> toJson() => toMap();
 }

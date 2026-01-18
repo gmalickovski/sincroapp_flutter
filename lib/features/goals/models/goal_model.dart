@@ -157,6 +157,8 @@ class Goal extends Equatable {
     };
   }
 
+  Map<String, dynamic> toJson() => toMap();
+
   // Construtor de cópia
   Goal copyWith({
     String? id,

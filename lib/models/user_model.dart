@@ -108,6 +108,8 @@ class UserModel {
     };
   }
 
+  Map<String, dynamic> toJson() => toFirestore();
+
   // Método 'copyWith' - Permite criar cópias do usuário modificando apenas alguns campos
   UserModel copyWith({
     String? uid,
