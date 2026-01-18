@@ -101,20 +101,91 @@ class StrategyN8NService {
       'user': {
         'name': user.primeiroNome,
         'numerology': {
-          'expression': profile.numeros['expressao'],
-          'destiny': profile.numeros['destino'],
-          'path': profile.numeros['missao'], // Mission
+          'expression': NumerologyEngine.reduceNumber(profile.numeros['expressao'] ?? 0, mestre: true),
+          'destiny': NumerologyEngine.reduceNumber(profile.numeros['destino'] ?? 0, mestre: true),
+          'path': NumerologyEngine.reduceNumber(profile.numeros['missao'] ?? 0, mestre: true), // Mission (Correctly Reduced)
         }
       },
       'profession': professionName,
       'formatting_instructions': '''
-1. Calcule o Score de Compatibilidade em degraus de 5% (ex: 55%, 60%, 85%...).
-2. Forneça a análise detalhada como de costume.
-3. CONDICIONAL "Profissões Ideais":
-   - Se Score >= 90%: NÃO inclua esta seção.
-   - Se Score 50%-85%: Sugira 3 profissões.
-   - Se Score < 50%: Sugira 5 profissões.
-   Misture áreas correlatas e distintas.
+Você é um especialista em Numerologia Aplicada a Carreiras. Analise a compatibilidade numerológica do usuário com a profissão.
+
+DADOS DO USUÁRIO:
+- Número de Expressão: ${NumerologyEngine.reduceNumber(profile.numeros['expressao'] ?? 0, mestre: true)}
+- Número de Destino: ${NumerologyEngine.reduceNumber(profile.numeros['destino'] ?? 0, mestre: true)}
+- Número de Missão: ${NumerologyEngine.reduceNumber(profile.numeros['missao'] ?? 0, mestre: true)}
+- Profissão Solicitada: $professionName
+
+TABELA DE HARMONIZAÇÃO (use para calcular o score base):
+| Destino | Expressão Favorável (+30%) | Expressão Desfavorável (-20%) |
+|---------|---------------------------|------------------------------|
+| 1 | 3, 5, 9 | 6 |
+| 2 | 2, 4, 6, 7 | 5, 9 |
+| 3 | 1, 3, 5, 6 | 4, 7, 8 |
+| 4 | 2, 6, 8 | 3, 5, 7, 9 |
+| 5 | 1, 3, 5, 7, 9 | 2, 4, 6, 8 |
+| 6 | 2, 3, 4, 8, 9 | 1, 5, 7 |
+| 7 | 2, 5, 7 | 3, 4, 6, 8, 9 |
+| 8 | 4, 6 | 3, 5, 7, 8, 9 |
+| 9 | 1, 5, 6, 9 | 2, 4, 7, 8 |
+
+REGRAS DE CÁLCULO DO SCORE (Ajuste Fino de 5%):
+1. **Base:** Comece com 50%.
+2. **Matriz:**
+   - Se Expressão está na coluna FAVORÁVEL do Destino: +30%
+   - Se Expressão está na coluna DESFAVORÁVEL do Destino: -20%
+3. **Afinidade Natural da Profissão:**
+   - Se a profissão tem TUDO a ver com a Expressão (ex: Expressão 1 e "Líder/Empresário"): +15%
+   - Se tem "muito" a ver: +10%
+   - Se tem "pouco" a ver: +5%
+   - Se é oposta (ex: Expressão 1 e "Subordinado/Rotina"): -10%
+4. **Alinhamento com Missão/Destino:**
+   - Se a profissão ajuda a cumprir a Missão: +5% a +10%
+
+**IMPORTANTE:** O resultado final DEVE ser arredondado para múltiplos de 5 (Ex: 55%, 60%, 85%, 95%, 100%). Evite scores redondos apenas de 10 em 10 se a nuance pedir 5%.
+
+FORMATO DA RESPOSTA (Markdown):
+
+## 🎯 Análise de Compatibilidade
+Escreva um parágrafo introdutório usando SEGUNDA PESSOA (você, seu, sua). Exemplo: "A sua compatibilidade com a profissão de [X] revela..." NUNCA use o nome do usuário nem terceira pessoa.
+
+### Pontos Fortes 🌟
+- Seu **Número de Expressão ${NumerologyEngine.reduceNumber(profile.numeros['expressao'] ?? 0, mestre: true)}** indica que você [explicação]
+- O seu **Destino ${NumerologyEngine.reduceNumber(profile.numeros['destino'] ?? 0, mestre: true)}** sugere que você tem [explicação]
+- A sua **Missão ${NumerologyEngine.reduceNumber(profile.numeros['missao'] ?? 0, mestre: true)}** revela que você [explicação]
+
+### Desafios ⚠️
+- [Desafio relacionado ao perfil]
+- [Outro desafio]
+
+### Score de Compatibilidade 📊
+Com base na Tabela de Harmonização, sua compatibilidade é de **XX%**. [Justificativa breve do cálculo]
+
+> "Frase inspiradora como mantra final"
+
+---
+## 🏆 Profissões Ideais para Você
+**CONDICIONAL: SÓ INCLUA ESTA SEÇÃO SE O SCORE FOR MENOR QUE 90%.**
+(Se o score for 90%, 95% ou 100%, não mostre esta seção).
+
+**Quantidade de Sugestões:**
+- **Se Score < 90%:** Liste **3** profissões que teriam compatibilidade de **90% a 100%** com o perfil numerológico (Expressão ${NumerologyEngine.reduceNumber(profile.numeros['expressao'] ?? 0, mestre: true)} e Destino ${NumerologyEngine.reduceNumber(profile.numeros['destino'] ?? 0, mestre: true)}).
+- **IMPORTANTE:** As profissões sugeridas DEVEM ser calculadas para ter um Score ALTO (>= 90%). Não sugira algo que resultaria em 70%.
+
+**Critério de Escolha:**
+Misture profissões próximas à área solicitada (se possível) com profissões distintas que tenham alta compatibilidade com o Mapa Numerológico.
+
+1. **Profissão 1:** [Explicação]
+2. **Profissão 2:** [Explicação]
+3. **Profissão 3:** [Explicação]
+...
+
+REGRAS OBRIGATÓRIAS:
+1. Use SEMPRE segunda pessoa (você, seu, sua).
+2. Use **negrito** (cor Âmbar) nos termos numerológicos.
+3. O mantra final DEVE começar com > e estar entre aspas.
+4. O score DEVE ser calculado usando a lógica de 5%.
+5. **OBEDECER RIGOROSAMENTE AS REGRAS CONDICIONAIS DE SUGESTÃO DE PROFISÃO.**
 ''',
       'timestamp': DateTime.now().toIso8601String(),
     };

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -20,10 +21,32 @@ class _AddContactModalState extends State<AddContactModal> {
   List<UserModel> _searchResults = [];
   bool _isLoading = false;
   String? _successMessage;
+  Timer? _debounce;
 
-  void _search() async {
-    final query = _searchController.text.trim();
-    if (query.isEmpty) return;
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _search(query);
+    });
+  }
+
+  void _search(String query) async {
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.isEmpty) {
+      setState(() {
+        _searchResults = [];
+        _isLoading = false;
+      });
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -32,12 +55,16 @@ class _AddContactModalState extends State<AddContactModal> {
 
     try {
       // Find users by username
-      final results = await _supabaseService.searchUsersByUsername(query);
-      setState(() {
-        _searchResults = results.where((u) => u.uid != _currentUserId).toList();
-      });
+      final results = await _supabaseService.searchUsersByUsername(trimmedQuery);
+      if (mounted) {
+        setState(() {
+          _searchResults = results.where((u) => u.uid != _currentUserId).toList();
+        });
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -58,11 +85,13 @@ class _AddContactModalState extends State<AddContactModal> {
         metadata: {'type': 'contact_request', 'from_uid': _currentUserId, 'from_name': senderName},
       );
 
-      setState(() {
-        _successMessage = 'Convite enviado para ${user.username}';
-        // Remove from list or mark as sent
-        _searchResults.removeWhere((u) => u.uid == user.uid);
-      });
+      if (mounted) {
+        setState(() {
+          _successMessage = 'Convite enviado para ${user.username}';
+          // Remove from list or mark as sent
+          _searchResults.removeWhere((u) => u.uid == user.uid);
+        });
+      }
       
       // Clear message after delay
       Future.delayed(const Duration(seconds: 3), () {
@@ -70,9 +99,11 @@ class _AddContactModalState extends State<AddContactModal> {
       });
 
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao enviar convite: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao enviar convite: $e')),
+        );
+      }
     }
   }
 
@@ -86,125 +117,129 @@ class _AddContactModalState extends State<AddContactModal> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
-      child: FractionallySizedBox(
-        heightFactor: 0.85, 
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Adicionar Pessoa',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.tertiaryText),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const Expanded(
+                  child: Text(
+                    'Adicionar Pessoa',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(width: 48), // Balance for back button
-                ],
-              ),
-            ),
-            
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Buscar por @username...',
-                  hintStyle: const TextStyle(color: AppColors.secondaryText),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                  filled: true,
-                  fillColor: AppColors.background, // Contrast
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(30), // PILL SHAPE
-                    borderSide: BorderSide.none,
-                  ),
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.primary),
-                    onPressed: _search,
-                  ),
                 ),
-                autofillHints: null, // Hack to disable password manager
-                enableSuggestions: false,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.search,
-                onSubmitted: (_) => _search(),
-              ),
+                const SizedBox(width: 48), // Balance for back button
+              ],
             ),
-            
-            if (_successMessage != null)
-              Container(
-                 margin: const EdgeInsets.all(16),
-                 padding: const EdgeInsets.all(12),
-                 decoration: BoxDecoration(
-                   color: Colors.green.withOpacity(0.2),
-                   borderRadius: BorderRadius.circular(8),
-                   border: Border.all(color: Colors.green),
-                 ),
-                 child: Text(
-                   _successMessage!,
-                   style: const TextStyle(color: Colors.green),
-                   textAlign: TextAlign.center,
-                 ),
+          ),
+          
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: TextField(
+              controller: _searchController,
+              style: const TextStyle(color: Colors.white),
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Buscar por @username...',
+                hintStyle: const TextStyle(color: AppColors.secondaryText),
+                prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                filled: true,
+                fillColor: AppColors.background, // Contrast
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30), // PILL SHAPE
+                  borderSide: BorderSide.none,
+                ),
               ),
+              autofillHints: null, // Hack to disable password manager
+              enableSuggestions: false,
+              keyboardType: TextInputType.text,
+              textInputAction: TextInputAction.search,
+            ),
+          ),
+          
+          if (_successMessage != null)
+            Container(
+               margin: const EdgeInsets.all(16),
+               padding: const EdgeInsets.all(12),
+               decoration: BoxDecoration(
+                 color: Colors.green.withValues(alpha: 0.2),
+                 borderRadius: BorderRadius.circular(8),
+                 border: Border.all(color: Colors.green),
+               ),
+               child: Text(
+                 _successMessage!,
+                 style: const TextStyle(color: Colors.green),
+                 textAlign: TextAlign.center,
+               ),
+            ),
 
-            // Results List
-            Expanded(
-              child: _isLoading 
-                ? const Center(child: CircularProgressIndicator())
-                : _searchResults.isEmpty 
-                    ? const Center(
-                        child: Text(
-                          'Pesquise pelo nome de usuário (@username)',
-                          style: TextStyle(color: AppColors.secondaryText),
-                        ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final user = _searchResults[index];
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(vertical: 8),
-                            leading: CircleAvatar(
-                               backgroundColor: AppColors.contact,
-                               child: Text(user.username?[0].toUpperCase() ?? '?'),
-                            ),
-                            title: Text(
-                              user.username ?? 'Sem username',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              '${user.primeiroNome} ${user.sobrenome}',
-                              style: const TextStyle(color: AppColors.secondaryText),
-                            ),
-                            trailing: ElevatedButton(
-                              onPressed: () => _addContact(user),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
-                              ),
-                              child: const Text('Adicionar'),
-                            ),
-                          );
-                        },
+          // Results List
+          Flexible(
+            child: _isLoading 
+              ? const Padding(
+                  padding: EdgeInsets.all(32.0),
+                  child: CircularProgressIndicator(),
+                )
+              : _searchResults.isEmpty 
+                  ? Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        _searchController.text.isEmpty 
+                            ? 'Pesquise pelo nome de usuário (@username)'
+                            : 'Nenhum usuário encontrado.',
+                        style: const TextStyle(color: AppColors.secondaryText),
+                        textAlign: TextAlign.center,
                       ),
-            ),
-          ],
-        ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(16),
+                      shrinkWrap: true,
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final user = _searchResults[index];
+                        return ListTile(
+                          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                          leading: CircleAvatar(
+                             backgroundColor: AppColors.contact,
+                             child: Text(user.username != null && user.username!.isNotEmpty 
+                                 ? user.username![0].toUpperCase() 
+                                 : '?'),
+                          ),
+                          title: Text(
+                            user.username ?? 'Sem username',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '${user.primeiroNome} ${user.sobrenome}',
+                            style: const TextStyle(color: AppColors.secondaryText),
+                          ),
+                          trailing: ElevatedButton(
+                            onPressed: () => _addContact(user),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                            ),
+                            child: const Text('Adicionar', style: TextStyle(color: Colors.white)),
+                          ),
+                        );
+                      },
+                    ),
+          ),
+        ],
       ),
     );
   }

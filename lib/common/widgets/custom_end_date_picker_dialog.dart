@@ -20,7 +20,12 @@ class CustomEndDatePickerDialog extends StatefulWidget {
     required this.firstDate,
     required this.lastDate,
     required this.userData,
+    this.alignment,
+    this.isPopup = false,
   });
+
+  final AlignmentGeometry? alignment;
+  final bool isPopup;
 
   @override
   State<CustomEndDatePickerDialog> createState() =>
@@ -111,13 +116,21 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24.0),
-      ),
-      child: Container(
+    final content = Container(
         constraints: const BoxConstraints(maxWidth: 400),
+        decoration: widget.isPopup 
+          ? BoxDecoration(
+              color: AppColors.cardBackground,
+              borderRadius: BorderRadius.circular(24.0),
+              boxShadow: [
+                 BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                 ),
+              ],
+            )
+          : null,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -158,7 +171,19 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
             const SizedBox(height: 16),
           ],
         ),
+      );
+
+    if (widget.isPopup) {
+      return content;
+    }
+
+    return Dialog(
+      alignment: widget.alignment,
+      backgroundColor: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24.0),
       ),
+      child: content,
     );
   }
 

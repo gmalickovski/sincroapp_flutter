@@ -23,7 +23,9 @@ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_pan
 import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_filter_panel.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // For TaskViewScope
+import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
@@ -61,7 +63,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   Set<String> _selectedTaskIds = {}; // IDs of selected tasks
 
   OverlayEntry? _filterOverlay;
-  final LayerLink _filterLayerLink = LayerLink();
+  final GlobalKey _filterButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -301,47 +303,33 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   void _openFilterUI() {
-    showDialog(
-      context: context,
-      barrierColor: Colors.transparent, // Transparent barrier
-      builder: (context) => Stack(
-        children: [
-          // Use Follower to align with the button
-          Positioned(
-              // Position matches the button, adjusted via offset
-           child: CompositedTransformFollower(
-              link: _filterLayerLink,
-              showWhenUnlinked: false,
-              offset: const Offset(-300, 40), 
-              child: GoalFilterPanel(
-                initialScope: _currentScope,
-                initialDate: _filterDate,
-                initialVibration: _filterVibration,
-                initialTag: _filterTag,
-                availableTags: const [], // TODO: Tags
-                userData: widget.userData,
-                onApply: (scope, date, vibe, tag) {
-                  setState(() {
-                    _currentScope = scope;
-                    _filterDate = date;
-                    _filterVibration = vibe;
-                    _filterTag = tag;
-                  });
-                  Navigator.pop(context); // Close dialog
-                },
-                onClearInPanel: () {
-                   setState(() {
-                     _currentScope = TaskViewScope.todas;
-                     _filterDate = null;
-                     _filterVibration = null;
-                     _filterTag = null;
-                   });
-                   // goal_filter_panel handles pop on Clear internally
-                },
-              ),
-            ),
-          ),
-        ],
+    showSmartPopup(
+      context: _filterButtonKey.currentContext!,
+      builder: (context) => GoalFilterPanel(
+        initialScope: _currentScope,
+        initialDate: _filterDate,
+        initialVibration: _filterVibration,
+        initialTag: _filterTag,
+        availableTags: const [], // TODO: Tags
+        userData: widget.userData,
+        onApply: (scope, date, vibe, tag) {
+          setState(() {
+            _currentScope = scope;
+            _filterDate = date;
+            _filterVibration = vibe;
+            _filterTag = tag;
+          });
+          Navigator.pop(context); // Close dialog
+        },
+        onClearInPanel: () {
+            setState(() {
+              _currentScope = TaskViewScope.todas;
+              _filterDate = null;
+              _filterVibration = null;
+              _filterTag = null;
+            });
+            // goal_filter_panel handles pop on Clear internally
+        },
       ),
     );
   }
@@ -818,22 +806,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             const SizedBox(width: 8),
 
             // Filter Button
-            CompositedTransformTarget(
-              link: _filterLayerLink,
-              child: IconButton(
-                onPressed: _openFilterUI,
-                icon: Icon(
-                  Icons.filter_alt_outlined, // Funnel Icon
-                  color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) 
-                      ? AppColors.primary 
-                      : AppColors.secondaryText,
-                ),
-                tooltip: 'Filtrar',
-                 style: IconButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                     borderRadius: BorderRadius.circular(8),
-                     side: BorderSide(color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) ? AppColors.primary : AppColors.border),
-                  ),
+            // Filter Button
+            IconButton(
+              key: _filterButtonKey,
+              onPressed: _openFilterUI,
+              icon: Icon(
+                Icons.filter_alt_outlined, // Funnel Icon
+                color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) 
+                    ? AppColors.primary 
+                    : AppColors.secondaryText,
+              ),
+              tooltip: 'Filtrar',
+               style: IconButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                   borderRadius: BorderRadius.circular(8),
+                   side: BorderSide(color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) ? AppColors.primary : AppColors.border),
                 ),
               ),
             ),

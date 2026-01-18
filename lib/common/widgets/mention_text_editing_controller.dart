@@ -22,7 +22,7 @@ class MentionTextEditingController extends TextEditingController {
   TextSpan buildTextSpan({
     required BuildContext context,
     TextStyle? style,
-    required boolwithComposing,
+    required bool withComposing,
   }) {
     final List<InlineSpan> children = [];
     final text = value.text;

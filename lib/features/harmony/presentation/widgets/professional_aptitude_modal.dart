@@ -456,7 +456,6 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
               data: _aiAnalysis!,
               builders: {
                 'blockquote': ProfessionalMantraBuilder(),
-                'strong': NumerologyTermBuilder(),
               },
               styleSheet: MarkdownStyleSheet(
                 p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
@@ -465,6 +464,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
                 h3: TextStyle(color: Colors.cyan.shade300, fontSize: 20, fontWeight: FontWeight.bold, height: 2),
                 listBullet: TextStyle(color: Colors.cyan.shade300),
                 blockSpacing: 20,
+                // Fix: Bold text color (Strong)
+                strong: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
                 // Reset blockquote decoration to let custom builder handle it
                 blockquote: const TextStyle(color: Colors.transparent),
                 blockquoteDecoration: const BoxDecoration(),
@@ -543,22 +544,7 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
   }
 }
 
-/// Builder for numerology terms (e.g., "Expressão 6", "Destino 8")
-/// Highlights ALL bold terms to ensure visibility
-class NumerologyTermBuilder extends MarkdownElementBuilder {
-  @override
-  Widget? visitText(md.Text text, TextStyle? preferredStyle) {
-    // Apply Amber color to ALL bold text to ensure it stands out from white body text
-    return Text(
-      text.text,
-      style: const TextStyle(
-        color: Colors.amber, 
-        fontWeight: FontWeight.bold,
-        fontSize: 15,
-      ),
-    );
-  }
-}
+
 
 /// Builder for blockquotes (mantras/citations) in the professional aptitude modal
 /// Uses a dark, rounded background with readable text

@@ -476,7 +476,7 @@ class NumerologyEngine {
     final expressao = _calcularNumeroExpressao();
     final motivacao = _calcularNumeroMotivacao();
     final impressao = _calcularNumeroImpressao();
-    final missao = destino + expressao; // Simplificação comum
+    final missao = reduceNumber(destino + expressao, mestre: true); // Agora reduzido corretamente
     final talentoOculto = _calcularTalentoOculto(motivacao, expressao);
     final dataNasc = _parseDate(dataNascimento);
     final psiquico = dataNasc != null ? _calcularNumeroPsiquico(dataNasc) : 0;
@@ -526,7 +526,7 @@ class NumerologyEngine {
     'F': 8, 'P': 8,
   };
 
-  int _reduzirNumero(int n, {bool mestre = false}) {
+  static int reduceNumber(int n, {bool mestre = false}) {
     while (n > 9) {
       if (mestre && (n == 11 || n == 22)) {
         return n;
@@ -535,6 +535,8 @@ class NumerologyEngine {
     }
     return n;
   }
+
+  int _reduzirNumero(int n, {bool mestre = false}) => reduceNumber(n, mestre: mestre);
 
   int _calcularValor(String letra) {
     // Implementação simples anterior não suportava diacríticos aumentados; mantemos ajuste mestre.

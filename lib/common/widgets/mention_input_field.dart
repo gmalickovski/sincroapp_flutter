@@ -80,6 +80,10 @@ class _MentionInputFieldState extends State<MentionInputField> {
     }
 
     final cursorPos = selection.baseOffset;
+    if (cursorPos <= 0) { // Safety check
+       _removeOverlay();
+       return;
+    }
     
     // Procura o último '@' antes do cursor
     final lastAt = text.lastIndexOf('@', cursorPos - 1);

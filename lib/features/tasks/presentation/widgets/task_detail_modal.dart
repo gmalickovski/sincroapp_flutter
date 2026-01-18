@@ -656,8 +656,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       hintText: 'Descrição da tarefa...',
                       hintStyle: TextStyle(color: AppColors.secondaryText),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
                       isDense: true,
                       contentPadding: EdgeInsets.symmetric(vertical: 4.0),
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
                     ),
                     maxLines: null,
                     keyboardType: TextInputType.multiline,
@@ -748,65 +755,109 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           ),
       );
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    if (isMobile) {
       return Dialog(
-        backgroundColor: Colors.transparent, 
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0), 
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700), 
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24.0), 
-            child: Container(
-              decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(24.0),
-                  border: Border.all(
-                      color: vibrationColor.withValues(alpha: borderOpacity),
-                      width: borderWidth)),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  PreferredSize(
-                    preferredSize: const Size.fromHeight(kToolbarHeight),
-                    child: _buildAppBar(),
+        backgroundColor: AppColors.cardBackground,
+        insetPadding: EdgeInsets.zero,
+        child: Scaffold(
+          backgroundColor: AppColors.cardBackground,
+          appBar: _buildAppBar(isMobile: true),
+          body: contentBody, // O contentBody já tem SingleChildScrollView
+          bottomNavigationBar: _hasChanges
+              ? SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveChanges,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CustomLoadingSpinner(
+                                  size: 20, color: Colors.white))
+                          : const Text('Salvar Alterações',
+                              style: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                    ),
                   ),
-                  Flexible(child: contentBody),
-                  
-                  // --- RODAPÉ COM BOTÃO SALVAR ---
-                  if (_hasChanges)
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                      child: Center( // Centraliza
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _saveChanges,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24)), // Pilula
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 32, vertical: 12), // Padding ajustado
-                            elevation: 4,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CustomLoadingSpinner(size: 20, color: Colors.white))
-                              : const Text('Salvar Alterações',
-                                  style: TextStyle(
-                                      fontWeight: FontWeight.bold, fontSize: 16)),
+                )
+              : null,
+        ),
+      );
+    }
+
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 700),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24.0),
+          child: Container(
+            decoration: BoxDecoration(
+                color: AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(24.0),
+                border: Border.all(
+                    color: vibrationColor.withValues(alpha: borderOpacity),
+                    width: borderWidth)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                PreferredSize(
+                  preferredSize: const Size.fromHeight(kToolbarHeight),
+                  child: _buildAppBar(isMobile: false),
+                ),
+                Flexible(child: contentBody),
+
+                // --- RODAPÉ COM BOTÃO SALVAR ---
+                if (_hasChanges)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                    child: Center(
+                      // Centraliza
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _saveChanges,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24)), // Pilula
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 12), // Padding ajustado
+                          elevation: 4,
                         ),
+                        child: _isLoading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CustomLoadingSpinner(
+                                    size: 20, color: Colors.white))
+                            : const Text('Salvar Alterações',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16)),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         ),
-      );
+      ),
+    );
   }
 
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar({required bool isMobile}) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -1095,8 +1146,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       hintStyle: TextStyle(
                           color: AppColors.tertiaryText.withValues(alpha: 0.7)),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
                       contentPadding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
                       isDense: true,
+                      filled: false,
+                      fillColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
                     ),
                     enabled: _currentTags.length < 5,
                     onSubmitted: (_) => _addTag(),

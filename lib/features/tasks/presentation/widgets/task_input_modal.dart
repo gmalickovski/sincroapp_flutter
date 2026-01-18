@@ -413,6 +413,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       builder: (context) {
         return ContactPickerModal(
           preSelectedUsernames: _sharedWithUsernames,
@@ -501,7 +504,14 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 decoration: InputDecoration(
                   hintStyle: const TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
                 ),
                 maxLines: null,
               ),

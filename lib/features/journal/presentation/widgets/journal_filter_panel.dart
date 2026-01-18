@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 
 import 'package:sincro_app_flutter/features/journal/presentation/journal_screen.dart'; // For JournalViewScope
@@ -40,6 +41,7 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
   late DateTime? _tempDate;
   late int? _tempVibration;
   late int? _tempMood;
+  final GlobalKey _datePickerKey = GlobalKey();
 
   @override
   void initState() {
@@ -57,231 +59,235 @@ class _JournalFilterPanelState extends State<JournalFilterPanel> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
     return Material(
-      type: MaterialType.transparency,
+      color: Colors.transparent,
       child: Container(
-      width: 350,
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 10,
-          )
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Removed title as requested
-              // 1. SCOPE DROPDOWN
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.menu_book_outlined, color: AppColors.secondaryText, size: 20),
-                title: DropdownButton<JournalViewScope>(
-                  value: _tempScope,
-                  isExpanded: true,
-                  isDense: true,
-                  underline: const SizedBox.shrink(),
-                  dropdownColor: AppColors.cardBackground,
-                  borderRadius: BorderRadius.circular(16),
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (value) {
-                     if (value != null) setState(() => _tempScope = value);
-                  },
-                  items: JournalViewScope.values.map((type) {
-                    final bool isSelected = _tempScope == type;
-                    return DropdownMenuItem(
-                      value: type,
-                      child: Text(
-                        _getScopeLabel(type),
-                        style: TextStyle(
-                          color: isSelected ? AppColors.primary : Colors.white,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          fontFamily: 'Poppins',
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-              const Text("Refinar", style: TextStyle(color: AppColors.secondaryText, fontSize: 16, fontWeight: FontWeight.normal, fontFamily: 'Poppins')),
-              const SizedBox(height: 8),
-
-              // 2. FILTERS
-              // Date Filter
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.calendar_today, color: AppColors.secondaryText, size: 20),
-                title: InkWell(
-                  onTap: () async {
-                       final DateTime firstDate = DateTime(2020);
-                       final DateTime lastDate = DateTime.now().add(const Duration(days: 365));
-                       DateTime initial = _tempDate ?? DateTime.now();
-                       if (initial.isBefore(firstDate)) initial = firstDate;
-                       if (initial.isAfter(lastDate)) initial = lastDate;
-
-                       final pickedDate = await showDialog<DateTime>(
-                        context: context,
-                        barrierDismissible: true,
-                        builder: (ctx) => CustomEndDatePickerDialog(
-                          initialDate: initial,
-                          firstDate: firstDate,
-                          lastDate: lastDate,
-                          userData: widget.userData,
-                        ),
-                      );
-
-                      if (pickedDate != null) {
-                        setState(() => _tempDate = pickedDate);
-                      }
-                  },
-                  borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    // padding: const EdgeInsets.symmetric(vertical: 8), 
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _tempDate == null ? 'Por Data' : DateFormat('dd/MM/yyyy').format(_tempDate!),
-                          style: TextStyle(
-                            color: _tempDate != null ? AppColors.primary : Colors.white,
-                            fontWeight: _tempDate != null ? FontWeight.bold : FontWeight.normal,
-                            fontSize: 14,
-                            fontFamily: 'Poppins',
-                          ),
-                        ),
-                        if (_tempDate != null)
-                           InkWell(
-                              onTap: () => setState(() => _tempDate = null),
-                              borderRadius: BorderRadius.circular(20),
-                              child: const Padding(
-                                padding: EdgeInsets.all(4.0),
-                                child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
-                              ),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Vibration Filter
-              ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.wb_sunny_outlined, color: AppColors.secondaryText, size: 20),
-                  title: DropdownButton<int?>(
-                    value: _tempVibration,
-                    isExpanded: true,
-                    isDense: true,
-                    underline: const SizedBox.shrink(),
-                    hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontFamily: 'Poppins')),
-                    dropdownColor: AppColors.cardBackground,
-                    borderRadius: BorderRadius.circular(16),
-                    style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-                    onChanged: (value) {
-                      setState(() => _tempVibration = value);
-                    },
-                    selectedItemBuilder: (BuildContext context) {
-                    return [
-                      null,
-                      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
-                    ].map((int? v) {
-                      if (v == null) {
-                         return const Text('Dias Pessoais', style: TextStyle(color: Colors.white, fontFamily: 'Poppins'));
-                      }
-                      return Row(
-                        children: [
-                          VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
-                          const SizedBox(width: 12),
-                          Text('Dia Pessoal $v', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                        ],
-                      );
-                    }).toList();
-                  },
-                    items: [
-                      const DropdownMenuItem<int?>(
-                        value: null, child: Text('Dias Pessoais', style: TextStyle(fontFamily: 'Poppins'))),
-                      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) {
-                         final isSelected = _tempVibration == v;
-                         return DropdownMenuItem<int?>(
-                            value: v,
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
-                                    const SizedBox(width: 12),
-                                    Text('Dia Pessoal $v', style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.primary : null, fontFamily: 'Poppins')),
-                                  ],
-                                ),
-                                if (isSelected)
-                                  InkWell(
-                                    onTap: () {
-                                      setState(() => _tempVibration = null);
-                                      Navigator.pop(context);
-                                    },
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: const Padding(
-                                      padding: EdgeInsets.all(4.0),
-                                      child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
-                                    ),
-                                  ),
-                              ]
-                            ));
-                      }).toList(),
-                    ],
-                  ),
-                ),
-
-
-              // Mood Selector
-              Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: _MoodSelector(
-                    selectedMood: _tempMood,
-                    onMoodSelected: (mood) {
-                      setState(() => _tempMood = (_tempMood == mood) ? null : mood);
-                    },
-                  ),
-                ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                TextButton(
-                    onPressed: () {
-                    widget.onClearInPanel();
-                     setState(() {
-                        _tempScope = JournalViewScope.todas;
-                        _tempDate = null;
-                        _tempVibration = null;
-                        _tempMood = null;
-                     });
-                    Navigator.pop(context);
-                  },
-                    child: const Text('Limpar Filtros',
-                        style: TextStyle(color: AppColors.primary, fontFamily: 'Poppins'))),
-                const Spacer(),
-                ElevatedButton(
-                  onPressed: () =>
-                      widget.onApply(_tempScope, _tempDate, _tempVibration, _tempMood),
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary),
-                  child: const Text('Aplicar',
-                      style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
-                )
-              ],
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
             )
           ],
         ),
-      ),
+        child: SingleChildScrollView(
+            padding: isMobile
+                ? const EdgeInsets.all(16)
+                : const EdgeInsets.fromLTRB(24, 16, 24, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Removed title as requested
+                  // 1. SCOPE DROPDOWN
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.menu_book_outlined, color: AppColors.secondaryText, size: 20),
+                    title: DropdownButton<JournalViewScope>(
+                      value: _tempScope,
+                      isExpanded: true,
+                      isDense: true,
+                      underline: const SizedBox.shrink(),
+                      dropdownColor: AppColors.cardBackground,
+                      borderRadius: BorderRadius.circular(16),
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: (value) {
+                         if (value != null) setState(() => _tempScope = value);
+                      },
+                      items: JournalViewScope.values.map((type) {
+                        final bool isSelected = _tempScope == type;
+                        return DropdownMenuItem(
+                          value: type,
+                          child: Text(
+                            _getScopeLabel(type),
+                            style: TextStyle(
+                              color: isSelected ? AppColors.primary : Colors.white,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontFamily: 'Poppins',
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  const Text("Refinar", style: TextStyle(color: AppColors.secondaryText, fontSize: 16, fontWeight: FontWeight.normal, fontFamily: 'Poppins')),
+                  const SizedBox(height: 8),
+
+                  // 2. FILTERS
+                  // Date Filter
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.calendar_today, color: AppColors.secondaryText, size: 20),
+                    title: InkWell(
+                      key: _datePickerKey,
+                      onTap: () {
+                           final DateTime firstDate = DateTime(2020);
+                           final DateTime lastDate = DateTime.now().add(const Duration(days: 365));
+                           DateTime initial = _tempDate ?? DateTime.now();
+                           if (initial.isBefore(firstDate)) initial = firstDate;
+                           if (initial.isAfter(lastDate)) initial = lastDate;
+
+                           showDialog(
+                            context: context,
+                            builder: (context) => CustomEndDatePickerDialog(
+                              initialDate: initial,
+                              firstDate: firstDate,
+                              lastDate: lastDate,
+                              userData: widget.userData,
+                            ),
+                          ).then((pickedDate) {
+                             if (pickedDate != null && pickedDate is DateTime) {
+                               setState(() => _tempDate = pickedDate);
+                             }
+                          });
+
+
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        // padding: const EdgeInsets.symmetric(vertical: 8), 
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              _tempDate == null ? 'Por Data' : DateFormat('dd/MM/yyyy').format(_tempDate!),
+                              style: TextStyle(
+                                color: _tempDate != null ? AppColors.primary : Colors.white,
+                                fontWeight: _tempDate != null ? FontWeight.bold : FontWeight.normal,
+                                fontSize: 14,
+                                fontFamily: 'Poppins',
+                              ),
+                            ),
+                            if (_tempDate != null)
+                               InkWell(
+                                  onTap: () => setState(() => _tempDate = null),
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: const Padding(
+                                    padding: EdgeInsets.all(4.0),
+                                    child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
+                                  ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Vibration Filter
+                  ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.wb_sunny_outlined, color: AppColors.secondaryText, size: 20),
+                      title: DropdownButton<int?>(
+                        value: _tempVibration,
+                        isExpanded: true,
+                        isDense: true,
+                        underline: const SizedBox.shrink(),
+                        hint: const Text('Por Dia Pessoal', style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontFamily: 'Poppins')),
+                        dropdownColor: AppColors.cardBackground,
+                        borderRadius: BorderRadius.circular(16),
+                        style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+                        onChanged: (value) {
+                          setState(() => _tempVibration = value);
+                        },
+                        selectedItemBuilder: (BuildContext context) {
+                        return [
+                          null,
+                          ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22]
+                        ].map((int? v) {
+                          if (v == null) {
+                             return const Text('Dias Pessoais', style: TextStyle(color: Colors.white, fontFamily: 'Poppins'));
+                          }
+                          return Row(
+                            children: [
+                              VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
+                              const SizedBox(width: 12),
+                              Text('Dia Pessoal $v', style: const TextStyle(color: Colors.white, fontFamily: 'Poppins')),
+                            ],
+                          );
+                        }).toList();
+                      },
+                        items: [
+                          const DropdownMenuItem<int?>(
+                            value: null, child: Text('Dias Pessoais', style: TextStyle(fontFamily: 'Poppins'))),
+                          ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 22].map((v) {
+                             final isSelected = _tempVibration == v;
+                             return DropdownMenuItem<int?>(
+                                value: v,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        VibrationPill(vibrationNumber: v, type: VibrationPillType.compact),
+                                        const SizedBox(width: 12),
+                                        Text('Dia Pessoal $v', style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isSelected ? AppColors.primary : null, fontFamily: 'Poppins')),
+                                      ],
+                                    ),
+                                    if (isSelected)
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() => _tempVibration = null);
+                                          Navigator.pop(context);
+                                        },
+                                        borderRadius: BorderRadius.circular(20),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(4.0),
+                                          child: Icon(Icons.close, color: AppColors.secondaryText, size: 16),
+                                        ),
+                                      ),
+                                  ]
+                                ));
+                          }).toList(),
+                        ],
+                      ),
+                    ),
+
+
+                  // Mood Selector
+                  Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: _MoodSelector(
+                        selectedMood: _tempMood,
+                        onMoodSelected: (mood) {
+                          setState(() => _tempMood = (_tempMood == mood) ? null : mood);
+                        },
+                      ),
+                    ),
+                const SizedBox(height: 24),
+                Row(
+                  children: [
+                    TextButton(
+                        onPressed: () {
+                        widget.onClearInPanel();
+                         setState(() {
+                            _tempScope = JournalViewScope.todas;
+                            _tempDate = null;
+                            _tempVibration = null;
+                            _tempMood = null;
+                         });
+                        Navigator.pop(context);
+                      },
+                        child: const Text('Limpar Filtros',
+                            style: TextStyle(color: AppColors.primary, fontFamily: 'Poppins'))),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () =>
+                          widget.onApply(_tempScope, _tempDate, _tempVibration, _tempMood),
+                      icon: const Icon(Icons.check, color: AppColors.primary),
+                      tooltip: 'Aplicar',
+                    )
+                  ],
+                )
+              ],
+            ),
+        ),
       ),
     );
   }

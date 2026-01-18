@@ -151,6 +151,9 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85,
+      ),
       builder: (context) => const AddContactModal(),
     ).then((_) {
       // Refresh contacts on return
@@ -171,8 +174,8 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
         right: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
-      height: MediaQuery.of(context).size.height * 0.85,
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Header
           Row(
@@ -258,9 +261,10 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
           const SizedBox(height: 16),
           
           // Contacts List
-          Expanded(
+          Flexible(
             child: _contacts.isEmpty 
-              ? Center(
+              ? Padding(
+                  padding: const EdgeInsets.all(32.0),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -269,15 +273,17 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                       const Text(
                         'Você ainda não tem contatos.',
                         style: TextStyle(color: AppColors.secondaryText),
+                        textAlign: TextAlign.center,
                       ),
                       TextButton(
                         onPressed: _openAddContactModal, 
                         child: const Text('Buscar novas pessoas', style: TextStyle(color: AppColors.primary))
                       ),
                     ],
-                  )
+                  ),
                 )
               : ListView.separated(
+                  shrinkWrap: true,
                   itemCount: _filteredContacts.length,
                   separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
                   itemBuilder: (context, index) {
@@ -287,7 +293,9 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                       onTap: () => _toggleContact(contact),
                       leading: CircleAvatar(
                         backgroundColor: AppColors.contact,
-                        child: Text(contact.displayName?[0].toUpperCase() ?? '?'),
+                        child: Text(contact.displayName != null && contact.displayName!.isNotEmpty
+                            ? contact.displayName![0].toUpperCase() 
+                            : '?'),
                       ),
                       title: Text(
                         contact.displayName ?? 'Sem nome',

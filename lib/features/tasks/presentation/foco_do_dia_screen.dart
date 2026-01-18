@@ -23,6 +23,7 @@ import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'widgets/task_filter_panel.dart';
+import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 // --- FIM DA MUDANÇA ---
 
 // --- INÍCIO DA MUDANÇA (Solicitação 2): Adicionado 'concluidas' ---
@@ -832,49 +833,33 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   void _openFilterUI(List<String> availableTags) {
-    final RenderBox? renderBox =
-        _filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
-    final offset = renderBox != null
-        ? renderBox.localToGlobal(Offset.zero)
-        : const Offset(0, 0);
-    final size = renderBox?.size ?? const Size(0, 0);
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.transparent,
-      builder: (context) => Stack(
-        children: [
-          Positioned(
-            top: offset.dy + size.height + 8,
-            right: MediaQuery.of(context).size.width - (offset.dx + size.width),
-            child: TaskFilterPanel(
-              initialScope: _currentScope,
-              initialDate: _selectedDate,
-              initialVibration: _selectedVibrationNumber,
-              initialTag: _selectedTag,
-              availableTags: availableTags,
-              userData: widget.userData,
-              onApply: (scope, date, vibration, tag) {
-                setState(() {
-                  _currentScope = scope;
-                  _selectedDate = date;
-                  _selectedVibrationNumber = vibration;
-                  _selectedTag = tag;
-                   _clearSelection();
-                });
-                Navigator.pop(context);
-              },
-              onClearInPanel: () {
-                setState(() {
-                    _currentScope = TaskViewScope.todas;
-                    _selectedDate = null;
-                    _selectedVibrationNumber = null;
-                    _selectedTag = null;
-                });
-              },
-            ),
-          ),
-        ],
+    showSmartPopup(
+      context: _filterButtonKey.currentContext!,
+      builder: (context) => TaskFilterPanel(
+        initialScope: _currentScope,
+        initialDate: _selectedDate,
+        initialVibration: _selectedVibrationNumber,
+        initialTag: _selectedTag,
+        availableTags: availableTags,
+        userData: widget.userData,
+        onApply: (scope, date, vibration, tag) {
+          setState(() {
+            _currentScope = scope;
+            _selectedDate = date;
+            _selectedVibrationNumber = vibration;
+            _selectedTag = tag;
+             _clearSelection();
+          });
+          Navigator.pop(context);
+        },
+        onClearInPanel: () {
+          setState(() {
+              _currentScope = TaskViewScope.todas;
+              _selectedDate = null;
+              _selectedVibrationNumber = null;
+              _selectedTag = null;
+          });
+        },
       ),
     );
   }

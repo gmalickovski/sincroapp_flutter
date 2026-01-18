@@ -15,6 +15,7 @@ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_pan
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/journal_filter_panel.dart';
+import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 enum JournalViewScope { todas }
@@ -60,47 +61,31 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   void _openFilterUI() {
-    final RenderBox? renderBox =
-        _filterButtonKey.currentContext?.findRenderObject() as RenderBox?;
-    final offset = renderBox != null
-        ? renderBox.localToGlobal(Offset.zero)
-        : const Offset(0, 0);
-    final size = renderBox?.size ?? const Size(0, 0);
-
-    showDialog(
-      context: context,
-      barrierColor: Colors.transparent,
-      builder: (context) => Stack(
-        children: [
-          Positioned(
-            top: offset.dy + size.height + 8,
-            right: MediaQuery.of(context).size.width - (offset.dx + size.width),
-            child: JournalFilterPanel(
-              initialScope: _currentScope,
-              initialDate: _dateFilter,
-              initialVibration: _vibrationFilter,
-              initialMood: _moodFilter,
-              onApply: (scope, date, vibration, mood) {
-                setState(() {
-                  _currentScope = scope;
-                  _dateFilter = date;
-                  _vibrationFilter = vibration;
-                  _moodFilter = mood;
-                });
-                Navigator.pop(context);
-              },
-              onClearInPanel: () {
-                setState(() {
-                  _currentScope = JournalViewScope.todas;
-                  _dateFilter = null;
-                  _vibrationFilter = null;
-                  _moodFilter = null;
-                });
-              },
-              userData: widget.userData,
-            ),
-          ),
-        ],
+    showSmartPopup(
+      context: _filterButtonKey.currentContext!,
+      builder: (context) => JournalFilterPanel(
+        initialScope: _currentScope,
+        initialDate: _dateFilter,
+        initialVibration: _vibrationFilter,
+        initialMood: _moodFilter,
+        onApply: (scope, date, vibration, mood) {
+          setState(() {
+            _currentScope = scope;
+            _dateFilter = date;
+            _vibrationFilter = vibration;
+            _moodFilter = mood;
+          });
+          Navigator.pop(context);
+        },
+        onClearInPanel: () {
+          setState(() {
+            _currentScope = JournalViewScope.todas;
+            _dateFilter = null;
+            _vibrationFilter = null;
+            _moodFilter = null;
+          });
+        },
+        userData: widget.userData,
       ),
     );
   }
@@ -177,15 +162,17 @@ class _JournalScreenState extends State<JournalScreen> {
                           color: Colors.white,
                           fontSize: isDesktop ? 32 : 28,
                           fontWeight: FontWeight.bold)),
-                  Badge(
+                  IconButton(
                     key: _filterButtonKey,
-                    isLabelVisible: _isFilterActive,
-                    child: OutlinedButton.icon(
-                      onPressed: _openFilterUI,
-                      icon: const Icon(Icons.filter_list, size: 18),
-                      label: const Text("Filtros"),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.secondaryText,
+                    onPressed: _openFilterUI,
+                    icon: Icon(
+                      Icons.filter_alt_outlined,
+                      color: _isFilterActive ? AppColors.primary : AppColors.secondaryText,
+                    ),
+                    tooltip: 'Filtros',
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                         side: BorderSide(
                             color: _isFilterActive
                                 ? AppColors.primary
