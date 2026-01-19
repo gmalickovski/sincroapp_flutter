@@ -413,7 +413,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      backgroundColor: Colors.transparent,
       builder: (context) {
         return ContactPickerModal(
           preSelectedUsernames: _sharedWithUsernames,

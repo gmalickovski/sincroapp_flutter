@@ -151,7 +151,6 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      backgroundColor: Colors.transparent,
       builder: (context) => const AddContactModal(),
     ).then((_) {
       // Refresh contacts on return
