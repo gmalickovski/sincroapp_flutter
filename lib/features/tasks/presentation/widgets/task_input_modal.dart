@@ -413,9 +413,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85,
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
         return ContactPickerModal(
           preSelectedUsernames: _sharedWithUsernames,
