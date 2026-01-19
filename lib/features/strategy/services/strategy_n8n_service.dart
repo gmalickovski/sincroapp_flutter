@@ -108,13 +108,19 @@ class StrategyN8NService {
       },
       'profession': professionName,
       'formatting_instructions': '''
-1. Calcule o Score de Compatibilidade em degraus de 5% (ex: 55%, 60%, 85%...).
-2. Forneça a análise detalhada como de costume.
-3. CONDICIONAL "Profissões Ideais":
-   - Se Score >= 90%: NÃO inclua esta seção.
-   - Se Score < 90%: Sugira 3 profissões que teriam compatibilidade de 90% a 100% com o perfil numerológico.
-     IMPORTANTE: As profissões sugeridas DEVEM ser calculadas para ter um Score ALTO (>= 90%). Não sugira algo que resultaria em 70%.
-   Misture áreas correlatas e distintas.
+1. **LÓGICA DE PRECISÃO (5%):** O cálculo deve ser preciso. Use os "Ajustes Finos" (Afinidade +5%/+15%, Missão +5%/+10%) para chegar a resultados como 55%, 65%, 85%, 95%. Não arrede apenas para 10 em 10.
+
+2. **ANÁLISE DETALHADA:** Forneça a análise da profissão solicitada como de costume.
+
+3. **"PROFISSÕES IDEAIS" (CRITÉRIO RIGOROSO - 90% a 100%):**
+   - Esta seção é CONDICIONAL. Só exiba se o Score da profissão principal for < 90%.
+   - **REGRA DE OURO:** Antes de sugerir uma profissão, você DEVE calcular mentalmente o score dela usando a tabela e as regras acima.
+   - **VERIFICAÇÃO:**
+     - Simule o cálculo: (50% Base +/- Matriz +/- Afinidade + Missão).
+     - Resultado < 90%? -> **DESCARTE**. Não sugira.
+     - Resultado >= 90%? -> **APROVADO**. Pode sugerir.
+   - Liste 3 profissões que passaram nesse teste de verificação.
+   - Se for difícil encontrar, busque variações ou nichos específicos que se alinhem perfeitamente com a Expressão e Destino do usuário.
 ''',
       'timestamp': DateTime.now().toIso8601String(),
     };
