@@ -501,26 +501,43 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
   }
   
 
-  /// Parse score percentage from AI analysis text (searches for patterns like "80%")
   int _parseScoreFromAnalysis(String text) {
-    // 1. Try to find explicit "compatibilidade é de XX%" pattern
-    final specificRegex = RegExp(r'compatibilidade.*?(\d{1,3})\s*%', caseSensitive: false);
-    final specificMatch = specificRegex.firstMatch(text);
-    if (specificMatch != null) {
-      final value = int.tryParse(specificMatch.group(1)!) ?? 0;
-      return value.clamp(0, 100);
+    // 1. High Priority: Look for "compatibilidade é de **XX%**" (Standard N8N Prompt)
+    final strictRegex = RegExp(r'compatibilidade é de \**(\d{1,3})%\**', caseSensitive: false);
+    final strictMatch = strictRegex.firstMatch(text);
+    if (strictMatch != null) {
+       return int.tryParse(strictMatch.group(1)!)?.clamp(0, 100) ?? 0;
     }
 
-    // 2. Fallback: Find ALL percentage matches and use the LAST one
-    // (Usually the final score is stated at the end or in the summary)
-    final regex = RegExp(r'(\d{1,3})\s*%');
-    final matches = regex.allMatches(text);
-    if (matches.isNotEmpty) {
-      // Filter out small percentages unlikely to be the score (e.g. 5%, 10% adjustments) 
-      // if we have multiple. But simplest is trust the last one which is the total.
-      final lastMatch = matches.last;
-      final value = int.tryParse(lastMatch.group(1)!) ?? 0;
-      return value.clamp(0, 100);
+    // 2. High Priority: Look for "Entenda seu Score (XX%)" (Standard N8N Prompt Header)
+    final headerRegex = RegExp(r'Entenda seu Score \((\d{1,3})%\)', caseSensitive: false);
+    final headerMatch = headerRegex.firstMatch(text);
+    if (headerMatch != null) {
+       return int.tryParse(headerMatch.group(1)!)?.clamp(0, 100) ?? 0;
+    }
+
+    // 3. Medium Priority: Look for "Score de XX%"
+    final scoreRegex = RegExp(r'Score de \**(\d{1,3})%\**', caseSensitive: false);
+    final scoreMatch = scoreRegex.firstMatch(text);
+    if (scoreMatch != null) {
+       return int.tryParse(scoreMatch.group(1)!)?.clamp(0, 100) ?? 0;
+    }
+
+    // 4. Fallback: Find the FIRST percentage that is NOT "100%" (unless it's the only one)
+    // We avoid "100%" because it often appears in text like "100% focado", "100% garantido"
+    final fallbackRegex = RegExp(r'(\d{1,3})\s*%');
+    final matches = fallbackRegex.allMatches(text);
+    
+    for (final m in matches) {
+      final val = int.tryParse(m.group(1)!) ?? 0;
+      // If we find a specific number like 35, 65, 90, we take it.
+      // We skip 100, 50, 30, 20 IF they appear in "weights" context (hard to detect here but we try safe guess)
+      // Actually, safest is to rely on strict patterns above. 
+      // This fallback is only if strict fails.
+      if (val != 100 && val != 50 && val != 30 && val != 20) { 
+         // returns the first "non-weight-looking" number
+         return val.clamp(0, 100); 
+      }
     }
     
     return 0;

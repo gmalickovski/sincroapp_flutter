@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 
 class StrategyN8NService {
   static const String _webhookEnvKey = 'SINCROFLOW_WEBHOOK';
@@ -97,20 +98,47 @@ class StrategyN8NService {
       throw Exception('Configuration Error: Webhook URL missing.');
     }
 
+    // 1. Calculate reduced expression (keeping master numbers 11/22)
+    final expressionRaw = profile.numeros['expressao'] ?? 0;
+    final expressionReduced = NumerologyEngine.reduceNumber(expressionRaw, mestre: true);
+    
+    // 2. Lookup Ground Truth Content
+    // Try exact match (e.g. 11, 22). If not found (e.g. 33), reduce to single digit (6).
+    VibrationContent? aptitudeContent = ContentData.textosAptidoesProfissionais[expressionReduced];
+    if (aptitudeContent == null) {
+      final singleDigit = NumerologyEngine.reduceNumber(expressionRaw, mestre: false);
+      aptitudeContent = ContentData.textosAptidoesProfissionais[singleDigit];
+    }
+
+    // 3. Prepare Ground Truth Data
+    final Map<String, dynamic> groundTruth = aptitudeContent != null 
+        ? {
+            'title': aptitudeContent.titulo,
+            'short_description': aptitudeContent.descricaoCurta,
+            'description': aptitudeContent.descricaoCompleta,
+            'keywords': aptitudeContent.tags.join(', '),
+          }
+        : {};
+
     final payload = {
+      'action': 'professional_aptitude',
       'user': {
         'name': user.primeiroNome,
         'numerology': {
-          'expression': NumerologyEngine.reduceNumber(profile.numeros['expressao'] ?? 0, mestre: true),
+          'expression': expressionReduced,
           'destiny': NumerologyEngine.reduceNumber(profile.numeros['destino'] ?? 0, mestre: true),
-          'path': NumerologyEngine.reduceNumber(profile.numeros['missao'] ?? 0, mestre: true), // Mission (Correctly Reduced)
+          'path': NumerologyEngine.reduceNumber(profile.numeros['missao'] ?? 0, mestre: true),
         }
       },
       'profession': professionName,
+      'context': {
+        'aptitude_ground_truth': groundTruth,
+      },
       'formatting_instructions': '''
 1. **LÓGICA DE PRECISÃO (5%):** O cálculo deve ser preciso. Use os "Ajustes Finos" (Afinidade +5%/+15%, Missão +5%/+10%) para chegar a resultados como 55%, 65%, 85%, 95%. Não arrede apenas para 10 em 10.
 
-2. **ANÁLISE DETALHADA:** Forneça a análise da profissão solicitada como de costume.
+2. **ANÁLISE DETALHADA:** Forneça a análise da profissão solicitada.
+   - **CONSISTÊNCIA (CRUCIAL):** Utilize as informações de "aptitude_ground_truth" (se disponíveis) para embasar a descrição dos pontos fortes do Número de Expressão. Não alucine características que contradigam esse texto base.
 
 3. **"PROFISSÕES IDEAIS" (CRITÉRIO RIGOROSO - 90% a 100%):**
    - Esta seção é CONDICIONAL. Só exiba se o Score da profissão principal for < 90%.
