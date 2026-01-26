@@ -48,14 +48,23 @@ h6 {
 }
 
 .container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 24px;
+    padding: 0 40px;
 }
 
 /* Hero Section */
+/* Hero Section - Standardized */
+/* Hero Section - Standardized across all pages - STRICT ENFORCEMENT */
 .hero {
-    padding: 160px 0 100px;
+    margin-top: -80px;
+    padding-top: 160px;
+    padding-bottom: 120px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
     text-align: center;
     position: relative;
     overflow: hidden;
@@ -64,20 +73,37 @@ h6 {
 .hero::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0, 0, 0, 0) 70%);
-    opacity: 0.4;
-    filter: blur(60px);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Standard Gradient */
+    background: radial-gradient(ellipse at top, var(--accent-primary) 0%, rgba(17, 24, 39, 0) 70%);
+    opacity: 0.25;
+    filter: blur(80px);
+    pointer-events: none;
     z-index: 0;
 }
 
 .hero .container {
     position: relative;
     z-index: 10;
+}
+
+.hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    letter-spacing: -1px;
+    line-height: 1.2;
+}
+
+.hero p {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
 }
 
 /* Values Grid */
@@ -138,4 +164,26 @@ h6 {
 
 .creator-info {
     padding: 32px;
+}
+
+/* Responsiveness */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 20px;
+    }
+
+    /* Hero - Standardized mobile */
+    .hero {
+        margin-top: -80px !important;
+        padding: 140px 20px 80px !important;
+        min-height: auto !important;
+    }
+
+    .hero h1 {
+        font-size: 28px !important;
+    }
+
+    .hero p {
+        font-size: 16px !important;
+    }
 }

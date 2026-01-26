@@ -334,7 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function fetchFeatures() {
     try {
-        const response = await fetch('/api/features');
+        const response = await fetch('/api/features?context=landing');
         const data = await response.json();
         const container = document.getElementById('features-scroll-container');
 

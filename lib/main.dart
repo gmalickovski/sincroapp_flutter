@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:workmanager/workmanager.dart'; // 🚀 Import Workmanager
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
@@ -14,13 +15,55 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 
-// --- INÍCIO DAS NOVAS IMPORTAÇÕES ---
 import 'package:sincro_app_flutter/services/notification_service.dart';
 import 'package:sincro_app_flutter/services/payment_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import completo (User vem daqui)
-import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/core/theme/app_theme.dart'; // IMPORT APP THEME
-// --- FIM DAS NOVAS IMPORTAÇÕES ---
+import 'package:supabase_flutter/supabase_flutter.dart'; // Restore Supabase import
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // Restore Service import
+import 'package:sincro_app_flutter/core/theme/app_theme.dart'; // Restore Theme import
+// ... other imports
+
+// --- WORKMANAGER CALLBACK (Must be top-level or static) ---
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    // 1. Initialize Flutter Bindings
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // 2. Initialize Supabase (Hardcoded for background reliability or pass via inputData if possible)
+    // Using hardcoded fallback ensures it works even if .env fails in isolate
+    try {
+      await Supabase.initialize(
+        url: 'https://supabase.studiomlk.com.br', 
+        anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3MTYzMTYyLCJleHAiOjIwODI1MjMxNjIsInJlZiI6InNpbmNyb2FwcF9hbm9uIn0.fxAcgzxGZe3ybA1-Ocu2AhvlNPuM2-ysE05IAcgfBaA',
+      );
+    } catch (e) {
+      debugPrint('Workmanager: Supabase init error (might be already init): $e');
+    }
+
+    // 3. Perform Background Check
+    // We need the User ID. Since we can't easily access Auth State in background isolate without persisting it securely to SharedPrefs or SecureStorage and reading it here.
+    // For now, we will assume we can check general updates or if inputs provided userId.
+    // NOTE: In a real "Robust" app, you'd save UserId to SharedPreferences and read it here.
+    // implemented below as a simulated check or strictly for timed notifications.
+    
+    try {
+      await NotificationService.instance.init();
+      // Example: Check for unread notifications if we had the User ID
+      // For now, let's just log or perform a simple "Alive" check.
+      // Ideally: 
+      // final prefs = await SharedPreferences.getInstance();
+      // final userId = prefs.getString('userId');
+      // if (userId != null) await NotificationService.instance.checkForUnread(userId);
+      
+      debugPrint("Workmanager: Background Sync Executed!");
+    } catch (e) {
+      debugPrint("Workmanager: Output error: $e");
+    }
+
+    return Future.value(true);
+  });
+}
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,10 +72,35 @@ Future<void> main() async {
   // 🚀 Carrega o arquivo .env
   try {
     await dotenv.load(fileName: ".env");
-    // debugPrint('📄 Arquivo .env carregado com sucesso.');
   } catch (e) {
     debugPrint('⚠️ Erro ao carregar .env: $e');
   }
+  
+  // Initialize Workmanager
+  if (!kIsWeb) {
+    try {
+      Workmanager().initialize(
+        callbackDispatcher, 
+        isInDebugMode: kDebugMode // Set to false in production
+      );
+      // Register Periodic Task (15 min minimum on Android)
+      Workmanager().registerPeriodicTask(
+        "1", 
+        "simplePeriodicTask", 
+        frequency: const Duration(minutes: 15),
+        constraints: Constraints(
+          networkType: NetworkType.connected,
+        ),
+      );
+    } catch (e) {
+      debugPrint('⚠️ Workmanager init failed: $e');
+    }
+  }
+
+  // ========================================
+  // INICIALIZAÇÃO SUPABASE (USANDO .ENV)
+  // ========================================
+
 
   // ========================================
   // INICIALIZAÇÃO SUPABASE (USANDO .ENV)

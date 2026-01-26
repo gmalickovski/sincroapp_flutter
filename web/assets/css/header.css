@@ -1,33 +1,62 @@
 /* ================================================
    SHARED HEADER STYLES
    Injected automatically by main-header.js
+   standardized based on Home Page reference
    ================================================ */
 
-/* Header Core */
+/* Ensure standardized box-sizing for header elements */
+.header,
+.header * {
+    box-sizing: border-box;
+}
+
 /* Header Core */
 .header {
-    background-color: rgba(17, 24, 39, 0.95) !important;
+    background-color: rgba(17, 24, 39, 0.9);
+    /* Fallback */
+    /* If --bg is defined, we can use it, but we need opacity. 
+       Keeping rgba(17, 24, 39, 0.9) to match the approved look. */
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid #374151;
-    /* var(--border) fallback */
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border, #374151);
+    /* Use variable with fallback */
     position: fixed;
-    /* Fixed instead of sticky */
     top: 0;
+    left: 0;
     z-index: 100;
-    padding: 16px 0;
+    padding: 16px 0 !important;
     width: 100%;
+    line-height: 1.5 !important;
+    /* Reset line-height to prevent body inheritance issues */
+}
+
+/* Spacer logic */
+#main-header {
+    display: block;
+    width: 100%;
+    min-height: 80px !important;
 }
 
 .header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 100%;
-    margin: 0;
-    padding: 0 40px;
     width: 100%;
+    /* Standardize Container Width to match Page Content (e.g. Home is 1400px) */
+    max-width: 1400px !important;
+    margin: 0 auto;
+    /* Center it */
+    padding: 0 40px !important;
+    /* Internal spacing */
     position: relative;
-    height: 48px;
+    height: 48px !important;
+}
+
+/* Responsive Container Padding */
+@media (max-width: 768px) {
+    .header-container {
+        padding: 0 20px;
+    }
 }
 
 /* Logo Sizing & Visibility */
@@ -39,17 +68,27 @@
 }
 
 .logo-svg-main {
-    height: auto;
+    height: 32px !important;
+    /* Enforce standard height */
+    width: auto;
     display: block;
-    /* Tailwind classes handle sizing: w-32 md:w-auto h-auto md:h-8 */
 }
 
-/* Fallback for logo if Tailwind fails */
-@media (min-width: 768px) {
+/* Mobile: Center logo absolutely */
+@media (max-width: 767px) {
+    .logo-link {
+        position: absolute !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
     .logo-svg-main {
-        height: 32px;
-        /* md:h-8 */
-        width: auto;
+        height: 28px !important;
+        /* Slightly smaller on mobile */
+        width: auto !important;
     }
 }
 
@@ -57,24 +96,19 @@
 .hamburger-btn {
     position: relative !important;
     width: 24px !important;
-    /* Reduced from 32px */
     height: 24px !important;
-    /* Reduced from 32px */
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
     align-items: center !important;
     gap: 5px !important;
-    /* Slightly reduced gap */
     background: transparent !important;
     border: none !important;
     cursor: pointer !important;
     z-index: 60 !important;
     padding: 0 !important;
-    /* Above mobile menu */
 }
 
-/* CRITICAL: Hide hamburger on desktop (using ID for higher specificity) */
 @media (min-width: 768px) {
 
     #menu-toggle,
@@ -86,9 +120,8 @@
 
 .hamburger-line {
     width: 18px !important;
-    /* Reduced from 24px */
     height: 2px !important;
-    background-color: white !important;
+    background-color: var(--text-primary, #FFFFFF) !important;
     border-radius: 2px !important;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     transform-origin: center !important;
@@ -111,7 +144,6 @@
 
 /* Desktop Navigation */
 .header-nav-center {
-    /* Hidden on mobile, visible on desktop */
     display: none;
     align-items: center;
     gap: 32px;
@@ -120,7 +152,6 @@
     transform: translateX(-50%);
 }
 
-/* CRITICAL: Show nav on desktop */
 @media (min-width: 768px) {
     .header-nav-center {
         display: flex !important;
@@ -130,24 +161,35 @@
 .nav-link {
     font-size: 14px;
     font-weight: 500;
-    color: #9CA3AF;
-    /* var(--text-secondary) */
+    color: var(--text-secondary, #9CA3AF);
     transition: all 0.3s ease;
     text-decoration: none;
     padding: 8px 16px;
     border-radius: 9999px;
     position: relative;
     font-family: 'Poppins', sans-serif;
+    /* Enforce font */
+    white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+    .header-nav-center {
+        gap: 16px;
+    }
+
+    .nav-link {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
 }
 
 .nav-link:hover {
-    color: #FFFFFF;
+    color: var(--text-primary, #FFFFFF);
     background-color: rgba(255, 255, 255, 0.05);
 }
 
 .nav-link.active {
-    color: #a78bfa;
-    /* var(--accent-secondary) */
+    color: var(--accent-secondary, #a78bfa);
     background-color: rgba(124, 58, 237, 0.15);
     box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
     border: 1px solid rgba(139, 92, 246, 0.2);
@@ -156,9 +198,7 @@
 /* Mobile Menu Overlay */
 #mobile-menu {
     position: fixed;
-    /* Fixed to match header */
     top: 80px;
-    /* Height of header approx */
     left: 0;
     width: 100%;
     background-color: rgba(17, 24, 39, 0.95);
@@ -175,7 +215,6 @@
     z-index: 50;
     overflow: hidden;
     display: block !important;
-    /* Force display so transform works */
 }
 
 @media (min-width: 768px) {
@@ -190,30 +229,62 @@
     visibility: visible;
 }
 
+.mobile-menu-inner {
+    padding: 12px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.mobile-nav-link {
+    display: block;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text-secondary, #9CA3AF);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    font-family: 'Poppins', sans-serif;
+}
+
+.mobile-nav-link:hover {
+    color: var(--text-primary, #FFFFFF);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-nav-link.active {
+    color: var(--text-primary, #FFFFFF);
+    background-color: rgba(124, 58, 237, 0.15);
+    border-left: 3px solid var(--accent-primary, #7C3AED);
+}
+
 /* Button Outline (Header Actions) */
 .btn-outline {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     padding: 0.5rem 1.5rem !important;
-    border: 1px solid #374151 !important;
+    border: 1px solid var(--border, #374151) !important;
     border-radius: 9999px !important;
     font-size: 0.875rem !important;
+    /* 14px */
     font-weight: 500 !important;
-    color: #FFFFFF !important;
+    color: var(--text-primary, #FFFFFF) !important;
     background-color: transparent !important;
     transition: all 0.3s ease !important;
     text-decoration: none !important;
     white-space: nowrap !important;
+    font-family: 'Poppins', sans-serif !important;
 }
 
 .btn-outline:hover {
-    border-color: #7C3AED;
-    color: #7C3AED;
-    background-color: rgba(124, 58, 237, 0.1);
+    border-color: var(--accent-primary, #7C3AED) !important;
+    color: var(--accent-primary, #7C3AED) !important;
+    background-color: rgba(124, 58, 237, 0.1) !important;
 }
 
-/* Responsive Text for Button */
+/* Text Visibility Classes */
 .btn-text-full {
     display: inline;
 }
@@ -222,7 +293,7 @@
     display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 600px) {
     .btn-text-full {
         display: none;
     }
@@ -230,63 +301,4 @@
     .btn-text-short {
         display: inline;
     }
-
-    .header-container {
-        padding: 0 16px;
-    }
-}
-
-/* ================================================
-   MOBILE-SPECIFIC STYLES
-   ================================================ */
-
-/* Mobile: Center logo absolutely */
-@media (max-width: 767px) {
-    .logo-link {
-        position: absolute !important;
-        left: 48% !important;
-        /* Nudge to left from 50% center */
-        transform: translateX(-50%) !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    .logo-svg-main {
-        height: 28px !important;
-        width: auto !important;
-        display: block !important;
-    }
-}
-
-/* Mobile Menu Inner Container */
-.mobile-menu-inner {
-    padding: 12px 16px 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-}
-
-/* Mobile Nav Links */
-.mobile-nav-link {
-    display: block;
-    padding: 12px 16px;
-    border-radius: 12px;
-    font-size: 16px;
-    font-weight: 500;
-    color: #9CA3AF;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    font-family: 'Poppins', sans-serif;
-}
-
-.mobile-nav-link:hover {
-    color: #FFFFFF;
-    background-color: rgba(255, 255, 255, 0.05);
-}
-
-.mobile-nav-link.active {
-    color: #FFFFFF;
-    background-color: rgba(124, 58, 237, 0.15);
-    border-left: 3px solid #7C3AED;
 }

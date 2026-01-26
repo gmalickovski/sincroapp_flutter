@@ -8,6 +8,7 @@ import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 class ParsedTask {
   final String cleanText;
   final List<String> tags;
+  final List<String> sharedWith; // NOVO
   final String? journeyId;
   final String? journeyTitle;
   final DateTime? dueDate;
@@ -19,6 +20,7 @@ class ParsedTask {
   ParsedTask({
     required this.cleanText,
     this.tags = const [],
+    this.sharedWith = const [], // NOVO
     this.journeyId,
     this.journeyTitle,
     this.dueDate,
@@ -31,6 +33,7 @@ class ParsedTask {
   ParsedTask copyWith({
     String? cleanText,
     List<String>? tags,
+    List<String>? sharedWith, // NOVO
     String? journeyId,
     String? journeyTitle,
     DateTime? dueDate,
@@ -41,6 +44,7 @@ class ParsedTask {
     return ParsedTask(
       cleanText: cleanText ?? this.cleanText,
       tags: tags ?? this.tags,
+      sharedWith: sharedWith ?? this.sharedWith, // NOVO
       journeyId: journeyId ?? this.journeyId,
       journeyTitle: journeyTitle ?? this.journeyTitle,
       dueDate: dueDate ?? this.dueDate,
@@ -94,11 +98,40 @@ class TaskParser {
           r')(?:\s+de\s+(\d{4}))?',
       caseSensitive: false);
 
-  // --- MÉTODO PARSE (SUPER SIMPLIFICADO) ---
-  // Apenas retorna o texto limpo. Tags, Metas e Datas são tratadas pela UI.
+  // Regex para Tags e Mentions
+  static final _tagPattern = RegExp(r'#[a-zA-Z0-9_À-ÿ]+');
+  static final _mentionPattern = RegExp(r'@[a-z0-9_.]+');
+
+  // --- MÉTODO PARSE ATUALIZADO ---
   static ParsedTask parse(String rawText) {
+    String text = rawText;
+    final List<String> extractedTags = [];
+    final List<String> extractedMentions = [];
+
+    // 1. Extrair Tags (#) e REMOVER do texto (para não duplicar na visualização)
+    final tagMatches = _tagPattern.allMatches(text);
+    for (final match in tagMatches) {
+      // Remove o '#'
+      extractedTags.add(match.group(0)!.substring(1));
+    }
+    // Remove as tags do texto limpo
+    text = text.replaceAll(_tagPattern, '').trim();
+
+    // 2. Extrair Mentions (@) e MANTER no texto (contexto)
+    final mentionMatches = _mentionPattern.allMatches(text);
+    for (final match in mentionMatches) {
+      // Remove o '@'
+      extractedMentions.add(match.group(0)!.substring(1));
+    }
+    // NÃO remove mentions do texto
+
+    // 3. Limpa espaços extras que podem ter sobrado após remover tags
+    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+
     return ParsedTask(
-      cleanText: rawText.trim(),
+      cleanText: text,
+      tags: extractedTags,
+      sharedWith: extractedMentions,
     );
   }
 

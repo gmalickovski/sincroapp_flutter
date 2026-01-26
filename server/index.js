@@ -152,6 +152,14 @@ const notionToHtml = (blocks) => {
             listType = null;
         }
 
+        // Helper to render children if they exist
+        const renderChildren = (children) => {
+            if (children && children.length > 0) {
+                return notionToHtml(children);
+            }
+            return '';
+        };
+
         switch (block.type) {
             case 'paragraph':
                 html += `<p>${richText(block.paragraph.rich_text)}</p>`;
@@ -168,28 +176,35 @@ const notionToHtml = (blocks) => {
             case 'bulleted_list_item':
                 if (listType !== 'ul') {
                     if (listType) html += `</${listType}>`;
-                    html += '<ul>';
+                    html += '<ul class="notion-list-disc">';
                     listType = 'ul';
                 }
-                html += `<li>${richText(block.bulleted_list_item.rich_text)}</li>`;
+                // Include nested children for list items
+                const bulletChildren = renderChildren(block.children);
+                html += `<li>${richText(block.bulleted_list_item.rich_text)}${bulletChildren}</li>`;
                 break;
             case 'numbered_list_item':
                 if (listType !== 'ol') {
                     if (listType) html += `</${listType}>`;
-                    html += '<ol>';
+                    html += '<ol class="notion-list-decimal">';
                     listType = 'ol';
                 }
-                html += `<li>${richText(block.numbered_list_item.rich_text)}</li>`;
+                // Include nested children for list items
+                const numChildren = renderChildren(block.children);
+                html += `<li>${richText(block.numbered_list_item.rich_text)}${numChildren}</li>`;
                 break;
             case 'divider':
                 html += `<hr>`;
                 break;
             case 'quote':
-                html += `<blockquote>${richText(block.quote.rich_text)}</blockquote>`;
+                const quoteChildren = renderChildren(block.children);
+                html += `<blockquote>${richText(block.quote.rich_text)}${quoteChildren}</blockquote>`;
                 break;
             case 'callout':
                 const icon = block.callout.icon?.emoji || '💡';
-                html += `<div class="callout"><span class="callout-icon">${icon}</span><div class="callout-content">${richText(block.callout.rich_text)}</div></div>`;
+                // IMPORTANT: Render nested children inside the callout
+                const calloutChildren = renderChildren(block.children);
+                html += `<div class="callout"><span class="callout-icon">${icon}</span><div class="callout-content">${richText(block.callout.rich_text)}${calloutChildren ? `<div class="callout-children">${calloutChildren}</div>` : ''}</div></div>`;
                 break;
             case 'code':
                 const lang = block.code.language || 'plaintext';
@@ -206,7 +221,9 @@ const notionToHtml = (blocks) => {
                 break;
             case 'toggle':
                 const toggleContent = richText(block.toggle.rich_text);
-                html += `<details><summary>${toggleContent}</summary><div class="toggle-content"></div></details>`;
+                // IMPORTANT: Render nested children inside the toggle
+                const toggleChildren = renderChildren(block.children);
+                html += `<details><summary>${toggleContent}</summary><div class="toggle-content">${toggleChildren}</div></details>`;
                 break;
             case 'to_do':
                 const checked = block.to_do.checked ? 'checked' : '';
@@ -373,12 +390,19 @@ app.get('/api/plans', async (req, res) => {
 app.get('/api/features', async (req, res) => {
     try {
         const FEATURES_DATABASE_ID = process.env.PLANS_DATABASE_ID || process.env.NOTION_PLANS_DATABASE_ID;
-        console.log("Fetching Features from Notion...");
+        const { context } = req.query;
+        console.log(`Fetching Features from Notion... Context: ${context || 'default(landing)'}`);
+
+        // Determine which checkbox property to filter by based on context
+        let filterProperty = "Landing Page";
+        if (context === 'blog') {
+            filterProperty = "Blog";
+        }
 
         const response = await notion.databases.query({
             database_id: FEATURES_DATABASE_ID,
             filter: {
-                property: "Landing Page",
+                property: filterProperty,
                 checkbox: { equals: true },
             },
             sorts: [
@@ -399,12 +423,6 @@ app.get('/api/features', async (req, res) => {
         console.log("Loaded Features:", features.length);
         if (features.length > 0) {
             console.log("DEBUG: Available Notion Properties:", Object.keys(response.results[0].properties));
-            console.log("Sample Feature Images:", {
-                name: features[0].name,
-                img: features[0].image,
-                mob: features[0].imgMobile,
-                desk: features[0].imgDesktop
-            });
         }
 
         res.json({ features });
@@ -415,18 +433,42 @@ app.get('/api/features', async (req, res) => {
     }
 });
 
+// Helper: Recursively fetch block children (for nested Notion content)
+const fetchBlockChildren = async (blockId, depth = 0) => {
+    const blocks = [];
+    let cursor;
+    while (true) {
+        const { results, next_cursor } = await notion.blocks.children.list({
+            block_id: blockId,
+            start_cursor: cursor,
+        });
+        blocks.push(...results);
+        if (!next_cursor) break;
+        cursor = next_cursor;
+    }
+
+    // Recursively fetch nested children for blocks that have them
+    for (const block of blocks) {
+        if (block.has_children) {
+            console.log(`[NOTION] Block ${block.type} has children, fetching...`);
+            block.children = await fetchBlockChildren(block.id, depth + 1);
+        }
+    }
+    return blocks;
+};
+
 // API Route: Get Single Feature with full content
 app.get('/api/features/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        console.log(`Fetching Feature ${id} from Notion...`);
+        console.log(`Fetching Feature ${id} from Notion (with children)...`);
 
         // Get page properties
         const page = await notion.pages.retrieve({ page_id: id });
 
-        // Get page content blocks
-        const blocks = await notion.blocks.children.list({ block_id: id });
-        const contentHtml = notionToHtml(blocks.results);
+        // Get page content blocks RECURSIVELY to capture nested content
+        const blocks = await fetchBlockChildren(id);
+        const contentHtml = notionToHtml(blocks);
 
         const feature = {
             id: page.id,

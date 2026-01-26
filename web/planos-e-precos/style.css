@@ -86,15 +86,22 @@ a {
     background: #6D28D9;
 }
 
-/* HERO SECTION */
+/* HERO SECTION - Standardized across all pages - STRICT ENFORCEMENT */
 .hero {
-    padding: 140px 0 60px;
+    margin-top: -80px;
+    padding-top: 140px;
+    padding-bottom: 140px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     position: relative;
     text-align: center;
     overflow: hidden;
 }
 
-/* Premium Gradient Glow */
+/* Background Glow for Hero - Standard Gradient */
 .hero::before {
     content: '';
     position: absolute;
@@ -122,31 +129,63 @@ a {
     line-height: 1.2;
 }
 
+.hero p,
 .hero-subtitle {
     font-size: 18px;
     color: var(--text-secondary);
-    margin-bottom: 40px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
 }
 
-/* BILLING TOGGLE (Pill Style) */
+/* BILLING TOGGLE - Sticky Implementation */
 .billing-toggle-container {
     display: flex;
     justify-content: center;
-    margin-bottom: 40px;
+    position: sticky;
+    top: 80px;
+    /* Below fixed header */
+    z-index: 40;
+    /* Above cards (z-index ~1) but below mobile menu (z-index 50) */
+    padding: 16px 0;
+    /* Vertical padding when sticky */
+    margin-bottom: 24px;
+    /* Space between toggle and cards */
+    margin-top: 0;
+    /* Reset margin to remove overlap */
+    transition: all 0.3s ease;
+}
+
+/* Add a pseudo-element for the glass effect background only when sticky/scrolled 
+   Since we can't detect scroll state easily with pure CSS without JS for specific class, 
+   we'll add a subtle background that works in both states or rely on the pill itself.
+   
+   However, for a "strip" effect requested:
+*/
+.billing-toggle-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    /* Full width strip */
+    height: 100%;
+    background: rgba(17, 24, 39, 0.85);
+    /* Dark semi-transparent background */
+    backdrop-filter: blur(12px);
+    z-index: -1;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .billing-toggle {
-    background: rgba(31, 41, 55, 0.6);
-    /* Glassy default */
-    padding: 4px;
-    border-radius: 50px;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9999px;
+    padding: 4px;
     display: inline-flex;
     position: relative;
-    backdrop-filter: blur(8px);
+    /* backdrop-filter: blur(8px); Removed as container now handles blur */
 }
 
 .toggle-btn {
@@ -560,8 +599,20 @@ a {
         padding: 0 20px;
     }
 
+    /* Hero - Standardized mobile */
+    .hero {
+        margin-top: -80px !important;
+        padding: 140px 20px 80px !important;
+        min-height: auto !important;
+    }
+
     .hero h1 {
-        font-size: 32px;
+        font-size: 28px !important;
+    }
+
+    .hero p,
+    .hero-subtitle {
+        font-size: 16px !important;
     }
 
     .pricing-grid {

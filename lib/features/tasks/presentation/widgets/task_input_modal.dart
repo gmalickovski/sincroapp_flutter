@@ -13,11 +13,14 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tag_selection_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart'; // NOVO
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/mention_input_field.dart'; // NOVO
 import 'package:sincro_app_flutter/common/widgets/mention_text_editing_controller.dart'; // NOVO
 import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart'; // NOVO
+import 'package:sincro_app_flutter/models/subscription_model.dart'; // NOVO
+
 
 // --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
 
@@ -46,9 +49,11 @@ class TaskInputModal extends StatefulWidget {
 }
 
 class _TaskInputModalState extends State<TaskInputModal> {
-  // --- IN├ìCIO DA MUDAN├çA: Controller Padr├úo ---
-  late MentionTextEditingController _textController; // MUDAN├çA: Controller com Highlight
-  // --- FIM DA MUDAN├çA ---
+  // --- INÍCIO DA MUDANÇA: Controller Padrão ---
+  late MentionTextEditingController _textController; // MUDANÇA: Controller com Highlight
+  final SupabaseService _supabaseService = SupabaseService(); // Service para buscar contatos
+  Set<String> _validUsernames = {}; // Armazena usernames válidos para o highlight
+  // --- FIM DA MUDANÇA ---
 
   DateTime _selectedDateForPill = DateTime.now();
   int _personalDay = 0;
@@ -59,6 +64,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
   // --- ESTADO PARA OS "PILLS" ---
   String? _selectedGoalId;
   String? _selectedGoalTitle;
+  DateTime? _selectedGoalDeadline; // NOVO: Armazena data da meta
   DateTime? _selectedDate; // Novo estado para a data
 
   List<String> _selectedTags = []; // Novo estado para as tags
@@ -71,20 +77,21 @@ class _TaskInputModalState extends State<TaskInputModal> {
   void initState() {
     super.initState();
 
-    // --- IN├ìCIO DA MUDAN├çA: Controller Padr├úo ---
-    _textController = MentionTextEditingController(); // MUDAN├çA
-    // --- FIM DA MUDAN├çA ---
+    // --- INÍCIO DA MUDANÇA: Controller Padrão ---
+    _textController = MentionTextEditingController(); // Inicializa vazio
+    _fetchContactsForMentions(); // Busca contatos para validar mentions
+    // --- FIM DA MUDANÇA ---
 
     DateTime initialDateForPill = DateTime.now();
 
     if (_isEditing) {
       _textController.text = widget.taskToEdit!.text;
 
-      // --- IN├ìCIO DA MUDAN├çA: Popula os "pills" em vez do texto ---
+      // --- INÍCIO DA MUDANÇA: Popula os "pills" em vez do texto ---
       _selectedTags = List.from(widget.taskToEdit!.tags);
       _sharedWithUsernames = List.from(widget.taskToEdit!.sharedWith); // NOVO
       _selectedDate = widget.taskToEdit!.dueDate?.toLocal();
-      // --- FIM DA MUDAN├çA ---
+      // --- FIM DA MUDANÇA ---
 
       initialDateForPill =
           widget.taskToEdit!.dueDate?.toLocal() ?? initialDateForPill;
@@ -98,27 +105,28 @@ class _TaskInputModalState extends State<TaskInputModal> {
       _selectedGoalId = widget.taskToEdit!.journeyId;
       _selectedGoalTitle = widget.taskToEdit!.journeyTitle;
     } else {
-      // L├│gica para NOVAS tarefas
+      // Lógica para NOVAS tarefas
       _textController.text = widget.initialTaskText ?? '';
       _selectedTime = null;
       _selectedRecurrenceRule = RecurrenceRule();
-      _selectedTags = []; // Come├ºa vazio
-      _selectedDate = null; // Garante que o pill de data n├úo apare├ºa por padr├úo
+      _selectedTags = []; // Começa vazio
+      _selectedDate = null; // Garante que o pill de data não apareça por padrão
 
-      // --- IN├ìCIO DA CORRE├ç├âO (Problema 1 e 2) ---
-      // L├│gica condicional:
-      // Se uma meta ├® pr├®-selecionada, estamos na tela de metas.
-      // Se n├úo, estamos no calend├írio ou foco.
+      // --- INÍCIO DA CORREÇÃO (Problema 1 e 2) ---
+      // Lógica condicional:
+      // Se uma meta é pré-selecionada, estamos na tela de metas.
+      // Se não, estamos no calendário ou foco.
       if (widget.preselectedGoal != null) {
-        // --- L├ôGICA DA TELA DE METAS ---
+        // --- LÓGICA DA TELA DE METAS ---
         _selectedGoalId = widget.preselectedGoal!.id;
         _selectedGoalTitle = widget.preselectedGoal!.title;
+        _selectedGoalDeadline = widget.preselectedGoal!.targetDate; // Popula deadline
 
-        // --- IN├ìCIO DA CORRE├ç├âO ---
+        // --- INÍCIO DA CORREÇÃO ---
         // As linhas que adicionavam a tag automaticamente foram REMOVIDAS.
-        // --- FIM DA CORRE├ç├âO ---
+        // --- FIM DA CORREÇÃO ---
 
-        // Usa a data inicial APENAS para a p├¡lula de vibra├º├úo (Problema 1)
+        // Usa a data inicial APENAS para a pílula de vibração (Problema 1)
         if (widget.initialDueDate != null) {
           initialDateForPill = DateTime(
             widget.initialDueDate!.year,
@@ -126,12 +134,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
             widget.initialDueDate!.day,
           );
         }
-        // _selectedDate continua nulo, ent├úo o pill de data n├úo aparece
+        // _selectedDate continua nulo, então o pill de data não aparece
       } else {
-        // --- L├ôGICA DO CALEND├üRIO / FOCO ---
-        // S├│ mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
+        // --- LÓGICA DO CALENDÁRIO / FOCO ---
+        // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
         if (widget.initialDueDate != null) {
-          // CORRE├ç├âO: Usa os componentes da data para evitar shift de fuso hor├írio (UTC -> Local)
+          // CORREÇÃO: Usa os componentes da data para evitar shift de fuso horário (UTC -> Local)
           // Se widget.initialDueDate for 29/11 00:00 UTC, toLocal() viraria 28/11 21:00 (BRT).
           // Ao usar DateTime(y,m,d), criamos 29/11 00:00 Local, mantendo o dia correto.
           initialDateForPill = DateTime(
@@ -144,12 +152,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
           _selectedDate = initialDateForPill;
         }
       }
-      // --- FIM DA CORRE├ç├âO ---
+      // --- FIM DA CORREÇÃO ---
     }
 
     // --- REMOVIDO: _textController.addListener(_onTextChanged) ---
 
-    // Define a data para a p├¡lula de vibra├º├úo (usa data selecionada ou a data inicial)
+    // Define a data para a pílula de vibração (usa data selecionada ou a data inicial)
     _selectedDateForPill = _selectedDate ?? initialDateForPill;
     if (widget.userData != null) {
       _updateVibrationForDate(_selectedDateForPill);
@@ -161,6 +169,29 @@ class _TaskInputModalState extends State<TaskInputModal> {
       _textController.selection = TextSelection.fromPosition(
           TextPosition(offset: _textController.text.length));
     });
+  }
+
+  // --- NOVO MÉTODO (Carregar contatos para validação) ---
+  Future<void> _fetchContactsForMentions() async {
+    try {
+      final currentUserId = widget.userId;
+      final contacts = await _supabaseService.getContacts(currentUserId);
+      
+      if (mounted) {
+        setState(() {
+          // Filtra ativos e mapeia para usernames não nulos
+          _validUsernames = contacts
+              .where((c) => c.status == 'active' && c.username != null)
+              .map((c) => c.username!)
+              .toSet();
+              
+          // Atualiza o controller com a lista válida para pintar de zul
+          _textController.updateValidMentions(_validUsernames);
+        });
+      }
+    } catch (e) {
+      debugPrint("Erro ao carregar contatos para mentions: $e");
+    }
   }
 
   // --- REMOVIDO: _onTextChanged ---
@@ -233,6 +264,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       setState(() {
         _selectedGoalId = result.id;
         _selectedGoalTitle = result.title;
+        _selectedGoalDeadline = result.targetDate; // Captura deadline da seleção
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
       _openCreateGoalWidget();
@@ -327,6 +359,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
         initialTime: _selectedTime,
         initialRecurrence: ruleToPass,
         userData: widget.userData!,
+        goalDeadline: _selectedGoalDeadline, // Passa o prazo para validação
       ),
     ).then((result) {
       if (result != null) {
@@ -375,19 +408,32 @@ class _TaskInputModalState extends State<TaskInputModal> {
       return;
     }
 
-    // 2. Parser simplificado (s├¡ncrono)
+    // 2. Parser simplificado (síncrono)
     final ParsedTask textParseResult = TaskParser.parse(rawText);
+
+    // MERGE: Combina tags/mentions do texto com as selecionadas via Pill
+    final Set<String> mergedTags = {
+      ..._selectedTags,
+      ...textParseResult.tags
+    };
+    
+    // MERGE: Combina mentions do texto com as selecionadas no Modal de Contatos
+    final Set<String> mergedSharedWith = {
+      ..._sharedWithUsernames,
+      ...textParseResult.sharedWith
+    };
 
     // 3. Define a data
     final ParsedTask finalParsedTask = textParseResult.copyWith(
-      // cleanText j├í est├í correto vindo do parse
+      // cleanText já veio limpo do parser (sem tags)
       dueDate: _selectedDate, // Envia a data do "pill" (pode ser null)
       reminderTime: _selectedTime,
       recurrenceRule: _selectedRecurrenceRule,
-      tags: _selectedTags, // Envia a lista de tags
+      tags: mergedTags.toList(), // Envia lista unificada
+      sharedWith: mergedSharedWith.toList(), // Envia lista unificada
       journeyId: _selectedGoalId, // Envia o ID da meta
-      journeyTitle: _selectedGoalTitle, // Envia o T├¡tulo da meta
-      // O Dia Pessoal ser├í recalculado no foco_do_dia_screen com base na data
+      journeyTitle: _selectedGoalTitle, // Envia o Título da meta
+      // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
     ).copyWith(
         reminderAt: () {
             // Calculate numeric reminderAt
@@ -469,6 +515,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
   // --- IN├ìCIO DA MUDAN├çA: build() atualizado com "Pills" ---
   @override
   Widget build(BuildContext context) {
+    // NOVO: Debug print to understand why button is hidden
+    // ignore: avoid_print
+    if (widget.userData != null) {
+      print('DEBUG: User Plan String is "${widget.userData!.plano}"');
+      print('DEBUG: User Enum Plan is "${widget.userData!.subscription.plan}"');
+    }
+
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -521,8 +574,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   runSpacing: 4.0, // Espa├ºo vertical entre as linhas de pills
                   children: [
                     // Pill da Meta (l├│gica que j├í t├¡nhamos)
+                    // Pill da Meta (EXIBIDO APENAS SE NÃO FOR PRÉ-SELECIONADO)
                     if (_selectedGoalTitle != null &&
-                        _selectedGoalTitle!.isNotEmpty)
+                        _selectedGoalTitle!.isNotEmpty &&
+                        widget.preselectedGoal == null)
                       _buildPill(
                         label: _selectedGoalTitle!,
                         icon: Icons.flag_rounded,
@@ -533,6 +588,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                                 setState(() {
                                   _selectedGoalId = null;
                                   _selectedGoalTitle = null;
+                                  _selectedGoalDeadline = null; // Limpa deadline
                                 });
                               },
                       ),
@@ -598,26 +654,28 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     color:
                         _selectedTags.isNotEmpty ? Colors.purpleAccent : null,
                   ),
-                  _buildActionButton(
-                    icon: Icons.flag_outlined,
-                    onTap: widget.preselectedGoal != null ? null : _selectGoal,
-                    color: _selectedGoalId != null
-                        ? Colors.cyanAccent
-                        : (widget.preselectedGoal != null
-                            ? AppColors.tertiaryText.withOpacity(0.3)
-                            : AppColors.tertiaryText),
-                  ),
+                  // Botão de Meta (EXIBIDO APENAS SE NÃO FOR PRÉ-SELECIONADO)
+                  if (widget.preselectedGoal == null)
+                    _buildActionButton(
+                      icon: Icons.flag_outlined,
+                      onTap: _selectGoal,
+                      color: _selectedGoalId != null ? Colors.cyanAccent : null,
+                    ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
                     onTap: _showDatePickerModal, // Chama o novo modal
                     color: _selectedDate != null ? Colors.orangeAccent : null,
                   ),
-                  // NOVO: Botão para abrir o Contact Picker
-                  _buildActionButton(
-                    icon: Icons.person_add_alt,
-                    onTap: _openContactPicker,
-                    color: _sharedWithUsernames.isNotEmpty ? Colors.lightBlueAccent : null,
-                  ),
+
+                  
+                  // NOVO: Botão para abrir o Contact Picker (Apenas para planos > essencial/free)
+                  if (widget.userData != null && 
+                      widget.userData!.subscription.plan != SubscriptionPlan.free)
+                    _buildActionButton(
+                      icon: Icons.person_outline,
+                      onTap: _openContactPicker,
+                      color: _sharedWithUsernames.isNotEmpty ? Colors.lightBlueAccent : null, // keep consistent
+                    ),
                   const Spacer(),
                   if (_personalDay > 0)
                     Padding(

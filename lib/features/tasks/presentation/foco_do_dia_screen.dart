@@ -170,34 +170,29 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   void _createRecurringTasks(ParsedTask parsedTask) {
+    // Geração de ID único para agrupar (se necessário no futuro)
     final String recurrenceId = _uuid.v4();
-    final List<DateTime> dates = _calculateRecurrenceDates(
-        parsedTask.recurrenceRule, parsedTask.dueDate);
+    
+    // A logica antiga gerava 100+ tarefas. 
+    // A nova lógica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a próxima ao concluir.
+    
+    // Usa a data definida ou 'Hoje'
+    final firstDate = parsedTask.dueDate ?? DateTime.now();
+    
+    final taskForFirstDate = parsedTask.copyWith(
+      dueDate: firstDate,
+    );
 
-    if (dates.isEmpty) {
-      _showErrorSnackbar(
-          "Nenhuma data futura encontrada para esta recorrência.");
-      return;
-    }
+    // Cria apenas uma tarefa
+    _createSingleTask(taskForFirstDate, recurrenceId: recurrenceId);
 
-    // --- INÍCIO DA MUDANÇA: Usar o loop 'for' (do código comentado) ---
-    // Isso garante que cada tarefa passe por _createSingleTask,
-    // que agora calcula e salva o Dia Pessoal corretamente.
-    // O Batch Write foi removido pois não tínhamos como injetar o cálculo do Dia Pessoal.
-    for (final date in dates) {
-      final taskForDate = parsedTask.copyWith(
-        dueDate: date,
-      );
-      // Chamando _createSingleTask, que agora lida com o Dia Pessoal
-      _createSingleTask(taskForDate, recurrenceId: recurrenceId);
-    }
-
-    // Sugestão para o usuário aguardar a criação
+    // Feedback visual simples
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Criando tarefas recorrentes...'),
+          content: Text('Tarefa recorrente criada!'),
           duration: Duration(seconds: 2),
+          backgroundColor: AppColors.primary,
         ),
       );
     }
@@ -989,10 +984,36 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       return Container(
         padding: const EdgeInsets.symmetric(vertical: 4.0),
         child: Row(
-          mainAxisAlignment:
-              MainAxisAlignment.spaceBetween, // Garante separação
           children: [
-            // Botão Excluir (Lado Esquerdo)
+            // 1. Selecionar Todas (Primeiro, Esquerda)
+            Transform.scale(
+              scale: 0.9,
+              child: Checkbox(
+                value: allSelected,
+                onChanged: tasksToShow.isEmpty
+                    ? null
+                    : (value) => _selectAll(tasksToShow),
+                visualDensity: VisualDensity.compact,
+                checkColor: Colors.white,
+                activeColor: AppColors.primary,
+                side: const BorderSide(color: AppColors.border, width: 2),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4)),
+              ),
+            ),
+            InkWell(
+              onTap: tasksToShow.isEmpty
+                  ? null
+                  : () => _selectAll(tasksToShow),
+              child: const Text(
+                'Selecionar Todas',
+                style: TextStyle(color: AppColors.secondaryText),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            // 2. Excluir (Segundo, Logo após)
             TextButton.icon(
               icon: Icon(Icons.delete_outline_rounded,
                   color: count > 0 ? Colors.redAccent : AppColors.tertiaryText),
@@ -1004,44 +1025,13 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
               onPressed: count > 0 ? _deleteSelectedTasks : null,
             ),
 
-            // Controles do Lado Direito
-            Flexible(
-              child: Row(
-                mainAxisAlignment:
-                    MainAxisAlignment.end, // Alinha controles à direita
-                children: [
-                  Checkbox(
-                    value: allSelected,
-                    onChanged: tasksToShow.isEmpty
-                        ? null
-                        : (value) => _selectAll(tasksToShow),
-                    visualDensity: VisualDensity.compact, // Reduz o padding
-                    checkColor: Colors.white,
-                    activeColor: AppColors.primary,
-                    side: const BorderSide(color: AppColors.border, width: 2),
-                  ),
-                  // Envolve o InkWell/Texto em Flexible
-                  Flexible(
-                    child: InkWell(
-                      onTap: tasksToShow.isEmpty
-                          ? null
-                          : () => _selectAll(tasksToShow),
-                      child: const Text(
-                        'Selecionar Todas',
-                        style: TextStyle(color: AppColors.secondaryText),
-                        overflow: TextOverflow
-                            .ellipsis, // Corta o texto se for muito longo
-                        softWrap: false,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
-                    onPressed: _clearSelection,
-                    tooltip: 'Cancelar seleção',
-                  ),
-                ],
-              ),
+            const Spacer(),
+
+            // 3. Fechar (Direita)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.white),
+              onPressed: _clearSelection,
+              tooltip: 'Cancelar seleção',
             ),
           ],
         ),

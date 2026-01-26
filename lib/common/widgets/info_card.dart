@@ -147,43 +147,38 @@ class _InfoCardState extends State<InfoCard> {
         : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
-    final cardContent = ClipRRect(
-      borderRadius: BorderRadius.circular(16.0),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: borderColor, width: borderWidth),
-            // Hover effect now uses only the border; keep a subtle, constant shadow
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x26000000),
-                blurRadius: 10,
-                offset: Offset(0, 5),
-              )
-            ],
+    // Use a solid high-opacity color instead of Blur for performance
+    final cardContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: borderColor, width: borderWidth),
+        // Hover effect now uses only the border; keep a subtle, constant shadow
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          )
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            // *** PADDING INTERNO REDUZIDO PARA MELHOR LAYOUT ***
+            padding: const EdgeInsets.all(20.0),
+            child: widget.isDesktopLayout
+                ? _buildDesktopLayout(displayTitle)
+                : _buildMobileLayout(displayTitle),
           ),
-          child: Stack(
-            children: [
-              Padding(
-                // *** PADDING INTERNO REDUZIDO PARA MELHOR LAYOUT ***
-                padding: const EdgeInsets.all(20.0),
-                child: widget.isDesktopLayout
-                    ? _buildDesktopLayout(displayTitle)
-                    : _buildMobileLayout(displayTitle),
-              ),
-              if (widget.dragHandle != null)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: widget.dragHandle!,
-                ),
-            ],
-          ),
-        ),
+          if (widget.dragHandle != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: widget.dragHandle!,
+            ),
+        ],
       ),
     );
 

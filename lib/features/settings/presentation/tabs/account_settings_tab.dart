@@ -36,8 +36,16 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
   @override
   void initState() {
     super.initState();
+    var cleanFirstName = widget.userData.primeiroNome;
+    final lastName = widget.userData.sobrenome;
+    
+    // Fix: Remove surname if it appears in the first name field
+    if (lastName.isNotEmpty && cleanFirstName.toLowerCase().endsWith(lastName.toLowerCase())) {
+       cleanFirstName = cleanFirstName.substring(0, cleanFirstName.toLowerCase().lastIndexOf(lastName.toLowerCase())).trim();
+    }
+
     _firstNameController =
-        TextEditingController(text: widget.userData.primeiroNome);
+        TextEditingController(text: cleanFirstName);
     _lastNameController =
         TextEditingController(text: widget.userData.sobrenome);
     _usernameController =
@@ -244,7 +252,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
         children: [
           // Seção Minha Conta
           _buildSectionCard(
-            title: 'Minha Conta',
+            title: 'Meus Dados',
             subtitle: 'Veja e edite suas informações pessoais.',
             content: Form(
               key: _formKeyInfo,
@@ -324,37 +332,10 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
               ),
             ),
           ),
-
+          
           const SizedBox(height: 24),
 
-          // Seção Contatos (NOVO)
-          _buildSectionCard(
-            title: 'Contatos',
-            subtitle: 'Gerencie sua lista de contatos e bloqueios.',
-            content: SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.people_outline, color: AppColors.primary),
-                label: const Text('Gerenciar Contatos'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  side: const BorderSide(color: AppColors.primary),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ContactManagementModal(userId: widget.userData.uid),
-                  );
-                },
-              ),
-            ),
-          ),
 
-          const SizedBox(height: 24),
 
           // Seção Alterar Senha
           _buildSectionCard(

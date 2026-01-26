@@ -1,5 +1,8 @@
 # Gestão de Tempo Sincronizada
 
+**Nome Comercial:** Gestão de Tempo Kairós & Cronos
+**Descrição Curta:** Metodologia exclusiva que une gestão de tarefas clássica (Cronos) com o momento energético oportuno (Kairós) para máxima eficiência.
+
 ## A Filosofia de Tempo do SincroApp
 No **SincroApp**, não gerenciamos apenas o "tempo" (Cronos), mas o "momento oportuno" (Kairós). A ideia não é fazer *mais* coisas, mas fazer as coisas *ertas* no dia *certo*.
 

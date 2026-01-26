@@ -203,13 +203,18 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+            style: const TextStyle(
+              color: AppColors.secondaryText, 
+              fontSize: 14,
+              height: 1.5,
+            ),
             children: [
               TextSpan(
                 text: '@$username',
                 style: const TextStyle(
                   color: Colors.lightBlueAccent,
                   fontWeight: FontWeight.bold,
+                  height: 1.5,
                 ),
               ),
               const TextSpan(text: ' convidou você para:'),
@@ -228,6 +233,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w600,
+            height: 1.3,
           ),
         ),
         
@@ -237,7 +243,11 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
-              style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+              style: const TextStyle(
+                color: AppColors.secondaryText, 
+                fontSize: 14, 
+                height: 1.5
+              ),
               children: [
                 const TextSpan(text: 'Data: '),
                 TextSpan(
@@ -246,6 +256,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
                     color: Colors.amber,
                     fontWeight: FontWeight.bold,
                     fontSize: 16,
+                    height: 1.5,
                   ),
                 ),
               ],

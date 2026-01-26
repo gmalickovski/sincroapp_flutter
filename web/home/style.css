@@ -231,120 +231,8 @@ body {
     grid-row: 1;
 }
 
-/* HEADER STANDARDIZATION (Copied from web/funcionalidades/style.css) */
-.header {
-    background-color: rgba(17, 24, 39, 0.9);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: 16px 0;
-    width: 100%;
-}
+/* Header styles moved to /assets/css/header.css */
 
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 100%;
-    margin: 0;
-    padding: 0 40px;
-    width: 100%;
-    position: relative;
-    height: 48px;
-    /* Fixed height for consistency */
-}
-
-/* Ensure Logo sizing matches exactly */
-.logo-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    text-decoration: none;
-}
-
-.logo-svg {
-    height: 28px;
-    width: auto;
-    display: block;
-}
-
-/* New Class to ensure visibility on mobile */
-.logo-svg-main {
-    height: auto;
-    display: block;
-    /* Always block, controlled by Tailwind classes for size */
-}
-
-.logo-icon {
-    height: 32px;
-    width: auto;
-    display: none;
-}
-
-@media (max-width: 768px) {
-    .logo-svg {
-        display: none;
-    }
-
-    .logo-icon {
-        display: block;
-    }
-}
-
-/* Navigation Menu */
-.header-nav-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    align-items: center;
-    gap: 32px;
-}
-
-.nav-link {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.3s ease;
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 9999px;
-    /* Pill shape */
-    position: relative;
-}
-
-.nav-link:hover {
-    color: var(--text-primary);
-    background-color: rgba(255, 255, 255, 0.05);
-    /* Subtle hover */
-}
-
-.nav-link.active {
-    color: var(--accent-secondary);
-    /* Lighter purple text */
-    background-color: rgba(124, 58, 237, 0.15);
-    /* Purple tint background */
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
-    /* Subtle glow */
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    /* Slight border definition */
-}
-
-@media (max-width: 900px) {
-    .header-nav-center {
-        display: none;
-    }
-}
-
-/* Header Actions */
-.header-actions.right {
-    margin-left: auto;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-}
 
 .btn-primary {
     background-color: var(--accent-primary);
@@ -378,44 +266,8 @@ body {
     display: inline-block;
 }
 
-.btn-outline {
-    border: 1px solid var(--border);
-    padding: 8px 16px;
-    border-radius: 9999px;
-    /* Pill Shape */
-    font-size: 14px;
-    color: var(--text-primary);
-    transition: all 0.2s;
-    background: transparent;
-    text-decoration: none;
-}
+/* Button outline styles moved to shared CSS */
 
-.btn-outline:hover {
-    background-color: var(--card-bg);
-    border-color: var(--text-secondary);
-}
-
-.btn-text-full {
-    display: inline;
-}
-
-.btn-text-short {
-    display: none;
-}
-
-@media (max-width: 600px) {
-    .header-container {
-        padding: 0 20px;
-    }
-
-    .btn-text-full {
-        display: none;
-    }
-
-    .btn-text-short {
-        display: inline;
-    }
-}
 
 /* BRANDED SCROLLBAR - SincroApp Violet */
 ::-webkit-scrollbar {
@@ -489,3 +341,9 @@ body {
 
 /* Header styles are now handled by /assets/css/header.css */
 /* This is loaded automatically by main-header.js */
+
+/* Page Header Reservation (Prevents Blink) */
+#main-header {
+    min-height: 80px;
+    display: block;
+}

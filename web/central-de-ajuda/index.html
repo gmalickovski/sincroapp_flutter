@@ -45,20 +45,25 @@
 
     <!-- Hero Section -->
     <section class="hero">
-
-
-        <div class="container relative z-10">
+        <div class="container">
             <h1>Como podemos ajudar?</h1>
-            <div class="search-box">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="11" cy="11" r="8"></circle>
-                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <input type="text" id="searchInput" placeholder="Busque por dúvidas, ex: Senha, Assinatura...">
-            </div>
+            <p>Encontre respostas rápidas para suas dúvidas, tutoriais detalhados<br>e suporte
+                técnico para aproveitar o máximo do SincroApp.</p>
+            <!-- Search Box moved below section for sticky support -->
         </div>
     </section>
+
+    <!-- Sticky Search Container -->
+    <div class="search-container-sticky">
+        <div class="search-box">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <input type="text" id="searchInput" placeholder="Busque por dúvidas, ex: Senha, Assinatura...">
+        </div>
+    </div>
 
     <!-- Categories Grid -->
     <section class="categories section-padding relative">
@@ -303,12 +308,7 @@
                     </div>
 
                     <!-- Success Message -->
-                    <div id="inlineSuccessMessage" class="success-message" style="display: none;">
-                        <span class="material-icons success-icon">check_circle</span>
-                        <h3>Mensagem Enviada! 🎉</h3>
-                        <p>Recebemos seu feedback e vamos analisar com atenção.</p>
-                        <button type="button" class="submit-btn secondary" onclick="resetForm()">Enviar outro</button>
-                    </div>
+                    <!-- Success Message Removed (Using Modal) -->
                 </form>
             </div>
         </div>

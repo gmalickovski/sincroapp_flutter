@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 
 class TaskItem extends StatelessWidget {
@@ -63,15 +64,17 @@ class TaskItem extends StatelessWidget {
     return !today.isAtSameMomentAs(targetDate);
   }
 
-  /// Helper para criar TextSpan com destaque de @menções em azul
+  /// Helper para criar TextSpan com destaque de @menções em azul e #tags em roxo
   TextSpan _buildMentionHighlightedText(
     String text, {
     required TextStyle baseStyle,
     required TextStyle mentionStyle,
+    required TextStyle tagStyle,
   }) {
-    // Regex para encontrar @username (letras, números, underscores, pontos)
-    final mentionRegex = RegExp(r'@[\w.]+');
-    final matches = mentionRegex.allMatches(text);
+    // Regex para encontrar @username OU #tag
+    // Captura @letras.pontos ou #letras
+    final regex = RegExp(r'(@[\w.]+|#[\wÀ-ÿ]+)');
+    final matches = regex.allMatches(text);
     
     if (matches.isEmpty) {
       return TextSpan(text: text, style: baseStyle);
@@ -81,7 +84,9 @@ class TaskItem extends StatelessWidget {
     int lastEnd = 0;
     
     for (final match in matches) {
-      // Texto antes da menção
+      final matchText = match.group(0)!;
+      
+      // Texto antes da coincidência
       if (match.start > lastEnd) {
         spans.add(TextSpan(
           text: text.substring(lastEnd, match.start),
@@ -89,16 +94,17 @@ class TaskItem extends StatelessWidget {
         ));
       }
       
-      // A menção destacada em azul
+      // Aplica estilo dependendo se é menção ou tag
+      final isMention = matchText.startsWith('@');
       spans.add(TextSpan(
-        text: match.group(0),
-        style: mentionStyle,
+        text: matchText,
+        style: isMention ? mentionStyle : tagStyle,
       ));
       
       lastEnd = match.end;
     }
     
-    // Texto após a última menção
+    // Texto após a última coincidência
     if (lastEnd < text.length) {
       spans.add(TextSpan(
         text: text.substring(lastEnd),
@@ -121,7 +127,7 @@ class TaskItem extends StatelessWidget {
         alignment: Alignment.topLeft,
         // Alinha com a primeira linha do texto (ajustado para height 1.45)
         margin: const EdgeInsets.only(right: 8.0, top: 2.0),
-        child: Container(
+        child: Container( // Removido Transform.scale para manter tamanho original
           width: 19, // Tamanho do círculo
           height: 19,
           decoration: BoxDecoration(
@@ -142,6 +148,8 @@ class TaskItem extends StatelessWidget {
     );
   }
   // --- FIM DA MUDANÇA ---
+
+  // ... (checkbox methods omitted) ...
 
   // --- INÍCIO DA MUDANÇA (Solicitação 1): Checkbox de Seleção ---
   /// O checkbox de seleção (padrão do Flutter)
@@ -181,9 +189,9 @@ class TaskItem extends StatelessWidget {
     final bool shouldShowGoalIcon = showGoalIconFlag &&
         task.journeyTitle != null &&
         task.journeyTitle!.isNotEmpty;
-    final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty;
-    final bool shouldShowDateIcon = _isNotToday(
-        task.dueDate); // Data futura sempre mostra ícone (se não for hoje)
+    // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
+    final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
+    final bool shouldShowDateIcon = _isNotToday(task.dueDate) && !isRecurrent; // Só mostra data se NÃO for recorrente
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
         task.personalDay! > 0;
@@ -205,6 +213,13 @@ class TaskItem extends StatelessWidget {
     // --- INÍCIO DA MUDANÇA (Solicitação 1): Verifica se está selecionado ---
     final bool isSelected = selectedTaskIds.contains(task.id);
     // --- FIM DA MUDANÇA ---
+
+    // Constrói o texto de exibição (Texto Original + Tags)
+    String displayText = task.text;
+    if (task.tags.isNotEmpty) {
+      final tagsString = task.tags.map((t) => '#$t').join(' ');
+      displayText += ' $tagsString';
+    }
 
     // Widget principal (Conteúdo)
     final Widget content = InkWell(
@@ -253,13 +268,13 @@ class TaskItem extends StatelessWidget {
                 _buildCompletionCheckbox(verticalAlignmentPadding),
               // --- FIM DA MUDANÇA ---
 
-              // 2. Texto Principal com destaque de menções
+              // 2. Texto Principal com destaque de menções e tags
               Expanded(
                 child: RichText(
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                   text: _buildMentionHighlightedText(
-                    task.text,
+                    displayText,
                     baseStyle: TextStyle(
                       color: task.completed
                           ? AppColors.tertiaryText
@@ -281,86 +296,94 @@ class TaskItem extends StatelessWidget {
                       height: 1.45,
                       letterSpacing: 0.15,
                     ),
+                    tagStyle: TextStyle(
+                      color: const Color(0xFFEC4899), // Pink-500 (mesma cor do ícone antigo)
+                      fontWeight: FontWeight.normal, // Tags geralmente normal ou semi-bold
+                      decoration: task.completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      fontSize: mainFontSize,
+                      height: 1.45,
+                      letterSpacing: 0.15,
+                    ),
                   ),
                 ),
               ),
 
-              // 3. Grupo de Ícones/Pílula com largura limitada
+              // 3. Grupo de Ícones/Pílula sem constraint
               if (shouldShowDateIcon ||
                   shouldShowGoalIcon ||
-                  shouldShowTagIcon ||
-                  shouldShowReminderIcon || // Adicionado
+                  // shouldShowTagIcon || // REMOVIDO
+                  shouldShowReminderIcon || 
                   shouldShowPill)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 120),
-                  child: Padding(
-                    // Alinha com a primeira linha do texto (considerando height 1.45)
-                    padding: const EdgeInsets.only(left: 8.0, top: 1.0),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (shouldShowDateIcon)
-                           Padding(
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 3.0),
-                            child: Icon(
-                              task.isOverdue ? Icons.event_busy : Icons.calendar_today_outlined,
-                              size: iconIndicatorSize,
-                              color: task.isOverdue ? Colors.red : const Color(
-                                  0xFFFB923C), // orange-400
-                            ),
+                Padding(
+                  // Alinha com a primeira linha do texto (considerando height 1.45)
+                  padding: const EdgeInsets.only(left: 8.0, top: 1.0),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (shouldShowDateIcon)
+                         Padding(
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 3.0),
+                          child: Icon(
+                            task.isOverdue ? Icons.event_busy : Icons.calendar_today_outlined,
+                            size: iconIndicatorSize,
+                            color: task.isOverdue ? Colors.red : const Color(
+                                0xFFFB923C), // orange-400
                           ),
-                        if (shouldShowReminderIcon) // Ícone de Lembrete
-                           const Padding(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 3.0),
-                            child: Icon(
-                              Icons.notifications_active_outlined,
-                              size: iconIndicatorSize,
-                              color: AppColors.primary, // Roxo como destaque
-                            ),
+                        ),
+                      if (shouldShowReminderIcon) // Ícone de Lembrete
+                         const Padding(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 3.0),
+                          child: Icon(
+                            Icons.notifications_active_outlined,
+                            size: iconIndicatorSize,
+                            color: AppColors.primary, // Roxo como destaque
                           ),
-                        if (shouldShowGoalIcon)
-                          const Padding(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 3.0),
-                            child: Icon(
-                              Icons.flag_outlined,
-                              size: iconIndicatorSize,
-                              color: Color(
-                                  0xFF06B6D4), // cyan-500
-                            ),
+                        ),
+                      // --- INÍCIO DA MUDANÇA: Ícone de Recorrência ---
+                      if (task.recurrenceType != RecurrenceType.none)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 3.0),
+                          child: Icon(
+                            Icons.repeat_rounded, // Ícone de repetição
+                            size: iconIndicatorSize,
+                            color: Color(0xFF8B5CF6), // Violet-500
                           ),
-                        if (shouldShowTagIcon)
-                          const Padding(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 3.0),
-                            child: Icon(
-                              Icons.label_outline,
-                              size: iconIndicatorSize,
-                              color: Color(
-                                  0xFFEC4899), // pink-500
-                            ),
+                        ),
+                      // --- FIM DA MUDANÇA ---
+                      if (shouldShowGoalIcon)
+                        const Padding(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 3.0),
+                          child: Icon(
+                            Icons.flag_outlined,
+                            size: iconIndicatorSize,
+                            color: Color(
+                                0xFF06B6D4), // cyan-500
                           ),
-                        if (shouldShowPill)
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: (shouldShowDateIcon ||
-                                      shouldShowGoalIcon ||
-                                      shouldShowTagIcon || 
-                                      shouldShowReminderIcon) // Ajuste padding
-                                  ? 6.0
-                                  : 0,
-                            ),
-                            child: VibrationPill(
-                              vibrationNumber: task.personalDay!,
-                              type: VibrationPillType.compact,
-                            ),
+                        ),
+                      // ICONE DE TAG REMOVIDO DAQUI
+                      if (shouldShowPill)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: (shouldShowDateIcon ||
+                                    shouldShowGoalIcon ||
+                                    // shouldShowTagIcon ||
+                                    shouldShowReminderIcon) // Ajuste padding
+                                ? 6.0
+                                : 0,
                           ),
-                      ],
-                    ),
+                          child: VibrationPill(
+                            vibrationNumber: task.personalDay!,
+                            type: VibrationPillType.compact,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
             ],

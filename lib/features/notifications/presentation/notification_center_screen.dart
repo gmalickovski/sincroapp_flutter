@@ -65,6 +65,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     });
   }
 
+  void _deleteNotification(String id) async {
+    await _supabaseService.deleteNotifications([id]);
+  }
+
   void _markSelectedAsRead() async {
     final ids = _selectedIds.toList();
     await _supabaseService.markNotificationsAsRead(ids);
@@ -159,6 +163,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                           }
                         },
                         onLongPress: () => _toggleSelectionMode(notif.id),
+                        onDelete: () => _deleteNotification(notif.id), // New callback
                       );
                     },
                   );
@@ -386,6 +391,7 @@ class _NotificationTile extends StatelessWidget {
   final bool isSelectionMode;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final VoidCallback onDelete; // New param
 
   const _NotificationTile({
     required this.notification,
@@ -393,6 +399,7 @@ class _NotificationTile extends StatelessWidget {
     required this.isSelectionMode,
     required this.onTap,
     required this.onLongPress,
+    required this.onDelete, // New param
   });
 
   @override
@@ -490,6 +497,14 @@ class _NotificationTile extends StatelessWidget {
                 ],
               ),
             ),
+
+            if (!isSelectionMode)
+              IconButton(
+                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.tertiaryText),
+                tooltip: 'Excluir',
+                splashRadius: 20,
+                onPressed: onDelete,
+              ),
           ],
         ),
       ),
@@ -532,16 +547,22 @@ class _NotificationTile extends StatelessWidget {
 
   /// Helper para criar TextSpan com destaque de @menções em azul e datas em âmbar
   TextSpan _buildHighlightedNotificationText(String text) {
-    const baseStyle = TextStyle(color: AppColors.secondaryText, fontSize: 14);
+    const baseStyle = TextStyle(
+      color: AppColors.secondaryText, 
+      fontSize: 14,
+      height: 1.5, // Fix tight spacing
+    );
     const mentionStyle = TextStyle(
       color: Colors.lightBlueAccent,
       fontWeight: FontWeight.bold,
       fontSize: 14,
+      height: 1.5,
     );
     const dateStyle = TextStyle(
       color: Colors.amber,
       fontWeight: FontWeight.bold,
       fontSize: 14,
+      height: 1.5,
     );
 
     // Regex combinado para @username e datas (dd/MM, dd de mês, etc.)

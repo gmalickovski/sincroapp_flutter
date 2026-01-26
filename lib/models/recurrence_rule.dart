@@ -65,7 +65,7 @@ class RecurrenceRule {
 
     if (endDate != null) {
       final formattedDate = DateFormat.yMd('pt_BR').format(endDate!);
-      summary += ", at├® $formattedDate";
+      summary += ", até $formattedDate";
     }
 
     return summary;

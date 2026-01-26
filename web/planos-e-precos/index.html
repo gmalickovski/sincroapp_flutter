@@ -40,20 +40,22 @@
     <section class="hero">
         <div class="container">
             <h1>Escolha a jornada ideal para você</h1>
-            <p class="hero-subtitle">Desbloqueie todo o potencial da sua evolução com recursos exclusivos.</p>
+            <p>Desbloqueie todo o potencial da sua evolução com recursos exclusivos.</p>
 
-            <!-- Billing Toggle -->
-            <div class="billing-toggle-container">
-                <div class="billing-toggle">
-                    <button class="toggle-btn active" id="btn-monthly" onclick="setBilling('monthly')">Mensal</button>
-                    <button class="toggle-btn" id="btn-annual" onclick="setBilling('annual')">
-                        Anual
-                        <span class="badge">20% OFF</span>
-                    </button>
-                </div>
-            </div>
+            <!-- Toggle moved to outside hero for sticky support -->
         </div>
     </section>
+
+    <!-- Billing Toggle (Sticky) -->
+    <div class="billing-toggle-container">
+        <div class="billing-toggle">
+            <button class="toggle-btn active" id="btn-monthly" onclick="setBilling('monthly')">Mensal</button>
+            <button class="toggle-btn" id="btn-annual" onclick="setBilling('annual')">
+                Anual
+                <span class="badge">20% OFF</span>
+            </button>
+        </div>
+    </div>
 
     <!-- Pricing Grid -->
     <section class="pricing section-padding">

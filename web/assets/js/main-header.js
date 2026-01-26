@@ -71,6 +71,11 @@ function loadHeader() {
     // 3. Highlight Active Link
     const currentPath = window.location.pathname.replace(/\/$/, "");
 
+    // 4. Global Layout Fix: Prevent Header Overlap
+    // Content padding is now handled by CSS (style.css / header.css)
+    // to allow responsive adjustment (80px desktop, 60px mobile).
+    document.body.style.boxSizing = 'border-box';
+
     const isActive = (linkPath) => {
         const cleanLinkPath = linkPath.replace(/\/$/, "");
         if (cleanLinkPath === "" && currentPath === "") return true;

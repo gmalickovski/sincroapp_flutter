@@ -70,15 +70,22 @@ a {
 /* Header styles are mostly handled by /assets/css/header.css */
 /* We just ensure no conflict */
 
-/* HERO SECTION */
+/* HERO SECTION - Standardized across all pages - STRICT ENFORCEMENT */
 .hero {
-    padding: 160px 0 80px;
+    margin-top: -80px;
+    padding-top: 140px;
+    padding-bottom: 140px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
     position: relative;
     text-align: center;
     overflow: hidden;
 }
 
-/* Background Glow for Hero */
+/* Background Glow for Hero - Standard Gradient */
 .hero::before {
     content: '';
     position: absolute;
@@ -86,7 +93,6 @@ a {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Gradient expands uniformly to edges */
     background: radial-gradient(ellipse at top, var(--accent-primary) 0%, rgba(17, 24, 39, 0) 70%);
     opacity: 0.25;
     filter: blur(80px);
@@ -102,26 +108,55 @@ a {
 .hero h1 {
     font-size: 48px;
     font-weight: 700;
-    margin-bottom: 40px;
+    margin-bottom: 24px;
     letter-spacing: -1px;
     line-height: 1.2;
 }
 
+.hero p,
+.hero-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* Sticky Search Container (Matching Funcionalidades .filters) */
+.search-container-sticky {
+    position: sticky;
+    top: 80px;
+    /* Below global header */
+    z-index: 40;
+    /* Reset margin to remove overlap */
+    margin-top: 0;
+    padding: 24px 20px;
+    /* Standardize padding */
+    display: flex;
+    justify-content: center;
+    background-color: rgba(17, 24, 39, 0.8);
+    /* Dark semi-transparent background */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    /* Subtle bottom line */
+}
+
 /* Search Box Styled as Home Input/Card */
 .search-box {
+    width: 100%;
     max-width: 600px;
-    margin: 0 auto;
     position: relative;
     display: flex;
     align-items: center;
     background-color: rgba(31, 41, 55, 0.6);
-    /* Semi-transparent */
     border: 1px solid var(--border);
     border-radius: 9999px;
-    /* Pill */
-    padding: 8px 24px;
+    /* Reduced vertical size */
+    padding: 6px 20px;
     transition: all 0.3s ease;
     backdrop-filter: blur(8px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 .search-box:focus-within {
@@ -137,7 +172,8 @@ a {
 
 .search-box input {
     width: 100%;
-    padding: 12px 0;
+    padding: 8px 0;
+    /* Reduced from 12px 0 */
     background: transparent;
     border: none;
     color: var(--text-primary);
@@ -441,9 +477,7 @@ a {
 
 /* Responsiveness */
 @media (max-width: 768px) {
-    .header-container {
-        padding: 0 16px;
-    }
+    /* Header container padding handled by header.css */
 
     /* Show mobile elements, hide desktop elements */
     .desktop-only {
@@ -490,17 +524,52 @@ a {
         font-size: 14px;
     }
 
+    /* FIX: Hero section - Standardized mobile */
     .hero {
-        padding: 100px 0 40px;
+        margin-top: -80px !important;
+        padding: 140px 20px 80px !important;
+        min-height: auto !important;
     }
 
     .hero h1 {
-        font-size: 28px;
+        font-size: 28px !important;
+    }
+
+    .hero p,
+    .hero-subtitle {
+        font-size: 16px !important;
+    }
+
+    /* FIX: Container padding for mobile */
+    .container {
+        padding: 0 20px !important;
+    }
+
+    /* FIX: Search container */
+    .search-container-sticky {
+        margin-top: -40px;
+        padding: 16px 20px;
     }
 
     .search-box {
-        padding: 0 24px;
+        padding: 0 20px;
         /* More breathing room on sides */
+    }
+
+    /* FIX: Cards full-width on mobile, aligned with other elements */
+    .topics-grid {
+        flex-direction: column !important;
+        gap: 16px !important;
+        padding: 0 !important;
+        width: 100% !important;
+    }
+
+    .card {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-grow: 1 !important;
+        flex-shrink: 1 !important;
+        margin: 0 !important;
     }
 
     .grid {
@@ -1413,3 +1482,73 @@ h6,
 }
 
 /* Mobile menu toggle styles now handled by main-header.js embedded CSS */
+
+/* MODAL OVERLAY - Fixed Positioning */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 1000;
+    display: flex;
+    /* Flex required for centering */
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.modal-content {
+    background-color: #1F2937;
+    /* Explicit dark color (var(--card-bg)) */
+    border: 1px solid #374151;
+    /* var(--border-color) */
+    border-radius: 16px;
+    padding: 32px;
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    position: relative;
+    text-align: center;
+    animation: slideUp 0.3s ease-out;
+}
+
+.btn-primary.btn-full-width {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+    color: white;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.btn-primary.btn-full-width:hover {
+    transform: translateY(-2px);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}

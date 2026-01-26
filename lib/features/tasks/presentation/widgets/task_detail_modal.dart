@@ -470,6 +470,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               : null,
           initialReminderOffset: _reminderOffset, 
           userData: widget.userData,
+          goalDeadline: _selectedGoal?.targetDate,
         );
       },
     );

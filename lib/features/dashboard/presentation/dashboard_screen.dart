@@ -2,8 +2,10 @@
 
 import 'dart:async';
 import 'package:flutter/gestures.dart';
+import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
+import 'package:sincro_app_flutter/services/notification_service.dart'; // Import NotificationService
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -86,6 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _goalsSubscription; // Stream de metas em tempo real
   final FabOpacityController _fabOpacityController = FabOpacityController();
   StrategyRecommendation? _strategyRecommendation; // State for AI strategy
+  String _searchQuery = ''; // Search state replacement
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -174,6 +177,17 @@ class _DashboardScreenState extends State<DashboardScreen>
       _initializeGoalsStream(currentUser.id);
       // _initializeGoalsStream(currentUser.id); // Duplicado no original, removendo
       _loadStrategy(); // Load AI strategy
+      
+      // NOTIFICATIONS INIT
+      if (!kIsWeb) {
+        NotificationService.instance.listenToRealtimeNotifications(currentUser.id);
+        if (userData != null && userData.dataNasc.isNotEmpty) {
+           NotificationService.instance.initializeDailyIncentives(
+              currentUser.id, 
+              userData.dataNasc
+           );
+        }
+      }
     } catch (e, stackTrace) {
       debugPrint(
           "Erro detalhado ao carregar dados iniciais do dashboard: $e\n$stackTrace");
@@ -1248,9 +1262,32 @@ class _DashboardScreenState extends State<DashboardScreen>
         },
       }
     };
-    final List<String> cardOrder = _userData!.dashboardCardOrder;
+    
+    // Priority Logic: Ensure Sincro Flow is first if not explicitly ordered
+    // Create a mutable copy of the order
+    final List<String> cardOrder = List<String>.from(_userData!.dashboardCardOrder);
+    
+    // Check if Sincro Flow (or its legacy names) is present. If not, PREPEND it.
+    // We want it to be the default first item for users who haven't moved it completely?
+    // User requirement: "Sincro Flow sempre como padrão deve ser sempre o primeiro ... mas poderá ser reposicionando"
+    // If we assume empty list means "Default", we handle empty list.
+    // If not in list, we prepend.
+    
+    bool hasSincro = cardOrder.contains('sincroflow') || cardOrder.contains('strategyCard') || cardOrder.contains('bussola');
+    if (!hasSincro) {
+       cardOrder.insert(0, 'sincroflow'); 
+    }
+    
     final List<Widget> orderedCards = [];
     Set<String> addedKeys = {};
+    
+    // Helper to filter
+    bool matchesSearch(String key) {
+      if (_searchQuery.isEmpty) return true;
+      final title = _getCardTitle(key);
+      return title.toLowerCase().contains(_searchQuery.toLowerCase());
+    }
+
     for (String cardId in cardOrder) {
       String effectiveId = cardId;
       // Compatibilidade: 'bussola' ou 'strategyCard' viram 'sincroflow'
@@ -1261,20 +1298,58 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (allCardsMap.containsKey(effectiveId) &&
           !addedKeys.contains(effectiveId) &&
           !hidden.contains(effectiveId)) {
-        orderedCards.add(allCardsMap[effectiveId]!);
+            
+        // Apply Search Filter
+        if (matchesSearch(effectiveId)) {
+           orderedCards.add(allCardsMap[effectiveId]!);
+        }
         addedKeys.add(effectiveId);
       }
     }
+    
+    // Add remaining cards (that might be new features not in user's saved order)
     allCardsMap.forEach((key, value) {
       if (!addedKeys.contains(key) && !hidden.contains(key)) {
-        orderedCards.add(value);
+         if (matchesSearch(key)) {
+            orderedCards.add(value);
+         }
       }
     });
 
     // Código de força 'strategyCard' removido para respeitar a ordem do usuário.
     _cards = orderedCards;
+  }
+  
+  String _getCardTitle(String key) {
+    switch (key) {
+      case 'sincroflow': return 'Sincro Flow';
+      case 'goalsProgress': return 'Metas';
+      case 'focusDay': return 'Foco do Dia';
+      case 'vibracaoDia': return 'Dia Pessoal';
+      case 'vibracaoMes': return 'Mês Pessoal';
+      case 'vibracaoAno': return 'Ano Pessoal';
+      case 'cicloVida': return 'Ciclo de Vida';
+      case 'numeroDestino': return 'Número de Destino';
+      case 'numeroExpressao': return 'Número de Expressão';
+      case 'numeroMotivacao': return 'Número da Motivação';
+      case 'numeroImpressao': return 'Número de Impressão';
+      case 'missaoVida': return 'Missão de Vida';
+      case 'talentoOculto': return 'Talento Oculto';
+      case 'respostaSubconsciente': return 'Resposta Subconsciente';
+      case 'diaNatalicio': return 'Dia Natalício';
+      case 'numeroPsiquico': return 'Número Psíquico';
+      case 'aptidoesProfissionais': return 'Aptidões Profissionais';
+      case 'desafios': return 'Desafios';
+      case 'momentosDecisivos': return 'Momento Decisivo';
+      case 'licoesCarmicas': return 'Lições Kármicas';
+      case 'debitosCarmicos': return 'Débitos Kármicos';
+      case 'tendenciasOcultas': return 'Tendências Ocultas';
+      case 'harmoniaConjugal': return 'Harmonia Conjugal';
+      case 'diasFavoraveis': return 'Dias Favoráveis';
+      default: return '';
+    }
 
-    _cards = orderedCards;
+
   }
 
   Widget _buildDragHandle(String cardKey) {
@@ -2224,6 +2299,12 @@ class _DashboardScreenState extends State<DashboardScreen>
         onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
             ? _openReorderModal
             : null,
+        onSearchChanged: (query) {
+          setState(() {
+            _searchQuery = query;
+            _buildCardList();
+          });
+        },
         onMenuPressed: () {
           setState(() {
             if (isDesktop) {
@@ -2356,23 +2437,18 @@ class _DashboardScreenState extends State<DashboardScreen>
 
       return ScrollConfiguration(
         behavior: MyCustomScrollBehavior(),
-        child: ListView(
-          padding: const EdgeInsets.all(spacing),
-          children: [
-            MasonryGridView.count(
-              key: _masonryGridKey,
-              crossAxisCount: crossAxisCount,
-              mainAxisSpacing: spacing,
-              crossAxisSpacing: spacing,
-              itemCount: _cards.length,
-              itemBuilder: (context, index) {
-                return _cards[index];
-              },
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-            ),
-            const SizedBox(height: 60),
-          ],
+        child: MasonryGridView.count(
+          key: _masonryGridKey,
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: spacing,
+          crossAxisSpacing: spacing,
+          // Add bottom padding to replace SizedBox(height: 60)
+          padding: const EdgeInsets.fromLTRB(spacing, spacing, spacing, 84.0),
+          itemCount: _cards.length,
+          itemBuilder: (context, index) {
+            return _cards[index];
+          },
+          // Removed shrinkWrap: true and NeverScrollableScrollPhysics to restore virtualization
         ),
       );
     }

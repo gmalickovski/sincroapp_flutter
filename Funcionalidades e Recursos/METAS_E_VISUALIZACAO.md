@@ -1,9 +1,8 @@
 # Metas e Visualização Criativa
 
-**Nome Comercial:** Jornada de Metas Otimizadas & Inteligência de Trajetória (**Sincro IA**)
-**Descrição Curta:** Crie e acompanhe metas de longo prazo com sugestão de marcos via **Sincro IA** e capas de visualização para manifestação.
+**Nome Comercial:** Jornada de Metas Otimizadas & Inteligência de Trajetória
+**Descrição Curta:** Crie e acompanhe metas de longo prazo com sugestão de marcos e capas de visualização para manifestação.
 
----
 ---
 
 ## A Ciência da Materialização
@@ -33,10 +32,12 @@ Uma meta grande pode paralisar pelo medo. O segredo é dividir para conquistar.
     *   **Marco 3:** "Completar a Meia-Maratona" (Data: Junho).
 *   **Funcionalidade:** Você vai adicionando Marco por Marco, criando um checklist de progresso. A cada Marco concluído, a barra de progresso da Meta avança, dando a sensação visual de que você está chegando lá.
 
+<!--
 ## Geração com Sincro IA
 Está travado? Não sabe quais são os passos para "Abrir uma Empresa"?
 *   Use o botão **"Sugerir Marcos com Sincro IA"**.
 *   O **SincroApp** analisa seu objetivo e gera automaticamente uma lista de 5 a 10 Marcos lógicos e sequenciais para você apenas seguir o plano.
+-->
 
 ## Resumo
 **Meta** é o destino. **Imagem** é a motivação. **Marcos** são o mapa. O Sincro une tudo isso no seu bolso.

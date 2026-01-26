@@ -17,6 +17,7 @@ class ScheduleTaskSheet extends StatefulWidget {
   final TimeOfDay? initialTime;
   final RecurrenceRule? initialRecurrence;
   final Duration? initialReminderOffset; // Novo par├ómetro
+  final DateTime? goalDeadline; // Prazo final da meta (se houver)
   final UserModel userData;
 
   const ScheduleTaskSheet({
@@ -25,6 +26,7 @@ class ScheduleTaskSheet extends StatefulWidget {
     this.initialTime,
     this.initialRecurrence,
     this.initialReminderOffset, // Recebe no construtor
+    this.goalDeadline, // Novo parâmetro para limitar opções
     required this.userData,
   });
 
@@ -371,7 +373,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                         // Default to Daily AND Default End Date (30 days) to prevent infinite loops
                         _recurrenceRule = RecurrenceRule(
                            type: RecurrenceType.daily,
-                           endDate: _selectedDay.add(const Duration(days: 30)),
+                           endDate: null, // Infinite recurrence (Smart Completion)
                         ); 
                       } else {
                         _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
@@ -415,11 +417,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                         ),
                         
                       const SizedBox(height: 16),
-                      const Text(
-                        "Termina em",
-                         style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
-                      ),
-                      const SizedBox(height: 8),
+                      // Removed Termina em label
 
                       // Duration / End Date Chips
                       SingleChildScrollView(
@@ -427,15 +425,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                         child: Row(
                           children: [
                              // Removed "Nunca" to enforce finite recurrence
-                             _buildDurationChip("1 Mês", const Duration(days: 30)),
+                             // _buildDurationChip("1 Mês", const Duration(days: 30)),
                              const SizedBox(width: 8),
-                             _buildDurationChip("6 Meses", const Duration(days: 180)),
+                             // _buildDurationChip("6 Meses", const Duration(days: 180)),
                              const SizedBox(width: 8),
-                             _buildDurationChip("1 Ano", const Duration(days: 365)),
+                             // _buildDurationChip("1 Ano", const Duration(days: 365)),
                              const SizedBox(width: 8),
-                             ActionChip(
-                               label: Text(
-                                 _recurrenceRule.endDate != null && 
+                             /* ActionChip( label: Text(_recurrenceRule.endDate != null && 
                                  _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 && // Rough check to differentiate from presets
                                  _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365
                                   ? DateFormat('dd/MM/yy').format(_recurrenceRule.endDate!)
@@ -462,8 +458,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                                 ),
                                 // Fill if custom date selected
                                 elevation: 0,
-                                visualDensity: VisualDensity.compact,
-                             ),
+                                visualDensity: VisualDensity.compact, ), */
                           ],
                         ),
                       ),
@@ -477,11 +472,35 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   Widget _buildRecurrenceChip(String label, RecurrenceType type) {
+    // Validação de Prazo da Meta
+    bool isDisabled = false;
+    String? disabledReason;
+
+    if (widget.goalDeadline != null) {
+      final daysUntilDeadline = widget.goalDeadline!.difference(_selectedDay).inDays;
+      
+      if (type == RecurrenceType.weekly && daysUntilDeadline < 7) {
+        isDisabled = true;
+        disabledReason = "Meta acaba em menos de uma semana";
+      } else if (type == RecurrenceType.monthly && daysUntilDeadline < 28) { // 28 dias margem segura
+        isDisabled = true;
+        disabledReason = "Meta acaba em menos de um mês";
+      }
+    }
+
     final isSelected = _recurrenceRule.type == type;
-    return ChoiceChip(
+    
+    // Se a opção selecionada se tornou inválida (ex: mudou dia), reseta
+    if (isSelected && isDisabled) {
+       // O ideal seria forçar reset no estado, mas build loop perigo.
+       // Deixa visualmente desativado ou selecionado com erro?
+       // Vamos permitir desmarcar, mas visualmente mostrar erro.
+    }
+
+    Widget chip = ChoiceChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (val) {
+      onSelected: isDisabled ? null : (val) {
         if (val) {
           setState(() {
             _recurrenceRule = _recurrenceRule.copyWith(type: type);
@@ -492,16 +511,35 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
           });
         }
       },
-      selectedColor: AppColors.primary,
+      // Cores desabilitadas
+      disabledColor: AppColors.background.withOpacity(0.5),
+      
+      selectedColor: isDisabled ? AppColors.secondaryText : AppColors.primary, // Cinza se invalido
       backgroundColor: AppColors.background,
       labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppColors.secondaryText,
+        color: isDisabled 
+            ? AppColors.secondaryText.withOpacity(0.5) 
+            : (isSelected ? Colors.white : AppColors.secondaryText),
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: isSelected ? AppColors.primary : AppColors.border),
+        side: BorderSide(
+          color: isDisabled 
+              ? AppColors.border.withOpacity(0.3)
+              : (isSelected ? AppColors.primary : AppColors.border)
+        ),
       ),
     );
+
+    if (isDisabled && disabledReason != null) {
+      return Tooltip(
+        message: disabledReason,
+        triggerMode: TooltipTriggerMode.tap,
+        child: Opacity(opacity: 0.5, child: chip),
+      );
+    }
+    
+    return chip;
   }
 
   Widget _buildWeeklyDaysSelector() {

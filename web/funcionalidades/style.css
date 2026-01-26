@@ -7,34 +7,7 @@
 /* This is loaded automatically by main-header.js */
 
 /* Nav Link Pill Style (Page-specific overrides if needed) */
-.nav-link {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    transition: all 0.3s ease;
-    text-decoration: none;
-    padding: 8px 16px;
-    border-radius: 9999px;
-    /* Pill shape */
-    position: relative;
-}
-
-.nav-link:hover {
-    color: var(--text-main);
-    background-color: rgba(255, 255, 255, 0.05);
-    /* Subtle hover */
-}
-
-.nav-link.active {
-    color: #a78bfa;
-    /* Lighter purple text */
-    background-color: rgba(124, 58, 237, 0.15);
-    /* Purple tint background */
-    box-shadow: 0 0 10px rgba(139, 92, 246, 0.1);
-    /* Subtle glow */
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    /* Slight border definition */
-}
+/* Nav Link styles are handled by header.css */
 
 @media (max-width: 900px) {
     .header-nav-center {
@@ -108,13 +81,13 @@ a {
 .container {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 60px;
+    padding: 0 40px;
 }
 
 .container-wide {
-    max-width: 1600px;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 60px;
+    padding: 0 40px;
 }
 
 .text-center {
@@ -166,17 +139,7 @@ a {
     color: inherit;
 }
 
-.container {
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 0 20px;
-}
-
-.container-wide {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 40px;
-}
+/* Removed duplicate conflicting container styles */
 
 .text-center {
     text-align: center;
@@ -187,101 +150,28 @@ a {
 }
 
 /* Header - Same as central-de-ajuda */
-.header {
-    background-color: rgba(17, 24, 39, 0.9);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--border-color);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    padding: 16px 0;
-}
-
-.header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 100%;
-    margin: 0;
-    padding: 0 40px;
-    width: 100%;
-    position: relative;
-}
-
-.logo-svg {
-    height: 28px;
-    width: auto;
-}
-
-.logo-icon {
-    height: 32px;
-    width: auto;
-}
-
-.desktop-only {
-    display: block;
-}
-
-.mobile-only {
-    display: none;
-}
-
-.btn-text-full {
-    display: inline;
-}
-
-.btn-text-short {
-    display: none;
-}
-
-.header-title-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    font-weight: 600;
-    font-size: 18px;
-    color: var(--text-main);
-}
-
-.header-actions.right {
-    margin-left: auto;
-}
-
-.logo-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-weight: 600;
-    font-size: 18px;
-}
-
-.btn-outline {
-    border: 1px solid var(--border-color);
-    padding: 8px 16px;
-    border-radius: 50px;
-    font-size: 14px;
-    transition: all 0.2s;
-}
-
-.btn-outline:hover {
-    background-color: var(--card-bg);
-    border-color: var(--text-secondary);
-}
+/* Header styles removed - using /assets/css/header.css */
 
 /* Removed fixed-top-section styles */
 
-/* HERO SECTION - Premium Gradient */
+/* HERO SECTION - Standardized across all pages */
+/* HERO SECTION - Standardized across all pages - STRICT ENFORCEMENT */
 .hero {
-    padding: 120px 0 60px;
-    /* More breathing room */
+    margin-top: -80px;
+    padding-top: 160px;
+    padding-bottom: 120px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
     position: relative;
     text-align: center;
     overflow: hidden;
     background: transparent;
-    /* Handled by pseudo-element */
 }
 
-/* Background Glow for Hero */
+/* Background Glow for Hero - Standard Gradient */
 .hero::before {
     content: '';
     position: absolute;
@@ -289,94 +179,206 @@ a {
     left: 0;
     width: 100%;
     height: 100%;
-    /* Gradient expands uniformly to edges */
     background: radial-gradient(ellipse at top, var(--accent-primary) 0%, rgba(17, 24, 39, 0) 70%);
     opacity: 0.25;
     filter: blur(80px);
     pointer-events: none;
-    z-index: -1;
+    z-index: 0;
 }
 
-/* Hero Section */
-/* Hero Section */
-/* Hero Section */
-.hero {
-    padding-top: 160px !important;
-    /* Force clearance (Global Header 80px + Spacing) */
-    padding-bottom: 60px;
-    text-align: center;
-    max-width: 800px;
-    margin: 0 auto;
+.hero>.container {
+    position: relative;
+    z-index: 10;
 }
 
 .hero h1 {
-    /* ... (unchanged) */
-
-    /* ... (keep existing lines until Feature Detail) */
-
-    /* Feature Detail View - DOCUMENT FLOW LAYOUT */
-    .feature-detail {
-        display: flex;
-        flex-direction: column;
-        min-height: 100vh;
-        /* Allow full document scroll */
-        padding-top: 0;
-        /* Reset padding, handled by children */
-        background-color: var(--bg-color);
-    }
-
-    .detail-header {
-        position: fixed;
-        /* Fixed relative to viewport */
-        top: 80px;
-        /* Global Menu Height */
-        left: 0;
-        width: 100%;
-        height: 100%;
-        /* 100% is safer than 100vh on mobile */
-        z-index: 90;
-        /* Below header (100) but above content */
-        padding-top: 80px;
-        /* Global header offset */
-        background-color: var(--bg-color);
-        /* Opaque background */
-        overflow: hidden;
-        /* Container doesn't scroll */
-    }
-
-    .detail-header {
-        /* Static block inside flex container */
-        flex: 0 0 auto;
-        /* Don't shrink/grow */
-        width: 100%;
-        padding: 20px 0;
-        background-color: var(--bg-color);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        z-index: 10;
-    }
-
-    .detail-header .back-btn {
-        margin-bottom: 0;
-    }
-
-    .detail-content {
-        /* The only scrolling part */
-        flex: 1;
-        overflow-y: auto;
-        /* Enable internal scrolling */
-        -webkit-overflow-scrolling: touch;
-        /* Smooth iOS scroll */
-        padding: 40px 0;
-        width: 100%;
-        overscroll-behavior: contain;
-        /* Prevent body scroll chain */
-    }
-
     font-size: 48px;
     font-weight: 700;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     letter-spacing: -1px;
+    line-height: 1.2;
 }
+
+.hero p,
+.hero-subtitle {
+    font-size: 18px;
+    color: var(--text-secondary);
+    max-width: 700px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ... (unchanged) */
+
+/* ... (keep existing lines until Feature Detail) */
+
+/* Feature Detail View - DOCUMENT FLOW LAYOUT (Consolidated) */
+.feature-detail {
+    display: flex;
+    flex-direction: column;
+    min-height: auto;
+    background-color: var(--bg-color);
+}
+
+.detail-header {
+    position: fixed;
+    top: 80px;
+    /* Global Menu Height */
+    left: 0;
+    width: 100%;
+    /* Increase top padding for separation from Main Menu */
+    padding: 40px 0 24px 0;
+    background-color: var(--bg-color);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 80;
+}
+
+/* New: Make grid match container width */
+.detail-header-grid {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 24px;
+    align-items: start;
+    max-width: 1400px;
+    /* Matches .container */
+    margin: 0 auto;
+    padding: 0 40px;
+    /* Matches .container padding */
+}
+
+/* CUSTOM CONTAINER to bypass Tailwind conflicts */
+.sincro-container {
+    width: 100%;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
+    padding: 0 40px !important;
+}
+
+/* Header Sections */
+.header-left {
+    min-width: 140px;
+}
+
+.header-center {
+    flex: 1;
+}
+
+.header-right {
+    min-width: 140px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+/* Back Button Style */
+.back-btn-subtle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.2s;
+    font-family: inherit;
+    padding: 8px 0;
+}
+
+.back-btn-subtle:hover {
+    color: var(--accent-secondary);
+}
+
+.back-text {
+    display: inline-block;
+}
+
+/* Next Button Style */
+.next-btn-subtle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 6px 16px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-family: inherit;
+}
+
+.next-btn-subtle:hover {
+    border-color: var(--accent-secondary);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.feature-name {
+    display: inline-block;
+}
+
+
+.detail-content {
+    display: block;
+    width: 100%;
+    /* Padding will be calculated by JS, but we set a safe default */
+    padding-top: 220px;
+    overflow: visible;
+}
+
+/* Markdown Content Styling */
+.feature-article-clean h1,
+.feature-article-clean h2,
+.feature-article-clean h3 {
+    margin-top: 1.5em;
+    margin-bottom: 0.8em;
+}
+
+/* Reduce top margin of the first element to fix huge gap */
+.feature-article-clean>*:first-child {
+    margin-top: 0 !important;
+}
+
+/* RESET PADDING FOR ALIGNMENT */
+/* This removes the 48px padding that was indenting the text relative to the header */
+.feature-article-clean {
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+@media (max-width: 768px) {
+    .detail-header-grid {
+        display: flex;
+        flex-direction: column;
+        padding: 0 20px;
+        gap: 16px;
+    }
+
+    .header-left,
+    .header-right {
+        min-width: auto;
+        width: 100%;
+    }
+
+    .header-right {
+        justify-content: flex-start;
+    }
+
+    .detail-header {
+        position: relative;
+        /* Static on mobile? Or keep fixed? User wants fixed usually to see context */
+        /* Let's keep fixed but simpler */
+        top: 60px;
+        /* Mobile header height often smaller? checking... */
+    }
+}
+
+
 
 .hero p {
     font-size: 18px;
@@ -393,7 +395,10 @@ a {
     background-color: rgba(17, 24, 39, 0.8);
     /* Slight transparency */
     backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    padding-bottom: 16px;
+    /* Reduced bottom padding */
 }
 
 @media (max-width: 768px) {
@@ -538,9 +543,19 @@ a {
     justify-content: space-between;
     align-items: center;
     gap: 16px;
-    padding: 0 60px;
     /* Match standard */
     width: 100%;
+}
+
+@media (min-width: 768px) and (max-width: 1200px) {
+    .filters .container-wide {
+        padding: 0 40px;
+        gap: 12px;
+    }
+
+    .search-box {
+        max-width: 220px;
+    }
 }
 
 .filter-buttons {
@@ -561,6 +576,8 @@ a {
     flex: 1;
     /* Occupy remaining space */
     gap: 8px;
+    min-width: 0;
+    /* Allow Flexbox shrinking */
 }
 
 /* Base Search Box Styles (Desktop & Common) */
@@ -718,8 +735,10 @@ a {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     /* Slightly wider cards */
+    /* Slightly wider cards */
     gap: 32px;
-    padding: 40px 0;
+    padding: 24px 0 40px 0;
+    /* Reduced top padding from 40px */
 }
 
 .feature-card {
@@ -861,153 +880,6 @@ a {
     to {
         transform: rotate(360deg);
     }
-}
-
-/* Feature Detail View */
-/* Feature Detail View - DOCUMENT FLOW LAYOUT */
-.feature-detail {
-    display: flex;
-    flex-direction: column;
-    min-height: auto;
-    /* Allow variable height based on content */
-    padding-top: 0;
-    /* Reset padding, handled by children */
-    background-color: var(--bg-color);
-}
-
-.detail-header {
-    position: fixed;
-    /* Fixed relative to viewport */
-    top: 80px;
-    /* Global Menu Height */
-    left: 0;
-    width: 100%;
-    padding: 20px 0;
-    background-color: var(--bg-color);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    z-index: 80;
-    /* Below Global Header (100) but above content */
-}
-
-.detail-header .back-btn {
-    margin-bottom: 0;
-}
-
-.detail-content {
-    display: block;
-    /* No flex grow */
-    width: 100%;
-    padding: 180px 0 60px 0 !important;
-    /* Clear Global Header (80px) + Detail Header (~70px) + buffer */
-    overflow: visible;
-    /* Let body scroll */
-}
-
-/* Mobile adjustments */
-@media (max-width: 768px) {
-    .detail-header {
-        top: 80px !important;
-        /* Match global header base */
-        padding: 12px 0 !important;
-    }
-
-    .detail-content {
-        padding-top: 160px !important;
-        /* Safe clearance for mobile */
-    }
-}
-
-/* Back Button */
-.back-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 24px;
-    background-color: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 9999px;
-    /* Pill */
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-family: inherit;
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: 500;
-}
-
-.back-btn:hover {
-    border-color: var(--accent-secondary);
-    color: var(--text-primary);
-    background-color: rgba(255, 255, 255, 0.08);
-}
-
-.feature-article {
-    background: rgba(30, 41, 59, 0.4);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 48px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-}
-
-@media (max-width: 768px) {
-    .feature-article {
-        padding: 24px;
-    }
-}
-
-.feature-article .header-section {
-    margin-bottom: 32px;
-    padding-bottom: 24px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.feature-article .header-section .tags {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 16px;
-}
-
-.feature-article h1 {
-    font-size: 28px;
-    font-weight: 700;
-    margin-bottom: 16px;
-}
-
-.feature-article .article-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    font-size: 14px;
-    color: var(--text-secondary);
-}
-
-.feature-article .article-meta span {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.feature-article .article-meta .material-icons {
-    font-size: 18px;
-}
-
-.feature-article .content {
-    font-size: 16px;
-    line-height: 1.8;
-}
-
-.feature-article .content p {
-    margin-bottom: 16px;
-}
-
-.feature-article .content h3,
-.feature-article .content h4,
-.feature-article .content h5 {
-    margin-top: 32px;
-    margin-bottom: 16px;
-    color: var(--text-main);
 }
 
 .feature-article .content ul,
@@ -1235,17 +1107,18 @@ a {
     }
 
     .hero {
-        padding: 30px 0 20px;
+        /* Mobile: Ultra compact */
+        padding: 10px 0 5px;
     }
 
     .hero h1 {
         font-size: 24px;
-        margin-bottom: 8px;
+        margin-bottom: 4px;
     }
 
     .hero p {
         font-size: 14px;
-        margin-bottom: 16px;
+        margin-bottom: 8px;
     }
 
     .search-box {
@@ -1412,6 +1285,8 @@ a {
 body {
     font-family: 'Poppins', sans-serif !important;
     -webkit-font-smoothing: antialiased;
+    /* Default spacing for fixed header (Desktop) */
+    padding-top: 80px;
 }
 
 /* Headings should use Outfit */
@@ -1474,10 +1349,20 @@ h6,
     padding: 16px 0 !important;
 }
 
-@media (max-width: 600px) {
-    .header-container {
-        padding: 0 20px !important;
-    }
+.header-container {
+    padding: 0 20px !important;
+}
+
+/* COMPACT HEADER ON MOBILE */
+.header {
+    /* Reduce padding from 16px to 6px */
+    /* Total height: 6+48+6 = 60px */
+    padding: 6px 0 !important;
+}
+
+body {
+    /* Match compacted header height */
+    padding-top: 60px;
 }
 
 /* BRANDED SCROLLBAR - SincroApp Violet */
@@ -1506,3 +1391,669 @@ h6,
 }
 
 /* Mobile menu toggle styles now handled by main-header.js embedded CSS */
+
+/* Notion Heading 2 (Mapped to H3) */
+.content.content-readable h3 {
+    font-size: 26px !important;
+    font-weight: 600 !important;
+    margin-top: 36px !important;
+    margin-bottom: 16px !important;
+    color: #F3F4F6;
+}
+
+/* Notion Heading 3 (Mapped to H4) */
+.content.content-readable h4 {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    margin-top: 24px !important;
+    margin-bottom: 12px !important;
+    color: #E5E7EB;
+}
+
+/* Paragraphs - The "Word" readable flow */
+.content.content-readable p {
+    font-size: 17px !important;
+    /* Slightly larger reading size */
+    line-height: 1.75 !important;
+    margin-bottom: 24px !important;
+    /* Distinct paragraph separation */
+    color: #D1D5DB;
+}
+
+/* List Items - Indentation Fix */
+.content.content-readable ul,
+.content.content-readable ol {
+    margin-bottom: 24px !important;
+    padding-left: 28px !important;
+}
+
+.content.content-readable li {
+    font-size: 17px !important;
+    line-height: 1.75 !important;
+    margin-bottom: 10px !important;
+    padding-left: 8px !important;
+}
+
+/* Callouts - Ensure they pop */
+.content.content-readable .callout {
+    margin: 32px 0 !important;
+    padding: 20px 24px !important;
+    background: rgba(124, 58, 237, 0.08) !important;
+    border: 1px solid rgba(124, 58, 237, 0.2) !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    gap: 16px !important;
+}
+
+.content.content-readable .callout-icon {
+    font-size: 24px !important;
+    padding-top: 2px !important;
+}
+
+.content.content-readable .callout-content {
+    font-size: 16px !important;
+    line-height: 1.6 !important;
+    color: #E5E7EB !important;
+}
+
+/* Blockquotes */
+.content.content-readable blockquote {
+    font-size: 18px !important;
+    line-height: 1.7 !important;
+    border-left-width: 4px !important;
+    padding-left: 24px !important;
+    color: #9CA3AF !important;
+    font-style: italic !important;
+    margin: 32px 0 !important;
+}
+
+/* ================================================
+   NESTED CONTENT & LIST FIXES
+   ================================================ */
+
+/* List Styling - FORCE Bullets and Numbers */
+.notion-list-disc {
+    list-style-type: disc !important;
+    padding-left: 28px !important;
+    margin-bottom: 24px !important;
+}
+
+.notion-list-decimal {
+    list-style-type: decimal !important;
+    padding-left: 28px !important;
+    margin-bottom: 24px !important;
+}
+
+.notion-list-disc li,
+.notion-list-decimal li {
+    display: list-item !important;
+    /* Ensure it's treated as a list item */
+    margin-bottom: 8px !important;
+    padding-left: 4px !important;
+}
+
+/* Callout Children (The missing text) */
+.callout-children {
+    display: block;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.callout-children p {
+    margin-bottom: 12px !important;
+    font-size: 16px !important;
+    color: #E5E7EB !important;
+    /* Ensure readability against callout background */
+}
+
+/* Fix for recursive layout inside callouts */
+.callout-content .callout-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--text-primary);
+}
+
+/* Nested lists inside callout */
+.callout-children ul,
+.callout-children ol {
+    margin-bottom: 16px !important;
+}
+
+/* ================================================
+   READABILITY & COLOR REFINEMENT
+   ================================================ */
+
+/* Soften the body text color (User Feedback: "White is too bright") */
+.content.content-readable p,
+.content.content-readable li,
+.content p,
+.content li,
+.callout-children p,
+.callout-content {
+    color: #B0B8C4 !important;
+    /* Grayish-white - Soft, easy on eyes */
+    font-family: 'Poppins', sans-serif !important;
+}
+
+/* Ensure headings stay bright for contrast/hierarchy */
+.content.content-readable h2,
+.content.content-readable h3,
+.content.content-readable h4,
+.content h2,
+.content h3,
+.content h4 {
+    color: #F8FAFC !important;
+    /* Slate 50/White */
+    font-family: 'Outfit', 'Poppins', sans-serif !important;
+}
+
+/* Strong text should stand out but not match headings exactly, or just be white */
+.content.content-readable strong,
+.content.content-readable b,
+.content strong,
+.content b {
+    color: #E2E8F0 !important;
+    /* Slate 200 - Slightly more white than body text */
+}
+
+/* ================================================
+   NOTION LIST STYLING - FORCE BULLET MARKERS
+   ================================================ */
+
+/* Bulleted Lists - Force disc marker */
+.notion-list-disc,
+.content.content-readable ul.notion-list-disc {
+    list-style-type: disc !important;
+    list-style-position: outside !important;
+    padding-left: 32px !important;
+    margin-bottom: 24px !important;
+}
+
+.notion-list-disc>li {
+    display: list-item !important;
+    list-style-type: disc !important;
+    margin-bottom: 12px !important;
+    padding-left: 8px !important;
+    color: #B0B8C4 !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+}
+
+.notion-list-disc>li::marker {
+    color: var(--accent-primary) !important;
+    font-size: 14px !important;
+}
+
+/* Numbered Lists - Force decimal marker */
+.notion-list-decimal,
+.content.content-readable ol.notion-list-decimal {
+    list-style-type: decimal !important;
+    list-style-position: outside !important;
+    padding-left: 32px !important;
+    margin-bottom: 24px !important;
+}
+
+.notion-list-decimal>li {
+    display: list-item !important;
+    list-style-type: decimal !important;
+    margin-bottom: 12px !important;
+    padding-left: 8px !important;
+    color: #B0B8C4 !important;
+    font-family: 'Poppins', sans-serif !important;
+    font-size: 16px !important;
+    line-height: 1.7 !important;
+}
+
+.notion-list-decimal>li::marker {
+    color: var(--accent-primary) !important;
+}
+
+/* Generic content list overrides for lists without notion classes */
+.content.content-readable ul,
+.content.content-readable ol {
+    padding-left: 32px !important;
+    margin-bottom: 24px !important;
+}
+
+.content.content-readable ul {
+    list-style-type: disc !important;
+}
+
+.content.content-readable ol {
+    list-style-type: decimal !important;
+}
+
+.content.content-readable li {
+    display: list-item !important;
+    margin-bottom: 10px !important;
+    padding-left: 6px !important;
+    font-family: 'Poppins', sans-serif !important;
+}
+
+.content.content-readable li::marker {
+    color: var(--accent-primary) !important;
+}
+
+/* Callout content styling */
+.callout-children {
+    font-family: 'Poppins', sans-serif !important;
+    color: #B0B8C4 !important;
+}
+
+.callout-children ul,
+.callout-children ol {
+    list-style-type: disc !important;
+    padding-left: 24px !important;
+    margin-top: 12px !important;
+}
+
+.callout-children ol {
+    list-style-type: decimal !important;
+}
+
+.callout-children li {
+    display: list-item !important;
+    margin-bottom: 8px !important;
+    color: #B0B8C4 !important;
+    font-family: 'Poppins', sans-serif !important;
+}
+
+.callout-children li::marker {
+    color: var(--accent-primary) !important;
+}
+
+/* Page Header Reservation (Prevents Blink) */
+#main-header {
+    min-height: 80px;
+    display: block;
+}
+
+/* ================================================
+   FEATURE DETAIL PAGE - REDESIGNED LAYOUT
+   ================================================ */
+
+/* Detail Header Bar - Fixed below main navigation */
+.detail-header {
+    position: fixed;
+    top: 80px;
+    /* Flush with main header (80px) */
+    left: 0;
+    right: 0;
+    z-index: 90;
+    background: rgba(17, 24, 39, 0.98);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    /* VERTICAL SEPARATION: 40px top padding for space from main menu */
+    padding: 40px 24px 24px 24px !important;
+}
+
+/* 3-Column Grid Layout */
+/* 3-Column Grid Layout (Sides conform, Center is fixed/flexible) */
+.detail-header-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    max-width: 1400px;
+    /* Increased max-width to allow more space for sides */
+    margin: 0 auto;
+    /* Reduced gap */
+    gap: 12px;
+}
+
+/* Left Column: Back Button */
+.header-left {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+}
+
+.back-btn-subtle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px 16px;
+    /* Wider padding for pill shape */
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-radius: 9999px;
+    /* Pill shape */
+    transition: all 0.2s ease;
+    font-family: var(--font-poppins);
+    font-size: 14px;
+}
+
+.back-btn-subtle:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+    /* Visible pill bg on hover */
+}
+
+.back-btn-subtle .material-icons {
+    font-size: 18px;
+}
+
+.back-btn-subtle .back-text {
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* Center Column: Title + Tags/Meta */
+.header-center {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 820px;
+    /* Fixed width for the center block to match content */
+    max-width: 100%;
+    /* Responsive fallback */
+}
+
+/* Row 1: Title only */
+.header-title-row {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+}
+
+.header-title-row h1 {
+    font-size: 28px;
+    /* Increased from 24px */
+    font-weight: 600;
+    color: var(--text-primary);
+    font-family: var(--font-outfit);
+    margin: 0;
+    line-height: 1.3;
+    text-align: left;
+}
+
+/* Row 2: Tags left, Meta right */
+.header-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.header-meta-row .tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+
+.header-meta-row .article-meta {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    flex-wrap: wrap;
+    font-family: var(--font-poppins);
+}
+
+.header-meta-row .article-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.header-meta-row .article-meta .material-icons {
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Right Column: Next Feature Button */
+.header-right {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.next-btn-subtle {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Icon gap */
+    border-radius: 9999px;
+    transition: all 0.2s ease;
+    font-family: var(--font-poppins);
+    font-size: 14px;
+    text-decoration: none;
+    max-width: 200px;
+    /* Limit width */
+}
+
+.next-btn-subtle:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.next-btn-subtle .material-icons {
+    font-size: 18px;
+}
+
+.next-btn-subtle .feature-name {
+    opacity: 0.8;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Responsive: Mobile */
+/* Responsive: Mobile */
+@media (max-width: 1100px) {
+    .detail-header-grid {
+        /* Allow wrapping on smaller screens */
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .header-left,
+    .header-right {
+        /* Ensure buttons are visible */
+        display: flex;
+    }
+
+    .header-center {
+        width: 100%;
+        /* Force new line if needed on very narrow tablet, or let it flow */
+    }
+
+    /* SAFEGUARD: If grid wraps (at 1100px), Header is Tall. Increase padding. */
+    .detail-content-clean {
+        padding-top: 320px !important;
+    }
+}
+
+@media (max-width: 768px) {
+
+    /* FIX: Hero section - Standardized mobile */
+    .hero {
+        margin-top: -80px !important;
+        padding: 140px 20px 80px !important;
+        min-height: auto !important;
+    }
+
+    .hero h1 {
+        font-size: 28px !important;
+    }
+
+    .hero p {
+        font-size: 16px !important;
+        padding: 0 16px;
+    }
+
+    .detail-header {
+        /* Compact mobile padding - minimal vertical footprint */
+        padding: 0 16px 8px 16px !important;
+        top: 80px;
+    }
+
+    /* Mobile: Use CSS Grid for reliable button placement */
+    .detail-header-grid {
+        display: grid !important;
+        grid-template-columns: auto 1fr auto !important;
+        grid-template-rows: auto auto !important;
+        grid-template-areas:
+            "left . right"
+            "center center center" !important;
+        gap: 0 !important;
+        width: 100%;
+        padding-top: 8px;
+    }
+
+    /* Place buttons at grid areas */
+    .header-left {
+        grid-area: left !important;
+        min-width: auto !important;
+    }
+
+    .header-right {
+        grid-area: right !important;
+        min-width: auto !important;
+        justify-self: end !important;
+    }
+
+    /* Title spans full width on second row */
+    .header-center {
+        grid-area: center !important;
+        width: 100% !important;
+        margin-top: 16px;
+        padding: 14px 0 12px 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    /* Hide pseudo-element */
+    .detail-header-grid::before {
+        display: none !important;
+    }
+
+    /* Compact Button Styling */
+    .next-btn-subtle,
+    .back-btn-subtle {
+        padding: 8px 4px !important;
+        background: transparent !important;
+        max-width: none;
+        width: auto;
+        border: none;
+        font-size: 13px;
+        cursor: pointer;
+        position: relative;
+        z-index: 10;
+    }
+
+    .next-btn-subtle .feature-name,
+    .back-btn-subtle .back-text {
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .next-btn-subtle .material-icons,
+    .back-btn-subtle .material-icons {
+        font-size: 14px;
+    }
+
+    .header-title-row h1 {
+        font-size: 22px;
+        text-align: left;
+    }
+
+    .header-meta-row {
+        justify-content: flex-start;
+        gap: 12px;
+    }
+
+    .header-meta-row .article-meta {
+        font-size: 11px;
+        margin-top: 4px;
+        /* width: 100%; -- Remove width constraint to let them flow naturally? */
+        width: auto;
+        margin-right: 12px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .detail-content-clean {
+        /* Fallback for JS: Detail Header height is ~100px on mobile */
+        padding-top: 100px !important;
+    }
+}
+
+/* ==========================================================================
+   NUCLEAR SPACING RESET (Fixes "Buraco" / Gap Issue)
+   ========================================================================== */
+
+/* 1. Reset Container Spacing */
+.detail-content-clean {
+    background: transparent !important;
+    /* Spacing: Body(80) + Padding(100) = 180px. Header ~180px. */
+    /* Spacing: Detail Header is ~60px on desktop */
+    padding-top: 60px !important;
+    padding-bottom: 60px !important;
+    margin: 0 auto !important;
+    border: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+.feature-article-clean {
+    width: 100% !important;
+    max-width: 820px !important;
+    /* Match header-center width for alignment */
+    margin: 0 auto !important;
+    /* Center to align with header grid */
+    background: transparent !important;
+    /* Remove dark background */
+    box-shadow: none !important;
+    border: none !important;
+}
+
+/* Force container to be centered and transparent */
+/* REMOVED: Replaced by .sincro-container */
+
+.feature-article-clean,
+.feature-article-clean .content,
+.detail-content-clean .container {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border: none !important;
+}
+
+/* 2. Reset Text Spacing (The Ghost Margins) */
+.detail-content-clean .content>*:first-child,
+.detail-content-clean .content>div:first-child,
+.detail-content-clean .content h1:first-of-type,
+.detail-content-clean .content h2:first-of-type {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    line-height: 1.2 !important;
+    /* Prevent line-height gap */
+}
+
+/* Override existing .content-readable h2 rule from line 1945 */
+.content.content-readable h2 {
+    margin-top: 24px;
+    /* Restore normal margin for non-first */
+}
+
+.content.content-readable>h2:first-child {
+    margin-top: 0 !important;
+}

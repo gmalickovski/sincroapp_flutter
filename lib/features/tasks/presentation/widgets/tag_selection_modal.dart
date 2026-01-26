@@ -2,18 +2,15 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/common/utils/string_sanitizer.dart';
 
 class TagSelectionModal extends StatefulWidget {
   final String userId;
   final List<String> initialSelectedTags;
-  // --- REMOVIDO: onTagSelected callback ---
 
   const TagSelectionModal({
     super.key,
     required this.userId,
     this.initialSelectedTags = const [],
-    // required this.onTagSelected, // Removido
   });
 
   @override
@@ -35,7 +32,6 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
   }
 
   void _loadTags() {
-    // (Mantida a lógica de buscar tags recentes ou de 'getTags')
     _tagsFuture = _supabaseService.getRecentTasks(widget.userId).then((tasks) {
       final tagSet = <String>{};
       for (var task in tasks) {
@@ -45,8 +41,6 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
       tagList.sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
       return tagList;
     });
-    // Se você tem um getTags() que retorna List<String>, use:
-    // _tagsFuture = _firestoreService.getTags(widget.userId);
   }
 
   @override
@@ -60,7 +54,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
     if (tagName.isEmpty) return;
 
     // Sanitiza a tag para o formato padrão (minúsculo, sem hífen)
-    final sanitizedTag = StringSanitizer.toSimpleTag(tagName);
+    final sanitizedTag = tagName.trim(); 
     if (sanitizedTag.isEmpty) return;
 
     setState(() {
@@ -68,13 +62,8 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
     });
 
     try {
-      // Opcional: Salva a nova tag no backend (se você tiver um createTag)
-      // await _firestoreService.createTag(widget.userId, sanitizedTag);
-
-      // --- INÍCIO DA MUDANÇA ---
       // Retorna a nova tag sanitizada via pop
       if (mounted) Navigator.of(context).pop(sanitizedTag);
-      // --- FIM DA MUDANÇA ---
     } catch (e) {
       debugPrint("Erro ao criar tag: $e");
       setState(() {
@@ -172,10 +161,8 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
                       splashColor: AppColors.primary.withValues(alpha: 0.2),
                       hoverColor: AppColors.primary.withValues(alpha: 0.1),
                       onTap: () {
-                        // --- INÍCIO DA MUDANÇA ---
-                        // Retorna a tag (já sanitizada) via pop
+                        // Retorna a tag via pop
                         Navigator.of(context).pop(tagName);
-                        // --- FIM DA MUDANÇA ---
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(

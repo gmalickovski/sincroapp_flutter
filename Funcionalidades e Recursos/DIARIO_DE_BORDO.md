@@ -1,5 +1,8 @@
 # Diário de Bordo (Journal) e Anotações
 
+**Nome Comercial:** Diário de Bordo Sensorial & Mood Tracker
+**Descrição Curta:** Registre insights e rastreie suas emoções diárias correlacionando humor com sua vibração numerológica da data.
+
 ## O Espelho da Alma
 O **Diário de Bordo** não é apenas um lugar para escrever "o que aconteceu", mas para registrar "como você se sentiu". Na jornada do autoconhecimento, identificar padrões emocionais é tão importante quanto bater metas.
 

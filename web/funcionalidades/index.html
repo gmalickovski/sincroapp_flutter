@@ -29,14 +29,16 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="/assets/css/header.css">
+    <!-- Styles -->
+    <link rel="stylesheet" href="style.css?v=1.1.80">
+    <link rel="stylesheet" href="/assets/css/header.css?v=1.0.1">
+    <meta name="view-transition" content="same-origin" />
 </head>
 
 <body>
     <!-- Header (JS Injected) -->
     <div id="main-header"></div>
-    <script src="/assets/js/main-header.js"></script>
+    <script src="/assets/js/main-header.js?v=1.1.8"></script>
     <script>loadHeader();</script>
 
     <!-- Hero Section (hides on scroll) -->
@@ -127,20 +129,31 @@
 
     <!-- Feature Detail (Hidden by default) -->
     <section class="feature-detail" id="featureDetail" style="display: none;">
-        <!-- Fixed Back Button Bar -->
+        <!-- Fixed Header Bar with Back Arrow + Page Info -->
         <div class="detail-header">
-            <div class="container">
-                <button class="back-btn" onclick="showFeed()">
-                    <span class="material-icons">arrow_back</span>
-                    Voltar para funcionalidades
-                </button>
+            <div class="detail-header-grid">
+                <!-- Left: Back Button -->
+                <div class="header-left">
+                    <button class="back-btn-subtle" onclick="showFeed()" title="Página Inicial">
+                        <span class="material-icons">arrow_back_ios</span>
+                        <span class="back-text">Página Inicial</span>
+                    </button>
+                </div>
+
+                <!-- Center: Title + Tags/Meta Grid -->
+                <div class="header-center" id="detailHeaderInfo">
+                    <!-- Title, tags, meta populated by JS -->
+                </div>
+
+                <!-- Right: Spacer for balance -->
+                <div class="header-right"></div>
             </div>
         </div>
 
-        <!-- Scrollable Content -->
-        <div class="detail-content">
-            <div class="container">
-                <article class="feature-article" id="featureArticle">
+        <!-- Scrollable Content (no background card) -->
+        <div class="detail-content detail-content-clean">
+            <div class="sincro-container">
+                <article class="feature-article feature-article-clean" id="featureArticle">
                     <!-- Content loaded dynamically -->
                 </article>
             </div>
@@ -150,7 +163,7 @@
     <!-- Footer (Global) -->
     <div id="main-footer"></div>
     <script src="/assets/js/main-footer.js"></script>
-    <script src="script.js"></script>
+    <script src="script.js?v=1.1.60"></script>
 </body>
 
 </html>

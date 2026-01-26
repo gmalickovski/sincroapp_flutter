@@ -6,6 +6,7 @@ import 'tabs/account_settings_tab.dart';
 import 'tabs/numerology_settings_tab.dart';
 import 'tabs/plan_settings_tab.dart';
 import 'tabs/integrations_settings_tab.dart';
+import 'tabs/contacts_settings_tab.dart'; // NOVO import
 
 class SettingsScreen extends StatefulWidget {
   final UserModel userData;
@@ -28,6 +29,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         icon: Icons.person_outline,
         title: 'Minha Conta',
         page: AccountSettingsTab(userData: widget.userData),
+      ),
+      (
+        icon: Icons.people_outline,
+        title: 'Contatos',
+        page: ContactsSettingsTab(userData: widget.userData), // NOVO Tab
       ),
       (
         icon: Icons.calculate_outlined,

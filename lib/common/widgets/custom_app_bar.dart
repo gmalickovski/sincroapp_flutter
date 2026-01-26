@@ -7,13 +7,13 @@ import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
 
-class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
+class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final UserModel? userData;
   final VoidCallback onMenuPressed;
   final AnimationController menuAnimationController;
   final bool isEditMode;
-  final VoidCallback?
-      onEditPressed; // Callback remains, but button visibility changes
+  final VoidCallback? onEditPressed;
+  final ValueChanged<String>? onSearchChanged; // New callback
 
   const CustomAppBar({
     super.key,
@@ -22,20 +22,78 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.menuAnimationController,
     this.isEditMode = false,
     this.onEditPressed,
+    this.onSearchChanged,
   });
 
+  @override
+  State<CustomAppBar> createState() => _CustomAppBarState();
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight + 1.0);
+}
+
+class _CustomAppBarState extends State<CustomAppBar> {
+  bool _isSearchOpen = false;
+  bool _isSearchHovered = false; // Track field hover
+  bool _isCloseHovered = false; // Track close button hover (for color change)
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchFocusNode.addListener(_onFocusChanged);
+  }
+
+  @override
+  void dispose() {
+    _searchFocusNode.removeListener(_onFocusChanged);
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onFocusChanged() {
+    setState(() {}); // Rebuild to update border on focus change
+  }
+
+  void _openSearch() {
+    if (!_isSearchOpen) {
+      setState(() {
+        _isSearchOpen = true;
+        _searchFocusNode.requestFocus();
+      });
+    }
+  }
+
+  void _closeSearch() {
+    if (_isSearchOpen) {
+      setState(() {
+        _isSearchOpen = false;
+        _searchFocusNode.unfocus();
+      });
+      // Delay clearing text until animation finishes to avoid visual snap
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && !_isSearchOpen) {
+           _searchController.clear();
+           widget.onSearchChanged?.call('');
+        }
+      });
+    }
+  }
+
   void _navigateToSettings(BuildContext context) {
-    if (userData != null) {
-      final isDesktop = MediaQuery.of(context).size.width >= 720; // Matches Sidebar logic
+    if (widget.userData != null) {
+      final isDesktop = MediaQuery.of(context).size.width >= 720;
       if (isDesktop) {
         showDialog(
           context: context,
-          builder: (context) => SettingsScreen(userData: userData!),
+          builder: (context) => SettingsScreen(userData: widget.userData!),
         );
       } else {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => SettingsScreen(userData: userData!),
+            builder: (context) => SettingsScreen(userData: widget.userData!),
           ),
         );
       }
@@ -46,74 +104,63 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
+    Widget titleWidget = SvgPicture.asset(
+      'assets/images/sincroapp_logo.svg',
+      height: isDesktop ? 32 : 24,
+      fit: BoxFit.contain,
+    );
+
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
       leading: IconButton(
-        // Use IconButton consistently
         icon: AnimatedIcon(
-          // Use AnimatedIcon for desktop, simple Menu icon for mobile driven by controller state
           icon: AnimatedIcons.menu_close,
-          progress: menuAnimationController, // Animation driven by controller
+          progress: widget.menuAnimationController,
           color: AppColors.secondaryText,
         ),
-        onPressed: onMenuPressed,
+        onPressed: widget.onMenuPressed,
         tooltip: 'Menu',
       ),
-      title: SvgPicture.asset(
-        'assets/images/sincroapp_logo.svg',
-        height: isDesktop ? 32 : 24, // Menor no mobile
-        fit: BoxFit.contain,
-      ),
+      // Hide title on mobile when search is open to avoid push/shrink effect
+      title: (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
       centerTitle: true,
       actions: [
-        // *** CHANGE HERE: Only show Edit button if on Desktop AND callback is provided ***
-        // Oculta o botão de Editar/Concluir enquanto o modo de reorder está ativo
-        if (isDesktop && onEditPressed != null && !isEditMode)
+        // Unified Search (same behavior for mobile and desktop)
+        Padding(
+          padding: const EdgeInsets.only(right: 8.0), // Spacing from next element
+          child: _buildUnifiedSearch(context, isDesktop: isDesktop),
+        ),
+
+        if (isDesktop && widget.onEditPressed != null && !widget.isEditMode)
           Padding(
-            // Add padding for better spacing on desktop
-            padding: const EdgeInsets.only(right: 8.0),
-            child: TextButton.icon(
+            padding: const EdgeInsets.only(right: 24.0),
+            child: IconButton(
               icon: const Icon(
-                // Logic remains the same: show check when isEditMode is true (modal open)
-                Icons.edit_outlined,
+                Icons.swap_vert,
                 color: AppColors.secondaryText,
-                size: 18,
               ),
-              label: const Text(
-                'Editar',
-                style: TextStyle(color: AppColors.secondaryText),
-              ),
-              onPressed: onEditPressed, // This still calls _openReorderModal
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: const BorderSide(color: AppColors.border),
+              tooltip: 'Reordenar Cards',
+              onPressed: widget.onEditPressed,
+            ),
+          ),
+
+        if (widget.userData != null)
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+              child: GestureDetector(
+                onTap: () => _navigateToSettings(context),
+                child: UserAvatar(
+                  photoUrl: widget.userData!.photoUrl,
+                  firstName: widget.userData!.primeiroNome,
+                  lastName: widget.userData!.sobrenome,
+                  radius: 18,
                 ),
               ),
             ),
-          ),
-        // *** END CHANGE ***
 
-        // User Avatar / Settings Navigation
-        if (userData != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: GestureDetector(
-              onTap: () => _navigateToSettings(context),
-              child: UserAvatar(
-                photoUrl: userData!.photoUrl,
-                firstName: userData!.primeiroNome,
-                lastName: userData!.sobrenome,
-                radius: 18,
-              ),
-            ),
-          ),
-        // Add SizedBox if on mobile and userData is null to prevent title shift
-        if (!isDesktop && userData == null)
-          const SizedBox(
-              width: kToolbarHeight), // Approx. width of avatar action
+        if (!isDesktop && widget.userData == null)
+          const SizedBox(width: kToolbarHeight),
       ],
       shape: const Border(
         bottom: BorderSide(color: AppColors.border, width: 1.0),
@@ -121,7 +168,139 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-  @override
-  Size get preferredSize =>
-      const Size.fromHeight(kToolbarHeight + 1.0); // Keep border height
+  /// Unified search widget - same behavior for mobile and desktop.
+  /// Expands leftward from the button position, X stays in place.
+  Widget _buildUnifiedSearch(BuildContext context, {required bool isDesktop}) {
+    final isOpen = _isSearchOpen;
+    final screenWidth = MediaQuery.of(context).size.width;
+    // Desktop: 35% of screen. Mobile: ~70% of screen (leaving space for menu and avatar)
+    final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth * 0.70;
+    
+    // Determine Border Color or Transparent if closed
+    Color borderColor = Colors.transparent;
+    Color bgColor = Colors.transparent;
+    
+    if (isOpen) {
+       bgColor = AppColors.cardBackground.withValues(alpha: 0.5);
+       if (_searchFocusNode.hasFocus) {
+        borderColor = AppColors.primary;
+       } else if (_isSearchHovered) {
+        borderColor = AppColors.secondaryText;
+       } else {
+        borderColor = AppColors.border;
+       }
+    }
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      width: isOpen ? targetWidth : 48.0, 
+      height: 42,
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      // Use Stack to keep button anchored to the right
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // The Search Field (Visible only when open)
+          if (isOpen)
+            Positioned.fill(
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _isSearchHovered = true),
+                onExit: (_) => setState(() => _isSearchHovered = false),
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: const InputDecoration(
+                    hintText: 'Pesquisar...',
+                    hintStyle: TextStyle(
+                        color: AppColors.tertiaryText, fontSize: 14),
+                    border: InputBorder.none,
+                    focusedBorder: InputBorder.none,
+                    enabledBorder: InputBorder.none,
+                    errorBorder: InputBorder.none,
+                    disabledBorder: InputBorder.none,
+                    isCollapsed: true,
+                    filled: false,
+                    contentPadding: EdgeInsets.only(left: 16, right: 48, top: 12, bottom: 12), 
+                  ),
+                  onChanged: widget.onSearchChanged,
+                  onTapOutside: (event) {
+                    if (_isSearchOpen) _closeSearch();
+                  },
+                ),
+              ),
+            ),
+
+          // The Toggle Button (Search or Close) - always anchored to right
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: SizedBox(
+              width: 48,
+              height: 48,
+              child: isOpen 
+                ? _buildCloseButton()
+                : _buildSearchButton(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchButton() {
+    return Center(
+      child: SizedBox(
+        width: 40,
+        height: 40,
+        child: Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          child: InkWell(
+            onTap: _openSearch,
+            customBorder: const CircleBorder(),
+            hoverColor: AppColors.primary.withValues(alpha: 0.1),
+            splashColor: AppColors.primary.withValues(alpha: 0.2),
+            child: const Center(
+              child: Icon(
+                Icons.search,
+                color: AppColors.secondaryText,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Builds a close button that changes color on hover (no background splash).
+  Widget _buildCloseButton() {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isCloseHovered = true),
+      onExit: (_) => setState(() => _isCloseHovered = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: _closeSearch,
+        child: Container(
+          width: 48,
+          height: 48,
+          alignment: Alignment.center,
+          color: Colors.transparent,
+          child: Icon(
+            Icons.close,
+            color: _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
 }
+

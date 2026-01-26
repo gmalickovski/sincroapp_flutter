@@ -405,7 +405,7 @@ class SupabaseService {
       final response = await _supabase
           .schema('sincroapp')
           .from('user_contacts')
-          .select('contact_user_id, status, users!contact_user_id(uid, username, first_name, last_name, email)')
+          .select('contact_user_id, status, users!contact_user_id(uid, username, first_name, last_name, email, photo_url)')
           .eq('user_id', uid)
           .order('created_at');
 
@@ -417,21 +417,24 @@ class SupabaseService {
         
         final firstName = (userData['first_name'] ?? '').toString().trim();
         final lastName = (userData['last_name'] ?? '').toString().trim();
-        final firstLastNamePart = lastName.split(' ').first;
         
+        // Logic fixed: Prevent duplication if firstName already contains lastName
         String displayName;
-        if (firstName.isNotEmpty && firstLastNamePart.isNotEmpty) {
-          displayName = '$firstName $firstLastNamePart';
-        } else if (firstName.isNotEmpty) {
-          displayName = firstName;
+        if (firstName.isNotEmpty) {
+           if (firstName.toLowerCase().endsWith(lastName.toLowerCase())) {
+             displayName = firstName;
+           } else {
+             displayName = '$firstName $lastName'.trim();
+           }
         } else {
-          displayName = userData['email'] ?? '';
+           displayName = userData['email'] ?? '';
         }
 
         return ContactModel(
           userId: item['contact_user_id'],
           username: userData['username'] ?? '',
           displayName: displayName,
+          photoUrl: userData['photo_url'],
           status: status,
         );
       }).toList();

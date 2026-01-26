@@ -51,14 +51,10 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
         : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
-    final cardContent = ClipRRect(
-      borderRadius: BorderRadius.circular(16.0),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
-        child: AnimatedContainer(
+final cardContent = AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
-            color: AppColors.cardBackground.withValues(alpha: 0.8),
+            color: AppColors.cardBackground.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(16.0),
             border: Border.all(color: borderColor, width: borderWidth),
             boxShadow: const [
@@ -85,8 +81,6 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
                 ),
             ],
           ),
-        ),
-      ),
     );
 
     return MouseRegion(

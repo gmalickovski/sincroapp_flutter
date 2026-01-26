@@ -1,6 +1,6 @@
 # Aptidões Profissionais
 
-**Nome Comercial:** Orientação Vocacional Vibracional (IA)
+**Nome Comercial:** Orientação Vocacional Vibracional com Sincro IA
 **Descrição Curta:** Identifique as carreiras que ressoam com seu propósito de vida através de uma análise profunda do seu Mapa.
 
 ---

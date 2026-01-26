@@ -22,7 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const featureId = urlParams.get('id');
 
     if (featureId) {
+        // 1. Load detail IMMEDIATELY (Performance Fix)
+        // "O correto é que fosse instantaneo"
         loadFeatureDetail(featureId);
+
+        // 2. Fetch full list in background for navigation (Next Button)
+        fetchFeatures().then(() => {
+            // Re-render ONLY the navigation part (Header Right)
+            // We pass true as second arg to indicate "only nav update" if possible, 
+            // or just rely on the fact that loadFeatureDetail is cheap? 
+            // Better: Create specific function or just call renderFeatureNav
+            updateFeatureNavigation(featureId);
+        });
     } else {
         fetchFeatures();
     }
@@ -171,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Fetch all features
 async function fetchFeatures() {
     try {
-        const response = await fetch('/api/features');
+        const response = await fetch('/api/features?context=blog');
         const data = await response.json();
 
         if (data.features && data.features.length > 0) {
@@ -276,6 +287,9 @@ async function loadFeatureDetail(id) {
     featuresFeed.style.display = 'none';
     featureDetail.style.display = 'block';
 
+    // 3. Scroll to Top (Fix "Scroll pela metade")
+    window.scrollTo(0, 0);
+
     featureArticle.innerHTML = `
         <div class="loading">
             <span class="material-icons spin">sync</span>
@@ -317,27 +331,58 @@ function renderFeatureDetail(feature) {
     const createdDate = formatDate(feature.createdAt);
     const updatedDate = formatDate(feature.updatedAt);
 
-    featureArticle.innerHTML = `
-        <div class="header-section">
-            <h1>${feature.name}</h1>
-            <div class="tags" style="margin-bottom: 16px;">${tags}</div>
-            <div class="article-meta">
-                <span>
-                    <span class="material-icons">event</span>
-                    Publicado: ${createdDate}
-                </span>
-                <span>
-                    <span class="material-icons">update</span>
-                    Atualizado: ${updatedDate}
-                </span>
-                <span>
-                    <span class="material-icons">new_releases</span>
-                    Versão: ${feature.version}
-                </span>
+    // Populate the sticky header with title, tags, and meta
+    const headerInfo = document.getElementById('detailHeaderInfo');
+    if (headerInfo) {
+        headerInfo.innerHTML = `
+            <div class="header-title-row">
+                <h1>${feature.name}</h1>
             </div>
-        </div>
+            </div>
+            <div class="header-meta-row">
+                <div class="tags">${tags}</div>
+                <div class="article-meta">
+                    <span>
+                        <span class="material-icons">event</span>
+                        ${createdDate}
+                    </span>
+                    <span>
+                        <span class="material-icons">update</span>
+                        ${updatedDate}
+                    </span>
+                    ${feature.version ? `
+                    <span>
+                        <span class="material-icons">new_releases</span>
+                        v${feature.version}
+                    </span>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    // Populate Right Header (Next Feature)
+    const headerRight = document.querySelector('.header-right');
+    if (headerRight) {
+        const currentIndex = allFeatures.findIndex(f => f.id === feature.id);
+
+        // Check if there is a next feature
+        if (currentIndex !== -1 && currentIndex < allFeatures.length - 1) {
+            const nextFeature = allFeatures[currentIndex + 1];
+            headerRight.innerHTML = `
+                <button class="next-btn-subtle" onclick="openFeature('${nextFeature.id}')" title="Próximo: ${nextFeature.name}">
+                    <span class="feature-name">Próxima Página</span>
+                    <span class="material-icons">arrow_forward_ios</span>
+                </button>
+            `;
+        } else {
+            headerRight.innerHTML = ''; // Clear if last or not found
+        }
+    }
+
+    // Render content directly without header-section wrapper
+    featureArticle.innerHTML = `
         <div class="content">
-            ${feature.content || '<p>Conteúdo em breve.</p>'}
+            ${feature.content || '<p class="empty-content">Conteúdo em breve.</p>'}
         </div>
     `;
 }
@@ -370,21 +415,56 @@ window.addEventListener('popstate', () => {
     }
 });
 
-// Mobile Menu Logic with Animated Hamburger & Overlay
-// Mobile Menu Logic// Mobile Menu Init
-// Handled by main-header.js
 
-// Initial Call
-document.addEventListener('DOMContentLoaded', () => {
-    // Check for URL parameter (deep link to feature)
-    const urlParams = new URLSearchParams(window.location.search);
-    const featureId = urlParams.get('id');
+// Helper to update navigation after background fetch
+function updateFeatureNavigation(currentId) {
+    const currentIndex = allFeatures.findIndex(f => f.id === currentId);
+    const headerRight = document.querySelector('.header-right');
 
-    if (featureId) {
-        loadFeatureDetail(featureId);
-    } else {
-        fetchFeatures();
+    if (headerRight && currentIndex !== -1 && currentIndex < allFeatures.length - 1) {
+        const nextFeature = allFeatures[currentIndex + 1];
+        headerRight.innerHTML = `
+            <button class="next-btn-subtle" onclick="openFeature('${nextFeature.id}')" title="Próximo: ${nextFeature.name}">
+                <span class="feature-name">Próxima Página</span>
+                <span class="material-icons">arrow_forward_ios</span>
+            </button>
+        `;
     }
+}
 
-    // Mobile menu is now handled by main-header.js
-});
+// ================================================
+// DYNAMIC LAYOUT FIX (FIXED HEADER OVERLAP)
+// ================================================
+function adjustContentPadding() {
+    const detailHeader = document.querySelector('.detail-header');
+    const contentContainer = document.querySelector('.detail-content-clean');
+
+    if (detailHeader && contentContainer) {
+        // Measure heights
+        const detailHeaderHeight = detailHeader.offsetHeight;
+        // Main header is fixed at 80px (desktop) or varying on mobile? 
+        // Let's assume 80px if .header-container exists, or measure it if sticky
+        const mainHeader = document.getElementById('main-header'); // From main-header.js
+        const mainHeaderHeight = mainHeader ? mainHeader.offsetHeight : 80;
+
+        // Calculate total top offset
+        // Main Header (80px) + Detail Header (variable) - TIGHTENING (100px)
+        // Subtracting to pull content closer to header, removing the gap
+        const finalPadding = mainHeaderHeight + detailHeaderHeight - 100;
+
+        // Override CSS with !important to win over any CSS rules
+        contentContainer.style.setProperty('padding-top', `${finalPadding}px`, 'important');
+    }
+}
+
+// Run on load, resize, and when content changes (e.g. render)
+window.addEventListener('load', adjustContentPadding);
+window.addEventListener('resize', adjustContentPadding);
+
+// Hook into render loop
+const originalRenderFeatureDetail = renderFeatureDetail;
+renderFeatureDetail = function (feature) {
+    originalRenderFeatureDetail(feature);
+    // Wait for DOM update
+    setTimeout(adjustContentPadding, 50); // Small delay for layout calculation
+};
