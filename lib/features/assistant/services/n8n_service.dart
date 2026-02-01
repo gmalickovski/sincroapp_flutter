@@ -8,29 +8,29 @@ class N8nService {
   // Agora lê do arquivo .env
   static String get _webhookUrl => dotenv.env['ASSISTANT_WEBHOOK_URL'] ?? '';
 
-  /// Envia o prompt para o n8n e retorna a resposta bruta (String)
+  /// Envia o payload estruturado para o n8n
   Future<String> chat({
-    required String prompt,
+    required Map<String, dynamic> payload,
     required String userId,
   }) async {
     try {
       if (_webhookUrl.isEmpty) {
         throw Exception('ASSISTANT_WEBHOOK_URL not configured in .env');
       }
-      debugPrint('[N8nService] Enviando prompt para $_webhookUrl...');
+      debugPrint('[N8nService] Enviando payload para $_webhookUrl...');
+      
+      final bodyMap = {
+        ...payload,
+        'userId': userId,
+        // 'timestamp': DateTime.now().toIso8601String(),
+      };
       
       final response = await http.post(
         Uri.parse(_webhookUrl),
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': 'Bearer ...' // Se adicionar auth no futuro
         },
-        body: jsonEncode({
-          'chatInput': prompt,
-          'userId': userId,
-          // Podemos enviar metadados adicionais se o n8n for otimizado para usá-los separado
-          // 'timestamp': DateTime.now().toIso8601String(),
-        }),
+        body: jsonEncode(bodyMap),
       );
 
       if (response.statusCode == 200) {
@@ -44,10 +44,21 @@ class N8nService {
         String outputText = '';
         if (decoded is List && decoded.isNotEmpty) {
            // As vezes n8n retorna [{ "output": "..." }]
-           final first = decoded.first;
-           outputText = first['output'] ?? first['text'] ?? jsonEncode(first);
+           final first = decoded.first as Map<String, dynamic>;
+           final dynamic content = first['output'] ?? first['text'];
+           
+           if (content is Map || content is List) {
+             outputText = jsonEncode(content);
+           } else {
+             outputText = content?.toString() ?? jsonEncode(first);
+           }
         } else if (decoded is Map) {
-           outputText = decoded['output'] ?? decoded['text'] ?? jsonEncode(decoded);
+           final dynamic content = decoded['output'] ?? decoded['text'];
+            if (content is Map || content is List) {
+             outputText = jsonEncode(content);
+           } else {
+             outputText = content?.toString() ?? jsonEncode(decoded);
+           }
         } else {
            outputText = decoded.toString();
         }

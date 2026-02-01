@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 class AppColors {
   static const Color background = Color(0xFF111827); // gray-900
   static const Color cardBackground = Color(0xFF1F2937); // gray-800
+  static const Color cardBackgroundLight = Color(0xFF374151); // gray-700
   static const Color border = Color(0xFF4B5563); // gray-600
 
   static const Color primaryText = Color(0xFFFFFFFF); // white

@@ -197,6 +197,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
     try {
       final displayName = widget.user.userMetadata?['full_name'] ?? '';
+      final gender = widget.user.userMetadata?['gender']; // NOVO
       
       // Lógica de Fallback: Se o displayName vier vazio (erro no cadastro),
       // usamos o nome de nascimento inserido pelo usuário.
@@ -218,6 +219,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         sobrenome: sobrenome,
         nomeAnalise: _nomeAnaliseController.text.trim(),
         dataNasc: _dataNascController.text.trim(),
+        gender: gender, // NOVO
         plano: 'essencial',
         isAdmin: false,
         dashboardCardOrder: UserModel.defaultCardOrder,

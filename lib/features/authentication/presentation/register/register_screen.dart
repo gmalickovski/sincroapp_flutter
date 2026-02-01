@@ -24,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isLoading = false;
   bool _showPassword = false;
   bool _agreedToTerms = false;
+  String? _selectedGender; // NOVO
 
   Future<void> _signUp() async {
     if (!_agreedToTerms) {
@@ -43,6 +44,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         email: _emailController.text,
         password: _passwordController.text,
         displayName: displayName,
+        gender: _selectedGender, // NOVO
       );
 
       final freshUser = response.user;
@@ -245,6 +247,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 borderSide: const BorderSide(color: AppColors.primary),
               ),
             ),
+          ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<String>(
+            value: _selectedGender,
+            decoration: InputDecoration(
+              labelText: 'Gênero (Opcional)',
+              labelStyle: const TextStyle(color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.wc, color: AppColors.secondaryText),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.border),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: AppColors.primary),
+              ),
+            ),
+            dropdownColor: AppColors.cardBackground, 
+            style: const TextStyle(color: Colors.white),
+            items: ['Masculino', 'Feminino', 'Outro'].map((String value) {
+              return DropdownMenuItem<String>(
+                value: value,
+                child: Text(value),
+              );
+            }).toList(),
+            onChanged: (newValue) {
+              setState(() {
+                _selectedGender = newValue;
+              });
+            },
           ),
           const SizedBox(height: 16),
           TextField(

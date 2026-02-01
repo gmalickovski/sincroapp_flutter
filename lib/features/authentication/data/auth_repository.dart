@@ -41,12 +41,16 @@ class AuthRepository {
     required String email,
     required String password,
     required String displayName,
+    String? gender, // NOVO
   }) async {
     try {
       final response = await _auth.signUp(
         email: email.trim(),
         password: password.trim(),
-        data: {'full_name': displayName.trim()}, 
+        data: {
+          'full_name': displayName.trim(),
+          if (gender != null) 'gender': gender, // NOVO
+        }, 
       );
       
       // Notificar N8N MOVED: Now handled in UserDetailsScreen after analysis data

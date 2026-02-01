@@ -50,7 +50,7 @@ class SubTask extends Equatable {
     return SubTask(
       id: map['id'] ?? defaultId,
       title: map['title'] ?? '',
-      isCompleted: map['isCompleted'] ?? false,
+      isCompleted: map['is_completed'] ?? map['isCompleted'] ?? false,
       deadline: parsedDeadline,
     );
   }
@@ -59,7 +59,7 @@ class SubTask extends Equatable {
     return {
       'id': id,
       'title': title,
-      'isCompleted': isCompleted,
+      'is_completed': isCompleted,
       'deadline': deadline?.toIso8601String(),
     };
   }
@@ -109,9 +109,10 @@ class Goal extends Equatable {
     }
 
     List<SubTask> loadedSubTasks = [];
-    if (data['subTasks'] is List) {
+    final subTasksRaw = data['sub_tasks'] ?? data['subTasks'];
+    if (subTasksRaw is List) {
       try {
-        List<dynamic> subTasksData = data['subTasks'] as List<dynamic>;
+        List<dynamic> subTasksData = subTasksRaw as List<dynamic>;
         loadedSubTasks = subTasksData.map((taskData) {
           final taskMap = taskData as Map<String, dynamic>;
           // Usando um ID temporário se não vier
@@ -126,13 +127,13 @@ class Goal extends Equatable {
       id: data['id'] ?? '', // ID deve vir no map
       title: data['title'] ?? '',
       description: data['description'] ?? '',
-      targetDate: parseDate(data['targetDate']),
+      targetDate: parseDate(data['target_date'] ?? data['targetDate']),
       progress: (data['progress'] ?? 0).toInt(),
-      createdAt: parseDate(data['createdAt']) ?? DateTime.now(),
-      userId: data['userId'] ?? '',
+      createdAt: parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
+      userId: data['user_id'] ?? data['userId'] ?? '',
       category: data['category'] as String?,
       subTasks: loadedSubTasks,
-      imageUrl: data['imageUrl'] as String?,
+      imageUrl: (data['image_url'] ?? data['imageUrl']) as String?,
     );
   }
 
@@ -147,13 +148,13 @@ class Goal extends Equatable {
     return {
       'title': title,
       'description': description,
-      'targetDate': targetDate?.toIso8601String(),
+      'target_date': targetDate?.toIso8601String(),
       'progress': currentProgress, 
-      'createdAt': createdAt.toIso8601String(),
-      'userId': userId,
+      'created_at': createdAt.toIso8601String(),
+      'user_id': userId,
       'category': category,
-      'subTasks': subTasks.map((task) => task.toMap()).toList(),
-      'imageUrl': imageUrl,
+      'sub_tasks': subTasks.map((task) => task.toMap()).toList(),
+      'image_url': imageUrl,
     };
   }
 

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_section_title.dart';
 
 class NumerologySettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -93,89 +94,84 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if running on desktop
-    final isDesktop = MediaQuery.of(context).size.width >= 720;
-
     return SingleChildScrollView(
-      padding: isDesktop
-          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
-          : const EdgeInsets.all(16.0),
-      child: Container(
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(12.0),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Dados da Análise',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold)),
-              const Padding(
-                padding: EdgeInsets.only(top: 4, bottom: 16),
-                child: Text(
-                    'Informações usadas para os cálculos numerológicos.',
-                    style: TextStyle(color: AppColors.secondaryText)),
-              ),
-              TextFormField(
-                controller: _analysisNameController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Nome Completo (para análise)',
-                  labelStyle: const TextStyle(color: AppColors.secondaryText),
-                  prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.secondaryText),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _birthDateController,
-                readOnly: true,
-                onTap: () => _selectDate(context),
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  labelText: 'Data de Nascimento',
-                  labelStyle: const TextStyle(color: AppColors.secondaryText),
-                  prefixIcon: const Icon(Icons.calendar_month_outlined, color: AppColors.secondaryText),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.border),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: AppColors.primary),
-                  ),
-                ),
-                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _isSaving ? null : _handleSaveChanges,
-                child: _isSaving
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Salvar Alterações'),
-              ),
-            ],
+      // Padding is handled by SettingsScreen wrapper for mobile
+      // But verify if we need it here. SettingsScreen adds padding 16.0
+      // So we don't need excessive padding here.
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SettingsSectionTitle(title: 'Dados da Análise'),
+          
+          Container(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: const Text(
+                'Informações usadas para os cálculos numerológicos.',
+                style: TextStyle(color: AppColors.secondaryText)),
           ),
-        ),
+
+          Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextFormField(
+                  controller: _analysisNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Nome Completo (para análise)',
+                    labelStyle: const TextStyle(color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.secondaryText),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _birthDateController,
+                  readOnly: true,
+                  onTap: () => _selectDate(context),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Data de Nascimento',
+                    labelStyle: const TextStyle(color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.calendar_month_outlined, color: AppColors.secondaryText),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.border),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: AppColors.primary),
+                    ),
+                  ),
+                  validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _handleSaveChanges,
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white))
+                        : const Text('Salvar Alterações'),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

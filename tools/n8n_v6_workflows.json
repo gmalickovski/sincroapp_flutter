@@ -1,0 +1,350 @@
+{
+    "name": "Sincro V6 Bundle",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "chat",
+                "responseMode": "lastNode",
+                "options": {}
+            },
+            "name": "Webhook (SincroApp)",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                0,
+                0
+            ],
+            "id": "webhook-node"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=Contexto: Data atual = {{ $json.body.context.currentDate }} ({{ $json.body.context.currentWeekDay }})\n\nPergunta do usuário: {{ $json.body.question }}",
+                "systemMessage": "You are the **Router** for the Sincro App.\nYour **ONLY** job is to classify the user's intent and select the correct tool/workflow to handle it.\n\n## Available Tools\n\n### 1. `numerology_engine`\n- User asks about 'vibração', 'numerologia', 'compatibilidade'.\n- User asks 'What is my Personal Year?' or 'What does my Expression Number mean?'.\n- User mentions specific dates in a query context.\n\n### 2. `data_retrieval`\n- User asks 'What are my tasks?', 'Do I have goals?'.\n- User refers to past notes or journal entries.\n\n### 3. `action_scheduler`\n- User explicitly wants to CREATE, UPDATE, or DELETE something.\n- Keywords: 'Agende', 'Crie uma tarefa', 'Lembre-me de comprar pão', 'Marque uma reunião'.\n\n### 4. `chitchat`\n- Greetings, Generic questions.\n\n## Output Format (JSON ONLY)\n{{\n  \"tool\": \"tool_name_here\",\n  \"confidence\": 0.95,\n  \"params\": {\n    \"intent\": \"...\",\n    \"target_date\": \"YYYY-MM-DDTHH:mm:ss\" // (Mandatory for Action) Calculate based on context 'currentDate'. If time unspecified, use 09:00:00.\n  }\n}}",
+                "options": {
+                    "responseFormat": "json_object"
+                }
+            },
+            "name": "Router LLM",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                220,
+                0
+            ],
+            "id": "router-llm"
+        },
+        {
+            "parameters": {
+                "jsCode": "const content = items[0].json.output || items[0].json.text || JSON.stringify(items[0].json);\nconst cleanJson = content.replace(/```json/g, \"\").replace(/```/g, \"\").trim();\nreturn JSON.parse(cleanJson);"
+            },
+            "name": "Parse Router JSON",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                340,
+                0
+            ],
+            "id": "parser-json"
+        },
+        {
+            "parameters": {
+                "dataType": "string",
+                "value1": "={{ $json.tool }}",
+                "rules": {
+                    "rules": [
+                        {
+                            "value2": "numerology_engine",
+                            "output": 0
+                        },
+                        {
+                            "value2": "data_retrieval",
+                            "output": 1
+                        },
+                        {
+                            "value2": "action_scheduler",
+                            "output": 2
+                        },
+                        {
+                            "value2": "chitchat",
+                            "output": 3
+                        }
+                    ]
+                }
+            },
+            "name": "Router Switch",
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 1,
+            "position": [
+                440,
+                0
+            ],
+            "id": "router-switch"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $('Webhook (SincroApp)').item.json.body.question }}",
+                "systemMessage": "=You are the Sincro AI, an expert numerologist.\nContext: {{ JSON.stringify($('Webhook (SincroApp)').item.json.body.context.numerology) }}\nUser: {{ $('Webhook (SincroApp)').item.json.body.context.user.first_name }}\n\nProvide an inspiring, mystical explanation based on the numbers provided in the context.",
+                "options": {}
+            },
+            "name": "Worker: Numerology Insight",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                700,
+                -100
+            ],
+            "id": "worker-numerology"
+        },
+        {
+            "parameters": {
+                "jsCode": "// Parse Date Range - Converts time_range to Supabase filters\nconst routerOutput = items[0].json;\nconst params = routerOutput.params || routerOutput;\nconst timeRange = params.time_range || 'today';\nconst entities = params.entities || ['task'];\n\nconst webhook = $('Webhook (SincroApp)').item.json;\nconst userId = webhook.body?.userId;\nconst currentDateStr = webhook.body?.context?.currentDate;\nconst now = currentDateStr ? new Date(currentDateStr) : new Date();\nconst today = new Date(now.getFullYear(), now.getMonth(), now.getDate());\n\nfunction startOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }\nfunction endOfDay(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59); }\nfunction addDays(d, n) { const r = new Date(d); r.setDate(r.getDate() + n); return r; }\nfunction getNextMonday(d) { const day = d.getDay(); return startOfDay(addDays(d, day === 0 ? 1 : 8 - day)); }\nfunction getEndOfMonth(d) { return new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59); }\n\nlet startDate = null, endDate = null, humanDesc = '';\n\nswitch (timeRange) {\n    case 'today': startDate = startOfDay(today); endDate = endOfDay(today); humanDesc = 'hoje'; break;\n    case 'tomorrow': startDate = startOfDay(addDays(today, 1)); endDate = endOfDay(addDays(today, 1)); humanDesc = 'amanhã'; break;\n    case 'this_week': startDate = startOfDay(today); endDate = endOfDay(addDays(today, 7 - today.getDay())); humanDesc = 'esta semana'; break;\n    case 'next_week': startDate = getNextMonday(today); endDate = endOfDay(addDays(startDate, 6)); humanDesc = 'semana que vem'; break;\n    case 'this_month': startDate = startOfDay(today); endDate = getEndOfMonth(today); humanDesc = 'este mês'; break;\n    case 'overdue': endDate = startOfDay(today); humanDesc = 'atrasadas'; break;\n    case 'pending': humanDesc = 'pendentes'; break;\n    default: startDate = startOfDay(today); endDate = endOfDay(today); humanDesc = 'hoje';\n}\n\nlet filter = [`user_id=eq.${userId}`, 'completed=eq.false'];\nif (startDate && timeRange !== 'overdue') filter.push(`due_date=gte.${startDate.toISOString()}`);\nif (endDate) filter.push(`due_date=${timeRange === 'overdue' ? 'lt' : 'lte'}.${endDate.toISOString()}`);\n\nreturn {\n    userId, timeRange, humanDescription: humanDesc,\n    startDate: startDate?.toISOString(),\n    endDate: endDate?.toISOString(),\n    supabaseFilter: filter.join('&'),\n    originalQuestion: webhook.body?.question || ''\n};"
+            },
+            "name": "Parse Date Range",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                600,
+                150
+            ],
+            "id": "parse-date-range"
+        },
+        {
+            "parameters": {
+                "operation": "getAll",
+                "tableId": "tasks",
+                "returnAll": true,
+                "filters": {
+                    "string": "={{ $json.supabaseFilter }}"
+                }
+            },
+            "name": "Supabase: Get Tasks",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                800,
+                150
+            ],
+            "id": "supabase-get-tasks",
+            "credentials": {
+                "supabaseApi": {
+                    "id": "YOUR_SUPABASE_CREDENTIAL_ID",
+                    "name": "Supabase account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "jsCode": "// Format Tasks Response - Inclui todos campos para renderizar TaskItem no Flutter\nconst parserOutput = $('Parse Date Range').item.json;\nconst tasks = items.map(i => i.json);\nconst timeRange = parserOutput.timeRange;\nconst humanDesc = parserOutput.humanDescription;\nconst now = new Date();\n\nconst formatted = tasks.map((t, i) => {\n    const dueDate = t.due_date ? new Date(t.due_date) : null;\n    const isOverdue = dueDate && dueDate < now && !t.completed;\n    return {\n        // Campos essenciais para TaskModel (Flutter)\n        id: t.id,\n        text: t.text || t.title || 'Sem título',\n        completed: t.completed || false,\n        due_date: t.due_date,\n        personal_day: t.personal_day || null,\n        journey_id: t.journey_id || null,\n        journey_title: t.journey_title || null,\n        tags: t.tags || [],\n        recurrence_type: t.recurrence_type || 'none',\n        recurrence_days_of_week: t.recurrence_days_of_week || [],\n        reminder_at: t.reminder_at || null,\n        // Campos extras para display\n        index: i + 1,\n        date_formatted: dueDate ? dueDate.toLocaleDateString('pt-BR', {weekday: 'short', day: '2-digit', month: 'short'}) : 'Sem data',\n        is_overdue: isOverdue\n    };\n});\n\nlet summary = '';\nif (formatted.length === 0) {\n    const msgs = { next_week: '🎉 Sem tarefas para semana que vem.', this_week: '✨ Sem tarefas esta semana.', today: '🌟 Dia livre!', overdue: '👏 Sem tarefas atrasadas!', this_month: '📅 Sem tarefas este mês.' };\n    summary = msgs[timeRange] || '📭 Nenhuma tarefa encontrada.';\n} else {\n    const p = formatted.length > 1 ? 's' : '';\n    const msgs = { next_week: `📅 ${formatted.length} tarefa${p} semana que vem:`, this_week: `📋 ${formatted.length} tarefa${p} esta semana:`, today: `📌 ${formatted.length} tarefa${p} hoje:`, overdue: `⚠️ ${formatted.length} tarefa${p} atrasada${p}:`, this_month: `📅 ${formatted.length} tarefa${p} este mês:` };\n    summary = msgs[timeRange] || `📋 ${formatted.length} tarefa${p}:`;\n}\n\nreturn {\n    question: parserOutput.originalQuestion,\n    timeRange, humanDescription: humanDesc,\n    taskCount: formatted.length,\n    answer: summary,\n    tasks: formatted,\n    hasActions: formatted.length > 0\n};"
+            },
+            "name": "Format Tasks Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                1000,
+                150
+            ],
+            "id": "format-tasks-response"
+        },
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "={{ $('Webhook (SincroApp)').item.json.body.question }}",
+                "systemMessage": "Você é a Sincro IA. Responda de forma simples, direta e simpática.",
+                "options": {}
+            },
+            "name": "Worker: Chitchat",
+            "type": "n8n-nodes-base.openAi",
+            "typeVersion": 1,
+            "position": [
+                700,
+                400
+            ],
+            "id": "worker-chitchat"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "assignment-response",
+                            "name": "resposta",
+                            "value": "={{ $json.response }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "name": "Format Response",
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1100,
+                0
+            ],
+            "id": "format-response"
+        },
+        {
+            "parameters": {
+                "jsCode": "// === HELPER FUNCTIONS ===\nfunction reduceNumber(n, mestre = false) {\n    while (n > 9) {\n        if (mestre && (n === 11 || n === 22)) return n;\n        n = n.toString().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0);\n    }\n    return n;\n}\n\nfunction parseDate(dateStr) {\n    if (!dateStr) return null;\n    if (dateStr.includes('-')) {\n        const parts = dateStr.split('-');\n        if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);\n    }\n    if (dateStr.includes('/')) {\n        const parts = dateStr.split('/');\n        if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);\n    }\n    return null;\n}\n\nfunction calculatePersonalDay(targetDate, birthDate) {\n    const bioMonth = birthDate.getMonth() + 1;\n    const bioDay = birthDate.getDate();\n    const targetYear = targetDate.getFullYear();\n    const targetMonth = targetDate.getMonth() + 1;\n    const targetDay = targetDate.getDate();\n    \n    let calcYear = targetYear;\n    if (targetMonth < bioMonth || (targetMonth === bioMonth && targetDay < bioDay)) {\n        calcYear = targetYear - 1;\n    }\n    const anoPessoal = reduceNumber(bioDay + bioMonth + calcYear, false);\n    const mesPessoal = reduceNumber(anoPessoal + targetMonth, false);\n    const diaReduzido = reduceNumber(targetDay, true);\n    return reduceNumber(mesPessoal + diaReduzido, true);\n}\n\n// === HARMONIZATION MATRIX ===\nconst MATRIX = {\n    1: { fav: [3, 5, 9], unfav: [6], neutral: [1, 2, 4, 7, 8] },\n    2: { fav: [2, 4, 6, 7], unfav: [5, 9], neutral: [1, 3, 8] },\n    3: { fav: [1, 3, 5, 6], unfav: [4, 7, 8], neutral: [2, 9] },\n    4: { fav: [2, 6, 8], unfav: [3, 5, 7, 9], neutral: [1, 4] },\n    5: { fav: [1, 3, 5, 7, 9], unfav: [2, 4, 6, 8], neutral: [] },\n    6: { fav: [2, 3, 4, 8, 9], unfav: [1, 5, 7], neutral: [6] },\n    7: { fav: [2, 5, 7], unfav: [3, 4, 6, 8, 9], neutral: [1] },\n    8: { fav: [4, 6], unfav: [3, 5, 7, 8, 9], neutral: [1, 2] },\n    9: { fav: [1, 5, 6, 9], unfav: [2, 4, 7, 8], neutral: [3] },\n    11: { fav: [1, 3, 5, 7, 9, 11], unfav: [2, 4, 6, 8], neutral: [22] },\n    22: { fav: [1, 2, 3, 4, 5, 6, 7, 8, 9, 22], unfav: [], neutral: [11] }\n};\n\nconst VIBE_KEYWORDS = {\n    1: [\"Início\", \"Liderança\"], 2: [\"Parceria\", \"Paciência\"], 3: [\"Criatividade\", \"Comunicação\"],\n    4: [\"Trabalho\", \"Ordem\"], 5: [\"Mudança\", \"Vendas\"], 6: [\"Família\", \"Harmonia\"],\n    7: [\"Análise\", \"Estudo\"], 8: [\"Poder\", \"Finanças\"], 9: [\"Conclusão\", \"Altruísmo\"],\n    11: [\"Inspiração\", \"Mestre\"], 22: [\"Construção\", \"Grandeza\"]\n};\n\n// === INPUTS ===\nconst input = items[0].json;\nconst params = input.params || input;\nconst title = params.title || params.intent || 'Tarefa';\n\nconst context = $('Webhook (SincroApp)').item.json.body.context || {};\nconst contextNumerology = context.numerology || {};\nconst contextUser = context.user || {};\n\nconst birthDateStr = contextUser.dataNasc || \"2000-01-01\";\nconst birthDate = parseDate(birthDateStr) || new Date(2000, 0, 1);\n\n// Get Destiny Number (Fallback to 1 if missing)\nlet destinyNum = 1;\nif (contextNumerology.numeros && contextNumerology.numeros.destino) {\n    destinyNum = contextNumerology.numeros.destino;\n} else {\n    // Calc simplistic destiny if needed, but assuming standard 1 for fallback\n    destinyNum = 1;\n}\n\n// Target Date Logic\nlet targetDateStr = params.target_date;\nlet isSuggestionMode = false;\nlet targetDate = null;\n\nif (!targetDateStr || targetDateStr === 'null') {\n    isSuggestionMode = true;\n    targetDateStr = null;\n} else {\n    targetDate = new Date(targetDateStr);\n}\n\n// === SCORING LOGIC ===\nfunction evaluateDate(date, bDate, dNum) {\n    const pDay = calculatePersonalDay(date, bDate);\n    const rules = MATRIX[dNum] || MATRIX[1];\n    let status = \"Neutro\";\n    let score = 50;\n\n    if (rules.fav.includes(pDay)) {\n        status = \"Favorável\";\n        score = 100;\n    } else if (rules.unfav.includes(pDay)) {\n        status = \"Desafiador\";\n        score = 0;\n    }\n    \n    return {\n        date: date,\n        personalDay: pDay,\n        status: status,\n        score: score,\n        vibe: VIBE_KEYWORDS[pDay] || []\n    };\n}\n\n// 1. Analyze Specific Date (if exists)\nlet mainAnalysis = {};\nif (!isSuggestionMode && targetDate) {\n    mainAnalysis = evaluateDate(targetDate, birthDate, destinyNum);\n    mainAnalysis.is_favorable = mainAnalysis.score >= 50; // Neutral is 'ok'\n}\n\n// 2. Find Suggestions (Next 7-10 days)\nlet suggestions = [];\nlet scanDate = new Date(); // Start from today\n// If target date exists, start scanning from it? No, scan from TODAY to find alternatives.\n// Or if target date is far future, scan around it? Let's scan from TODAY for now.\nif (targetDate && targetDate > new Date()) {\n    // If target date is future, scan around it?\n    // Ideally scan near the desired date. Let's start scan from tomorrow or target date.\n    scanDate = new Date(targetDate);\n    scanDate.setDate(scanDate.getDate() - 3); // Check range around it?\n    if (scanDate < new Date()) scanDate = new Date();\n}\n\nscanDate.setDate(scanDate.getDate() + 1); // Start tomorrow\n\nlet attempts = 0;\nwhile (suggestions.length < 3 && attempts < 15) {\n    const ev = evaluateDate(scanDate, birthDate, destinyNum);\n    \n    // Add if Favorable (Score 100)\n    // If we are desperate, maybe Neutral?\n    if (ev.score === 100) {\n         suggestions.push({\n            date: ev.date.toISOString(),\n            personalDay: ev.personalDay,\n            vibe: ev.vibe,\n            status: ev.status,\n            formatted: ev.date.toLocaleDateString('pt-BR')\n        });\n    }\n    \n    // Next day\n    scanDate.setDate(scanDate.getDate() + 1);\n    attempts++;\n}\n\n// If we didn't find 3 Perfect days, fill with Neutrals\nif (suggestions.length < 3) {\n    scanDate = new Date();\n    scanDate.setDate(scanDate.getDate() + 1);\n    attempts = 0;\n    while (suggestions.length < 3 && attempts < 15) {\n         const ev = evaluateDate(scanDate, birthDate, destinyNum);\n         // Add if Neutral and not already in list\n         if (ev.score === 50 && !suggestions.some(s => s.date.split('T')[0] === ev.date.toISOString().split('T')[0])) {\n             suggestions.push({\n                date: ev.date.toISOString(),\n                personalDay: ev.personalDay,\n                vibe: ev.vibe,\n                status: ev.status,\n                formatted: ev.date.toLocaleDateString('pt-BR')\n            });\n         }\n         scanDate.setDate(scanDate.getDate() + 1);\n         attempts++;\n    }\n}\n\n\nreturn {\n    title: title,\n    date: isSuggestionMode ? null : targetDateStr,\n    analysis: isSuggestionMode ? { is_favorable: false, keywords: [], personalDay: 0 } : {\n        personalDay: mainAnalysis.personalDay,\n        keywords: mainAnalysis.vibe,\n        is_favorable: mainAnalysis.is_favorable,\n        status: mainAnalysis.status\n    },\n    suggestedDates: suggestions\n};"
+            },
+            "name": "Format Action Response",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                950,
+                -300
+            ],
+            "id": "format-action-response"
+        },
+        {
+            "parameters": {
+                "jsCode": "// === HELPER FUNCTIONS ===\nfunction reduceNumber(n, mestre = false) {\n    while (n > 9) {\n        if (mestre && (n === 11 || n === 22)) return n;\n        n = n.toString().split('').reduce((a, b) => parseInt(a) + parseInt(b), 0);\n    }\n    return n;\n}\n\nfunction parseDate(dateStr) {\n    // Tenta ISO YYYY-MM-DD\n    if (dateStr.includes('-')) {\n        const parts = dateStr.split('-');\n        if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]);\n    }\n    // Tenta BR DD/MM/YYYY\n    if (dateStr.includes('/')) {\n        const parts = dateStr.split('/');\n        if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);\n    }\n    return null;\n}\n\nfunction calculatePersonalDay(targetDate, birthDate) {\n    const bioMonth = birthDate.getMonth() + 1;\n    const bioDay = birthDate.getDate();\n    \n    const targetYear = targetDate.getFullYear();\n    const targetMonth = targetDate.getMonth() + 1;\n    const targetDay = targetDate.getDate();\n    \n    let calcYear = targetYear;\n    if (targetMonth < bioMonth || (targetMonth === bioMonth && targetDay < bioDay)) {\n        calcYear = targetYear - 1;\n    }\n    \n    const anoPessoal = reduceNumber(bioDay + bioMonth + calcYear, false);\n    const mesPessoal = reduceNumber(anoPessoal + targetMonth, false);\n    const diaReduzido = reduceNumber(targetDay, true);\n    const diaPessoal = reduceNumber(mesPessoal + diaReduzido, true);\n    \n    return diaPessoal;\n}\n\nconst VIBES = {\n    1: [\"Início\", \"Ação\"],\n    2: [\"Parceria\", \"Paciência\"],\n    3: [\"Criatividade\", \"Expressão\"],\n    4: [\"Trabalho\", \"Organização\"],\n    5: [\"Mudança\", \"Liberdade\"],\n    6: [\"Família\", \"Harmonia\"],\n    7: [\"Análise\", \"Estudo\"],\n    8: [\"Poder\", \"Negócios\"],\n    9: [\"Conclusão\", \"Limpeza\"],\n    11: [\"Inspiração\", \"Mestre\"],\n    22: [\"Construção\", \"Mestre\"]\n};\n\n// === MAIN EXECUTION ===\nconst input = items[0].json;\n// Pega do Router ou Params\nconst params = input.params || input;\nconst title = params.title || params.intent || 'Tarefa';\n\n// 1. Datas\nconst targetDateStr = params.target_date || new Date().toISOString();\nlet targetDate = new Date(targetDateStr);\n\n// Pega do Contexto Global (Webhook)\nconst contextUser = $('Webhook (SincroApp)').item.json.body.context.user || {};\nconst birthDateStr = contextUser.dataNasc || \"2000-01-01\";\nconst birthDate = parseDate(birthDateStr) || new Date(2000, 0, 1);\n\n// 2. Analisa Data Alvo\nconst pDay = calculatePersonalDay(targetDate, birthDate);\nconst powerDays = [1, 3, 5, 8, 11, 22];\nconst isFavorable = powerDays.includes(pDay);\n\n// 3. Busca Sugestões (se necessario)\nconst suggestions = [];\nif (!isFavorable) {\n    let checkDate = new Date(targetDate);\n    checkDate.setDate(checkDate.getDate() + 1);\n    let attempts = 0;\n    \n    while (suggestions.length < 3 && attempts < 15) {\n        const p = calculatePersonalDay(checkDate, birthDate);\n        if (powerDays.includes(p)) {\n            suggestions.push({\n                date: checkDate.toISOString().split('T')[0],\n                personalDay: p,\n                vibe: VIBES[p] || [\"Neutro\"],\n                formatted: checkDate.toLocaleDateString('pt-BR')\n            });\n        }\n        checkDate.setDate(checkDate.getDate() + 1);\n        attempts++;\n    }\n}\n\nreturn {\n    title: title,\n    date: targetDateStr,\n    analysis: {\n        personalDay: pDay,\n        keywords: VIBES[pDay] || [\"Neutro\"],\n        is_favorable: isFavorable\n    },\n    suggestedDates: suggestions\n};"
+            },
+            "name": "Worker: Numerology Calculator",
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                700,
+                -300
+            ],
+            "id": "worker-numerology-calc"
+        }
+    ],
+    "connections": {
+        "Webhook (SincroApp)": {
+            "main": [
+                [
+                    {
+                        "node": "Router LLM",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Router LLM": {
+            "main": [
+                [
+                    {
+                        "node": "Parse Router JSON",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Router JSON": {
+            "main": [
+                [
+                    {
+                        "node": "Router Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Router Switch": {
+            "main": [
+                [
+                    {
+                        "node": "Worker: Numerology Insight",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Parse Date Range",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Worker: Numerology Calculator",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Worker: Chitchat",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Worker: Numerology Insight": {
+            "main": [
+                [
+                    {
+                        "node": "Format Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Worker: Chitchat": {
+            "main": [
+                [
+                    {
+                        "node": "Format Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Worker: Numerology Calculator": {
+            "main": [
+                [
+                    {
+                        "node": "Format Action Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Parse Date Range": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase: Get Tasks",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Supabase: Get Tasks": {
+            "main": [
+                [
+                    {
+                        "node": "Format Tasks Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Format Tasks Response": {
+            "main": [
+                [
+                    {
+                        "node": "Format Response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

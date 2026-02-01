@@ -45,7 +45,8 @@ import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strate
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart';
-import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart'; // NEW IMPORT
+import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart';
+import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart'; // NEW IMPORT
 
 
 // Comportamento de scroll (inalterado)
@@ -78,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Goal> _userGoals = [];
   bool _isDesktopSidebarExpanded = false;
   bool _isMobileDrawerOpen = false;
+  bool _isAiSidebarOpen = false; // State for Desktop AI Sidebar
   late AnimationController _menuAnimationController;
   final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
@@ -576,10 +578,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_userData == null) return;
     Navigator.of(context)
         .push(
-      MaterialPageRoute(
-          builder: (context) =>
-              GoalDetailScreen(initialGoal: goal, userData: _userData!)),
-    )
+          MaterialPageRoute(
+            builder: (context) =>
+                GoalDetailScreen(initialGoal: goal, userData: _userData!),
+            settings: RouteSettings(
+              name: '/goal-detail',
+              arguments: {
+                'goalId': goal.id,
+                'goalTitle': goal.title,
+              },
+            ),
+          ),
+        )
         .then((_) {
       if (mounted) _reloadDataNonStream();
     });
@@ -2254,40 +2264,24 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
+  String _getPageName(int index) {
+    switch (index) {
+      case 0: return 'Dashboard';
+      case 1: return 'Calendar';
+      case 2: return 'Journal';
+      case 3: return 'Foco do Dia (Tasks)';
+      case 4: return 'Jornadas (Goals)';
+      default: return 'Dashboard';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
     Widget? fab;
-    if (_userData != null &&
-        _userData!.subscription.isActive &&
-        _userData!.subscription.plan == SubscriptionPlan.premium) {
-      switch (_sidebarIndex) {
-        case 0: // Dashboard: chat e mic
-          // ATUALIZADO: Agora o FAB só tem a função de abrir o assistente,
-          // ativando o novo modo simples do ExpandingAssistantFab.
-          fab = ExpandingAssistantFab(
-            onOpenAssistant: (message) {
-              if (_userData == null) return;
-              AssistantPanel.show(context, _userData!, initialMessage: message);
-            },
-          );
-          break;
-        case 1: // Calendar: usa o FAB nativo da tela CalendarScreen
-          fab =
-              null; // O CalendarScreen já tem seu próprio FAB com acesso ao _selectedDay
-          break;
-        case 2: // Journal: usa o FAB nativo da tela JournalScreen
-          fab = null; // O JournalScreen já tem seu próprio FAB
-          break;
-        case 3: // Foco do Dia: usa o FAB nativo da tela FocoDoDiaScreen
-          fab = null; // O FocoDoDiaScreen já tem seu próprio FAB
-          break;
-        case 4: // Goals: usa o FAB nativo da tela GoalsScreen
-          fab = null; // O GoalsScreen já tem seu próprio FAB
-          break;
-        default:
-          fab = null;
-      }
+    // STANDARD ACCESS: Button available for all paid plans (Essencial, Desperta, Sinergia)
+    // Assuming subscription.isActive covers these.
+    if (_userData != null && _userData!.subscription.isActive) {
     }
     return Scaffold(
       resizeToAvoidBottomInset: false, // Prevent resizing of main scaffold (fixes Calendar modal issue)
@@ -2296,6 +2290,22 @@ class _DashboardScreenState extends State<DashboardScreen>
         userData: _userData,
         menuAnimationController: _menuAnimationController,
         isEditMode: _isEditMode,
+        // Insert AI Toggle for desktop
+        actions: isDesktop 
+          ? [
+              IconButton(
+                icon: Icon(_isAiSidebarOpen ? Icons.chat_bubble : Icons.chat_bubble_outline),
+                color: AppColors.primaryText,
+                tooltip: 'Sincro IA',
+                onPressed: () {
+                   setState(() {
+                     _isAiSidebarOpen = !_isAiSidebarOpen;
+                   });
+                },
+              ),
+              const SizedBox(width: 8),
+            ]
+          : null,
         onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
             ? _openReorderModal
             : null,
@@ -2343,14 +2353,42 @@ class _DashboardScreenState extends State<DashboardScreen>
               selectedIndex: _sidebarIndex,
               userData: _userData!,
               onDestinationSelected: _navigateToPage),
-        Expanded(child: _buildCurrentPage()),
+        Expanded(
+          child: AssistantLayoutManager(
+            isMobile: false,
+            isAiSidebarOpen: _isAiSidebarOpen,
+            onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
+            assistant: _userData != null 
+                ? AssistantPanel(
+                    userData: _userData!, 
+                    numerologyData: _numerologyData, // Pass Cached Data
+                    activeContext: _getPageName(_sidebarIndex), // Pass Active Route
+                    onClose: () => setState(() => _isAiSidebarOpen = false),
+                  ) 
+                : const SizedBox.shrink(),
+            child: _buildCurrentPage(),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildMobileLayout() {
     const double sidebarWidth = 280;
-    return Stack(
+    // Wrap the entire mobile layout in the AssistantLayoutManager to enable the swipe gesture
+    return AssistantLayoutManager(
+      isMobile: true,
+      isAiSidebarOpen: false, // Not used in mobile mode
+      onToggleAiSidebar: () {}, // Not used in mobile mode
+      assistant: _userData != null 
+          ? AssistantPanel(
+              userData: _userData!, 
+              numerologyData: _numerologyData, 
+              activeContext: _getPageName(_sidebarIndex), // Pass Active Route
+              isFullScreen: true
+            )
+          : const SizedBox.shrink(),
+      child: Stack(
       children: [
         GestureDetector(
           onTap: () {
@@ -2394,6 +2432,7 @@ class _DashboardScreenState extends State<DashboardScreen>
               : const SizedBox.shrink(),
         ),
       ],
+    ),
     );
   }
 

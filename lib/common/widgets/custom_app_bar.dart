@@ -14,6 +14,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final bool isEditMode;
   final VoidCallback? onEditPressed;
   final ValueChanged<String>? onSearchChanged; // New callback
+  final List<Widget>? actions; // New Parameter
 
   const CustomAppBar({
     super.key,
@@ -23,6 +24,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.isEditMode = false,
     this.onEditPressed,
     this.onSearchChanged,
+    this.actions,
   });
 
   @override
@@ -158,6 +160,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 ),
               ),
             ),
+
+
+
+        if (widget.actions != null) ...widget.actions!, // Insert custom actions
 
         if (!isDesktop && widget.userData == null)
           const SizedBox(width: kToolbarHeight),

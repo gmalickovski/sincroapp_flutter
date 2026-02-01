@@ -98,6 +98,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
           initialGoal: goal,
           userData: widget.userData,
         ),
+        settings: RouteSettings(
+            name: '/goal-detail',
+            arguments: {
+              'goalId': goal.id,
+              'goalTitle': goal.title,
+            }),
       ));
     } catch (e, s) {
       debugPrint("GoalsScreen: ERRO durante Navigator.push: $e");

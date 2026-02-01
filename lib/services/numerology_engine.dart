@@ -504,6 +504,7 @@ class NumerologyEngine {
         'licoesCarmicas': _calcularLicoesCarmicas(),
         'debitosCarmicos': _calcularDebitosCarmicos(destino, motivacao, expressao),
         'tendenciasOcultas': _calcularTendenciasOcultas(),
+        'diasFavoraveis': calcularDiasFavoraveis(), // Expondo para N8n
       },
     );
   }
@@ -1001,11 +1002,12 @@ class NumerologyEngine {
         // Aptidões Profissionais: utilizamos o número de Expressão como base
         'aptidoesProfissionais': expressao,
         'desafio': desafios['desafioPrincipal']?['regente'] ?? 0,
+        'harmoniaConjugal': harmoniaConjugal, // For synastry calculations
       },
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
-        //'harmoniaConjugal': _tabelaHarmonia[harmoniaConjugal] ?? {}, // Removed during refactor
+        'harmoniaConjugal': _getHarmoniaConjugalData(harmoniaConjugal), // Full Map structure for dashboard
         'desafios': desafios,
         'desafioAtual': desafioAtual,
         'momentosDecisivos': momentosDecisivos,
@@ -1054,4 +1056,20 @@ class NumerologyEngine {
 
 
   // Date compatibility logic moved to HarmonyService
+
+  /// Helper to get harmonia conjugal data for dashboard display
+  static Map<String, dynamic> _getHarmoniaConjugalData(int harmoniaNum) {
+    const tabelaHarmonia = {
+      1: {'vibra': [9], 'atrai': [4, 8], 'oposto': [6, 7], 'passivo': [2, 3, 5]},
+      2: {'vibra': [8], 'atrai': [7, 9], 'oposto': [5], 'passivo': [1, 3, 4, 6]},
+      3: {'vibra': [7], 'atrai': [5, 6, 9], 'oposto': [4, 8], 'passivo': [1, 2]},
+      4: {'vibra': [6], 'atrai': [1, 8], 'oposto': [3, 5], 'passivo': [2, 7, 9]},
+      5: {'vibra': [5], 'atrai': [3, 9], 'oposto': [2, 4, 6], 'passivo': [1, 7, 8]},
+      6: {'vibra': [4], 'atrai': [3, 7, 9], 'oposto': [1, 5, 8], 'passivo': [2]},
+      7: {'vibra': [3], 'atrai': [2, 6], 'oposto': [1, 9], 'passivo': [4, 5, 8]},
+      8: {'vibra': [2], 'atrai': [1, 4], 'oposto': [3, 6], 'passivo': [5, 7, 9]},
+      9: {'vibra': [1], 'atrai': [2, 3, 5, 6], 'oposto': [7], 'passivo': [4, 8]},
+    };
+    return tabelaHarmonia[harmoniaNum] ?? {'vibra': [], 'atrai': [], 'oposto': [], 'passivo': []};
+  }
 }

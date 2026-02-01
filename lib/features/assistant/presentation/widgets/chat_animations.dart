@@ -97,6 +97,19 @@ class AnimatedMessageBubble extends StatelessWidget {
   }
 }
 
+/// Alias for MessageEntryAnimation used in new panels
+class ChatBubbleAnimation extends StatelessWidget {
+  final Widget child;
+  final bool isUser;
+  
+  const ChatBubbleAnimation({super.key, required this.child, required this.isUser});
+
+  @override
+  Widget build(BuildContext context) {
+    return MessageEntryAnimation(child: child, isUser: isUser);
+  }
+}
+
 /// An avatar that "pops" in with a scale animation.
 class AnimatedAvatar extends StatefulWidget {
   final Widget child;

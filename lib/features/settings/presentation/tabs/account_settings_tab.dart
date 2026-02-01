@@ -1,12 +1,11 @@
-// lib/features/settings/presentation/tabs/account_settings_tab.dart
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/common/utils/username_validator.dart'; // NOVO
-import 'package:sincro_app_flutter/features/settings/presentation/widgets/contact_management_modal.dart'; // NOVO
+import 'package:sincro_app_flutter/common/utils/username_validator.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_header.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_section_title.dart';
 
 class AccountSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -24,10 +23,11 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
 
   late TextEditingController _firstNameController;
   late TextEditingController _lastNameController;
-  late TextEditingController _usernameController; // NOVO: Controller para username
+  late TextEditingController _usernameController;
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  String? _selectedGender; // NOVO
 
   bool _isSavingInfo = false;
   bool _isSavingPassword = false;
@@ -39,17 +39,14 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
     var cleanFirstName = widget.userData.primeiroNome;
     final lastName = widget.userData.sobrenome;
     
-    // Fix: Remove surname if it appears in the first name field
     if (lastName.isNotEmpty && cleanFirstName.toLowerCase().endsWith(lastName.toLowerCase())) {
        cleanFirstName = cleanFirstName.substring(0, cleanFirstName.toLowerCase().lastIndexOf(lastName.toLowerCase())).trim();
     }
 
-    _firstNameController =
-        TextEditingController(text: cleanFirstName);
-    _lastNameController =
-        TextEditingController(text: widget.userData.sobrenome);
-    _usernameController =
-        TextEditingController(text: widget.userData.username ?? ''); // Inicializa username
+    _firstNameController = TextEditingController(text: cleanFirstName);
+    _lastNameController = TextEditingController(text: widget.userData.sobrenome);
+    _usernameController = TextEditingController(text: widget.userData.username ?? '');
+    _selectedGender = widget.userData.gender; // NOVO
   }
 
   @override
@@ -81,29 +78,24 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
       final newUsername = _usernameController.text.trim();
       final currentUsername = widget.userData.username;
 
-      // Se mudou o username, faz validações extras
       if (newUsername.isNotEmpty && newUsername != currentUsername) {
-        // Validação de formato (já feita pelo validator do campo, mas reforçando)
         if (!UsernameValidator.isValidFormat(newUsername)) {
           _showFeedback('Formato de username inválido.', isError: true);
           return;
         }
-
-        // Verifica disponibilidade
         final isAvailable = await _supabaseService.isUsernameAvailable(newUsername);
         if (!isAvailable) {
           _showFeedback('Este nome de usuário já está em uso.', isError: true);
-          return; // Para aqui
+          return;
         }
       }
 
-      // Prepara dados para atualização
       final Map<String, dynamic> updates = {
         'primeiroNome': _firstNameController.text.trim(),
         'sobrenome': _lastNameController.text.trim(),
+        'gender': _selectedGender, // NOVO
       };
       
-      // Adiciona username se mudou
       if (newUsername != currentUsername) {
         updates['username'] = newUsername.isEmpty ? null : newUsername;
       }
@@ -130,13 +122,11 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
       final user = _supabase.auth.currentUser;
       if (user == null || user.email == null) throw 'Usuário não logado';
 
-      // Re-autenticar para segurança antes de mudar senha
       await _supabase.auth.signInWithPassword(
         email: user.email, 
         password: _currentPasswordController.text
       );
       
-      // Atualizar senha
       await _supabase.auth.updateUser(
         UserAttributes(password: _newPasswordController.text)
       );
@@ -146,9 +136,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
       _newPasswordController.clear();
       _confirmPasswordController.clear();
     } on AuthException catch (e) {
-       _showFeedback(
-          'Erro ao alterar a senha: ${e.message}',
-          isError: true);
+       _showFeedback('Erro ao alterar a senha: ${e.message}', isError: true);
     } catch (e) {
       _showFeedback('Ocorreu um erro inesperado.', isError: true);
     } finally {
@@ -165,35 +153,17 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
       final user = _supabase.auth.currentUser;
       if (user == null || user.email == null) throw 'Usuário não logado';
 
-      // Re-autenticar para confirmar que sabe a senha
       await _supabase.auth.signInWithPassword(
         email: user.email, 
         password: password
       );
       
-      // Como o Client Side do Supabase não permite deletar usuário por padrão (security),
-      // e ainda não configuramos uma Edge Function para isso, vamos apenas exibir um aviso
-      // ou implementar Soft Delete se tivermos essa lógica.
-      // Por enquanto, vamos avisar para contactar suporte ou lançar erro amigável.
-      
-      // await _supabase.functions.invoke('delete-account'); // Exemplo futuro
-      
       _showFeedback('Funcionalidade indisponível temporariamente. Contate o suporte.', isError: false);
-
-      /* 
-      // Em um cenário ideal com permissão ou Edge Function:
-      await _supabase.rpc('soft_delete_account'); 
-      await _supabase.auth.signOut();
-      // Navigate to login...
-      */
       
     } on AuthException catch (e) {
-       _showFeedback(
-          'Senha incorreta ou erro de autenticação: ${e.message}',
-          isError: true);
+       _showFeedback('Senha incorreta ou erro de autenticação: ${e.message}', isError: true);
     } catch (e) {
-      _showFeedback('Ocorreu um erro inesperado ao processar.',
-          isError: true);
+      _showFeedback('Ocorreu um erro inesperado ao processar.', isError: true);
     } finally {
       if (mounted) setState(() => _isDeleting = false);
     }
@@ -205,8 +175,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Confirmar Exclusão',
-            style: TextStyle(color: Colors.white)),
+        title: const Text('Confirmar Exclusão', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: passwordController,
           obscureText: true,
@@ -215,14 +184,6 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
             labelText: 'Digite sua senha para confirmar',
             labelStyle: const TextStyle(color: AppColors.secondaryText),
             prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.border),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary),
-            ),
           ),
         ),
         actions: [
@@ -241,249 +202,182 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
 
   @override
   Widget build(BuildContext context) {
-    // Check if running on desktop (based on SettingsScreen breakpoint)
-    final isDesktop = MediaQuery.of(context).size.width >= 720;
-    
     return SingleChildScrollView(
-      padding: isDesktop
-          ? const EdgeInsets.fromLTRB(16, 0, 16, 16)
-          : const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Seção Minha Conta
-          _buildSectionCard(
-            title: 'Meus Dados',
-            subtitle: 'Veja e edite suas informações pessoais.',
-            content: Form(
-              key: _formKeyInfo,
-              child: Column(
+          // 1. Meus Dados Section
+          const SettingsSectionTitle(title: 'Meus Dados'),
+        
+        Form(
+          key: _formKeyInfo,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _usernameController,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Nome de Usuário (@username)',
+                  hintText: 'Ex: joao.silva',
+                  prefixIcon: Icon(Icons.alternate_email, color: AppColors.secondaryText),
+                ),
+                validator: (value) {
+                   if (value == null || value.isEmpty) return null;
+                   return UsernameValidator.validate(value);
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              Row(
                 children: [
-                  // --- CAMPO USERNAME ---
-                  TextFormField(
-                    controller: _usernameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Nome de Usuário (@username)',
-                      hintText: 'Ex: joao.silva',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.alternate_email, color: AppColors.secondaryText),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
-                    ),
-                    validator: (value) {
-                       if (value == null || value.isEmpty) return null; // Opcional
-                       return UsernameValidator.validate(value);
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  TextFormField(
-                    controller: _firstNameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Nome',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _firstNameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Nome',
+                        prefixIcon: Icon(Icons.person_outline, color: AppColors.secondaryText),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _lastNameController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Sobrenome',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _lastNameController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Sobrenome',
+                        prefixIcon: Icon(Icons.person_outline, color: AppColors.secondaryText),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _isSavingInfo ? null : _handleSaveChanges,
-                    child: _isSavingInfo
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Salvar Alterações'),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: _selectedGender,
+                decoration: const InputDecoration(
+                  labelText: 'Gênero',
+                  prefixIcon: Icon(Icons.wc, color: AppColors.secondaryText),
+                ),
+                dropdownColor: AppColors.cardBackground,
+                style: const TextStyle(color: Colors.white),
+                items: ['Masculino', 'Feminino', 'Outro'].map((String value) {
+                  return DropdownMenuItem<String>(
+                    value: value,
+                    child: Text(value),
+                  );
+                }).toList(),
+                onChanged: (newValue) => setState(() => _selectedGender = newValue),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSavingInfo ? null : _handleSaveChanges,
+                  child: _isSavingInfo
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Salvar Alterações'),
+                ),
+              ),
+            ],
           ),
-          
-          const SizedBox(height: 24),
+        ),
+        
+        const SizedBox(height: 32),
 
+        // 3. Alterar Senha Section
+        const SettingsSectionTitle(title: 'Segurança'),
 
-
-          // Seção Alterar Senha
-          _buildSectionCard(
-            title: 'Alterar Senha',
-            subtitle: 'Recomendamos o uso de uma senha forte e única.',
-            content: Form(
-              key: _formKeyPassword,
-              child: Column(
+        Form(
+          key: _formKeyPassword,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _currentPasswordController,
+                obscureText: true,
+                style: const TextStyle(color: Colors.white),
+                decoration: const InputDecoration(
+                  labelText: 'Senha Atual',
+                  prefixIcon: Icon(Icons.lock_outline, color: AppColors.secondaryText),
+                ),
+                validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
+              ),
+              const SizedBox(height: 16),
+              Row(
                 children: [
-                  TextFormField(
-                    controller: _currentPasswordController,
-                    obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Senha Atual',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _newPasswordController,
+                      obscureText: true,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Nova Senha',
+                        prefixIcon: Icon(Icons.key, color: AppColors.secondaryText),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
+                      validator: (v) => (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Campo obrigatório' : null,
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _newPasswordController,
-                    obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Nova Senha',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.key, color: AppColors.secondaryText), // Using key icon to differentiate
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: true,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: const InputDecoration(
+                        labelText: 'Confirmar',
+                        prefixIcon: Icon(Icons.check_circle_outline, color: AppColors.secondaryText),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
+                      validator: (v) => (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
                     ),
-                    validator: (v) =>
-                        (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _confirmPasswordController,
-                    obscureText: true,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: 'Confirmar Nova Senha',
-                      labelStyle: const TextStyle(color: AppColors.secondaryText),
-                      prefixIcon: const Icon(Icons.check_circle_outline, color: AppColors.secondaryText),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.border),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary),
-                      ),
-                    ),
-                    validator: (v) =>
-                        (v?.length ?? 0) < 6 ? 'Mínimo de 6 caracteres' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _isSavingPassword ? null : _handleChangePassword,
-                    child: _isSavingPassword
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                        : const Text('Alterar Senha'),
                   ),
                 ],
               ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _isSavingPassword ? null : _handleChangePassword,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.cardBackground,
+                    foregroundColor: AppColors.primary,
+                    side: const BorderSide(color: AppColors.primary),
+                  ),
+                  child: _isSavingPassword
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary))
+                      : const Text('Atualizar Senha'),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 48),
+
+        // Danger Zone
+        SizedBox(
+          width: double.infinity,
+          child: TextButton.icon(
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.redAccent.withOpacity(0.8),
             ),
+            icon: const Icon(Icons.delete_forever, size: 20),
+            onPressed: _isDeleting ? null : _handleDeleteAccount,
+            label: _isDeleting
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent))
+                : const Text('Excluir minha conta'),
           ),
-
-          const SizedBox(height: 24),
-
-          // Seção Zona de Perigo
-          _buildSectionCard(
-            isDangerZone: true,
-            title: 'Zona de Perigo',
-            subtitle:
-                'Esta ação é irreversível. Todos os seus dados serão permanentemente excluídos.',
-            content: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade800.withValues(alpha: 0.8),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 45)),
-              onPressed: _isDeleting ? null : _handleDeleteAccount,
-              child: _isDeleting
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
-                  : const Text('Deletar minha conta'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionCard({
-    required String title,
-    required String subtitle,
-    required Widget content,
-    bool isDangerZone = false,
-  }) {
-    final borderColor = isDangerZone ? Colors.red.shade400 : AppColors.border;
-    final titleColor =
-        isDangerZone ? Colors.red.shade300 : AppColors.primaryText;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: titleColor,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 16),
-            child: Text(subtitle,
-                style: const TextStyle(color: AppColors.secondaryText)),
-          ),
-          content,
-        ],
+        ),
+        const SizedBox(height: 24),
+      ],
       ),
     );
   }

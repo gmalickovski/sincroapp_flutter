@@ -41,6 +41,7 @@ class SupabaseService {
         'last_name': user.sobrenome,
         'analysis_name': user.nomeAnalise,
         'birth_date': user.dataNasc,
+        'gender': user.gender, // NOVO
         'is_admin': user.isAdmin,
         'dashboard_card_order': user.dashboardCardOrder,
         'dashboard_hidden_cards': user.dashboardHiddenCards,
@@ -91,6 +92,7 @@ class SupabaseService {
         plano: 'essencial', // Default legacy plan name
         nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
         dataNasc: data['birth_date'] ?? '',
+        gender: data['gender'], // NOVO
         isAdmin: data['is_admin'] ?? false,
         dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
         dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
@@ -116,6 +118,7 @@ class SupabaseService {
           case 'sobrenome': mappedData['last_name'] = value; break;
           case 'nomeAnalise': mappedData['analysis_name'] = value; break;
           case 'dataNasc': mappedData['birth_date'] = value; break;
+          case 'gender': mappedData['gender'] = value; break; // NOVO
           case 'dashboardCardOrder': mappedData['dashboard_card_order'] = value; break;
           case 'dashboardHiddenCards': mappedData['dashboard_hidden_cards'] = value; break;
           case 'subscription': mappedData['subscription_data'] = value; break; // Se vier o mapa
@@ -192,6 +195,7 @@ class SupabaseService {
         plano: 'essencial',
         nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
         dataNasc: data['birth_date'] ?? '',
+        gender: data['gender'], // NOVO
         isAdmin: data['is_admin'] ?? false,
         dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
         dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
@@ -237,6 +241,7 @@ class SupabaseService {
           plano: 'essencial',
           nomeAnalise: item['nome_analise'] ?? item['analysis_name'] ?? '',
           dataNasc: item['birth_date'] ?? '',
+          gender: item['gender'], // NOVO
           isAdmin: item['is_admin'] ?? false,
           dashboardCardOrder: List<String>.from(item['dashboard_card_order'] ?? UserModel.defaultCardOrder),
           dashboardHiddenCards: List<String>.from(item['dashboard_hidden_cards'] ?? []),

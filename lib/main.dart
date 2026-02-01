@@ -19,7 +19,8 @@ import 'package:sincro_app_flutter/services/notification_service.dart';
 import 'package:sincro_app_flutter/services/payment_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // Restore Supabase import
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // Restore Service import
-import 'package:sincro_app_flutter/core/theme/app_theme.dart'; // Restore Theme import
+import 'package:sincro_app_flutter/core/theme/app_theme.dart';
+import 'package:sincro_app_flutter/core/services/navigation_service.dart'; // 🚀 Navigation Service
 // ... other imports
 
 // --- WORKMANAGER CALLBACK (Must be top-level or static) ---
@@ -165,6 +166,9 @@ class SincroApp extends StatelessWidget {
       ],
       supportedLocales: const [
         Locale('pt', 'BR'),
+      ],
+      navigatorObservers: [
+        NavigationService.routeObserver,
       ],
       theme: AppTheme.darkTheme,
       home: const AuthCheck(),

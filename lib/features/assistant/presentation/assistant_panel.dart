@@ -5,27 +5,30 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
-import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart'; // Chat Animations
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/mentions_popup.dart'; // Mentions Widget
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/action_proposal_bubble.dart'; // Action Bubble
+import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart'; // Parser Regex
+import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // NEW: For direct Supabase calls
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
-import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/supabase_service.dart'; // Supabase
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/services/harmony_service.dart';
-import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
-import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_goal_form.dart';
-import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart';
-import 'package:sincro_app_flutter/features/assistant/presentation/widgets/inline_compatibility_form.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/goal_detail_screen.dart';
-import 'package:uuid/uuid.dart'; // Uuid
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
+import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
+import 'package:uuid/uuid.dart';
+import 'package:sincro_app_flutter/features/tasks/models/task_model.dart'; // Task Model
+import 'package:sincro_app_flutter/models/recurrence_rule.dart'; // RecurrenceType enum
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart'; // NOVO: Task Detail Modal
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
   final bool isFullScreen;
   final VoidCallback? onToggleFullScreen;
   final VoidCallback? onClose;
-  final String? initialMessage; // Mensagem inicial para envio automático
+  final String? initialMessage; 
+  final ScrollController? sheetScrollController; 
 
   const AssistantPanel({
     super.key,
@@ -34,7 +37,13 @@ class AssistantPanel extends StatefulWidget {
     this.onToggleFullScreen,
     this.onClose,
     this.initialMessage,
+    this.sheetScrollController,
+    this.numerologyData, // Received from Dashboard
+    this.activeContext, // New: Active Tab Name
   });
+
+  final NumerologyResult? numerologyData;
+  final String? activeContext;
 
   static Future<void> show(BuildContext context, UserModel userData, {String? initialMessage}) async {
     final isDesktop = MediaQuery.of(context).size.width > 768;
@@ -45,19 +54,19 @@ class AssistantPanel extends StatefulWidget {
         builder: (_) => AssistantPanel(userData: userData, initialMessage: initialMessage),
       );
     } else {
-      // Mobile: Full Screen Page instead of ModalBottomSheet
-      await Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => 
-            AssistantPanel(userData: userData, initialMessage: initialMessage, isFullScreen: true),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Slide up transition to match the "expanding" feel
-            const begin = Offset(0.0, 1.0);
-            const end = Offset.zero;
-            const curve = Curves.easeOutCubic;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            return SlideTransition(position: animation.drive(tween), child: child);
-          },
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (_, controller) => AssistantPanel(
+             userData: userData, 
+             initialMessage: initialMessage, 
+             sheetScrollController: controller
+          ),
         ),
       );
     }
@@ -72,1410 +81,541 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Controllers & Services ---
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _supabase = SupabaseService(); // Usando Supabase
+  final _supabase = SupabaseService();
   final _speechService = SpeechService();
   final _harmonyService = HarmonyService();
   final _inputFocusNode = FocusNode();
-  final Set<String> _animatedMessageIds = {}; // Track messages that have already animated
+  final Set<String> _animatedMessageIds = {};
 
   // --- State Variables ---
-  final List<AssistantMessage> _messages = [];
-  bool _isSending = false; // Controls the "Typing..." indicator
+  List<AssistantMessage> _messages = [];
+  bool _isLoading = false;
+  bool _isSending = false;
   bool _isListening = false;
   bool _isInputEmpty = true;
   String _textBeforeListening = '';
   
-  // Mobile Sheet Controller
-  late DraggableScrollableController _sheetController;
-  bool _isSheetExpanded = false;
+  // Mentions State
+  OverlayEntry? _mentionsOverlay;
+  List<MentionCandidate> _mentionCandidates = [];
   
-
-
-  // --- Animation ---
-  late AnimationController _animController;
-  late Animation<double> _scaleAnimation;
+  // Mobile Sheet Controller (if needed internally, but we use scroll controller passed in)
+  late DraggableScrollableController _sheetController;
+  bool _isSheetExpanded = false; // Internal tracking
+  
+  // N8N Service
+  final N8nService _n8nService = N8nService(); // Use singleton or provider
 
   @override
   void initState() {
     super.initState();
-    _sheetController = DraggableScrollableController();
-    _sheetController.addListener(_onSheetChanged);
+    _loadHistory();
+    _speechService.init();
 
-    _controller.addListener(_updateInputState);
-    _inputFocusNode.addListener(() {
-      if (_inputFocusNode.hasFocus && _isListening) {
-        _stopListening();
-      }
-    });
+    _controller.addListener(_updateInputState); // Existing listener
+    _controller.addListener(_checkMentions); // 🚀 New Listener for Mentions
 
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
-
-    // Se houver mensagem inicial, envia automaticamente
-    if (widget.initialMessage != null && widget.initialMessage!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _controller.text = widget.initialMessage!;
-        _send();
-      });
-    }
-  }
-
-  void _onSheetChanged() {
-    if (!_sheetController.isAttached) return;
-    final size = _sheetController.size;
-    // Consider expanded if > 0.9
-    final isExpanded = size > 0.9;
-    if (_isSheetExpanded != isExpanded) {
-      setState(() {
-        _isSheetExpanded = isExpanded;
-      });
-    }
-  }
-
-  void _updateInputState() {
-    final isEmpty = _controller.text.trim().isEmpty;
-    if (_isInputEmpty != isEmpty) {
-      setState(() {
-        _isInputEmpty = isEmpty;
-      });
-    }
-  }
-
-  @override
-  void didUpdateWidget(AssistantPanel oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isFullScreen != widget.isFullScreen) {
-      // _isWindowMode removed
-    }
+    // Initial Message logic...
   }
 
   @override
   void dispose() {
-    _speechService.stop();
+    _hideMentionsOverlay(); // Cleanup
     _controller.removeListener(_updateInputState);
-    _inputFocusNode.dispose();
-    _sheetController.removeListener(_onSheetChanged);
-    _sheetController.dispose();
-    _animController.dispose();
+    _controller.removeListener(_checkMentions);
     _controller.dispose();
     _scrollController.dispose();
+    _inputFocusNode.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
-  // --- Auto Scroll ---
-
-  Future<void> _scrollToBottom() async {
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (!mounted) return;
-
-    if (_scrollController.hasClients) {
-      await _scrollController.animateTo(
-        0.0, // Reverse list: 0.0 is the bottom
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-      );
-    }
+  void _updateInputState() {
+    setState(() {
+      _isInputEmpty = _controller.text.trim().isEmpty;
+    });
   }
 
-  // --- Logic: Send Message ---
-
-  Future<void> _send() async {
-    final q = _controller.text.trim();
-    if (q.isEmpty) return;
-
-    if (_isListening) await _stopListening();
-
-    setState(() {
-      _messages.add(
-          AssistantMessage(role: 'user', content: q, time: DateTime.now()));
-    });
-
-    _supabase.addAssistantMessage(widget.userData.uid,
-        AssistantMessage(role: 'user', content: q, time: DateTime.now()));
-    _controller.clear();
-    _inputFocusNode.unfocus();
-
-    await _scrollToBottom();
-
-    // Add natural delay before showing typing indicator (simulates AI "reading" the message)
-    await Future.delayed(const Duration(milliseconds: 800));
+  // --- Mentions Logic ---
+  void _checkMentions() {
+    final text = _controller.text;
+    final selection = _controller.selection;
     
-    if (mounted) {
-      setState(() {
-        _isSending = true; // Start typing animation
-      });
-    }
-
-    // Check for affirmative response to pending actions
-    final pendingActions = _lastAssistantActions();
-    if (_isAffirmative(q) && pendingActions.isNotEmpty) {
-      try {
-        final chosen = _chooseActionForAffirmative(q, pendingActions);
-        final idx = _lastAssistantMessageIndexWithActions();
-        await _executeAction(context, chosen,
-            fromAuto: true, messageIndex: idx);
-      } finally {
-        if (mounted) setState(() => _isSending = false);
-        await _scrollToBottom();
-      }
+    // Only check if cursor is valid
+    if (selection.baseOffset < 0) {
+      _hideMentionsOverlay();
       return;
     }
 
-    // Normal AI processing
-    try {
-      final user = widget.userData;
-      NumerologyResult? numerology;
-      if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
-        numerology = NumerologyEngine(
-                nomeCompleto: user.nomeAnalise, dataNascimento: user.dataNasc)
-            .calcular();
-      }
-      numerology ??= NumerologyEngine(
-              nomeCompleto: 'Indefinido', dataNascimento: '1900-01-01')
-          .calcular();
+    // Find the word being typed at cursor
+    final cursorIndex = selection.baseOffset;
+    final textBeforeCursor = text.substring(0, cursorIndex);
+    
+    // Regex to find the last token starting with @ or !
+    // Matches whitespace/start + (@ or !) + characters until cursor
+    final regex = RegExp(r'(?:\s|^)([@!][a-zA-Z0-9_À-ÿ]*)$');
+    final match = regex.firstMatch(textBeforeCursor);
 
-      final tasks = await _supabase.getRecentTasks(user.uid, limit: 30);
-      final goals = await _supabase.getActiveGoals(user.uid);
-      final recentJournal =
-          await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
-
-      // --- REPLACEMENT FOR AssistantService.ask ---
-      // 1. Construct Context
-      final contextData = {
-        'user': user.toJson(),
-        'numerology': numerology?.toJson(),
-        'tasks': tasks.map((e) => e.toJson()).toList(),
-        'goals': goals.map((e) => e.toJson()).toList(),
-        'recentJournal': recentJournal.map((e) => e.toJson()).toList(),
-      };
+    if (match != null) {
+      final token = match.group(1)!; // e.g., "@ali" or "!"
+      final prefix = token[0]; // '@' or '!'
+      final query = token.substring(1).toLowerCase(); // "ali"
       
-      // 2. Serialize Input (Question + Context)
-      final fullInput = jsonEncode({
-        'question': q,
-        'context': contextData,
-      });
-
-      // 3. Call N8N
-      final n8n = N8nService();
-      final text = await n8n.chat(prompt: fullInput, userId: user.uid);
-      
-      // 4. Log Usage (Optional, keeping consistent with legacy behavior)
-      // _logUsage(user.uid, 'assistant_chat', fullInput.length, text.length); 
-
-      // 5. Parse Response (JSON or Text)
-      final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
-      final startIndex = cleanText.indexOf('{');
-      final endIndex = cleanText.lastIndexOf('}');
-
-      AssistantAnswer ans;
-      if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
-        try {
-          final jsonStr = cleanText.substring(startIndex, endIndex + 1);
-          final data = jsonDecode(jsonStr) as Map<String, dynamic>;
-          ans = AssistantAnswer.fromJson(data);
-        } catch (e) {
-          debugPrint('Error parsing N8N JSON: $e');
-          ans = AssistantAnswer(answer: cleanText, actions: []); // Fallback to raw text
-        }
-      } else {
-         ans = AssistantAnswer(answer: cleanText, actions: []);
-      }
-      // ---------------------------------------------
-
-      final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
-
-      if (mounted) {
-        setState(() {
-          _messages.add(AssistantMessage(
-            role: 'assistant',
-            content: ans.answer,
-            time: DateTime.now(),
-            actions: alignedActions,
-          ));
-        });
-      }
-
-      _supabase.addAssistantMessage(
-          widget.userData.uid,
-          AssistantMessage(
-              role: 'assistant',
-              content: ans.answer,
-              time: DateTime.now(),
-              actions: alignedActions));
-
-      await _scrollToBottom();
-    } catch (e) {
-      // Log technical error for debugging
-      debugPrint('Erro no assistente: $e');
-      
-      // Determine friendly message based on error type
-      String friendlyMessage = 'Desculpe, não consegui processar sua solicitação agora. 😔\n\nPode tentar novamente em alguns instantes?';
-      
-      final errorStr = e.toString().toLowerCase();
-      if (errorStr.contains('json')) {
-        friendlyMessage = 'Tive um problema ao entender a resposta. 🤔\n\nPode tentar reformular sua pergunta de outra forma?';
-      } else if (errorStr.contains('network') || errorStr.contains('connection') || errorStr.contains('socket')) {
-        friendlyMessage = 'Parece que estou com problemas de conexão. 📡\n\nVerifique sua internet e tente novamente.';
-      } else if (errorStr.contains('timeout')) {
-        friendlyMessage = 'A resposta está demorando mais que o esperado. ⏱️\n\nTente novamente em alguns instantes.';
-      }
-      
-      if (mounted) {
-        setState(() {
-          _messages.add(AssistantMessage(
-              role: 'assistant',
-              content: friendlyMessage,
-              time: DateTime.now()));
-        });
-        await _scrollToBottom();
-      }
-    } finally {
-      if (mounted) setState(() => _isSending = false); // Stop typing animation
-      await _scrollToBottom();
+      _fetchCandidates(prefix, query);
+    } else {
+      _hideMentionsOverlay();
     }
   }
 
-  // --- Logic: Speech ---
-
-  Future<void> _onMicPressed() async {
-    // 1. Garante que o teclado feche para não conflitar com o microfone nativo (mobile web)
-    _inputFocusNode.unfocus();
-    await Future.delayed(const Duration(milliseconds: 300));
-
-    final available = await _speechService.init();
-    if (!available) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Reconhecimento de voz indisponível.'),
-            backgroundColor: Colors.redAccent));
+  void _fetchCandidates(String prefix, String query) async {
+      List<MentionCandidate> results = [];
+      
+      if (prefix == '@') {
+         // Mock Contacts - Replace with real ContactService later
+         final allContacts = [
+             MentionCandidate(id: '1', label: '@Alice', type: MentionType.contact, description: 'Designer'),
+             MentionCandidate(id: '2', label: '@Bob', type: MentionType.contact, description: 'Developer'),
+             MentionCandidate(id: '3', label: '@Carol', type: MentionType.contact, description: 'Manager'),
+         ];
+         results = allContacts.where((c) => c.label.toLowerCase().contains(query)).toList();
+      } else if (prefix == '!') {
+         // Mock Goals - Replace with real GoalService later
+         final allGoals = [
+             MentionCandidate(id: 'g1', label: '!Marathon', type: MentionType.goal, description: 'Run 42km'),
+             MentionCandidate(id: 'g2', label: '!Website', type: MentionType.goal, description: 'Launch Site'),
+             MentionCandidate(id: 'g3', label: '!Meditation', type: MentionType.goal, description: 'Daily Practice'),
+         ];
+         results = allGoals.where((c) => c.label.toLowerCase().contains(query)).toList();
       }
+
+      if (results.isNotEmpty) {
+         _showMentionsOverlay(results);
+      } else {
+         _hideMentionsOverlay();
+      }
+  }
+
+  void _showMentionsOverlay(List<MentionCandidate> candidates) {
+    _mentionCandidates = candidates;
+    
+    if (_mentionsOverlay != null) {
+      // Just rebuild/update if already showing
+      _mentionsOverlay!.markNeedsBuild();
       return;
     }
 
-    _textBeforeListening = _controller.text;
-    if (_textBeforeListening.isNotEmpty && !_textBeforeListening.endsWith(' ')) {
-      _textBeforeListening += ' ';
+    final overlay = Overlay.of(context);
+    final renderBox = context.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+    
+    // Calculate position above input
+    // This is tricky with floating/modal, might need GlobalKey on InputArea
+    // For now, let's position it relative to the bottom of the screen (above input)
+    
+    _mentionsOverlay = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 100, // Fixed offset for now, ideally dynamic
+        left: 16,
+        right: 16,
+        child: MentionsPopup(
+           candidates: _mentionCandidates,
+           onDismiss: () => _hideMentionsOverlay(),
+           onSelected: (candidate) {
+              _applyMention(candidate);
+           },
+        ),
+      ),
+    );
+
+    overlay.insert(_mentionsOverlay!);
+  }
+
+  void _hideMentionsOverlay() {
+    _mentionsOverlay?.remove();
+    _mentionsOverlay = null;
+  }
+
+  void _applyMention(MentionCandidate candidate) {
+    final text = _controller.text;
+    final selection = _controller.selection;
+    final cursorIndex = selection.baseOffset;
+    
+    // Find start of token again
+    final textBeforeCursor = text.substring(0, cursorIndex);
+    final regex = RegExp(r'(?:\s|^)([@!][a-zA-Z0-9_À-ÿ]*)$');
+    final match = regex.firstMatch(textBeforeCursor);
+    
+    if (match != null) {
+        final tokenStart = match.start + (match.group(0)!.startsWith(' ') ? 1 : 0);
+        final tokenEnd = cursorIndex;
+        
+        final newText = text.replaceRange(tokenStart, tokenEnd, "${candidate.label} ");
+        _controller.text = newText;
+        
+        // Move cursor to end of inserted mention
+        _controller.selection = TextSelection.fromPosition(
+           TextPosition(offset: tokenStart + candidate.label.length + 1)
+        );
     }
+    
+    _hideMentionsOverlay();
+  }
+
+  Future<void> _loadHistory() async {
+    setState(() => _isLoading = true);
+    try {
+      final history = await AssistantService.fetchHistory(widget.userData.uid);
+      if (history.isNotEmpty) {
+        setState(() {
+          _messages = history;
+        });
+      } else {
+        // Add welcome message if history is empty
+        setState(() {
+            _messages.add(AssistantMessage(
+                id: const Uuid().v4(),
+                content: "Olá, ${widget.userData.primeiroNome}! Eu sou a Sincro IA. Como posso te ajudar a elevar sua energia hoje?",
+                role: 'assistant',
+                time: DateTime.now(),
+            ));
+        });
+      }
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _sendMessage(String text) async {
+    if (text.trim().isEmpty) return;
+
+    final userMsgId = const Uuid().v4();
+    final userMsg = AssistantMessage(
+      id: userMsgId,
+      content: text,
+      role: 'user',
+      time: DateTime.now(),
+    );
 
     setState(() {
-      _isListening = true;
-      _animController.forward();
+      _messages.insert(0, userMsg); // Reverse list
+      _isSending = true;
     });
-
-    await _speechService.start(onResult: (text) {
-      if (!mounted) return;
-      final newFullText = '$_textBeforeListening$text';
-      setState(() {
-        _controller.text = newFullText;
-        _controller.selection = TextSelection.fromPosition(
-            TextPosition(offset: _controller.text.length));
-      });
-    }, onDone: () {
-      if (mounted && _isListening) {
-        _stopListening();
-      }
-    });
-  }
-
-  Future<void> _stopListening() async {
-    await _speechService.stop();
-    if (mounted) {
-      setState(() {
-        _isListening = false;
-        _animController.reverse();
-      });
-    }
-  }
-
-  // --- Logic: Actions & Helpers ---
-
-  List<AssistantAction> _lastAssistantActions() {
-    for (var i = _messages.length - 1; i >= 0; i--) {
-      if (_messages[i].role == 'assistant' && _messages[i].actions.isNotEmpty) {
-        return _messages[i].actions.where((a) => !a.isExecuted).toList();
-      }
-    }
-    return [];
-  }
-
-  int _lastAssistantMessageIndexWithActions() {
-    for (var i = _messages.length - 1; i >= 0; i--) {
-      if (_messages[i].role == 'assistant' && _messages[i].actions.isNotEmpty) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  bool _isAffirmative(String text) {
-    final t = text.toLowerCase().trim();
-    return t == 'sim' ||
-        t == 'claro' ||
-        t == 'com certeza' ||
-        t == 'pode ser' ||
-        t == 'faça isso' ||
-        t == 'ok' ||
-        t == 'confirmar';
-  }
-
-  AssistantAction _chooseActionForAffirmative(
-      String text, List<AssistantAction> actions) {
-    return actions.first;
-  }
-
-  List<AssistantAction> _alignActionsWithAnswer(
-      List<AssistantAction> actions, String answer) {
-    return actions;
-  }
-
-  Future<void> _executeAction(
-      BuildContext context, AssistantAction action,
-      {bool fromAuto = false, int messageIndex = -1, int actionIndex = -1}) async {
-
-    // 1. Check for Navigation Action
-    if (action.data['action'] == 'navigate_to_goal') {
-      final goalId = action.data['goalId'] as String?;
-      if (goalId != null) {
-        try {
-          // Show loading indicator if needed, or just navigate
-          // Ideally we should fetch the goal, but for now let's assume we can fetch it or pass it if available.
-          // Since we only have ID, we need to fetch it.
-          // Fetch all active goals and find the one with the matching ID
-          final goals = await _supabase.getActiveGoals(widget.userData.uid);
-          final goal = goals.cast<Goal?>().firstWhere(
-            (g) => g?.id == goalId,
-            orElse: () => null,
-          );
-          
-          if (goal != null && mounted) {
-             Navigator.of(context).push(MaterialPageRoute(
-              builder: (context) => GoalDetailScreen(
-                initialGoal: goal,
-                userData: widget.userData,
-              ),
-            ));
-          } else if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Jornada não encontrada.'), backgroundColor: Colors.redAccent),
-            );
-          }
-        } catch (e) {
-          debugPrint('Error navigating to goal: $e');
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Erro ao abrir jornada.'), backgroundColor: Colors.redAccent),
-            );
-          }
-        }
-      }
-      return; // Stop execution here for navigation actions
-    }
-
-    if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
-      setState(() {
-        final msg = _messages[messageIndex];
-        if (actionIndex < msg.actions.length) {
-          final updatedActions = List<AssistantAction>.from(msg.actions);
-          updatedActions[actionIndex] = action.copyWith(isExecuting: true);
-          _messages[messageIndex] = msg.copyWith(actions: updatedActions);
-        }
-      });
-    }
+    _controller.clear();
+    _scrollToBottom();
+    
+    // Persist User Message
+    AssistantService.saveMessage(widget.userData.uid, userMsg);
 
     try {
-      if (action.type == AssistantActionType.create_task) {
-        final data = action.data;
-        final newTask = TaskModel(
-          id: '',
-          text: data['title'] ?? 'Nova Tarefa',
-          createdAt: DateTime.now(),
-          dueDate: DateTime.tryParse(data['date'] ?? '') ?? DateTime.now(),
-          completed: false,
-        );
-        await _supabase.addTask(widget.userData.uid, newTask);
-      } else if (action.type == AssistantActionType.analyze_harmony) {
-        final data = action.data;
-        final partnerName = data['partner_name'] ?? action.title ?? '';
-        final partnerDob = data['partner_dob'] ?? data['date'] ?? '';
-
-        if (partnerName.isNotEmpty && partnerDob.isNotEmpty) {
-           final analysis = _buildHarmonyAnalysis(partnerName, partnerDob);
-           setState(() {
-             _messages.add(AssistantMessage(
-               role: 'assistant',
-               content: analysis,
-               time: DateTime.now()
-             ));
-           });
-           await _scrollToBottom();
-        }
-
-      }
-
-      if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
-        setState(() {
-          final msg = _messages[messageIndex];
-          if (actionIndex < msg.actions.length) {
-            final updatedActions = List<AssistantAction>.from(msg.actions);
-            updatedActions[actionIndex] = updatedActions[actionIndex].copyWith(
-              isExecuting: false,
-              isExecuted: true,
-            );
-            _messages[messageIndex] = msg.copyWith(actions: updatedActions);
-          }
-        });
-      }
-
-      if (!fromAuto && action.type != AssistantActionType.analyze_harmony) {
-        setState(() {
-          _messages.add(AssistantMessage(
-              role: 'assistant',
-              content: 'Feito! ✅',
-              time: DateTime.now()));
-        });
-        await _scrollToBottom();
-      }
-    } catch (e) {
-       if (messageIndex != -1 && messageIndex < _messages.length && actionIndex != -1) {
-        setState(() {
-          final msg = _messages[messageIndex];
-          if (actionIndex < msg.actions.length) {
-            final updatedActions = List<AssistantAction>.from(msg.actions);
-            updatedActions[actionIndex] = action.copyWith(isExecuting: false);
-            _messages[messageIndex] = msg.copyWith(actions: updatedActions);
-          }
-        });
-      }
-
-      setState(() {
-        _messages.add(AssistantMessage(
-            role: 'assistant',
-            content: 'Erro ao executar ação: $e',
-            time: DateTime.now()));
-      });
-      await _scrollToBottom();
-    }
-  }
-
-
-
-  String _buildHarmonyAnalysis(String partnerName, String partnerDob) {
-    try {
-      DateTime? dob;
-      if (partnerDob.contains('/')) {
-        try {
-          dob = DateFormat('dd/MM/yyyy').parse(partnerDob);
-        } catch (e) {
-          try {
-            dob = DateFormat('d/M/yyyy').parse(partnerDob);
-          } catch (e2) {
-            // ignore
-          }
-        }
-      } else if (partnerDob.contains('-')) {
-        dob = DateTime.tryParse(partnerDob);
-      }
-
-      if (dob == null) {
-        return "❌ Data de nascimento inválida para análise. Por favor, forneça no formato DD/MM/AAAA (ex: 31/05/1991).";
-      }
-
-      final formattedDobForEngine = DateFormat('dd/MM/yyyy').format(dob);
-
-      final partnerNumerology = NumerologyEngine(
-        nomeCompleto: partnerName.trim(),
-        dataNascimento: formattedDobForEngine,
-      ).calcular();
-
-      final userNumerology = NumerologyEngine(
-        nomeCompleto: widget.userData.nomeAnalise,
-        dataNascimento: widget.userData.dataNasc,
-      ).calcular();
-
-      if (userNumerology == null || partnerNumerology == null) {
-        return "❌ Não foi possível calcular a numerologia para a análise. Verifique os dados.";
-      }
-
-      final userMissao = userNumerology.numeros['missao'] ?? 0;
-      final partnerMissao = partnerNumerology.numeros['missao'] ?? 0;
-
-      final userHarmony = userNumerology.estruturas['harmoniaConjugal'] as Map<String, dynamic>? ?? {};
-
-      final vibra = userHarmony['vibra'] as List? ?? [];
-      final atrai = userHarmony['atrai'] as List? ?? [];
-      final oposto = userHarmony['oposto'] as List? ?? [];
-      final passivo = userHarmony['passivo'] as List? ?? [];
-
-      String compatibilityLevel;
-      String emoji;
-      String explanation;
-
-      if (vibra.contains(partnerMissao)) {
-        compatibilityLevel = "Vibração Perfeita";
-        emoji = "💖";
-        explanation = "Vocês possuem uma **vibração perfeita**! Há uma sintonia natural e profunda entre vocês.";
-      } else if (atrai.contains(partnerMissao)) {
-        compatibilityLevel = "Alta Atração";
-        emoji = "✨";
-        explanation = "Existe uma **forte atração** entre vocês. A relação tende a ser harmoniosa e complementar.";
-      } else if (oposto.contains(partnerMissao)) {
-        compatibilityLevel = "Energias Opostas";
-        emoji = "⚡";
-        explanation = "Vocês possuem **energias opostas**. Isso pode gerar desafios, mas também crescimento mútuo se houver compreensão.";
-      } else if (passivo.contains(partnerMissao)) {
-        compatibilityLevel = "Relação Passiva";
-        emoji = "🌙";
-        explanation = "A relação tende a ser **passiva e tranquila**. Pode faltar intensidade, mas há estabilidade.";
-      } else {
-        compatibilityLevel = "Neutro";
-        emoji = "🔄";
-        explanation = "A relação é **neutra** do ponto de vista numerológico. O sucesso dependerá de outros fatores.";
-      }
-
-      return '''
-## $emoji Análise de Harmonia Conjugal
-
-**Sua Missão**: $userMissao
-**Missão de $partnerName**: $partnerMissao
-
-**Compatibilidade**: $compatibilityLevel
-
-$explanation
-
-### Detalhes da sua Harmonia Conjugal:
-- **Vibra com**: ${vibra.join(', ')}
-- **Atrai**: ${atrai.join(', ')}
-- **Oposto**: ${oposto.join(', ')}
-- **Passivo**: ${passivo.join(', ')}
-
-Lembre-se: a numerologia é uma ferramenta de autoconhecimento. O sucesso de qualquer relacionamento depende de amor, respeito, comunicação e esforço mútuo! 💕
-''';
-
-    } catch (e) {
-      return "Erro ao calcular harmonia: $e";
-    }
-  }
-
-  // --- Goal Form Handling ---
-
-  Future<void> _handleGoalFormSubmit(Goal goal, int messageIndex) async {
-    try {
-      // 1. Gerar ID e Salvar a meta (Supabase)
-      final goalId = const Uuid().v4(); // Gera UUID localmente
-      
-      // Cria a meta com o ID gerado e SEM as subtasks internas (pois serão salvas como Tasks externas)
-      // Mas mantemos subTasks no objeto local para iterar abaixo
-      final goalToSave = goal.copyWith(id: goalId, subTasks: []);
-      
-      await _supabase.addGoal(widget.userData.uid, goalToSave);
-
-      // 2. Salvar os marcos como Tarefas
-      int addedCount = 0;
-      for (final subTask in goal.subTasks) {
-        final newTask = TaskModel(
-          id: '', // Será gerado pelo Supabase no insert (ou ignorado)
-          text: subTask.title,
-          completed: false,
-          createdAt: DateTime.now(),
-          dueDate: goal.targetDate, // Usa a data da meta como sugestão
-          journeyId: goalId,
-          journeyTitle: goal.title,
-          goalId: goalId,
-        );
-        await _supabase.addTask(widget.userData.uid, newTask);
-        addedCount++;
-      }
-
-      // 3. Atualizar UI
-      setState(() {
-        _messages[messageIndex] = _messages[messageIndex].copyWith(
-          actions: _messages[messageIndex].actions.map((a) {
-            if (a.type == AssistantActionType.create_goal) {
-              return a.copyWith(isExecuted: true);
-            }
-            return a;
-          }).toList(),
-        );
-        
-        // Adicionar mensagem de sucesso estruturada com ação de navegação
-        _messages.add(AssistantMessage(
-          content: '✨ **Jornada Criada com Sucesso!**\n\n🎯 **${goal.title}**\n📅 Conclusão prevista: ${DateFormat('dd/MM/yyyy', 'pt_BR').format(goal.targetDate!)}\n\n🏆 Adicionei **$addedCount marcos** à sua lista de tarefas!',
-          role: 'assistant',
-          time: DateTime.now(),
-          actions: [
-            AssistantAction(
-              type: AssistantActionType.create_task, // Using create_task as a placeholder for navigation
-              title: 'Ver Jornada',
-              isExecuted: false,
-              needsUserInput: false,
-              data: {
-                'action': 'navigate_to_goal',
-                'goalId': goal.id,
-                'goalTitle': goal.title,
-              },
-            ),
-          ],
-        ));
-      });
-      
-      await _scrollToBottom();
-
-    } catch (e) {
-      debugPrint('Erro ao salvar meta: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao criar jornada: $e'), backgroundColor: Colors.red),
-        );
-      }
-    }
-  }
-
-  Future<void> _handleCompatibilityFormSubmit(String partnerName, DateTime partnerDob, int messageIndex) async {
-    try {
-      // 1. Calculate Partner's Numerology
-      final partnerEngine = NumerologyEngine(
-        nomeCompleto: partnerName,
-        dataNascimento: DateFormat('dd/MM/yyyy').format(partnerDob),
+      // 1. Call AssistantService (Wrapper that handles Context & Logic)
+      final answer = await AssistantService.ask(
+          question: text,
+          user: widget.userData,
+          numerology: widget.numerologyData ?? NumerologyEngine(
+             nomeCompleto: widget.userData.nomeAnalise.isNotEmpty 
+                ? widget.userData.nomeAnalise 
+                : "${widget.userData.primeiroNome} ${widget.userData.sobrenome}",
+             dataNascimento: widget.userData.dataNasc
+          ).calculateProfile(),
+          tasks: [], // TODO: Inject TaskProvider or similar
+          goals: [], // TODO: Inject GoalProvider
+          recentJournal: [], // TODO: Inject JournalProvider
+          activeContext: widget.activeContext, // Pass context
       );
-      final partnerProfile = partnerEngine.calculateProfile();
-
-      // 2. Get User's Numerology
-      final user = widget.userData;
-      NumerologyResult? userNumerology;
-      if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
-        userNumerology = NumerologyEngine(
-                nomeCompleto: user.nomeAnalise, dataNascimento: user.dataNasc)
-            .calculateProfile();
-      }
-      userNumerology ??= NumerologyEngine(
-              nomeCompleto: 'Indefinido', dataNascimento: '1900-01-01')
-          .calculateProfile();
-
-      // 3. Check Compatibility
-      final userHarmonia = userNumerology.numeros['harmoniaConjugal'] ?? 0;
-      final partnerHarmonia = partnerProfile.numeros['harmoniaConjugal'] ?? 0;
-      final compatibility = _harmonyService.checkCompatibility(userHarmonia, partnerHarmonia);
-
-      // 4. Update message to mark action as executed and add confirmation
-      if (messageIndex < _messages.length) {
-        setState(() {
-          final msg = _messages[messageIndex];
-          final updatedActions = msg.actions.map((action) {
-            if (action.type == AssistantActionType.analyze_compatibility) {
-              return action.copyWith(
-                isExecuted: true,
-                needsUserInput: false,
-              );
-            }
-            return action;
-          }).toList();
-          _messages[messageIndex] = msg.copyWith(actions: updatedActions);
-
-          // Add confirmation message
-          _messages.add(AssistantMessage(
-            role: 'assistant',
-            content: '💘 **Análise de Compatibilidade Iniciada!**\n\n🔮 Analisando a harmonia entre você e **$partnerName**...\n\n📊 Status: **${compatibility['status']}**\n\nAguarde a análise completa!',
-            time: DateTime.now(),
-          ));
-        });
-
-        await _scrollToBottom();
-      }
-
-      // 5. Start typing animation for full analysis
-      setState(() => _isSending = true);
-
-      // 6. Construct Prompt
-      final prompt = '''
-Realize uma ANÁLISE DE COMPATIBILIDADE AMOROSA/AFINIDADE detalhada entre:
-
-USUÁRIO: ${user.primeiroNome}
-- Harmonia Conjugal: $userHarmonia
-- Destino: ${userNumerology.numeros['destino']}
-- Expressão: ${userNumerology.numeros['expressao']}
-- Motivação: ${userNumerology.numeros['motivacao']}
-- Dia Pessoal: ${userNumerology.numeros['diaPessoal']}
-
-PARCEIRO(A): $partnerName (Nasc: ${DateFormat('dd/MM/yyyy').format(partnerDob)})
-- Harmonia Conjugal: $partnerHarmonia
-- Destino: ${partnerProfile.numeros['destino']}
-- Expressão: ${partnerProfile.numeros['expressao']}
-- Motivação: ${partnerProfile.numeros['motivacao']}
-- Dia Pessoal: ${partnerProfile.numeros['diaPessoal']}
-
-RESULTADO DA HARMONIA CONJUGAL:
-- Status: ${compatibility['status']}
-- Descrição Técnica: ${compatibility['descricao']}
-
-INSTRUÇÕES:
-1. Explique o que significa a Harmonia Conjugal de cada um.
-2. Analise a compatibilidade baseada no Status acima (Vibram Juntos, Atração, Opostos, etc.).
-3. Se forem OPOSTOS, explique que podem dar certo com sabedoria.
-4. Se forem IGUAIS, alerte sobre a monotonia (exceto 5).
-5. Use OBRIGATORIAMENTE os outros números (Destino, Expressão, Motivação) para complementar a análise e torná-la única.
-6. Seja empático, construtivo e use emojis.
-7. Formate a resposta com parágrafos curtos e bullet points para facilitar a leitura.
-''';
-
-      // 7. Fetch Context
-      final tasks = await _supabase.getRecentTasks(user.uid, limit: 30);
-      final goals = await _supabase.getActiveGoals(user.uid);
-      final recentJournal = await _supabase.getJournalEntriesForMonth(user.uid, DateTime.now());
-
-      // 8. Ask AI
-      // --- REPLACEMENT FOR AssistantService.ask (Compatibility) ---
-      final contextData = {
-        'user': user.toJson(),
-        'numerology': userNumerology!.toJson(),
-        'tasks': tasks.map((e) => e.toJson()).toList(),
-        'goals': goals.map((e) => e.toJson()).toList(),
-        'recentJournal': recentJournal.map((e) => e.toJson()).toList(),
-      };
-
-      final fullInput = jsonEncode({
-        'question': prompt, // The prompt built above
-        'context': contextData,
-      });
-
-      final n8n = N8nService();
-      final text = await n8n.chat(prompt: fullInput, userId: user.uid);
-
-      final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
-      final startIndex = cleanText.indexOf('{');
-      final endIndex = cleanText.lastIndexOf('}');
-       
-      AssistantAnswer ans;
-      if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
-        try {
-           final jsonStr = cleanText.substring(startIndex, endIndex + 1);
-           final data = jsonDecode(jsonStr) as Map<String, dynamic>;
-           ans = AssistantAnswer.fromJson(data);
-        } catch (e) {
-           ans = AssistantAnswer(answer: cleanText, actions: []);
-        }
-      } else {
-         ans = AssistantAnswer(answer: cleanText, actions: []);
-      }
-      // -----------------------------------------------------------
-      final alignedActions = _alignActionsWithAnswer(ans.actions, ans.answer);
+      
+      final assistantMsg = AssistantMessage(
+        id: const Uuid().v4(),
+        content: answer.answer, // The text response
+        role: 'assistant',
+        time: DateTime.now(),
+        actions: answer.actions, // Pass actions
+        embeddedTasks: answer.embeddedTasks, // NOVO: Passar tasks para renderizar
+      );
 
       if (mounted) {
         setState(() {
-          _messages.add(AssistantMessage(
-            role: 'assistant',
-            content: ans.answer,
-            time: DateTime.now(),
-            actions: alignedActions,
-          ));
+          _messages.insert(0, assistantMsg);
         });
+        
+        // Persist Assistant Message
+        await AssistantService.saveMessage(widget.userData.uid, assistantMsg);
+        
+        // Handle Actions (Navigations, Creations) if any
+        if (answer.actions.isNotEmpty) {
+           // TODO: Implement Action Handler
+        }
       }
-
-      _supabase.addAssistantMessage(
-          widget.userData.uid,
-          AssistantMessage(
-              role: 'assistant',
-              content: ans.answer,
-              time: DateTime.now(),
-              actions: alignedActions));
-
-      await _scrollToBottom();
 
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _messages.add(AssistantMessage(
-              role: 'assistant',
-              content: 'Desculpe, não consegui realizar a análise agora. Tente novamente mais tarde.\n\n$e',
-              time: DateTime.now()));
-        });
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Erro ao enviar mensagem: $e')),
+         );
       }
     } finally {
-      if (mounted) setState(() => _isSending = false);
-      await _scrollToBottom();
+      if (mounted) {
+        setState(() {
+           _isSending = false;
+        });
+      }
     }
   }
 
-  // --- UI Components ---
-
-
-
-  Widget _buildActionChip(AssistantAction action, int messageIndex, int actionIndex, bool anyActionExecuted) {
-  final isExecuted = action.isExecuted;
-  final isExecuting = action.isExecuting;
-  final isNavigationAction = action.data['action'] == 'navigate_to_goal';
-  final isDisabled = !isNavigationAction && (isExecuted || isExecuting || anyActionExecuted);
-
-    String label = action.title ?? 'Ação';
-    if (action.date != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
-      final actionDate = DateTime(action.date!.year, action.date!.month, action.date!.day);
-      String dateStr = actionDate.isAtSameMomentAs(today)
-          ? 'Hoje'
-          : DateFormat('dd/MM', 'pt_BR').format(action.date!);
-      label = '$label - $dateStr';
-    }
-
-    return GestureDetector(
-      onTap: isDisabled
-          ? null
-          : () => _executeAction(context, action, messageIndex: messageIndex, actionIndex: actionIndex),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isExecuted
-              ? AppColors.success.withValues(alpha: 0.1)
-              : isDisabled
-                  ? AppColors.border.withValues(alpha: 0.3)
-                  : AppColors.cardBackground, // Fundo mais sutil (card background)
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isExecuted
-                ? AppColors.success
-                : isDisabled
-                    ? Colors.transparent
-                    : AppColors.primary, // Borda mais visível (cor primária sólida)
-            width: 1.5, // Borda um pouco mais espessa
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (isExecuted)
-              const Padding(
-                padding: EdgeInsets.only(right: 8.0),
-                child: Icon(Icons.check, size: 16, color: AppColors.success),
-              ),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(
-                color: isNavigationAction
-                    ? AppColors.primary
-                    : isExecuted
-                        ? AppColors.success
-                        : isDisabled
-                            ? AppColors.secondaryText
-                            : Colors.white.withOpacity(0.9),
-                fontWeight: FontWeight.w500,
-                fontSize: 13,
-                decoration: isNavigationAction || !isExecuted ? TextDecoration.none : TextDecoration.lineThrough,
-              ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  void _send() {
+    _sendMessage(_controller.text);
   }
 
-  Widget _buildTypingIndicator() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Container(
-            width: 40, height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            padding: const EdgeInsets.all(8),
-            child: SvgPicture.asset(
-              'assets/images/icon-ia-sincroapp-branco-v1.svg',
-            ),
-          ),
-          const SizedBox(width: 12),
-          MessageEntryAnimation(
-            isUser: false,
-            duration: const Duration(milliseconds: 300),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.cardBackground,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(4),
-                ),
-                border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-              ),
-              child: const TypingIndicator(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  void _handleActionConfirm(AssistantAction action, DateTime selectedDate) async {
+    // Determine Action Type
+    // For now, assume 'propose_task' implies creating a task
+    try {
+       final payload = action.data['payload'] as Map<String, dynamic>? ?? {};
+       final title = action.title ?? payload['title'] as String? ?? 'Nova Tarefa';
 
-  Widget _buildMessageItem(AssistantMessage m, int index) {
-    final isUser = m.role == 'user';
-    final anyActionExecuted = m.actions.any((a) => a.isExecuted || a.isExecuting);
+       // Calculate Personal Day for the selected date
+       final personalDay = NumerologyEngine.calculatePersonalDay(selectedDate, widget.userData.dataNasc);
 
-    // Use a unique key based on time to preserve state and animations
-    return Padding(
-      key: ValueKey(m.time.toString()),
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-        children: [
-          // 1. Main Content (Avatar + Text)
-          if (isUser)
-            // USER MESSAGE LAYOUT (Right Aligned)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      final msgKey = m.time.toString();
-                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                      if (shouldAnimate) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _animatedMessageIds.add(msgKey);
-                        });
-                      }
-                      return Align(
-                        alignment: Alignment.centerRight,
-                        child: MessageEntryAnimation(
-                          isUser: true,
-                          animate: shouldAnimate,
-                          duration: const Duration(milliseconds: 300),
-                          child: Align(
-                            alignment: Alignment.centerRight,
-                            child: _buildMessageBubbleContent(m, isUser),
-                          ),
-                        ),
-                      );
-                    }
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Builder(
-                  builder: (context) {
-                    final msgKey = m.time.toString();
-                    // If the message ID is NOT in the set, it means it's new OR it's being added right now.
-                    // However, the builder above adds it to the set in post-frame.
-                    // So during the build phase of this frame, it's not in the set yet (if it's new).
-                    // So we can check the set here too.
-                    final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                    return AnimatedAvatar(
-                      animate: shouldAnimate,
-                      child: UserAvatar(
-                        firstName: widget.userData.primeiroNome,
-                        lastName: widget.userData.sobrenome,
-                        photoUrl: widget.userData.photoUrl,
-                        radius: 20,
-                      ),
-                    );
-                  }
-                ),
-              ],
-            )
-          else
-            // AI MESSAGE LAYOUT (Left Aligned)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Container(
-                  width: 40, height: 40,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: SvgPicture.asset(
-                    'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Flexible(
-                  child: Builder(
-                    builder: (context) {
-                      final msgKey = m.time.toString();
-                      final shouldAnimate = !_animatedMessageIds.contains(msgKey);
-                      if (shouldAnimate) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _animatedMessageIds.add(msgKey);
-                        });
-                      }
-                      return MessageEntryAnimation(
-                        isUser: false,
-                        animate: shouldAnimate,
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildMessageBubbleContent(m, isUser),
-                      );
-                    }
-                  ),
-                ),
-              ],
-            ),
-          
-          // 2. Actions (Form or Chips) - Enters with delay
-          // Check if there's a create_goal action that needs user input (show form)
-          if (!isUser && m.actions.any((a) => a.type == AssistantActionType.create_goal && a.needsUserInput && !a.isExecuted))
-            Builder(
-              builder: (context) {
-                final actionKey = '${m.time}_goal_form';
-                final shouldAnimate = !_animatedMessageIds.contains(actionKey);
-                if (shouldAnimate) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _animatedMessageIds.add(actionKey);
-                  });
-                }
-                return MessageEntryAnimation(
-                  isUser: false,
-                  animate: shouldAnimate,
-                  delay: const Duration(milliseconds: 2000), // Increased delay to 2s
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        const SizedBox(width: 40 + 12), 
-                        Expanded(
-                          child: InlineGoalForm(
-                            userData: widget.userData,
-                            prefilledTitle: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).title,
-                            prefilledDescription: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).description,
-                            prefilledTargetDate: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).date,
-                            prefilledSubtasks: m.actions.firstWhere((a) => a.type == AssistantActionType.create_goal).subtasks,
-                            onSave: (goal) => _handleGoalFormSubmit(goal, index),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-            )
-          // Check if there's a compatibility analysis action (show form)
-          else if (!isUser && m.actions.any((a) => a.type == AssistantActionType.analyze_compatibility && !a.isExecuted))
-             Builder(
-               builder: (context) {
-                 final actionKey = '${m.time}_compat_form';
-                 final shouldAnimate = !_animatedMessageIds.contains(actionKey);
-                 if (shouldAnimate) {
-                   WidgetsBinding.instance.addPostFrameCallback((_) {
-                     _animatedMessageIds.add(actionKey);
-                   });
-                 }
-                 return MessageEntryAnimation(
-                  isUser: false,
-                  animate: shouldAnimate,
-                  delay: const Duration(milliseconds: 400),
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // AI Avatar for compatibility form
-                        Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle,
-                          ),
-                          padding: const EdgeInsets.all(8),
-                          child: SvgPicture.asset(
-                            'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: InlineCompatibilityForm(
-                            userData: widget.userData,
-                            onAnalyze: (name, dob) => _handleCompatibilityFormSubmit(name, dob, index),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+       // Create TaskModel
+       final newTask = TaskModel(
+          id: const Uuid().v4(),
+          text: title,
+          completed: false,
+          createdAt: DateTime.now(),
+          dueDate: selectedDate,
+          personalDay: personalDay, // 🚀 Vibration Pill Logic
+          tags: (payload['tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
+       );
+       
+       debugPrint("Creating Task: ${newTask.text} at $selectedDate");
+       
+       // Real Persistence Call
+       await SupabaseService().addTask(widget.userData.uid, newTask);
+       
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(
+             content: Text('✅ Agendado para ${DateFormat('d/MM HH:mm').format(selectedDate)}'),
+             backgroundColor: AppColors.success,
+           ),
+         );
+         
+         // Update UI State (Mark executed & Persist Selected Date)
+         setState(() {
+            for (var msg in _messages) {
+               final index = msg.actions.indexOf(action);
+               if (index != -1) {
+                  msg.actions[index] = action.copyWith(
+                    isExecuted: true,
+                    date: selectedDate, // Update to show what was picked
+                  );
+                  break; 
                }
-             )
-          // Otherwise show action chips
-          else if (!isUser && m.actions.isNotEmpty)
-            // Only animate if there are non-executed actions
-            // If all actions are executed (chips are confirmation/summary), show without animation
-            anyActionExecuted
-                ? Padding(
-                    padding: const EdgeInsets.only(left: 44, top: 12),
-                    child: Wrap(
-                      spacing: 8, runSpacing: 8,
-                      children: m.actions.asMap().entries.map((entry) {
-                        return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
-                      }).toList(),
-                    ),
-                  )
-                : Builder(
-                    builder: (context) {
-                      final actionKey = '${m.time}_chips';
-                      final shouldAnimate = !_animatedMessageIds.contains(actionKey);
-                      if (shouldAnimate) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _animatedMessageIds.add(actionKey);
-                        });
-                      }
-                      return MessageEntryAnimation(
-                        isUser: false,
-                        animate: shouldAnimate,
-                        delay: const Duration(milliseconds: 400),
-                        child: Padding(
-                          padding: const EdgeInsets.only(left: 44, top: 12),
-                          child: Wrap(
-                            spacing: 8, runSpacing: 8,
-                            children: m.actions.asMap().entries.map((entry) {
-                              return _buildActionChip(entry.value, index, entry.key, anyActionExecuted);
-                            }).toList(),
-                          ),
-                        ),
-                      );
-                    }
-                  ),
-        ],
-      ),
-    );
+            }
+         });
+       }
+    } catch (e) {
+       debugPrint("Error executing action: $e");
+       if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+         );
+       }
+    }
   }
 
-  Widget _buildMessageBubbleContent(AssistantMessage m, bool isUser) {
-    return Container(
-      margin: isUser
-          ? (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(left: 40.0) : null)
-          : (MediaQuery.of(context).size.width > 700 ? const EdgeInsets.only(right: 40.0) : null),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: isUser ? AppColors.primaryAccent.withValues(alpha: 0.1) : AppColors.cardBackground,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isUser ? 16 : 4),
-          bottomRight: Radius.circular(isUser ? 4 : 16),
-        ),
-        border: Border.all(
-          color: isUser ? Colors.transparent : AppColors.border.withValues(alpha: 0.5),
-        ),
-      ),
-      child: MarkdownBody(
-        data: m.content,
-        selectable: true,
-        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-          p: TextStyle(
-            fontSize: 15,
-            height: 1.2,
-            color: isUser ? AppColors.primaryText : AppColors.secondaryText,
-          ),
-          blockSpacing: 10.0,
-          textAlign: WrapAlignment.start,
-        ),
-      ),
-    );
+  void _scrollToBottom() {
+      // With reverse list, scroll to 0
+      if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            0.0,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+      }
+  }
+  
+  // --- Speech Logic ---
+  void _onMicPressed() async {
+    if (!_isListening) {
+      bool available = await _speechService.init();
+      if (available) {
+        setState(() {
+          _isListening = true;
+          _textBeforeListening = _controller.text;
+        });
+        _speechService.start(
+          onResult: (text) {
+             if (mounted) {
+                 _controller.text = "$_textBeforeListening $text"; // Append
+             }
+          },
+        );
+      } else {
+         // Show error
+      }
+    } else {
+       _stopListening();
+    }
   }
 
-  // --- Main Layout ---
+  void _stopListening() async {
+     await _speechService.stop();
+     if (mounted) {
+       setState(() {
+         _isListening = false;
+       });
+     }
+  }
 
   @override
   Widget build(BuildContext context) {
+    // Determine scroll controller to use
+    final scrollCtrl = widget.sheetScrollController ?? _scrollController;
     final isDesktop = MediaQuery.of(context).size.width > 768;
+    final isModal = !isDesktop; 
 
-    if (!isDesktop && !widget.isFullScreen) {
-      // Mobile Modal Mode
-      return Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: DraggableScrollableSheet(
-          controller: _sheetController,
-          initialChildSize: 0.5,
-          minChildSize: 0.0, // Allow closing
-          maxChildSize: 1.0, // Allow full screen
-          snap: true,
-          snapSizes: const [0.5, 1.0], 
-          builder: (context, scrollController) {
-            return _buildPanelContent(context, sheetScrollController: scrollController, isModal: true);
-          },
-        ),
-      );
-    }
-
-    // Desktop Modal / FullScreen / Mobile FullScreen
-    return _buildPanelContent(context, isModal: !widget.isFullScreen);
-  }
-
-  Widget _buildPanelContent(BuildContext context, {ScrollController? sheetScrollController, required bool isModal}) {
-    final isDesktop = MediaQuery.of(context).size.width > 768;
-    final screenSize = MediaQuery.of(context).size;
-    
-    // Desktop Sizing Logic
-    double? width;
-    double? height;
-    
-    if (isDesktop) {
-      // Desktop: Fixed size floating dialog
-      width = 600;
-      height = 600;
-      
-      // Clamp to screen size
-      if (width > screenSize.width - 40) width = screenSize.width - 40;
-      if (height > screenSize.height - 40) height = screenSize.height - 40;
-    }
-
-    // Border Radius Logic
-    BorderRadiusGeometry borderRadius;
-    if (isDesktop) {
-      borderRadius = BorderRadius.circular(24); // Always rounded on desktop
-    } else {
-      // Mobile
-      if (_isSheetExpanded) {
-        borderRadius = BorderRadius.zero;
-      } else {
-        borderRadius = const BorderRadius.vertical(top: Radius.circular(24));
-      }
-    }
-
-    final panelContent = AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      width: width,
-      height: height,
-      clipBehavior: Clip.hardEdge, // Ensure children don't overflow rounded corners
-      decoration: BoxDecoration(
-        color: AppColors.background,
-        borderRadius: borderRadius,
-        boxShadow: isModal || isDesktop
-            ? [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, -5),
-                )
-              ]
-            : null,
-      ),
-      child: Column(
+    return Container(
+      // 1. Transparent Background (Removed solid color)
+      // We keep the noise/blur if desired, but user specifically said "transparente".
+      // Let's keep a very subtle blur for readability if it's an overlay, 
+      // but remove the minimal background color to be "transparent/floating".
+      color: Colors.transparent, 
+      child: Stack( // Use Stack to allow floating header over content if needed, or Column
         children: [
-          // Header
-          // If modal, wrap header in a ListView with the sheet controller to enable dragging
-          if (isModal && sheetScrollController != null)
-            SizedBox(
-              height: 70, // Fixed height for header area
-              child: ListView(
-                controller: sheetScrollController,
-                padding: EdgeInsets.zero,
-                physics: const ClampingScrollPhysics(), // Prevent overscroll glow
-                children: [
-                  _buildHeader(isModal, isDesktop),
-                ],
-              ),
-            )
-          else
-            _buildHeader(isModal, isDesktop),
-          
-          // Chat Area
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController, // Always use internal controller for chat
-              reverse: true,
-              padding: const EdgeInsets.all(20),
-              itemCount: _messages.length + (_isSending ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (_isSending && index == 0) {
-                  return _buildTypingIndicator();
-                }
-                final msgIndex = _isSending ? index - 1 : index;
-                final actualMsg = _messages[_messages.length - 1 - msgIndex];
-                final originalIndex = _messages.length - 1 - msgIndex;
-                return _buildMessageItem(actualMsg, originalIndex);
-              },
-            ),
-          ),
+           // Messages Layer
+           Positioned.fill(
+             child: Column(
+               children: [
+                 // Spacer for Header (since header is floating)
+                 SizedBox(height: isDesktop ? 80 : 70), // Approximate header height
 
-          // Input Area
-          _buildInputArea(),
+                 Expanded(
+                   child: ListView.builder(
+                     controller: scrollCtrl,
+                     reverse: true,
+                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 100), // Bottom padding for floating input
+                     itemCount: _messages.length,
+                     itemBuilder: (context, index) {
+                        final msg = _messages[index];
+                        // Determine if we should animate (new message at top/index 0?)
+                        bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
+                        if (shouldAnimate) _animatedMessageIds.add(msg.id);
+                        
+                        return ChatMessageItem(
+                          message: msg, 
+                          isUser: msg.isUser,
+                          animate: shouldAnimate,
+                          onActionConfirm: _handleActionConfirm,
+                          onActionCancel: (action) {
+                              // Optional handler
+                              debugPrint("Action cancelled: ${action.type}");
+                          },
+                          userData: widget.userData, // NOVO: Para abrir TaskDetailModal
+                        );
+                     },
+                   ),
+                 ),
+               ],
+             ),
+           ),
+
+           // Floating Header (Top)
+           Positioned(
+             top: 0, 
+             left: 0, 
+             right: 0,
+             child: SafeArea(
+               bottom: false,
+               child: _buildHeader(isModal, isDesktop),
+             ),
+           ),
+
+           // Floating Input (Bottom)
+           Positioned(
+             bottom: 0,
+             left: 0,
+             right: 0,
+             child: _buildInputArea(),
+           ),
         ],
       ),
     );
-
-    if (isDesktop) {
-      // Desktop: Just return the content, showDialog handles centering/scrim
-      return Center(child: panelContent);
-    }
-
-    return panelContent;
   }
 
   Widget _buildHeader(bool isModal, bool isDesktop) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      // Removed border decoration for cleaner look
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      // Desktop: Add more top margin to align with Dashboard Cards (usually start after header + padding)
+      // Mobile: Keep compact
+      margin: EdgeInsets.only(
+        left: 16, 
+        right: 16, 
+        top: isDesktop ? 24 : 8, // Push down on desktop to align with "Metas" card
+        bottom: 8
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground.withValues(alpha: 0.9), // Floating container color
+        borderRadius: BorderRadius.circular(20), // Rounded corners
+        boxShadow: [
+           BoxShadow(
+             color: Colors.black.withValues(alpha: 0.1),
+             blurRadius: 10,
+             offset: const Offset(0, 4),
+           ),
+        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Row(
         children: [
-          // Drag Handle (Mobile Only - Modal)
-          if (isModal && !isDesktop && !_isSheetExpanded)
-            Center(
-              child: Container(
-                width: 40, height: 4,
-                margin: const EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          Row(
-            children: [
-              SvgPicture.asset(
+           Container(
+             padding: const EdgeInsets.all(8),
+             decoration: BoxDecoration(
+               color: AppColors.primaryAccent.withValues(alpha: 0.2),
+               shape: BoxShape.circle,
+             ),
+             child: SvgPicture.asset(
                 'assets/images/icon-ia-sincroapp-v1.svg',
-                width: 32,
-                height: 32,
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text(
-                  'Sincro IA',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
-                    decoration: TextDecoration.none,
-                  ),
+                width: 24,
+                height: 24,
+                colorFilter: const ColorFilter.mode(AppColors.primaryAccent, BlendMode.srcIn),
+             ),
+           ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Sincro IA',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.primaryText,
+                  fontFamily: 'Inter',
                 ),
               ),
-              
-              // Close Button (Desktop or Mobile FullScreen)
-              if (isDesktop || widget.isFullScreen)
-                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-                  onPressed: () {
-                     if (widget.onClose != null) {
-                        widget.onClose!();
-                      } else if (!isDesktop && isModal) {
-                        // Mobile internal close logic (for modal)
-                        _sheetController.animateTo(
-                          0.0,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                        );
-                      } else {
-                        // Desktop or FullScreen close
-                        Navigator.of(context).pop();
-                      }
-                  },
-                  tooltip: 'Fechar',
+              Text(
+                'Assistente Pessoal',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: AppColors.secondaryText.withValues(alpha: 0.7),
                 ),
+              ),
             ],
+          ),
+          const Spacer(),
+          
+          // Close / Collapse Button
+          IconButton(
+              icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
+              onPressed: () {
+                 if (widget.onClose != null) {
+                    widget.onClose!();
+                  } else {
+                    Navigator.of(context).maybePop();
+                  }
+              },
+              tooltip: 'Fechar',
           ),
         ],
       ),
@@ -1483,89 +623,569 @@ INSTRUÇÕES:
   }
 
   Widget _buildInputArea() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      // Removed outer decoration/background for cleaner look
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.primaryAccent, // Match FAB background
-                borderRadius: BorderRadius.circular(28), // Match FAB radius
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+    // Floating Input without full-width background container
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        // Simple Row aligned to bottom
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                // Single visual "Input Capsule"
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground, 
+                  borderRadius: BorderRadius.circular(16), 
+                  boxShadow: [
+                     BoxShadow(
+                       color: _inputFocusNode.hasFocus 
+                           ? AppColors.primary.withValues(alpha: 0.2) // Glow on focus
+                           : Colors.black.withValues(alpha: 0.2),
+                       blurRadius: _inputFocusNode.hasFocus ? 16 : 10,
+                       offset: const Offset(0, 4),
+                     )
+                  ],
+                  // Single border with Focus Color
+                  border: Border.all(
+                    color: _inputFocusNode.hasFocus 
+                        ? AppColors.primary.withValues(alpha: 0.8) 
+                        : Colors.white.withValues(alpha: 0.1),
+                    width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
                   ),
-                ],
-              ),
-              child: TextField(
-                controller: _controller,
-                focusNode: _inputFocusNode,
-                maxLines: 5,
-                minLines: 1,
-                keyboardType: TextInputType.multiline,
-                style: const TextStyle(color: Colors.white, fontSize: 16), // White text
-                decoration: const InputDecoration(
-                  hintText: 'Como posso ajudar hoje?',
-                  border: InputBorder.none,
-                  isDense: false,
-                  contentPadding: EdgeInsets.symmetric(vertical: 14),
-                  hintStyle: TextStyle(color: Colors.white54), // White hint
                 ),
-                onSubmitted: (_) => _send(),
+                child: Row(
+                  children: [
+                     const SizedBox(width: 16),
+                     Expanded(
+                       child: TextField(
+                          controller: _controller,
+                          focusNode: _inputFocusNode,
+                          maxLines: 5,
+                          minLines: 1,
+                          keyboardType: TextInputType.multiline,
+                          textInputAction: TextInputAction.send, // Explicit action
+                          obscureText: false, // Explicitly false
+                          enableSuggestions: false, // Helps avoid some browser autocompletes
+                          autocorrect: false,
+                          style: const TextStyle(color: Colors.white, fontSize: 15),
+                          // Important: InputBorder.none to avoid inner border
+                          // Also filled: false to avoid inner highlight if theme sets it
+                          decoration: const InputDecoration(
+                            hintText: 'Pergunte sobre sua energia...',
+                            border: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            errorBorder: InputBorder.none,
+                            disabledBorder: InputBorder.none,
+                            filled: false, 
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(vertical: 14),
+                            hintStyle: TextStyle(color: Colors.white30),
+                          ),
+                          onSubmitted: (_) => _send(),
+                        ),
+                     ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 8),
-          _buildDynamicButton(),
-        ],
+            const SizedBox(width: 12),
+            
+            // Button - Squared with rounded corners
+            GestureDetector(
+               onTap: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
+               child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: 48,
+                  height: 48, // Aligned with single-line input height roughly
+                  decoration: BoxDecoration(
+                     gradient: _isListening 
+                        ? const LinearGradient(colors: [Colors.redAccent, Colors.red])
+                        : const LinearGradient(colors: [AppColors.primary, AppColors.primaryAccent]),
+                     borderRadius: BorderRadius.circular(16), // Rounded Square
+                     boxShadow: [
+                        BoxShadow(
+                          color: (_isListening ? Colors.red : AppColors.primaryAccent).withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        )
+                     ],
+                  ),
+                  child: Center(
+                     child: _isSending 
+                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                       : Icon(
+                           _isInputEmpty ? (_isListening ? Icons.stop : Icons.mic) : Icons.arrow_upward_rounded,
+                           color: Colors.white,
+                           size: 24,
+                       ),
+                  ),
+               ),
+            ),
+          ],
+        ),
       ),
     );
   }
-
-  Widget _buildDynamicButton() {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      transitionBuilder: (child, animation) => ScaleTransition(scale: animation, child: child),
-      child: _isListening
-          ? IconButton(
-              key: const ValueKey('stop'),
-              onPressed: _stopListening,
-              icon: const Icon(Icons.mic_off, color: Colors.redAccent),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.1),
-                shape: const CircleBorder(),
-                padding: const EdgeInsets.all(12),
-              ),
-            )
-          : IconButton(
-              key: const ValueKey('action'),
-              onPressed: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
-              icon: _isSending
-                  ? const SizedBox(
-                      width: 24, height: 24,
-                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                    )
-                  : Icon(
-                      _isInputEmpty ? Icons.mic : Icons.send,
-                      color: Colors.white,
-                    ),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primaryAccent,
-                shape: const CircleBorder(),
-                padding: const EdgeInsets.all(12),
-                elevation: 2,
-              ),
-            ),
-    );
-  }
-
-
 }
 
+// --- Chat Widgets ---
 
+class ChatMessageItem extends StatelessWidget {
+  final AssistantMessage message;
+  final bool isUser;
+  final bool animate;
+  final Function(AssistantAction, DateTime) onActionConfirm;
+  final Function(AssistantAction) onActionCancel;
+  final UserModel? userData; // NOVO: Para abrir TaskDetailModal
+
+  const ChatMessageItem({
+    super.key,
+    required this.message,
+    required this.isUser,
+    this.animate = false,
+    required this.onActionConfirm,
+    required this.onActionCancel,
+    this.userData, // NOVO
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    Widget content = Column(
+      crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        // Se tem tasks, exibe tudo em um único balão (texto + tasks)
+        if (!isUser && message.hasTasks)
+          _buildTaskListBubble(context)
+        else
+          _buildBubble(context),
+        // Mostrar ActionProposalBubble SOMENTE para propose_task/create_task, NÃO para task_list
+        if (!isUser && message.actions.isNotEmpty && !message.hasTasks)
+          ...message.actions.map((action) {
+             final typeStr = action.type.toString();
+             final actionType = action.data['type']?.toString() ?? '';
+             // Ignorar task_list - já exibido visualmente acima
+             if (actionType == 'task_list') return const SizedBox.shrink();
+             
+             final isProposal = typeStr.contains('propose_task') || 
+                                typeStr.contains('create_task') ||
+                                actionType == 'propose_task' ||
+                                actionType == 'create_task';
+
+             if (isProposal) { 
+                return ActionProposalBubble(
+                  action: action,
+                  onConfirm: (date) => onActionConfirm(action, date),
+                  onCancel: () => onActionCancel(action),
+                );
+             }
+             return const SizedBox.shrink();
+          }),
+      ],
+    );
+    
+    if (animate) {
+       return ChatBubbleAnimation(isUser: isUser, child: content);
+    }
+    return content;
+  }
+
+  Widget _buildBubble(BuildContext context) {
+      // Se tiver tasks, o build() já separa em dois widgets
+      
+      return Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8), // Reduced bottom margin as actions might follow
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isUser 
+               ? AppColors.primary.withValues(alpha: 0.2) 
+               : AppColors.cardBackgroundLight,
+            gradient: isUser 
+               ? LinearGradient(
+                   colors: [AppColors.primary.withValues(alpha: 0.3), AppColors.primaryAccent.withValues(alpha: 0.3)],
+                   begin: Alignment.topLeft,
+                   end: Alignment.bottomRight,
+                 )
+               : null,
+            borderRadius: BorderRadius.only(
+               topLeft: const Radius.circular(20),
+               topRight: const Radius.circular(20),
+               bottomLeft: isUser ? const Radius.circular(20) : const Radius.circular(4),
+               bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(20),
+            ),
+            border: Border.all(
+               color: isUser 
+                 ? AppColors.primaryAccent.withValues(alpha: 0.3)
+                 : Colors.white.withValues(alpha: 0.05),
+            ),
+          ),
+          child: Column(
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+                MarkdownBody(
+                   data: message.content,
+                   styleSheet: MarkdownStyleSheet(
+                      p: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
+                      strong: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
+                   ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  DateFormat('HH:mm').format(message.timestamp),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    fontSize: 10,
+                  ),
+                ),
+             ],
+          ),
+        ),
+      );
+  }
+  
+  // NOVO: Widget para exibir texto introdutório separado das tasks
+  Widget _buildTextBubble(BuildContext context) {
+    if (message.content.isEmpty) return const SizedBox.shrink();
+    
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackgroundLight,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+          ),
+        ),
+        child: MarkdownBody(
+          data: message.content,
+          styleSheet: MarkdownStyleSheet(
+            p: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
+            strong: const TextStyle(color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  // Widget para exibir lista visual de tarefas (texto + tasks em um único balão)
+  Widget _buildTaskListBubble(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.9),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackgroundLight,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(20),
+          ),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.05),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Texto introdutório - APENAS a primeira linha (título), não a lista de tarefas
+            if (message.content.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                child: Text(
+                  // Extrair apenas a primeira linha (título) - remover lista de tarefas
+                  _extractTitle(message.content),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+            
+            // Lista de tarefas (containers visuais)
+            ...message.embeddedTasks.map((taskData) => _buildInlineTaskItem(context, taskData)),
+            
+            // Footer com hora
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+              child: Text(
+                DateFormat('HH:mm').format(message.timestamp),
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  // Extrai apenas o título do texto (primeira linha antes da lista de tarefas)
+  String _extractTitle(String content) {
+    // Padrões que indicam início de lista de tarefas
+    final listPatterns = [
+      RegExp(r'\n\s*1\.'),   // Lista numerada
+      RegExp(r'\n\s*-'),     // Lista com traço
+      RegExp(r'\n\s*\*'),    // Lista com asterisco
+      RegExp(r'\n\s*•'),     // Lista com bullet
+    ];
+    
+    // Encontrar o primeiro padrão de lista
+    int firstListIndex = content.length;
+    for (final pattern in listPatterns) {
+      final match = pattern.firstMatch(content);
+      if (match != null && match.start < firstListIndex) {
+        firstListIndex = match.start;
+      }
+    }
+    
+    // Retornar apenas o texto antes da lista
+    String title = content.substring(0, firstListIndex).trim();
+    
+    // Se não encontrou lista, pegar apenas a primeira linha
+    if (title == content.trim()) {
+      final lines = content.split('\n');
+      title = lines.first.trim();
+    }
+    
+    return title;
+  }
+  
+  // Item de tarefa inline no chat (simplificado do TaskItem)
+  Widget _buildInlineTaskItem(BuildContext context, Map<String, dynamic> taskData) {
+    final text = taskData['text'] ?? 'Sem título';
+    final personalDay = taskData['personal_day'];
+    final journeyTitle = taskData['journey_title'];
+    final isOverdue = taskData['is_overdue'] == true;
+    final completed = taskData['completed'] == true;
+    final dateFormatted = taskData['date_formatted'] ?? '';
+    final recurrenceType = taskData['recurrence_type'] ?? 'none';
+    final isRecurrent = recurrenceType != 'none' && recurrenceType != null;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () => _openTaskDetail(context, taskData),
+          borderRadius: BorderRadius.circular(12),
+          splashColor: AppColors.primary.withValues(alpha: 0.1),
+          highlightColor: AppColors.primary.withValues(alpha: 0.05),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.background.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isOverdue 
+                  ? Colors.red.withValues(alpha: 0.3)
+                  : AppColors.primaryAccent.withValues(alpha: 0.2),
+              ),
+            ),
+            child: Row(
+              children: [
+                // Checkbox visual (clicável para toggle)
+                GestureDetector(
+                  onTap: () => _toggleTaskComplete(context, taskData),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: completed 
+                          ? AppColors.success
+                          : AppColors.primaryAccent.withValues(alpha: 0.5),
+                        width: 2,
+                      ),
+                      color: completed ? AppColors.success.withValues(alpha: 0.2) : Colors.transparent,
+                    ),
+                    child: completed 
+                      ? const Icon(Icons.check, size: 14, color: AppColors.success)
+                      : null,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                
+                // Texto e info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        text,
+                        style: TextStyle(
+                          color: completed ? Colors.white54 : Colors.white,
+                          fontSize: 14,
+                          decoration: completed ? TextDecoration.lineThrough : null,
+                          decorationColor: Colors.white54,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          // Data
+                          if (dateFormatted.isNotEmpty) ...[
+                            Icon(
+                              Icons.calendar_today,
+                              size: 11,
+                              color: isOverdue ? Colors.red : Colors.white38,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              dateFormatted,
+                              style: TextStyle(
+                                color: isOverdue ? Colors.red : Colors.white38,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                          // Ícone de Recorrência
+                          if (isRecurrent) ...[
+                            if (dateFormatted.isNotEmpty) const SizedBox(width: 6),
+                            const Icon(Icons.repeat_rounded, size: 11, color: Color(0xFF8B5CF6)),
+                          ],
+                          // Ícone de Meta
+                          if (journeyTitle != null) ...[
+                            if (dateFormatted.isNotEmpty || isRecurrent) const SizedBox(width: 6),
+                            const Icon(Icons.flag_outlined, size: 11, color: Color(0xFF06B6D4)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                
+                // Personal day badge (VibrationPill simplificada)
+                if (personalDay != null && personalDay > 0)
+                  Container(
+                    width: 24,
+                    height: 24,
+                    margin: const EdgeInsets.only(left: 8),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary, AppColors.primaryAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$personalDay',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                
+                // Arrow
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18,
+                  color: Colors.white.withValues(alpha: 0.3),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  // NOVO: Toggle de conclusão da tarefa
+  void _toggleTaskComplete(BuildContext context, Map<String, dynamic> taskData) async {
+    final taskId = taskData['id'];
+    if (taskId == null) return;
+    
+    final newCompleted = !(taskData['completed'] == true);
+    
+    try {
+      await Supabase.instance.client
+          .from('tasks')
+          .update({'completed': newCompleted})
+          .eq('id', taskId);
+      
+      // Feedback visual
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(newCompleted ? '✅ Tarefa concluída!' : '↩️ Tarefa reaberta'),
+          duration: const Duration(seconds: 1),
+          backgroundColor: newCompleted ? AppColors.success : AppColors.primary,
+        ),
+      );
+    } catch (e) {
+      debugPrint('[ChatMessageItem] Error toggling task: $e');
+    }
+  }
+  
+  // NOVO: Abrir modal de detalhes da tarefa
+  void _openTaskDetail(BuildContext context, Map<String, dynamic> taskData) {
+    // Verifica se userData está disponível
+    if (userData == null) {
+      debugPrint('[ChatMessageItem] userData is null, cannot open TaskDetailModal');
+      return;
+    }
+    
+    // Converter string para RecurrenceType enum
+    RecurrenceType recurrenceType = RecurrenceType.none;
+    final recurrenceStr = taskData['recurrence_type']?.toString().toLowerCase();
+    if (recurrenceStr == 'daily') recurrenceType = RecurrenceType.daily;
+    else if (recurrenceStr == 'weekly') recurrenceType = RecurrenceType.weekly;
+    else if (recurrenceStr == 'monthly') recurrenceType = RecurrenceType.monthly;
+    
+    // Criar TaskModel a partir do Map
+    final task = TaskModel(
+      id: taskData['id'] ?? '',
+      text: taskData['text'] ?? '',
+      completed: taskData['completed'] == true,
+      dueDate: taskData['due_date'] != null ? DateTime.tryParse(taskData['due_date']) : null,
+      personalDay: taskData['personal_day'],
+      journeyId: taskData['journey_id'],
+      journeyTitle: taskData['journey_title'],
+      tags: taskData['tags'] != null ? List<String>.from(taskData['tags']) : [],
+      recurrenceType: recurrenceType,
+      recurrenceDaysOfWeek: taskData['recurrence_days_of_week'] != null 
+        ? List<int>.from(taskData['recurrence_days_of_week']) 
+        : [],
+      reminderAt: taskData['reminder_at'] != null ? DateTime.tryParse(taskData['reminder_at']) : null,
+      createdAt: DateTime.now(), // Fallback para tasks do N8n
+    );
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => TaskDetailModal(
+        task: task,
+        userData: userData!,
+      ),
+    );
+  }
+}

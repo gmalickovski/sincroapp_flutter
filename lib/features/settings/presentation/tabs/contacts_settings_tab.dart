@@ -2,6 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/contact_list_item.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_header.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_section_title.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/contacts/presentation/add_contact_modal.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart'; // We use UserModel internally for richer data if needed, but list uses ContactModel
@@ -160,28 +163,12 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
     return Column(
       children: [
         // 1. Header Section
-        _buildHeader(),
+        SettingsHeader(userData: widget.userData),
 
         const SizedBox(height: 24),
 
         // 2. Subtitle "Meus Contatos"
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.only(bottom: 12),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.border)),
-          ),
-          child: Text(
-            'Meus Contatos',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.secondaryText,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 16),
+        const SettingsSectionTitle(title: 'Meus Contatos'),
 
         // 3. Search Bar + Add Button
         Row(
@@ -196,7 +183,7 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
                   hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
                   prefixIcon: const Icon(Icons.search, color: AppColors.tertiaryText),
                   filled: true,
-                  fillColor: AppColors.cardBackground, // Keep specifically matching this page
+                  fillColor: const Color(0xFF111827), // Darker background to match form inputs elsewhere
                   // Theme defines borders, but we can rely on defaults or slight overrides if needed
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
@@ -248,103 +235,6 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
                     ),
         ),
       ],
-    );
-  }
-
-  Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withValues(alpha: 0.2),
-            AppColors.cardBackground,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          // Large Avatar
-          Container(
-            width: 70,
-            height: 70,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.background,
-              border: Border.all(color: AppColors.primary, width: 2),
-              image: widget.userData.photoUrl != null && widget.userData.photoUrl!.isNotEmpty
-                  ? DecorationImage(
-                      image: NetworkImage(widget.userData.photoUrl!),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            alignment: Alignment.center,
-            child: widget.userData.photoUrl == null || widget.userData.photoUrl!.isEmpty
-                ? Text(
-                    widget.userData.primeiroNome.isNotEmpty 
-                        ? widget.userData.primeiroNome[0].toUpperCase() 
-                        : '?',
-                    style: const TextStyle(
-                      color: AppColors.primary, 
-                      fontSize: 28, 
-                      fontWeight: FontWeight.bold
-                    ),
-                  )
-                : null,
-          ),
-          
-          const SizedBox(width: 20),
-          
-          // User Info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '@${widget.userData.username ?? "usuario"}',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                // Botão de compartilhar perfile
-                InkWell(
-                   onTap: _shareProfile,
-                   borderRadius: BorderRadius.circular(20),
-                   child: Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                     decoration: BoxDecoration(
-                       color: AppColors.primary,
-                       borderRadius: BorderRadius.circular(20),
-                     ),
-                     child: Row(
-                       mainAxisSize: MainAxisSize.min,
-                       children: const [
-                         Icon(Icons.share, color: Colors.white, size: 14),
-                         SizedBox(width: 6),
-                         Text(
-                           'Compartilhar Perfil',
-                           style: TextStyle(
-                             color: Colors.white,
-                             fontSize: 12,
-                             fontWeight: FontWeight.w600,
-                           ),
-                         ),
-                       ],
-                     ),
-                   ),
-                )
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 

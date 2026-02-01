@@ -124,41 +124,40 @@ class TaskModel {
 
   // fromMap atualizado para ler os novos campos
   factory TaskModel.fromMap(Map<String, dynamic> data) {
+    // Tenta ler snake_case, fallback para camelCase (legado/local)
     RecurrenceType recType = RecurrenceType.none;
-    if (data['recurrenceType'] != null && data['recurrenceType'] is String) {
+    final rTypeStr = data['recurrence_type'] ?? data['recurrenceType'];
+    if (rTypeStr != null && rTypeStr is String) {
       recType = RecurrenceType.values.firstWhere(
-        (e) => e.toString() == data['recurrenceType'],
+        (e) => e.toString() == rTypeStr,
         orElse: () => RecurrenceType.none,
       );
     }
     
     int recInterval = 1;
-    if (data['recurrenceInterval'] != null) {
-      recInterval = data['recurrenceInterval'] is int ? data['recurrenceInterval'] : 1;
+    final rIntervalVal = data['recurrence_interval'] ?? data['recurrenceInterval'];
+    if (rIntervalVal != null) {
+      recInterval = rIntervalVal is int ? rIntervalVal : 1;
     }
 
     List<int> recDays = [];
-    if (data['recurrenceDaysOfWeek'] != null &&
-        data['recurrenceDaysOfWeek'] is List) {
-      recDays = List<int>.from(data['recurrenceDaysOfWeek']);
+    final rDaysVal = data['recurrence_days_of_week'] ?? data['recurrenceDaysOfWeek'];
+    if (rDaysVal != null && rDaysVal is List) {
+      recDays = List<int>.from(rDaysVal);
     }
 
     // Modificado: Tentar obter o tempo do próprio dueDate (se contiver hora)
     TimeOfDay? reminder;
     // Se tivermos as colunas antigas, usamos (backward compatibility)
-    if (data['reminderHour'] != null &&
-        data['reminderMinute'] != null &&
-        data['reminderHour'] is int &&
-        data['reminderMinute'] is int) {
-      try {
-        reminder = TimeOfDay(
-            hour: data['reminderHour'], minute: data['reminderMinute']);
-      } catch (e) {
-        reminder = null;
-      }
+    if (data['reminder_hour'] != null && data['reminder_minute'] != null) {
+       // snake_case
+       reminder = TimeOfDay(hour: data['reminder_hour'], minute: data['reminder_minute']);
+    } else if (data['reminderHour'] != null && data['reminderMinute'] != null) {
+       // camelCase (legacy)
+       reminder = TimeOfDay(hour: data['reminderHour'], minute: data['reminderMinute']);
     } else {
       // Se não, tentamos extrair do dueDate (parse string if needed)
-      DateTime? due = _parseDate(data['dueDate']);
+      DateTime? due = _parseDate(data['due_date'] ?? data['dueDate']);
       if (due != null) {
           final localDue = due.toLocal();
           if (localDue.hour != 0 || localDue.minute != 0) {
@@ -171,22 +170,22 @@ class TaskModel {
       id: data['id'] ?? data['id'] ?? '', // Assume ID is generic or passed
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
-      createdAt: _parseDate(data['createdAt']) ?? DateTime.now(),
-      dueDate: _parseDate(data['dueDate']),
+      createdAt: _parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
+      dueDate: _parseDate(data['due_date'] ?? data['dueDate']),
       tags: List<String>.from(data['tags'] ?? []),
-      sharedWith: List<String>.from(data['sharedWith'] ?? []), // NOVO
-      journeyId: data['journeyId'],
-      journeyTitle: data['journeyTitle'],
-      personalDay: data['personalDay'],
+      sharedWith: List<String>.from(data['shared_with'] ?? data['sharedWith'] ?? []), // NOVO
+      journeyId: data['journey_id'] ?? data['journeyId'],
+      journeyTitle: data['journey_title'] ?? data['journeyTitle'],
+      personalDay: data['personal_day'] ?? data['personalDay'],
       recurrenceType: recType,
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
-      recurrenceEndDate: _parseDate(data['recurrenceEndDate']),
+      recurrenceEndDate: _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate']),
       reminderTime: reminder,
-      recurrenceId: data['recurrenceId'],
-      goalId: data['goalId'],
+      recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
+      goalId: data['goal_id'] ?? data['goalId'],
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
-      completedAt: _parseDate(data['completedAt']),
+      completedAt: _parseDate(data['completed_at'] ?? data['completedAt']),
       // --- FIM DA MUDANÇA ---
       reminderAt: _parseDate(data['reminder_at']),
     );
@@ -205,22 +204,22 @@ class TaskModel {
     return {
       'text': text,
       'completed': completed,
-      'createdAt': createdAt.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
       // Salva o dueDate completo (com hora)
-      'dueDate': dueDate?.toIso8601String(),
+      'due_date': dueDate?.toIso8601String(),
       'tags': tags,
-      'sharedWith': sharedWith, // NOVO
-      'journeyId': journeyId,
-      'journeyTitle': journeyTitle,
-      'personalDay': personalDay,
-      'recurrenceType': recurrenceTypeString,
-      'recurrenceInterval': recurrenceInterval,
-      'recurrenceDaysOfWeek': recurrenceDaysOfWeek,
-      'recurrenceEndDate': recurrenceEndDate?.toIso8601String(),
-      'recurrenceId': recurrenceId,
-      'goalId': goalId,
+      'shared_with': sharedWith, // NOVO
+      'journey_id': journeyId,
+      'journey_title': journeyTitle,
+      'personal_day': personalDay,
+      'recurrence_type': recurrenceTypeString,
+      'recurrence_interval': recurrenceInterval,
+      'recurrence_days_of_week': recurrenceDaysOfWeek,
+      'recurrence_end_date': recurrenceEndDate?.toIso8601String(),
+      'recurrence_id': recurrenceId,
+      'goal_id': goalId,
       // --- INÍCIO DA MUDANÇA (Solicitação 2) ---
-      'completedAt': completedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
       // --- FIM DA MUDANÇA ---
       'reminder_at': reminderAt?.toIso8601String(),
     };

@@ -8,19 +8,21 @@ import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 class ParsedTask {
   final String cleanText;
   final List<String> tags;
-  final List<String> sharedWith; // NOVO
+  final List<String> sharedWith;
+  final List<String> goals; // 🚀 New
   final String? journeyId;
   final String? journeyTitle;
   final DateTime? dueDate;
 
   final TimeOfDay? reminderTime;
-  final DateTime? reminderAt; // Precise reminder timestamp
+  final DateTime? reminderAt;
   final RecurrenceRule recurrenceRule;
 
   ParsedTask({
     required this.cleanText,
     this.tags = const [],
-    this.sharedWith = const [], // NOVO
+    this.sharedWith = const [],
+    this.goals = const [], // 🚀 New
     this.journeyId,
     this.journeyTitle,
     this.dueDate,
@@ -28,12 +30,13 @@ class ParsedTask {
     this.reminderAt,
     RecurrenceRule? recurrenceRule,
   }) : recurrenceRule =
-            recurrenceRule ?? RecurrenceRule(); // Garante que nunca seja nulo
+            recurrenceRule ?? RecurrenceRule();
 
   ParsedTask copyWith({
     String? cleanText,
     List<String>? tags,
-    List<String>? sharedWith, // NOVO
+    List<String>? sharedWith,
+    List<String>? goals, // 🚀 New
     String? journeyId,
     String? journeyTitle,
     DateTime? dueDate,
@@ -44,7 +47,8 @@ class ParsedTask {
     return ParsedTask(
       cleanText: cleanText ?? this.cleanText,
       tags: tags ?? this.tags,
-      sharedWith: sharedWith ?? this.sharedWith, // NOVO
+      sharedWith: sharedWith ?? this.sharedWith,
+      goals: goals ?? this.goals, // 🚀 New
       journeyId: journeyId ?? this.journeyId,
       journeyTitle: journeyTitle ?? this.journeyTitle,
       dueDate: dueDate ?? this.dueDate,
@@ -98,40 +102,50 @@ class TaskParser {
           r')(?:\s+de\s+(\d{4}))?',
       caseSensitive: false);
 
-  // Regex para Tags e Mentions
-  static final _tagPattern = RegExp(r'#[a-zA-Z0-9_À-ÿ]+');
-  static final _mentionPattern = RegExp(r'@[a-z0-9_.]+');
+  // Regex para Tags, Mentions e Goals (Public para reuso)
+  static final tagPattern = RegExp(r'#[a-zA-Z0-9_À-ÿ]+');
+  static final mentionPattern = RegExp(r'@[a-z0-9_.]+');
+  static final goalPattern = RegExp(r'![a-zA-Z0-9_À-ÿ]+'); // 🚀 New Goal Pattern
 
   // --- MÉTODO PARSE ATUALIZADO ---
   static ParsedTask parse(String rawText) {
     String text = rawText;
     final List<String> extractedTags = [];
     final List<String> extractedMentions = [];
+    final List<String> extractedGoals = [];
 
-    // 1. Extrair Tags (#) e REMOVER do texto (para não duplicar na visualização)
-    final tagMatches = _tagPattern.allMatches(text);
+    // 1. Extrair Tags (#) e REMOVER do texto 
+    final tagMatches = tagPattern.allMatches(text);
     for (final match in tagMatches) {
-      // Remove o '#'
-      extractedTags.add(match.group(0)!.substring(1));
+      extractedTags.add(match.group(0)!.substring(1)); // Remove '#'
     }
-    // Remove as tags do texto limpo
-    text = text.replaceAll(_tagPattern, '').trim();
+    text = text.replaceAll(tagPattern, '').trim();
 
-    // 2. Extrair Mentions (@) e MANTER no texto (contexto)
-    final mentionMatches = _mentionPattern.allMatches(text);
+    // 2. Extrair Goals (!) e REMOVER do texto (opcional, mas seguindo padrão de tags)
+    // Para o Assistant, talvez queiramos manter, mas o parser geralmente limpa.
+    final goalMatches = goalPattern.allMatches(text);
+    for (final match in goalMatches) {
+      extractedGoals.add(match.group(0)!.substring(1)); // Remove '!'
+    }
+    // text = text.replaceAll(goalPattern, '').trim(); 
+    // DECISÃO: Por enquanto manter Goals no texto limpo também? 
+    // Tags são metadados, Goals são conteúdo. Vamos remover por consistência se for usar como metadado.
+    // Mas para o Assistant, ele envia o texto raw também.
+
+    // 3. Extrair Mentions (@) e MANTER no texto
+    final mentionMatches = mentionPattern.allMatches(text);
     for (final match in mentionMatches) {
-      // Remove o '@'
-      extractedMentions.add(match.group(0)!.substring(1));
+      extractedMentions.add(match.group(0)!.substring(1)); // Remove '@'
     }
-    // NÃO remove mentions do texto
 
-    // 3. Limpa espaços extras que podem ter sobrado após remover tags
+    // 4. Limpa espaços extras
     text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
 
     return ParsedTask(
       cleanText: text,
       tags: extractedTags,
       sharedWith: extractedMentions,
+      goals: extractedGoals,
     );
   }
 

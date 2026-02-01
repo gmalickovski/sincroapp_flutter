@@ -1132,7 +1132,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     );
   }
 
-  // Custom Indicator Builder
+  // Custom Indicator Builder - Subtle dot-style with tiny icons
   Widget _buildIndicatorIcon(int index, IconData icon) {
     final bool isSelected = _currentPage == index;
     return GestureDetector(
@@ -1145,26 +1145,24 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(12),
+        width: 32,
+        height: 32,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : AppColors.cardBackground,
-          borderRadius: BorderRadius.circular(12), // Rounded button
+          color: isSelected 
+              ? AppColors.primary.withValues(alpha: 0.15) 
+              : Colors.transparent,
+          shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border.withOpacity(0.5),
+            color: isSelected ? AppColors.primary : AppColors.border.withValues(alpha: 0.4),
             width: 1.0,
           ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            )
-          ] : [],
         ),
-        child: Icon(
-          icon,
-          size: 20,
-          color: isSelected ? Colors.white : AppColors.secondaryText,
+        child: Center(
+          child: Icon(
+            icon,
+            size: 16,
+            color: isSelected ? AppColors.primary : AppColors.tertiaryText,
+          ),
         ),
       ),
     );

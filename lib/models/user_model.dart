@@ -7,6 +7,7 @@ class UserModel {
   final String email;
   final String? photoUrl;
   final String? username; // NOVO: Nome de usuário único para compartilhamento
+  final String? gender; // NOVO: Gênero do usuário (Masculino, Feminino, Outro)
   final String primeiroNome;
   final String sobrenome;
   final String nomeAnalise;
@@ -23,6 +24,7 @@ class UserModel {
     required this.email,
     this.photoUrl,
     this.username, // NOVO
+    this.gender, // NOVO
     required this.primeiroNome,
     required this.sobrenome,
     required this.nomeAnalise,
@@ -80,6 +82,7 @@ class UserModel {
       email: data['email'] ?? '',
       photoUrl: data['photoUrl'],
       username: data['username'], // NOVO: pode ser null se usuário ainda não criou
+      gender: data['gender'], // NOVO
       primeiroNome: data['primeiroNome'] ?? '',
       sobrenome: data['sobrenome'] ?? '',
       nomeAnalise: data['nomeAnalise'] ?? '',
@@ -96,7 +99,9 @@ class UserModel {
     return {
       'email': email,
       'photoUrl': photoUrl,
+      'photoUrl': photoUrl,
       'username': username, // NOVO
+      'gender': gender, // NOVO
       'primeiroNome': primeiroNome,
       'sobrenome': sobrenome,
       'nomeAnalise': nomeAnalise,
@@ -116,6 +121,7 @@ class UserModel {
     String? email,
     String? photoUrl,
     String? username, // NOVO
+    String? gender, // NOVO
     String? primeiroNome,
     String? sobrenome,
     String? nomeAnalise,
@@ -131,6 +137,7 @@ class UserModel {
       email: email ?? this.email,
       photoUrl: photoUrl ?? this.photoUrl,
       username: username ?? this.username, // NOVO
+      gender: gender ?? this.gender, // NOVO
       primeiroNome: primeiroNome ?? this.primeiroNome,
       sobrenome: sobrenome ?? this.sobrenome,
       nomeAnalise: nomeAnalise ?? this.nomeAnalise,

@@ -222,10 +222,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           actions: [
             // Feedback Icon on AppBar for Mobile
-            IconButton(
-              icon: const Icon(Icons.feedback_outlined, color: AppColors.primary),
-              tooltip: 'Enviar Feedback',
-              onPressed: () => FeedbackModal.show(context, widget.userData),
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: IconButton(
+                icon: const Icon(Icons.feedback_outlined, color: AppColors.primary),
+                tooltip: 'Enviar Feedback',
+                onPressed: () => FeedbackModal.show(context, widget.userData),
+              ),
             ),
           ],
           bottom: TabBar(
@@ -233,11 +236,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             indicatorColor: AppColors.primary,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.secondaryText,
+            overlayColor: WidgetStateProperty.all(Colors.transparent), // Removes the square hover
+            splashFactory: NoSplash.splashFactory, // Removes splash effect
             tabs: _settingsPages.map((page) => Tab(text: page.title)).toList(),
           ),
         ),
         body: TabBarView(
-          children: _settingsPages.map((page) => page.page).toList(),
+          children: _settingsPages.map((page) => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            child: page.page,
+          )).toList(),
         ),
       ),
     );
