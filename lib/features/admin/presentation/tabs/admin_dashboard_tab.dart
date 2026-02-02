@@ -74,6 +74,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         
         // AI Stats
         final int totalAiUsed = stats['totalAiUsed'] ?? 0;
+        final int totalAiTokens = stats['totalAiTokens'] ?? 0;
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -103,7 +104,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               const SizedBox(height: 32),
 
               // 2. AI Usage & Costs
-              _buildAiUsageSection(totalAiUsed, totalAiCost, isDesktop),
+              _buildAiUsageSection(totalAiUsed, totalAiTokens, totalAiCost, isDesktop),
               const SizedBox(height: 32),
               
               // 3. Demographics Row (Age & Sex)
@@ -507,7 +508,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     );
   }
 
-  Widget _buildAiUsageSection(int totalAiUsed, double totalAiCost, bool isDesktop) {
+  Widget _buildAiUsageSection(int totalAiUsed, int totalAiTokens, double totalAiCost, bool isDesktop) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -537,7 +538,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                   border: Border.all(color: Colors.purple.withOpacity(0.3)),
                 ),
                 child: Text(
-                  '${NumberFormat.compact().format(totalAiUsed)} Sugestões',
+                  '${NumberFormat.compact().format(totalAiUsed)} Requests',
                   style: const TextStyle(
                     color: Colors.purple,
                     fontWeight: FontWeight.bold,
@@ -547,26 +548,69 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
+          // Adaptive Layout for 3 metrics
+          isDesktop 
+          ? Row(
             children: [
               Expanded(
                 child: _buildMiniMetric(
-                  "Sugestões Totais", 
+                  "Requisições", 
                   totalAiUsed.toString(), 
                   Icons.chat_bubble_outline, 
                   Colors.purple
                 ),
               ),
-             if (isDesktop) const SizedBox(width: 16),
-             if (isDesktop) Expanded(
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildMiniMetric(
+                  "Tokens Totais", 
+                  NumberFormat.compact().format(totalAiTokens), 
+                  Icons.token, 
+                  Colors.amber
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
                 child: _buildMiniMetric(
                   "Custo Estimado", 
                   _currencyFormat.format(totalAiCost), 
-                  Icons.money_off, 
+                  Icons.attach_money, 
                   Colors.redAccent
                 ),
               ),
             ],
+          )
+          : Column(
+             children: [
+                Row(
+                   children: [
+                      Expanded(
+                        child: _buildMiniMetric(
+                          "Requisições", 
+                          totalAiUsed.toString(), 
+                          Icons.chat_bubble_outline, 
+                          Colors.purple
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildMiniMetric(
+                          "Tokens", 
+                          NumberFormat.compact().format(totalAiTokens), 
+                          Icons.token, 
+                          Colors.amber
+                        ),
+                      ),
+                   ],
+                ),
+                const SizedBox(height: 12),
+                _buildMiniMetric(
+                  "Custo Estimado", 
+                  _currencyFormat.format(totalAiCost), 
+                  Icons.attach_money, 
+                  Colors.redAccent
+                ),
+             ],
           ),
         ],
       ),

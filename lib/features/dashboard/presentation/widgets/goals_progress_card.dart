@@ -285,75 +285,10 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
   }
 
   Widget _buildGoalItem(Goal goal) {
-    // Debug: Verificar data alvo recebida do modelo
-    debugPrint(
-        'GoalsProgressCard: Meta "${goal.title}" - targetDate: ${goal.targetDate}');
-    // Calcula progresso em tempo real a partir das tasks da meta
-    return StreamBuilder<List<TaskModel>>(
-      stream: SupabaseService().getTasksForGoalStream(widget.userId, goal.id),
-      builder: (context, snapshot) {
-        final tasks = snapshot.data ?? const <TaskModel>[];
-        int totalMarcos =
-            tasks.isNotEmpty ? tasks.length : goal.subTasks.length;
-        int marcosConcluidos = tasks.isNotEmpty
-            ? tasks.where((t) => t.completed).length
-            : goal.subTasks.where((t) => t.isCompleted).length;
-        // Fallback: usa progress salvo quando não há tasks carregadas
-        final double pct = totalMarcos > 0
-            ? (marcosConcluidos / totalMarcos).clamp(0.0, 1.0)
-            : (goal.progress / 100).clamp(0.0, 1.0);
-
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final bool isMobile = MediaQuery.of(context).size.width < 768.0;
-            final double diameter = ((constraints.maxWidth *
-                        (isMobile ? 0.6 : 0.65))
-                    .clamp(isMobile ? 150.0 : 180.0, isMobile ? 200.0 : 240.0))
-                .toDouble(); // Ocupa ~60-65% da largura, com limites por plataforma
-
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                // Círculo grande ocupando a largura
-                Center(
-                  child: _FullWidthGoalProgress(
-                    diameter: diameter,
-                    percent: pct,
-                    completed: marcosConcluidos,
-                    total: totalMarcos,
-                    targetDate: goal.targetDate, // Passa a data alvo
-                  ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  goal.title,
-                  style: const TextStyle(
-                    color: AppColors.primaryText,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 18,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  goal.description.isEmpty ? 'Sem descrição' : goal.description,
-                  style: TextStyle(
-                    color: goal.description.isEmpty
-                        ? AppColors.tertiaryText.withValues(alpha: 0.5)
-                        : AppColors.tertiaryText,
-                    fontSize: 14,
-                    height: 1.4,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            );
-          },
-        );
-      },
+    return GoalItemWidget(
+      key: ValueKey(goal.id),
+      goal: goal,
+      userId: widget.userId,
     );
   }
 
@@ -379,6 +314,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
       ),
     );
   }
+
   Widget _buildFooter(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween, // Botões nas extremidades
@@ -433,6 +369,113 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
       ],
     );
   }
+}
+
+class GoalItemWidget extends StatefulWidget {
+  final Goal goal;
+  final String userId;
+
+  const GoalItemWidget({
+    super.key,
+    required this.goal,
+    required this.userId,
+  });
+
+  @override
+  State<GoalItemWidget> createState() => _GoalItemWidgetState();
+}
+
+class _GoalItemWidgetState extends State<GoalItemWidget> {
+  late Stream<List<TaskModel>> _tasksStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _tasksStream = SupabaseService().getTasksForGoalStream(widget.userId, widget.goal.id);
+  }
+
+  @override
+  void didUpdateWidget(covariant GoalItemWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.goal.id != oldWidget.goal.id || widget.userId != oldWidget.userId) {
+      _tasksStream = SupabaseService().getTasksForGoalStream(widget.userId, widget.goal.id);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Debug: Verificar data alvo recebida do modelo
+    // debugPrint('GoalsProgressCard: Meta "${widget.goal.title}" - targetDate: ${widget.goal.targetDate}');
+    
+    // Calcula progresso em tempo real a partir das tasks da meta
+    return StreamBuilder<List<TaskModel>>(
+      stream: _tasksStream,
+      builder: (context, snapshot) {
+        final tasks = snapshot.data ?? const <TaskModel>[];
+        int totalMarcos =
+            tasks.isNotEmpty ? tasks.length : widget.goal.subTasks.length;
+        int marcosConcluidos = tasks.isNotEmpty
+            ? tasks.where((t) => t.completed).length
+            : widget.goal.subTasks.where((t) => t.isCompleted).length;
+        // Fallback: usa progress salvo quando não há tasks carregadas
+        final double pct = totalMarcos > 0
+            ? (marcosConcluidos / totalMarcos).clamp(0.0, 1.0)
+            : (widget.goal.progress / 100).clamp(0.0, 1.0);
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isMobile = MediaQuery.of(context).size.width < 768.0;
+            final double diameter = ((constraints.maxWidth *
+                        (isMobile ? 0.6 : 0.65))
+                    .clamp(isMobile ? 150.0 : 180.0, isMobile ? 200.0 : 240.0))
+                .toDouble(); // Ocupa ~60-65% da largura, com limites por plataforma
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.start,
+              children: [
+                // Círculo grande ocupando a largura
+                Center(
+                  child: _FullWidthGoalProgress(
+                    diameter: diameter,
+                    percent: pct,
+                    completed: marcosConcluidos,
+                    total: totalMarcos,
+                    targetDate: widget.goal.targetDate, // Passa a data alvo
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  widget.goal.title,
+                  style: const TextStyle(
+                    color: AppColors.primaryText,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 18,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.goal.description.isEmpty ? 'Sem descrição' : widget.goal.description,
+                  style: TextStyle(
+                    color: widget.goal.description.isEmpty
+                        ? AppColors.tertiaryText.withValues(alpha: 0.5)
+                        : AppColors.tertiaryText,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
 }
 
 // ===================== WIDGETS DE APOIO =====================

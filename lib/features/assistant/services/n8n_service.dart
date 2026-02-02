@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class N8nService {
   // Agora lê do arquivo .env
@@ -52,14 +53,41 @@ class N8nService {
            } else {
              outputText = content?.toString() ?? jsonEncode(first);
            }
-        } else if (decoded is Map) {
-           final dynamic content = decoded['output'] ?? decoded['text'];
+        } // End if(decoded is List)
+
+        // Extrair e logar uso de tokens (Fire and forget)
+        try {
+          Map<String, dynamic>? usageData;
+          if (decoded is Map<String, dynamic> && decoded.containsKey('token_usage')) {
+             usageData = decoded['token_usage'];
+          } else if (decoded is List && decoded.isNotEmpty && decoded[0] is Map && (decoded[0] as Map).containsKey('token_usage')) {
+             usageData = decoded[0]['token_usage'];
+          }
+
+          if (usageData != null) {
+             final int total = usageData['total_tokens'] is int ? usageData['total_tokens'] : 0;
+             if (total > 0) {
+               SupabaseService().logUsage(
+                 requestType: 'chat_message', 
+                 totalTokens: total,
+                 modelName: 'gpt-4o-mini',
+               );
+             }
+          }
+        } catch (e) {
+          debugPrint('[N8nService] Erro ao processar token_usage: $e');
+        }
+
+        // Output parsing logic (continuing from previous if/else structure logic)
+        if (decoded is Map) {
+           final dynamic content = decoded['output'] ?? decoded['text'] ?? decoded['response'];
             if (content is Map || content is List) {
              outputText = jsonEncode(content);
            } else {
              outputText = content?.toString() ?? jsonEncode(decoded);
            }
-        } else {
+        } else if (outputText.isEmpty) { 
+           // If outputText is still empty and it wasn't a list handled above or a map handled here
            outputText = decoded.toString();
         }
 

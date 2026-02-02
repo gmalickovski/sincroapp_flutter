@@ -149,7 +149,7 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
         if (widget.isAiSidebarOpen)
           Container(
             width: 1,
-            color: AppColors.border.withValues(alpha: 0.1), // Subtle divider
+            color: AppColors.border.withValues(alpha: 0.2), // Subtle solid divider
           ),
 
         // Sidebar (Animated Width)

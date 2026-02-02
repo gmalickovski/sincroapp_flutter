@@ -1486,6 +1486,34 @@ class SupabaseService {
      await _supabase.schema('sincroapp').from('journal_entries').delete().eq('id', entryId);
   }
 
+  // --- USAGE LOGGING ---
+
+
+
+  // --- USAGE LOGGING ---
+
+  Future<void> logUsage({
+    required String requestType,
+    required int totalTokens,
+    String? modelName,
+  }) async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) return;
+
+      // Tenta gravar no schema 'sincroapp' onde a tabela foi criada
+      await _supabase.schema('sincroapp').from('usage_logs').insert({
+        'user_id': user.id,
+        'request_type': requestType,
+        'tokens_total': totalTokens,
+        'model_name': modelName ?? 'gpt-4o-mini',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao logar uso: $e');
+    }
+  }
+
   // ========================================================================
   // === ADMIN PANEL METHODS ===
   // ========================================================================
@@ -1598,13 +1626,37 @@ class SupabaseService {
           sexDistribution['N/A'] = (sexDistribution['N/A'] ?? 0) + 1;
        }
        
-       // Cost Estimations
-       // Custo estimado por call IA: ~R$0.05 (GPT-4o-mini ou similar)
-       const double costPerAiCall = 0.05;
-       final double totalAiCost = totalAiUsed * costPerAiCall;
-       final double netProfit = grossMrr - totalAiCost;
-       
-       return {
+        // 4. Calculate Total Token Usage & Cost (Approximation)
+        // Fetch all usage logs (warning: heavy query, should be RPC in prod)
+        int totalTokens = 0;
+        int totalRequests = 0;
+        
+        try {
+          // Buscando apenas a coluna tokens_total para reduzir tráfego
+          // Nota: RPC 'get_total_token_usage' seria ideal
+          final usageResponse = await _supabase.schema('sincroapp').from('usage_logs').select('tokens_total');
+          final List<dynamic> usageList = usageResponse;
+          
+          totalRequests = usageList.length;
+          totalTokens = usageList.fold<int>(0, (sum, item) => sum + (item['tokens_total'] as int? ?? 0));
+        } catch (e) {
+          debugPrint('⚠️ Erro ao buscar usage_logs: $e');
+          // Fallback to subscription stats
+          totalRequests = totalAiUsed; 
+        }
+
+        // Custo estimado: ~R$0.05 por requisição (Legacy) OU Baseado em Tokens
+        // GPT-4o-mini: ~$0.20 per 1M tokens (Blended)
+        double aiCost = 0.0;
+        if (totalTokens > 0) {
+            aiCost = (totalTokens / 1000000) * 0.20 * 6.0; // USD to BRL (~6.0)
+        } else {
+            aiCost = totalAiUsed * 0.05; // Fallback Legacy
+        }
+        
+        final double netProfit = grossMrr - aiCost;
+        
+        return {
           'totalUsers': users.length,
           'freeUsers': freeCount,
           'plusUsers': plusCount,
@@ -1613,8 +1665,9 @@ class SupabaseService {
           'expiredSubscriptions': expiredCount,
           
           'estimatedMRR': grossMrr,
-          'totalAiUsed': totalAiUsed,
-          'totalAiCost': totalAiCost,
+          'totalAiUsed': totalRequests, // Total Requests (Real or Legacy)
+          'totalAiTokens': totalTokens, // New Metric
+          'totalAiCost': aiCost,
           'netProfit': netProfit,
           
           'demographics': {
@@ -1623,13 +1676,29 @@ class SupabaseService {
           },
           
           'lastUpdated': DateTime.now().toUtc(),
-       };
+        };
     } catch (e) {
        debugPrint('❌ [SupabaseService] Erro ao calcular stats: $e');
        return {
           'totalUsers': 0, 'estimatedMRR': 0.0,
        };
     }
+  }
+
+  Future<Map<String, int>> getUserTokenUsageMap() async {
+     try {
+        final response = await _supabase.schema('sincroapp').from('usage_logs').select('user_id, tokens_total');
+        final Map<String, int> usageMap = {};
+        for (var item in response) {
+           final uid = item['user_id'] as String;
+           final tokens = item['tokens_total'] as int? ?? 0;
+           usageMap[uid] = (usageMap[uid] ?? 0) + tokens;
+        }
+        return usageMap;
+     } catch (e) {
+        debugPrint('Error fetching user token usage: $e');
+        return {};
+     }
   }
 
   /// Helper para mapear usuário vindo do Supabase

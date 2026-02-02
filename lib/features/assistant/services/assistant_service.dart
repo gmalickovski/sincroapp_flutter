@@ -53,22 +53,22 @@ class AssistantService {
       // Usa valor preciso se vier, senão estima
       final int finalInputTokens = inputTokens ?? (promptLength / 4).ceil();
       final int finalOutputTokens = outputTokens ?? (outputLength / 4).ceil();
+      final int totalTokens = finalInputTokens + finalOutputTokens;
       
       await Supabase.instance.client
           .schema('sincroapp')
-          .from('ai_usage_logs')
+          .from('usage_logs')
           .insert({
         'user_id': userId,
+        'tokens_total': totalTokens,
+        'tokens_input': finalInputTokens, // Matches Screenshot 'tokens_input'
+        'tokens_output': finalOutputTokens, // Matches Screenshot 'tokens_output'
+        'model_name': 'n8n-assistant', // Matches Screenshot 'model_name' (using default string)
         'created_at': DateTime.now().toIso8601String(),
-        'type': type,
-        'prompt_length': promptLength,
-        'output_length': outputLength,
-        'estimated_input_tokens': finalInputTokens, // Usando coluna existente
-        'estimated_output_tokens': finalOutputTokens,
       });
     } catch (e) {
       // Ignora erro de tabela inexistente (PGRST205) para não poluir logs
-      if (e.toString().contains('PGRST205') || e.toString().contains('ai_usage_logs')) {
+      if (e.toString().contains('PGRST205') || e.toString().contains('usage_logs')) {
          return;
       }
       debugPrint('Erro ao logar uso de IA no Supabase: $e');
@@ -240,6 +240,14 @@ class AssistantService {
       }).toList(),
       'goals': goals.map((g) => {'id': g.id, 'title': g.title}).toList(),
       'mentions': mentionsList,
+      // 🚀 CTX: Chat History for Conversational Awareness
+      'previous_messages': chatHistory
+          .take(6) // Limit to last 6 messages to save tokens but keep immediate context
+          .map((m) => {
+                'role': m.role,
+                'content': m.content,
+              })
+          .toList(),
     };
     
     // 4. Serialize (Clean Map)
@@ -379,7 +387,7 @@ class AssistantService {
             time: DateTime.parse(row['created_at']),
             actions: actionsList));
       }
-      return history.reversed.toList(); // Return oldest -> newest
+      return history; // Return [Newest, ..., Oldest] for reverse:true List
     } catch (e) {
       debugPrint('Erro ao buscar histórico: $e');
       return [];

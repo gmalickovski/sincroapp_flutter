@@ -28,6 +28,8 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_filt
 import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // For TaskViewScope
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 
+import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart';
+
 class GoalDetailScreen extends StatefulWidget {
   final Goal initialGoal;
   final UserModel userData;
@@ -46,6 +48,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   bool _isLoading = false;
+  bool _isAiSidebarOpen = false;
   // NEW STATE: Controls the visibility of the top carousel
   bool _isMilestonesExpanded = false; 
   final FabOpacityController _fabOpacityController = FabOpacityController(); 
@@ -556,31 +559,40 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               milestones = milestones.where((t) => t.tags.contains(_filterTag)).toList();
             }
 
-            return Scaffold(
-              backgroundColor: AppColors.background,
-              body: ScreenInteractionListener(
-            controller: _fabOpacityController,
-            child: Stack(
-              children: [
-                  LayoutBuilder(
-                  builder: (context, constraints) {
-                    final bool isDesktop =
-                        constraints.maxWidth >= kDesktopBreakpoint;
-                    final double horizontalPadding = isDesktop ? 24.0 : 12.0;
-                    final double listHorizontalPadding = isDesktop ? 24.0 : 12.0;
+            return AssistantLayoutManager(
+              isMobile: MediaQuery.of(context).size.width < kDesktopBreakpoint,
+              isAiSidebarOpen: _isAiSidebarOpen,
+              onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
+              assistant: AssistantPanel(
+                userData: widget.userData,
+                activeContext: 'Goal Detail: ${currentGoal.title}',
+                onClose: () => setState(() => _isAiSidebarOpen = false),
+              ),
+              child: Scaffold(
+                backgroundColor: AppColors.background,
+                body: ScreenInteractionListener(
+                  controller: _fabOpacityController,
+                  child: Stack(
+                    children: [
+                        LayoutBuilder(
+                        builder: (context, constraints) {
+                          final bool isDesktop =
+                              constraints.maxWidth >= kDesktopBreakpoint;
+                          final double horizontalPadding = isDesktop ? 24.0 : 12.0;
+                          final double listHorizontalPadding = isDesktop ? 24.0 : 12.0;
 
-                    if (isDesktop) {
-                      return _buildDesktopLayout(context, currentGoal, milestones, progress);
-                    }
+                          if (isDesktop) {
+                            return _buildDesktopLayout(context, currentGoal, milestones, progress);
+                          }
 
-                    return SafeArea(
-                      child: CustomScrollView(
-                        physics: _isMilestonesExpanded 
-                            ? const ClampingScrollPhysics() 
-                            : const AlwaysScrollableScrollPhysics(),
-                        slivers: [
-                          // Mobile App Bar
-                          const SliverAppBar(
+                          return SafeArea(
+                            child: CustomScrollView(
+                              physics: _isMilestonesExpanded 
+                                  ? const ClampingScrollPhysics() 
+                                  : const AlwaysScrollableScrollPhysics(),
+                              slivers: [
+                                // Mobile App Bar
+                                const SliverAppBar(
                             backgroundColor: AppColors.background,
                             elevation: 0,
                             pinned: true,
@@ -758,7 +770,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           child: const Icon(Icons.place, color: Colors.white), // Free: Novo Marco direto
                         ),
                 ),
-            );
+            ));
           },
         );
       },

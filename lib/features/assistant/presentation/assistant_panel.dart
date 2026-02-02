@@ -4,6 +4,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/chat_animations.dart'; // Chat Animations
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/mentions_popup.dart'; // Mentions Widget
@@ -21,6 +22,7 @@ import 'package:uuid/uuid.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart'; // Task Model
 import 'package:sincro_app_flutter/models/recurrence_rule.dart'; // RecurrenceType enum
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart'; // NOVO: Task Detail Modal
+import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart'; // Vibration Pill for dynamic colors
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -109,6 +111,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   @override
   void initState() {
     super.initState();
+    _sheetController = DraggableScrollableController(); // Fix: Initialize to prevent late error on dispose
     _loadHistory();
     _speechService.init();
 
@@ -475,137 +478,97 @@ class _AssistantPanelState extends State<AssistantPanel>
     final isModal = !isDesktop; 
 
     return Container(
-      // 1. Transparent Background (Removed solid color)
-      // We keep the noise/blur if desired, but user specifically said "transparente".
-      // Let's keep a very subtle blur for readability if it's an overlay, 
-      // but remove the minimal background color to be "transparent/floating".
-      color: Colors.transparent, 
-      child: Stack( // Use Stack to allow floating header over content if needed, or Column
+      color: AppColors.background, 
+      child: Column(
         children: [
+           // Header (Top)
+           _buildHeader(isModal, isDesktop),
+
            // Messages Layer
-           Positioned.fill(
-             child: Column(
-               children: [
-                 // Spacer for Header (since header is floating)
-                 SizedBox(height: isDesktop ? 80 : 70), // Approximate header height
-
-                 Expanded(
-                   child: ListView.builder(
-                     controller: scrollCtrl,
-                     reverse: true,
-                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 100), // Bottom padding for floating input
-                     itemCount: _messages.length,
-                     itemBuilder: (context, index) {
-                        final msg = _messages[index];
-                        // Determine if we should animate (new message at top/index 0?)
-                        bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
-                        if (shouldAnimate) _animatedMessageIds.add(msg.id);
-                        
-                        return ChatMessageItem(
-                          message: msg, 
-                          isUser: msg.isUser,
-                          animate: shouldAnimate,
-                          onActionConfirm: _handleActionConfirm,
-                          onActionCancel: (action) {
-                              // Optional handler
-                              debugPrint("Action cancelled: ${action.type}");
-                          },
-                          userData: widget.userData, // NOVO: Para abrir TaskDetailModal
-                        );
-                     },
-                   ),
-                 ),
-               ],
+           Expanded(
+             child: ListView.builder(
+               controller: scrollCtrl,
+               reverse: true,
+               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
+               itemCount: _messages.length,
+               itemBuilder: (context, index) {
+                  final msg = _messages[index];
+                  bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
+                  if (shouldAnimate) _animatedMessageIds.add(msg.id);
+                  
+                  return ChatMessageItem(
+                    message: msg, 
+                    isUser: msg.isUser,
+                    animate: shouldAnimate,
+                    onActionConfirm: _handleActionConfirm,
+                    onActionCancel: (action) {
+                        debugPrint("Action cancelled: ${action.type}");
+                    },
+                    userData: widget.userData,
+                  );
+               },
              ),
            ),
 
-           // Floating Header (Top)
-           Positioned(
-             top: 0, 
-             left: 0, 
-             right: 0,
-             child: SafeArea(
-               bottom: false,
-               child: _buildHeader(isModal, isDesktop),
-             ),
-           ),
-
-           // Floating Input (Bottom)
-           Positioned(
-             bottom: 0,
-             left: 0,
-             right: 0,
-             child: _buildInputArea(),
-           ),
+           // Input (Bottom)
+           _buildInputArea(),
         ],
       ),
     );
   }
 
   Widget _buildHeader(bool isModal, bool isDesktop) {
-    return Container(
-      // Desktop: Add more top margin to align with Dashboard Cards (usually start after header + padding)
-      // Mobile: Keep compact
-      margin: EdgeInsets.only(
-        left: 16, 
-        right: 16, 
-        top: isDesktop ? 24 : 8, // Push down on desktop to align with "Metas" card
-        bottom: 8
+    // Universal Header: Use AppBar for exact visual parity on both Mobile and Desktop
+    return AppBar(
+      backgroundColor: AppColors.background,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      automaticallyImplyLeading: false,
+      primary: true, // Render with status bar padding
+      shape: const Border(
+        bottom: BorderSide(color: AppColors.border, width: 1.0),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground.withValues(alpha: 0.9), // Floating container color
-        borderRadius: BorderRadius.circular(20), // Rounded corners
-        boxShadow: [
-           BoxShadow(
-             color: Colors.black.withValues(alpha: 0.1),
-             blurRadius: 10,
-             offset: const Offset(0, 4),
-           ),
-        ],
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-      ),
-      child: Row(
+      titleSpacing: 16,
+      title: Row(
         children: [
-           Container(
-             padding: const EdgeInsets.all(8),
-             decoration: BoxDecoration(
-               color: AppColors.primaryAccent.withValues(alpha: 0.2),
-               shape: BoxShape.circle,
-             ),
+           Padding(
+             padding: const EdgeInsets.symmetric(horizontal: 4.0),
              child: SvgPicture.asset(
                 'assets/images/icon-ia-sincroapp-v1.svg',
-                width: 24,
-                height: 24,
+                width: 28, 
+                height: 28,
                 colorFilter: const ColorFilter.mode(AppColors.primaryAccent, BlendMode.srcIn),
              ),
            ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Sincro IA',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.primaryText,
-                  fontFamily: 'Inter',
+           const SizedBox(width: 12),
+           Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Sincro IA',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.primaryText,
+                    fontFamily: 'Inter',
+                    height: 1.1,
+                  ),
                 ),
-              ),
-              Text(
-                'Assistente Pessoal',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: AppColors.secondaryText.withValues(alpha: 0.7),
+                Text(
+                  'Assistente Pessoal',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: AppColors.secondaryText.withValues(alpha: 0.7),
+                    height: 1.1,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const Spacer(),
-          
-          // Close / Collapse Button
+              ],
+           ),
+        ],
+      ),
+      actions: [
           IconButton(
               icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
               onPressed: () {
@@ -617,38 +580,37 @@ class _AssistantPanelState extends State<AssistantPanel>
               },
               tooltip: 'Fechar',
           ),
-        ],
-      ),
+          const SizedBox(width: 8), 
+      ],
     );
   }
 
   Widget _buildInputArea() {
-    // Floating Input without full-width background container
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        // Simple Row aligned to bottom
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        // Optional: Add background to input area for separation
+      ),
+      child: SafeArea(
+        top: false,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                // Single visual "Input Capsule"
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground, 
                   borderRadius: BorderRadius.circular(16), 
                   boxShadow: [
                      BoxShadow(
                        color: _inputFocusNode.hasFocus 
-                           ? AppColors.primary.withValues(alpha: 0.2) // Glow on focus
+                           ? AppColors.primary.withValues(alpha: 0.2) 
                            : Colors.black.withValues(alpha: 0.2),
                        blurRadius: _inputFocusNode.hasFocus ? 16 : 10,
                        offset: const Offset(0, 4),
                      )
                   ],
-                  // Single border with Focus Color
                   border: Border.all(
                     color: _inputFocusNode.hasFocus 
                         ? AppColors.primary.withValues(alpha: 0.8) 
@@ -666,13 +628,11 @@ class _AssistantPanelState extends State<AssistantPanel>
                           maxLines: 5,
                           minLines: 1,
                           keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.send, // Explicit action
-                          obscureText: false, // Explicitly false
-                          enableSuggestions: false, // Helps avoid some browser autocompletes
+                          textInputAction: TextInputAction.send, 
+                          obscureText: false, 
+                          enableSuggestions: false, 
                           autocorrect: false,
                           style: const TextStyle(color: Colors.white, fontSize: 15),
-                          // Important: InputBorder.none to avoid inner border
-                          // Also filled: false to avoid inner highlight if theme sets it
                           decoration: const InputDecoration(
                             hintText: 'Pergunte sobre sua energia...',
                             border: InputBorder.none,
@@ -694,18 +654,17 @@ class _AssistantPanelState extends State<AssistantPanel>
             ),
             const SizedBox(width: 12),
             
-            // Button - Squared with rounded corners
             GestureDetector(
                onTap: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
                child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   width: 48,
-                  height: 48, // Aligned with single-line input height roughly
+                  height: 48, 
                   decoration: BoxDecoration(
                      gradient: _isListening 
                         ? const LinearGradient(colors: [Colors.redAccent, Colors.red])
                         : const LinearGradient(colors: [AppColors.primary, AppColors.primaryAccent]),
-                     borderRadius: BorderRadius.circular(16), // Rounded Square
+                     borderRadius: BorderRadius.circular(16), 
                      boxShadow: [
                         BoxShadow(
                           color: (_isListening ? Colors.red : AppColors.primaryAccent).withValues(alpha: 0.4),
@@ -794,6 +753,11 @@ class ChatMessageItem extends StatelessWidget {
   }
 
   Widget _buildBubble(BuildContext context) {
+      // [FIX] Don't render empty bubbles (Ghost Bubble fix)
+      if (message.content.trim().isEmpty) {
+        return const SizedBox.shrink();
+      }
+
       // Se tiver tasks, o build() já separa em dois widgets
       
       return Align(
@@ -978,8 +942,13 @@ class ChatMessageItem extends StatelessWidget {
     final isOverdue = taskData['is_overdue'] == true;
     final completed = taskData['completed'] == true;
     final dateFormatted = taskData['date_formatted'] ?? '';
-    final recurrenceType = taskData['recurrence_type'] ?? 'none';
-    final isRecurrent = recurrenceType != 'none' && recurrenceType != null;
+    final recurrenceType = taskData['recurrence_type']?.toString().toLowerCase() ?? 'none';
+    // [FIX] Strict check for recurrence to avoid showing icon for 'none', 'null' or empty
+    final validRecurrenceTypes = ['daily', 'weekly', 'monthly', 'yearly', 'custom'];
+    final isRecurrent = validRecurrenceTypes.contains(recurrenceType);
+    
+    final reminderAt = taskData['reminder_at'];
+    final hasReminder = reminderAt != null && reminderAt.toString() != 'null';
     
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -1062,14 +1031,19 @@ class ChatMessageItem extends StatelessWidget {
                               ),
                             ),
                           ],
+                          // Ícone de Lembrete (NOVO)
+                          if (hasReminder) ...[
+                            const SizedBox(width: 6),
+                            const Icon(Icons.notifications_active_outlined, size: 11, color: AppColors.primary),
+                          ],
                           // Ícone de Recorrência
                           if (isRecurrent) ...[
-                            if (dateFormatted.isNotEmpty) const SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             const Icon(Icons.repeat_rounded, size: 11, color: Color(0xFF8B5CF6)),
                           ],
                           // Ícone de Meta
-                          if (journeyTitle != null) ...[
-                            if (dateFormatted.isNotEmpty || isRecurrent) const SizedBox(width: 6),
+                          if (journeyTitle != null && journeyTitle.toString().isNotEmpty) ...[
+                            const SizedBox(width: 6),
                             const Icon(Icons.flag_outlined, size: 11, color: Color(0xFF06B6D4)),
                           ],
                         ],
@@ -1078,29 +1052,13 @@ class ChatMessageItem extends StatelessWidget {
                   ),
                 ),
                 
-                // Personal day badge (VibrationPill simplificada)
+                // Personal day badge (VibrationPill Corrected)
                 if (personalDay != null && personalDay > 0)
-                  Container(
-                    width: 24,
-                    height: 24,
-                    margin: const EdgeInsets.only(left: 8),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [AppColors.primary, AppColors.primaryAccent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$personalDay',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: VibrationPill(
+                      vibrationNumber: personalDay,
+                      type: VibrationPillType.compact, // 24x24 size
                     ),
                   ),
                 

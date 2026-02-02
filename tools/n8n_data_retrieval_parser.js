@@ -93,6 +93,13 @@ switch (timeRange) {
         humanDescription = 'este mês';
         break;
 
+    case 'next_two_weeks':
+    case 'next_2_weeks':
+        startDate = startOfDay(today);
+        endDate = endOfDay(addDays(today, 14));
+        humanDescription = 'próximas duas semanas';
+        break;
+
     case 'overdue':
         startDate = null; // sem limite inferior
         endDate = startOfDay(today); // antes de hoje
@@ -146,5 +153,6 @@ return {
     endDate: endDate?.toISOString() || null,
     filterCompleted: filterCompleted,
     supabaseFilter: supabaseFilter,
-    originalQuestion: webhook.body?.question || ''
+    originalQuestion: webhook.body?.question || '',
+    router_usage: routerOutput.router_usage
 };

@@ -7,6 +7,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
 import 'package:sincro_app_flutter/features/admin/presentation/widgets/user_edit_dialog.dart';
+import 'package:intl/intl.dart';
 
 class AdminUsersTab extends StatefulWidget {
   final UserModel userData;
@@ -25,6 +26,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   final TextEditingController _searchController = TextEditingController();
   List<UserModel> _allUsers = [];
   List<UserModel> _filteredUsers = [];
+  Map<String, int> _userUsage = {}; // Armazena uso de tokens por usuário
   bool _isLoading = true;
   String _filterPlan = 'all'; // all, free, plus, premium
   final double _usdToBrl = 6.0;
@@ -46,9 +48,11 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
     try {
       // Usando SupabaseService agora
       final users = await _supabaseService.getAllUsers();
+      final usage = await _supabaseService.getUserTokenUsageMap();
       
       setState(() {
         _allUsers = users;
+        _userUsage = usage;
         _applyFilters();
         _isLoading = false;
       });
@@ -415,8 +419,12 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                           if (user.subscription.systemPlan != null)
                              const SizedBox(width: 8),
                           
-                          if (!isActiveSubscription)
-                             _buildMiniBadge('Expirado', Colors.red, isActive: true)
+                           if (!isActiveSubscription)
+                             _buildMiniBadge('Expirado', Colors.red, isActive: true),
+                           
+                           const SizedBox(width: 8),
+                           if (_userUsage.containsKey(user.uid) && _userUsage[user.uid]! > 0)
+                              _buildMiniBadge('${NumberFormat.compact().format(_userUsage[user.uid])} Tokens', Colors.purple, isActive: true),
                         ],
                       )
                     ],

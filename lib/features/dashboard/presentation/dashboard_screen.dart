@@ -2284,53 +2284,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_userData != null && _userData!.subscription.isActive) {
     }
     return Scaffold(
-      resizeToAvoidBottomInset: false, // Prevent resizing of main scaffold (fixes Calendar modal issue)
-      backgroundColor: AppColors.background,
-      appBar: CustomAppBar(
-        userData: _userData,
-        menuAnimationController: _menuAnimationController,
-        isEditMode: _isEditMode,
-        // Insert AI Toggle for desktop
-        actions: isDesktop 
-          ? [
-              IconButton(
-                icon: Icon(_isAiSidebarOpen ? Icons.chat_bubble : Icons.chat_bubble_outline),
-                color: AppColors.primaryText,
-                tooltip: 'Sincro IA',
-                onPressed: () {
-                   setState(() {
-                     _isAiSidebarOpen = !_isAiSidebarOpen;
-                   });
-                },
-              ),
-              const SizedBox(width: 8),
-            ]
-          : null,
-        onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
-            ? _openReorderModal
-            : null,
-        onSearchChanged: (query) {
-          setState(() {
-            _searchQuery = query;
-            _buildCardList();
-          });
-        },
-        onMenuPressed: () {
-          setState(() {
-            if (isDesktop) {
-              _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
-              _isDesktopSidebarExpanded
-                  ? _menuAnimationController.forward()
-                  : _menuAnimationController.reverse();
-            } else {
-              _isMobileDrawerOpen = !_isMobileDrawerOpen;
-              _isMobileDrawerOpen
-                  ? _menuAnimationController.forward()
-                  : _menuAnimationController.reverse();
-            }
-          });
-        },
-      ),
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
@@ -2344,95 +2297,165 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildDesktopLayout() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (_userData != null)
-          DashboardSidebar(
-              isExpanded: _isDesktopSidebarExpanded,
-              selectedIndex: _sidebarIndex,
+    return AssistantLayoutManager(
+      isMobile: false,
+      isAiSidebarOpen: _isAiSidebarOpen,
+      onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
+      assistant: _userData != null
+          ? AssistantPanel(
               userData: _userData!,
-              onDestinationSelected: _navigateToPage),
-        Expanded(
-          child: AssistantLayoutManager(
-            isMobile: false,
-            isAiSidebarOpen: _isAiSidebarOpen,
-            onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
-            assistant: _userData != null 
-                ? AssistantPanel(
-                    userData: _userData!, 
-                    numerologyData: _numerologyData, // Pass Cached Data
-                    activeContext: _getPageName(_sidebarIndex), // Pass Active Route
-                    onClose: () => setState(() => _isAiSidebarOpen = false),
-                  ) 
-                : const SizedBox.shrink(),
-            child: _buildCurrentPage(),
+              numerologyData: _numerologyData,
+              activeContext: _getPageName(_sidebarIndex),
+              onClose: () => setState(() => _isAiSidebarOpen = false),
+            )
+          : const SizedBox.shrink(),
+      child: Column(
+        children: [
+          CustomAppBar(
+            userData: _userData,
+            menuAnimationController: _menuAnimationController,
+            isEditMode: _isEditMode,
+            actions: [
+              if (!_isAiSidebarOpen)
+                IconButton(
+                  icon: const Icon(Icons.chat_bubble_outline),
+                  color: AppColors.primaryText,
+                  tooltip: 'Sincro IA',
+                  onPressed: () {
+                    setState(() {
+                      _isAiSidebarOpen = true;
+                    });
+                  },
+                ),
+              const SizedBox(width: 8),
+            ],
+            onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+                ? _openReorderModal
+                : null,
+            onSearchChanged: (query) {
+              setState(() {
+                _searchQuery = query;
+                _buildCardList();
+              });
+            },
+            onMenuPressed: () {
+              setState(() {
+                _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
+                _isDesktopSidebarExpanded
+                    ? _menuAnimationController.forward()
+                    : _menuAnimationController.reverse();
+              });
+            },
           ),
-        ),
-      ],
+          Expanded(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_userData != null)
+                  DashboardSidebar(
+                      isExpanded: _isDesktopSidebarExpanded,
+                      selectedIndex: _sidebarIndex,
+                      userData: _userData!,
+                      onDestinationSelected: _navigateToPage),
+                 Expanded(
+                   child: _buildCurrentPage(),
+                 ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildMobileLayout() {
     const double sidebarWidth = 280;
-    // Wrap the entire mobile layout in the AssistantLayoutManager to enable the swipe gesture
     return AssistantLayoutManager(
       isMobile: true,
-      isAiSidebarOpen: false, // Not used in mobile mode
-      onToggleAiSidebar: () {}, // Not used in mobile mode
-      assistant: _userData != null 
+      isAiSidebarOpen: false, 
+      onToggleAiSidebar: () {}, 
+      assistant: _userData != null
           ? AssistantPanel(
-              userData: _userData!, 
-              numerologyData: _numerologyData, 
-              activeContext: _getPageName(_sidebarIndex), // Pass Active Route
-              isFullScreen: true
+              userData: _userData!,
+              numerologyData: _numerologyData,
+              activeContext: _getPageName(_sidebarIndex),
+              isFullScreen: true,
+              onClose: () {}, // Swipe handles close usually
             )
           : const SizedBox.shrink(),
       child: Stack(
-      children: [
-        GestureDetector(
-          onTap: () {
-            if (_isMobileDrawerOpen) {
-              setState(() {
-                _isMobileDrawerOpen = false;
-                _menuAnimationController.reverse();
-              });
-            }
-          },
-          onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
-              ? null
-              : _openReorderModal,
-          child: _buildCurrentPage(),
-        ),
-        if (_isMobileDrawerOpen)
-          GestureDetector(
-              onTap: () {
-                setState(() {
-                  _isMobileDrawerOpen = false;
-                  _menuAnimationController.reverse();
-                });
-              },
-              child: Container(color: Colors.black.withValues(alpha: 0.5))),
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut,
-          top: 0,
-          bottom: 0,
-          left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
-          width: sidebarWidth,
-          child: _userData != null
-              ? DashboardSidebar(
-                  isExpanded: true,
-                  selectedIndex: _sidebarIndex,
-                  userData: _userData!,
-                  onDestinationSelected: (index) {
-                    _navigateToPage(index);
+        children: [
+          Column(
+            children: [
+               CustomAppBar(
+                userData: _userData,
+                menuAnimationController: _menuAnimationController,
+                isEditMode: _isEditMode,
+                onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+                    ? _openReorderModal
+                    : null,
+                onSearchChanged: (query) {
+                  setState(() {
+                    _searchQuery = query;
+                    _buildCardList();
+                  });
+                },
+                onMenuPressed: () {
+                  setState(() {
+                    _isMobileDrawerOpen = !_isMobileDrawerOpen;
+                    _isMobileDrawerOpen
+                        ? _menuAnimationController.forward()
+                        : _menuAnimationController.reverse();
+                  });
+                },
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    if (_isMobileDrawerOpen) {
+                      setState(() {
+                        _isMobileDrawerOpen = false;
+                        _menuAnimationController.reverse();
+                      });
+                    }
                   },
-                )
-              : const SizedBox.shrink(),
-        ),
-      ],
-    ),
+                  onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
+                      ? null
+                      : _openReorderModal,
+                  child: _buildCurrentPage(),
+                ),
+              ),
+            ],
+          ),
+          if (_isMobileDrawerOpen)
+            GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isMobileDrawerOpen = false;
+                    _menuAnimationController.reverse();
+                  });
+                },
+                child: Container(color: Colors.black.withValues(alpha: 0.5))),
+          AnimatedPositioned(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            top: 0,
+            bottom: 0,
+            left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
+            width: sidebarWidth,
+            child: _userData != null
+                ? DashboardSidebar(
+                    isExpanded: true,
+                    selectedIndex: _sidebarIndex,
+                    userData: _userData!,
+                    onDestinationSelected: (index) {
+                      _navigateToPage(index);
+                    },
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2465,7 +2488,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       final screenWidth = MediaQuery.of(context).size.width;
       const double spacing = 24.0;
       final sidebarWidth = _isDesktopSidebarExpanded ? 250.0 : 80.0;
-      final availableWidth = screenWidth - sidebarWidth - (spacing * 2);
+      final aiSidebarWidth = _isAiSidebarOpen ? 450.0 : 0.0;
+      final availableWidth = screenWidth - sidebarWidth - aiSidebarWidth - (spacing * 2);
       int crossAxisCount = 1;
       if (availableWidth > 1300) {
         crossAxisCount = 3;

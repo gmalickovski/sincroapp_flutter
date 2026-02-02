@@ -4,7 +4,7 @@
  */
 
 // === INPUTS ===
-const parserOutput = $('Parse Date Range').item.json;
+const parserOutput = $('Parse Date Range').first().json; // .first() avoids "Paired item" error on multiple tasks
 const tasksRaw = items; // Array de tarefas do Supabase
 
 const tasks = tasksRaw.map(item => item.json);
@@ -117,5 +117,6 @@ return {
         { type: 'edit', label: 'Alterar data' },
         { type: 'complete', label: 'Marcar como concluída' },
         { type: 'delete', label: 'Excluir' }
-    ] : []
+    ] : [],
+    token_usage: { total_tokens: parserOutput.router_usage?.total_tokens || 0 }
 };
