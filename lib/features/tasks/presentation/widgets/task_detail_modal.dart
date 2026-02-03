@@ -17,15 +17,20 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 
 class TaskDetailModal extends StatefulWidget {
   final TaskModel task;
   final UserModel userData;
 
+  final bool isNew; // NOVO
+
   const TaskDetailModal({
     super.key,
     required this.task,
     required this.userData,
+    this.isNew = false, // Default false
   });
 
   @override
@@ -49,12 +54,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   late List<String> _originalTags;
   late DateTime? _originalDateTime;
   late RecurrenceRule _originalRecurrenceRule;
-  late Duration? _originalReminderOffset; // Novo
+
+  late Duration? _originalReminderOffset;
+  late List<String> _originalSharedWith; // NOVO
 
   // Estados para data/hora/recorrência/lembrete
   late DateTime? _selectedDateTime;
   late RecurrenceRule _recurrenceRule;
-  Duration? _reminderOffset; // Novo
+  Duration? _reminderOffset;
+  List<String> _currentSharedWith = []; // NOVO
 
   final TextEditingController _tagInputController = TextEditingController();
   final FocusNode _tagFocusNode = FocusNode();
@@ -119,6 +127,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _originalText = widget.task.text;
     _originalGoalId = widget.task.journeyId;
     _originalTags = List.from(widget.task.tags);
+    _originalSharedWith = List.from(widget.task.sharedWith); // NOVO
+    _currentSharedWith = List.from(widget.task.sharedWith); // NOVO
     _originalDateTime = _selectedDateTime;
     _originalRecurrenceRule = _recurrenceRule.copyWith();
     _originalReminderOffset = _reminderOffset;
@@ -201,13 +211,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         !_compareDateTimes(_selectedDateTime, _originalDateTime);
     bool recurrenceChanged = _recurrenceRule != _originalRecurrenceRule;
     bool reminderChanged = _reminderOffset != _originalReminderOffset;
+    bool sharedWithChanged = !_listEquality.equals(_currentSharedWith..sort(), _originalSharedWith..sort()); // NOVO
 
     bool changes = textChanged ||
         goalChanged ||
         tagsChanged ||
         dateTimeChanged ||
         recurrenceChanged ||
-        reminderChanged;
+        reminderChanged ||
+        sharedWithChanged; // NOVO
 
     if (changes != _hasChanges && mounted) {
       setState(() {
@@ -403,7 +415,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           ? _recurrenceRule.type.toString()
           : null,
       'recurrenceDaysOfWeek': _recurrenceRule.daysOfWeek,
+      'recurrenceDaysOfWeek': _recurrenceRule.daysOfWeek,
       'recurrenceEndDate': _recurrenceRule.endDate?.toUtc(),
+      'sharedWith': _currentSharedWith, // NOVO
     };
 
     String? originalGoalId = _originalGoalId;
@@ -414,26 +428,57 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     navigator.pop();
 
     try {
-      await _supabaseService.updateTaskFields(
-          widget.userData.uid, widget.task.id, updates);
-
-      bool goalChanged = originalGoalId != currentGoalId;
-      if (goalChanged) {
-        if (originalGoalId != null && originalGoalId.isNotEmpty) {
-          await _supabaseService.updateGoalProgress(
-              widget.userData.uid, originalGoalId);
+      if (widget.isNew) {
+        // --- LOGICA DE CRIAÇÃO ---
+        final newTask = widget.task.copyWith(
+          text: newText,
+          dueDate: finalDueDateUtc, // copyWith handles Object? so we pass directly
+          tags: _currentTags,
+          journeyId: _selectedGoal?.id,
+          journeyTitle: _selectedGoal?.title,
+          personalDay: newPersonalDay,
+          recurrenceType: _recurrenceRule.type,
+          recurrenceDaysOfWeek: _recurrenceRule.daysOfWeek,
+          recurrenceEndDate: _recurrenceRule.endDate?.toUtc(),
+          sharedWith: _currentSharedWith,
+          reminderAt: reminderAt,
+        );
+        
+        await _supabaseService.addTask(widget.userData.uid, newTask);
+        
+        // Se houver meta vinculada, atualizar progresso
+        if (_selectedGoal?.id != null) {
+             await _supabaseService.updateGoalProgress(widget.userData.uid, _selectedGoal!.id);
         }
-      }
-      if (currentGoalId != null && currentGoalId.isNotEmpty) {
-        await _supabaseService.updateGoalProgress(
-            widget.userData.uid, currentGoalId);
-      }
 
-      if (!mounted) return;
-      messenger.showSnackBar(
-        const SnackBar(
-            content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
-      );
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Tarefa criada.'), backgroundColor: Colors.green),
+        );
+
+      } else {
+        // --- LOGICA DE ATUALIZAÇÃO (existente) ---
+        await _supabaseService.updateTaskFields(
+            widget.userData.uid, widget.task.id, updates);
+
+        bool goalChanged = originalGoalId != currentGoalId;
+        if (goalChanged) {
+          if (originalGoalId != null && originalGoalId.isNotEmpty) {
+            await _supabaseService.updateGoalProgress(
+                widget.userData.uid, originalGoalId);
+          }
+        }
+        if (currentGoalId != null && currentGoalId.isNotEmpty) {
+          await _supabaseService.updateGoalProgress(
+              widget.userData.uid, currentGoalId);
+        }
+
+        if (!mounted) return;
+        messenger.showSnackBar(
+          const SnackBar(
+              content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
@@ -576,6 +621,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (result is Goal) {
       setState(() {
         _selectedGoal = result;
+        _currentSharedWith = []; // Limpa contatos ao selecionar meta (Exclusividade)
         _checkForChanges();
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
@@ -745,6 +791,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                         )
                       : null,
                 ),
+                const SizedBox(height: 8),
+                
+                 // NOVO: Seção de Contatos/Compartilhamento
+                _buildSharedWithSection(),
+
                 const Divider(color: AppColors.border, height: 32),
                 _buildTagsSection(),
                 if (_personalDay > 0 && _dayInfo != null) ...[
@@ -765,35 +816,68 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         insetPadding: EdgeInsets.zero,
         child: Scaffold(
           backgroundColor: AppColors.cardBackground,
-          appBar: _buildAppBar(isMobile: true),
+          appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: SafeArea(child: _buildAppBar(isMobile: true))), // FIX: SafeArea na AppBar
           body: contentBody, // O contentBody já tem SingleChildScrollView
-          bottomNavigationBar: _hasChanges
-              ? SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveChanges,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30)),
+          bottomNavigationBar: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    // Botão Cancelar (Sempre visível, ocupa metade ou flexivel)
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.maybePop(context),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: AppColors.cardBackground, // Ou transparente com borda
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                            side: BorderSide(color: AppColors.border),
+                          ),
+                        ),
+                        child: const Text('Cancelar',
+                            style: TextStyle(
+                                color: AppColors.secondaryText,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold)),
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CustomLoadingSpinner(
-                                  size: 20, color: Colors.white))
-                          : const Text('Salvar Alterações',
-                              style: TextStyle(
-                                  fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                )
-              : null,
+                    
+                    // Botão Salvar (Aparece se houver alterações && texto não vazio)
+                    if (_hasChanges && _textController.text.trim().isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _saveChanges,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30)),
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CustomLoadingSpinner(
+                                      size: 20, color: Colors.white))
+                              : Text(widget.isNew ? 'Criar' : 'Salvar', // Texto mais curto para caber
+                                  style: const TextStyle(
+                                      fontSize: 16, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+
         ),
+        // SAFE AREA FIX: Adiciona SafeArea ao redor do Dialog/Scaffold no mobile
+        // para garantir que a AppBar não sobreponha a status bar
       );
     }
 
@@ -822,35 +906,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 Flexible(child: contentBody),
 
                 // --- RODAPÉ COM BOTÃO SALVAR ---
-                if (_hasChanges)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                    child: Center(
-                      // Centraliza
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveChanges,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24)), // Pilula
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 32, vertical: 12), // Padding ajustado
-                          elevation: 4,
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CustomLoadingSpinner(
-                                    size: 20, color: Colors.white))
-                            : const Text('Salvar Alterações',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
-                      ),
-                    ),
-                  ),
+                // --- RODAPÉ REMOVIDO NO DESKTOP (Botões agora na AppBar) ---
               ],
+
             ),
           ),
         ),
@@ -862,44 +920,65 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      leading: IconButton(
-          icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-          tooltip: 'Fechar',
-          onPressed: () {
-            Navigator.maybePop(context);
-          }),
+      centerTitle: true,
+      automaticallyImplyLeading: false, // Controlamos manualmente
+      leading: isMobile
+          ? null // Mobile: sem botão fechar no topo
+          : Padding(
+              padding: const EdgeInsets.only(left: 8.0, top: 8.0),
+              child: IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppColors.secondaryText, size: 28),
+                  tooltip: 'Fechar',
+                  onPressed: () {
+                    Navigator.maybePop(context);
+                  }),
+            ),
       actions: [
-        // Botão Salvar REMOVIDO daqui
-        Padding(
-          padding: const EdgeInsets.only(right: 8.0),
-          child: PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded,
-                color: AppColors.secondaryText),
-            color: AppColors.cardBackground,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.0)),
-            tooltip: "Mais opções",
-            onSelected: (value) {
-              if (value == 'duplicate') {
-                _duplicateTask();
-              } else if (value == 'delete') {
-                _deleteTask();
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              _buildPopupMenuItem(
-                  icon: Icons.copy_outlined,
-                  text: 'Duplicar Tarefa',
-                  value: 'duplicate'),
-              const PopupMenuDivider(height: 1),
-              _buildPopupMenuItem(
-                  icon: Icons.delete_outline_rounded,
-                  text: 'Excluir Tarefa',
-                  value: 'delete',
-                  isDestructive: true),
-            ],
+        // Desktop: Botão Salvar (V) no topo direito se houver alterações
+        if (!isMobile && _hasChanges && _textController.text.trim().isNotEmpty)
+             Padding(
+              padding: const EdgeInsets.only(right: 8.0, top: 4.0),
+              child: IconButton(
+                icon: _isLoading 
+                    ? const SizedBox(width: 20, height: 20, child: CustomLoadingSpinner(size: 20, color: AppColors.primary))
+                    : const Icon(Icons.check_rounded, color: AppColors.primary, size: 32),
+                 tooltip: widget.isNew ? 'Criar Tarefa' : 'Salvar Alterações',
+                 onPressed: _isLoading ? null : _saveChanges,
+              ),
+            ),
+
+        if (!widget.isNew)
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0, top: 8.0),
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded,
+                  color: AppColors.secondaryText, size: 28),
+              color: AppColors.cardBackground,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.0)),
+              tooltip: "Mais opções",
+              onSelected: (value) {
+                if (value == 'duplicate') {
+                  _duplicateTask();
+                } else if (value == 'delete') {
+                  _deleteTask();
+                }
+              },
+              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                _buildPopupMenuItem(
+                    icon: Icons.copy_outlined,
+                    text: 'Duplicar Tarefa',
+                    value: 'duplicate'),
+                const PopupMenuDivider(height: 1),
+                _buildPopupMenuItem(
+                    icon: Icons.delete_outline_rounded,
+                    text: 'Excluir Tarefa',
+                    value: 'delete',
+                    isDestructive: true),
+              ],
+            ),
           ),
-        ),
       ],
     );
   }
@@ -1237,5 +1316,108 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       ),
     );
   }
-}
+  bool _isLoadingShared = false;
 
+  // ... (inside State class)
+
+  void _openContactPicker() async {
+    if (_isLoadingShared) return;
+    setState(() => _isLoadingShared = true);
+
+    try {
+      final contacts = await _supabaseService.getContacts(widget.userData.uid);
+      
+      if (!mounted) return;
+      setState(() => _isLoadingShared = false);
+
+      await showModalBottomSheet<List<String>>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) {
+          return ContactPickerModal(
+            preSelectedUsernames: _currentSharedWith,
+            currentDate: _selectedDateTime ?? DateTime.now(),
+            initialContacts: contacts, // PASS PRE-LOADED DATA
+            onSelectionChanged: (selectedUsernames) {
+              setState(() {
+                _currentSharedWith = selectedUsernames;
+                _checkForChanges();
+              });
+            },
+            onDateChanged: (newDate) {}, 
+          );
+        },
+      );
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoadingShared = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Erro ao carregar contatos.'), 
+              backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  // ...
+
+  Widget _buildSharedWithSection() {
+    return _buildDetailRow(
+      icon: Icons.people_outline_rounded,
+      iconColor: _currentSharedWith.isNotEmpty ? Colors.lightBlueAccent : AppColors.secondaryText,
+      valueWidget: _isLoadingShared
+          ? const Align(
+              alignment: Alignment.centerLeft,
+              child: SizedBox(
+                  width: 20, 
+                  height: 20, 
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondaryText)
+              ),
+            )
+          : (_currentSharedWith.isEmpty
+              ? const Text('Adicionar pessoas', style: TextStyle(color: AppColors.secondaryText, fontSize: 15))
+              : Wrap(
+                  spacing: 8.0,
+                  runSpacing: 4.0,
+                  children: _currentSharedWith.map((username) {
+                    return Chip(
+                      avatar: CircleAvatar(
+                          backgroundColor: AppColors.primary,
+                          radius: 10,
+                          child: Text(username[0].toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.white)),
+                      ),
+                      label: Text(username),
+                      labelStyle: const TextStyle(fontSize: 12),
+                      backgroundColor: AppColors.cardBackground,
+                      side: BorderSide(color: AppColors.border),
+                      visualDensity: VisualDensity.compact,
+                      onDeleted: () {
+                          setState(() {
+                              _currentSharedWith.remove(username);
+                              _checkForChanges();
+                          });
+                      },
+                    );
+                  }).toList(),
+                )),
+      onTap: (_selectedGoal != null || _isLoadingShared) ? null : _openContactPicker, 
+      valueColor: _selectedGoal != null 
+          ? AppColors.tertiaryText 
+          : (_currentSharedWith.isNotEmpty ? AppColors.primaryText : AppColors.secondaryText),
+      
+      trailingAction: _selectedGoal != null 
+          ? null 
+          : (_isLoadingShared 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondaryText))
+              : (_currentSharedWith.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.add_circle_outline_rounded, size: 20, color: AppColors.secondaryText),
+                      onPressed: _openContactPicker,
+                      tooltip: 'Gerenciar pessoas',
+                  )
+                  : null)),
+    );
+  }
+}

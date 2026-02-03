@@ -15,6 +15,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final VoidCallback? onEditPressed;
   final ValueChanged<String>? onSearchChanged; // New callback
   final List<Widget>? actions; // New Parameter
+  final bool showSearch; // New Parameter to toggle search visibility
 
   const CustomAppBar({
     super.key,
@@ -25,6 +26,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.onEditPressed,
     this.onSearchChanged,
     this.actions,
+    this.showSearch = true, // Default to true
   });
 
   @override
@@ -129,10 +131,11 @@ class _CustomAppBarState extends State<CustomAppBar> {
       centerTitle: true,
       actions: [
         // Unified Search (same behavior for mobile and desktop)
-        Padding(
-          padding: const EdgeInsets.only(right: 8.0), // Spacing from next element
-          child: _buildUnifiedSearch(context, isDesktop: isDesktop),
-        ),
+        if (widget.showSearch) // Check visibility
+          Padding(
+            padding: const EdgeInsets.only(right: 8.0), // Spacing from next element
+            child: _buildUnifiedSearch(context, isDesktop: isDesktop),
+          ),
 
         if (isDesktop && widget.onEditPressed != null && !widget.isEditMode)
           Padding(
@@ -147,7 +150,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
             ),
           ),
 
-        if (widget.userData != null)
+        if (widget.userData != null && isDesktop) // Mostra avatar apenas no desktop
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
               child: GestureDetector(
@@ -221,6 +224,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
                   controller: _searchController,
                   focusNode: _searchFocusNode,
                   style: const TextStyle(color: Colors.white, fontSize: 14),
+                  textAlignVertical: TextAlignVertical.center, // Center vertically
                   decoration: const InputDecoration(
                     hintText: 'Pesquisar...',
                     hintStyle: TextStyle(
@@ -230,9 +234,9 @@ class _CustomAppBarState extends State<CustomAppBar> {
                     enabledBorder: InputBorder.none,
                     errorBorder: InputBorder.none,
                     disabledBorder: InputBorder.none,
-                    isCollapsed: true,
+                    isDense: true,
                     filled: false,
-                    contentPadding: EdgeInsets.only(left: 16, right: 48, top: 12, bottom: 12), 
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Symmetric vertical padding for centering
                   ),
                   onChanged: widget.onSearchChanged,
                   onTapOutside: (event) {

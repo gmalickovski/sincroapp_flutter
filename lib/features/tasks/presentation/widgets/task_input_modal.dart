@@ -20,6 +20,7 @@ import 'package:sincro_app_flutter/common/widgets/mention_input_field.dart'; // 
 import 'package:sincro_app_flutter/common/widgets/mention_text_editing_controller.dart'; // NOVO
 import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart'; // NOVO
 import 'package:sincro_app_flutter/models/subscription_model.dart'; // NOVO
+import 'package:sincro_app_flutter/models/contact_model.dart'; // NOVO
 
 
 // --- REMOVIDO: Regex de data e SyntaxHighlightingController ---
@@ -171,7 +172,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
     });
   }
 
-  // --- NOVO MÉTODO (Carregar contatos para validação) ---
+  List<ContactModel>? _cachedContacts; // Cache for picker
+  bool _isLoadingContacts = false; // Loading state for button
+
+  // ...
+
   Future<void> _fetchContactsForMentions() async {
     try {
       final currentUserId = widget.userId;
@@ -179,13 +184,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
       
       if (mounted) {
         setState(() {
+          _cachedContacts = contacts; // Store full list
           // Filtra ativos e mapeia para usernames não nulos
           _validUsernames = contacts
               .where((c) => c.status == 'active' && c.username != null)
               .map((c) => c.username!)
               .toSet();
               
-          // Atualiza o controller com a lista válida para pintar de zul
           _textController.updateValidMentions(_validUsernames);
         });
       }
@@ -194,16 +199,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
-  // --- REMOVIDO: _onTextChanged ---
-
-  // isSameDay (inalterada)
+  // ...
+  
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  // _updateVibrationForDate (inalterada)
   void _updateVibrationForDate(DateTime date) {
-    // Consistent with Firestore: convert to UTC midnight for calculation
     final dateMidnight = DateTime.utc(date.year, date.month, date.day);
     if (widget.userData != null &&
         widget.userData!.dataNasc.isNotEmpty &&
@@ -238,9 +240,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
-  // --- REMOVIDO: _insertActionText ---
-
-  // _selectGoal (inalterada - j├í est├í correta)
   void _selectGoal() async {
     if (widget.preselectedGoal != null) return;
     if (widget.userData == null) return;
@@ -265,13 +264,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
         _selectedGoalId = result.id;
         _selectedGoalTitle = result.title;
         _selectedGoalDeadline = result.targetDate; // Captura deadline da seleção
+        _sharedWithUsernames = []; // Limpa contatos ao selecionar meta (Exclusividade)
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
       _openCreateGoalWidget();
     }
   }
 
-  // _openCreateGoalWidget (inalterada - j├í est├í correta)
   void _openCreateGoalWidget() async {
     if (widget.userData == null) return;
 
@@ -304,11 +303,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
-  // --- IN├ìCIO DA MUDAN├çA: _showTagSelectionModal atualizada ---
   void _showTagSelectionModal() async {
     FocusScope.of(context).unfocus();
 
-    // Abre o modal e espera o retorno (String)
     final String? tagName = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -320,7 +317,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
       },
     );
 
-    // Adiciona a tag ao estado se ela for v├ílida e n├úo existir
     if (tagName != null &&
         tagName.isNotEmpty &&
         !_selectedTags.contains(tagName)) {
@@ -329,17 +325,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
       });
     }
   }
-  // --- FIM DA MUDAN├çA ---
 
-  // --- IN├ìCIO DA MUDAN├çA: _showDatePickerModal atualizada ---
   void _showDatePickerModal() {
     FocusScope.of(context).unfocus();
     if (widget.userData == null) return;
 
-    // A data inicial ├® a data j├í selecionada, ou a data do "pill", ou hoje
     DateTime initialPickerDate = _selectedDate ?? _selectedDateForPill;
 
-    // Adiciona a hora (se j├í houver uma)
     initialPickerDate = DateTime(
       initialPickerDate.year,
       initialPickerDate.month,
@@ -359,7 +351,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
         initialTime: _selectedTime,
         initialRecurrence: ruleToPass,
         userData: widget.userData!,
-        goalDeadline: _selectedGoalDeadline, // Passa o prazo para validação
+        goalDeadline: _selectedGoalDeadline,
       ),
     ).then((result) {
       if (result != null) {
@@ -367,15 +359,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
         final selectedDateMidnight = DateTime(selectedDateTime.year,
             selectedDateTime.month, selectedDateTime.day);
 
-        // Atualiza a p├¡lula de vibra├º├úo
         _updateVibrationForDate(selectedDateMidnight);
 
-        // Atualiza o estado
         setState(() {
-          _selectedDate = selectedDateMidnight; // Armazena a data (meia-noite) para p├¡lulas e l├│gica
+          _selectedDate = selectedDateMidnight;
           
-          // Se o usu├írio selecionou um hor├írio, extra├¡mos dele.
-          // Se n├úo (Dia Inteiro), fica null.
           if (result.hasTime) {
              _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
           } else {
@@ -383,20 +371,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
           }
           
           _selectedRecurrenceRule = result.recurrenceRule;
-          _selectedReminderOffset = result.reminderOffset; // Captura offset
+          _selectedReminderOffset = result.reminderOffset;
         });
       }
     });
   }
-  // --- FIM DA MUDAN├çA ---
 
-  // --- IN├ìCIO DA MUDAN├çA: _submit atualizado ---
   void _submit() async {
     final rawText = _textController.text.trim();
 
-    // 1. Valida├º├úo de texto obrigat├│rio
     if (rawText.isEmpty) {
-      // Mostra um feedback
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Por favor, digite o nome da tarefa.'),
@@ -404,43 +388,36 @@ class _TaskInputModalState extends State<TaskInputModal> {
           duration: Duration(seconds: 2),
         ),
       );
-      _textFieldFocusNode.requestFocus(); // Foca no campo de texto
+      _textFieldFocusNode.requestFocus();
       return;
     }
 
-    // 2. Parser simplificado (síncrono)
     final ParsedTask textParseResult = TaskParser.parse(rawText);
 
-    // MERGE: Combina tags/mentions do texto com as selecionadas via Pill
     final Set<String> mergedTags = {
       ..._selectedTags,
       ...textParseResult.tags
     };
     
-    // MERGE: Combina mentions do texto com as selecionadas no Modal de Contatos
     final Set<String> mergedSharedWith = {
       ..._sharedWithUsernames,
       ...textParseResult.sharedWith
     };
 
-    // 3. Define a data
     final ParsedTask finalParsedTask = textParseResult.copyWith(
-      // cleanText já veio limpo do parser (sem tags)
-      dueDate: _selectedDate, // Envia a data do "pill" (pode ser null)
+      dueDate: _selectedDate,
       reminderTime: _selectedTime,
       recurrenceRule: _selectedRecurrenceRule,
-      tags: mergedTags.toList(), // Envia lista unificada
-      sharedWith: mergedSharedWith.toList(), // Envia lista unificada
-      journeyId: _selectedGoalId, // Envia o ID da meta
-      journeyTitle: _selectedGoalTitle, // Envia o Título da meta
-      // O Dia Pessoal será recalculado no foco_do_dia_screen com base na data
+      tags: mergedTags.toList(),
+      sharedWith: mergedSharedWith.toList(),
+      journeyId: _selectedGoalId,
+      journeyTitle: _selectedGoalTitle,
     ).copyWith(
         reminderAt: () {
-            // Calculate numeric reminderAt
             if (_selectedDate == null) return null;
             if (_selectedReminderOffset == null) return null;
             
-            DateTime base = _selectedDate!; // Midnight
+            DateTime base = _selectedDate!;
             if (_selectedTime != null) {
                 base = DateTime(base.year, base.month, base.day, _selectedTime!.hour, _selectedTime!.minute);
             }
@@ -452,9 +429,22 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     if (mounted) Navigator.of(context).pop();
   }
-  // --- FIM DA MUDAN├çA ---
-
+  
   void _openContactPicker() async {
+    // Se ainda não carregou, carrega agora
+    if (_cachedContacts == null) {
+        if (_isLoadingContacts) return;
+        setState(() => _isLoadingContacts = true);
+        try {
+            await _fetchContactsForMentions();
+        } finally {
+            if (mounted) setState(() => _isLoadingContacts = false);
+        }
+    }
+    
+    // Se falhou ou vazio (verifique lógica de retry se necessário, mas aqui assume que tentou)
+    final contactsToPass = _cachedContacts ?? []; 
+
     final result = await showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
@@ -463,19 +453,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
         return ContactPickerModal(
           preSelectedUsernames: _sharedWithUsernames,
           currentDate: _selectedDate ?? DateTime.now(),
+          initialContacts: contactsToPass, // PASS CACHED DATA
           onSelectionChanged: (selectedUsernames) {
-            // Atualiza o estado com os usernames selecionados
             setState(() {
               _sharedWithUsernames = selectedUsernames;
             });
-            // Não fecha o modal aqui, o usuário pode continuar selecionando
           },
           onDateChanged: (newDate) {
-            // A data é atualizada quando o usuário clica no ✓ para confirmar
             setState(() {
               _selectedDate = newDate;
             });
-            // Update vibration pill for the new date
             _updateVibrationForDate(newDate);
           },
         );
@@ -486,18 +473,20 @@ class _TaskInputModalState extends State<TaskInputModal> {
       // Adiciona mentions no texto
       String currentText = _textController.text;
       
-      // Adiciona espa├ºo se n├úo tiver
       if (currentText.isNotEmpty && !currentText.endsWith(' ')) {
         currentText += ' ';
       }
 
       for (var username in result) {
-        currentText += '@$username ';
+        // Só adiciona se não estiver já mencionado?
+        // O comportamento anterior era adicionar sempre. Mantemos.
+        if (!currentText.contains('@$username')) {
+             currentText += '@$username ';
+        }
       }
 
       _textController.text = currentText;
       
-      // Move cursor para o final
       _textController.selection = TextSelection.fromPosition(
         TextPosition(offset: _textController.text.length),
       );
@@ -515,13 +504,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
   // --- IN├ìCIO DA MUDAN├çA: build() atualizado com "Pills" ---
   @override
   Widget build(BuildContext context) {
-    // NOVO: Debug print to understand why button is hidden
-    // ignore: avoid_print
-    if (widget.userData != null) {
-      print('DEBUG: User Plan String is "${widget.userData!.plano}"');
-      print('DEBUG: User Enum Plan is "${widget.userData!.subscription.plan}"');
-    }
-
+    
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -668,14 +651,15 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   ),
 
                   
-                  // NOVO: Botão para abrir o Contact Picker (Apenas para planos > essencial/free)
-                  if (widget.userData != null && 
-                      widget.userData!.subscription.plan != SubscriptionPlan.free)
-                    _buildActionButton(
-                      icon: Icons.person_outline,
-                      onTap: _openContactPicker,
-                      color: _sharedWithUsernames.isNotEmpty ? Colors.lightBlueAccent : null, // keep consistent
-                    ),
+                    if (widget.userData != null && 
+                        widget.userData!.subscription.plan != SubscriptionPlan.free)
+                      _buildActionButton(
+                        icon: Icons.person_outline,
+                        onTap: _selectedGoalId != null ? null : _openContactPicker, // Desativa se tiver meta
+                        color: _selectedGoalId != null 
+                            ? AppColors.tertiaryText.withValues(alpha: 0.3) // Visual desativado
+                            : (_sharedWithUsernames.isNotEmpty ? Colors.lightBlueAccent : null),
+                      ),
                   const Spacer(),
                   if (_personalDay > 0)
                     Padding(

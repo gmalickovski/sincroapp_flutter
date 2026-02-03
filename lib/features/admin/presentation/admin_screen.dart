@@ -158,7 +158,7 @@ class _AdminScreenState extends State<AdminScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.cardBackground,
+        backgroundColor: AppColors.background,
         elevation: 0,
         title: const Row(
           children: [
@@ -178,14 +178,27 @@ class _AdminScreenState extends State<AdminScreen>
           indicatorColor: AppColors.primary,
           labelColor: AppColors.primary,
           unselectedLabelColor: AppColors.secondaryText,
+          // Remove custom height to let it adjust
           tabs: const [
             Tab(
-              icon: Icon(Icons.dashboard_outlined),
-              text: 'Dashboard',
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.dashboard_outlined),
+                  SizedBox(width: 8),
+                  Text('Dashboard'),
+                ],
+              ),
             ),
             Tab(
-              icon: Icon(Icons.people_outline),
-              text: 'Usuários',
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.people_outline),
+                  SizedBox(width: 8),
+                  Text('Usuários'),
+                ],
+              ),
             ),
           ],
         ),

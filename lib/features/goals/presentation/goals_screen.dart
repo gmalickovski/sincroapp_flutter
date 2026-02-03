@@ -11,7 +11,7 @@ import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_card
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
@@ -277,26 +277,13 @@ class _GoalsScreenState extends State<GoalsScreen> {
       ), // This closes ScreenInteractionListener
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
-        child: (widget.userData.subscription.isActive &&
-                widget.userData.subscription.plan == SubscriptionPlan.premium)
-            ? ExpandingAssistantFab(
-                onPrimary:
-                    _navigateToCreateGoal, // Chama screen ou dialog conforme plataforma
-                primaryIcon: Icons.flag_outlined, // Ícone de meta
-                primaryTooltip: 'Nova Jornada',
-                onOpenAssistant: (message) {
-                  AssistantPanel.show(context, widget.userData, initialMessage: message);
-                },
-              )
-            : FloatingActionButton(
+                  child: FloatingActionButton(
                 onPressed: _navigateToCreateGoal,
                 backgroundColor: AppColors.primary,
                 tooltip: 'Nova Jornada',
                 heroTag: 'fab_goals_screen',
                 elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
+                shape: const CircleBorder(),
                 child: const Icon(Icons.add, color: Colors.white),
               ),
       ),
@@ -305,7 +292,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
   Widget _buildHeader() {
     return const Padding(
-      padding: EdgeInsets.only(top: 16, bottom: 16),
+      padding: EdgeInsets.only(top: 8, bottom: 16),
       child: Text(
         // --- INÍCIO DA CORREÇÃO (Título) ---
         'Metas', // Alterado de 'Meta' para 'Metas'

@@ -14,8 +14,9 @@ import 'package:sincro_app_flutter/common/widgets/contact_list_item.dart'; // NO
 class ContactPickerModal extends StatefulWidget {
   final List<String> preSelectedUsernames;
   final Function(List<String> selectedUsernames) onSelectionChanged;
-  final DateTime currentDate; // Required for compatibility check
-  final Function(DateTime newDate)? onDateChanged; // If compatibility suggests a new date
+  final DateTime currentDate;
+  final Function(DateTime newDate)? onDateChanged;
+  final List<ContactModel> initialContacts; // NOVO: Dados pré-carregados
 
   const ContactPickerModal({
     super.key,
@@ -23,6 +24,7 @@ class ContactPickerModal extends StatefulWidget {
     required this.onSelectionChanged,
     required this.currentDate,
     this.onDateChanged,
+    required this.initialContacts, // Required to ensure pre-loading
   });
 
   @override
@@ -34,7 +36,7 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
   final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
   
   // State
-  List<ContactModel> _allContacts = []; // Store all for AddContactDialog
+  List<ContactModel> _allContacts = [];
   List<ContactModel> _contacts = [];
   List<ContactModel> _filteredContacts = [];
   Set<String> _selectedUsernames = {};
@@ -45,31 +47,40 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
   // Compatibility
   bool _calculatingCompatibility = false;
   double _compatibilityScore = 1.0;
-  String _compatibilityStatus = 'good'; // good, bad
+  String _compatibilityStatus = 'good'; 
   List<DateTime> _suggestedDates = [];
-  DateTime? _pendingDate; // Data selecionada aguardando confirmação
+  DateTime? _pendingDate;
 
   @override
   void initState() {
     super.initState();
     _selectedUsernames = widget.preSelectedUsernames.toSet();
-    _pendingDate = null; // Sem data pendente inicialmente
-    _fetchContacts();
+    _pendingDate = null;
     
-    // Initial calc if pre-selected
+    // Configuração inicial com dados pré-carregados (ZERO delay/jump)
+    _allContacts = widget.initialContacts;
+    _contacts = widget.initialContacts.where((c) => c.status == 'active').toList();
+    _filteredContacts = _contacts;
+    
+    // Compute compatibility immediately if needed
     if (_selectedUsernames.isNotEmpty) {
       _calculateCompatibility();
     }
   }
 
   void _fetchContacts() async {
+    // Usado apenas para REFRESH após adicionar novo contato
     final contacts = await _supabaseService.getContacts(_currentUserId);
     if (mounted) {
       setState(() {
         _allContacts = contacts;
-        // Filter only active contacts
         _contacts = contacts.where((c) => c.status == 'active').toList();
         _filteredContacts = _contacts;
+        
+        // Re-apply filter if search is active
+        if (_searchController.text.isNotEmpty) {
+           _filterContacts(_searchController.text);
+        }
       });
     }
   }
@@ -150,8 +161,10 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
   }
   
   void _openAddContactModal() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => AddContactDialog(
         existingContactIds: _allContacts.map((c) => c.userId).toList(),
       ),

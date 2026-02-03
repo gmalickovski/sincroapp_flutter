@@ -59,11 +59,13 @@ class AssistantPanel extends StatefulWidget {
       await showModalBottomSheet(
         context: context,
         isScrollControlled: true,
+        useRootNavigator: true, // Use root navigator to cover FAB
         backgroundColor: Colors.transparent,
+        barrierColor: Colors.black54,
         builder: (context) => DraggableScrollableSheet(
-          initialChildSize: 0.9,
-          minChildSize: 0.5,
-          maxChildSize: 0.95,
+          initialChildSize: 1.0, // Start at full screen
+          minChildSize: 0.9,
+          maxChildSize: 1.0,
           builder: (_, controller) => AssistantPanel(
              userData: userData, 
              initialMessage: initialMessage, 
@@ -477,8 +479,8 @@ class _AssistantPanelState extends State<AssistantPanel>
     final isDesktop = MediaQuery.of(context).size.width > 768;
     final isModal = !isDesktop; 
 
-    return Container(
-      color: AppColors.background, 
+    return Material(
+      color: AppColors.background,
       child: Column(
         children: [
            // Header (Top)
@@ -575,7 +577,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                  if (widget.onClose != null) {
                     widget.onClose!();
                   } else {
-                    Navigator.of(context).maybePop();
+                    Navigator.of(context, rootNavigator: true).pop();
                   }
               },
               tooltip: 'Fechar',
@@ -593,98 +595,100 @@ class _AssistantPanelState extends State<AssistantPanel>
       ),
       child: SafeArea(
         top: false,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground, 
-                  borderRadius: BorderRadius.circular(16), 
-                  boxShadow: [
-                     BoxShadow(
-                       color: _inputFocusNode.hasFocus 
-                           ? AppColors.primary.withValues(alpha: 0.2) 
-                           : Colors.black.withValues(alpha: 0.2),
-                       blurRadius: _inputFocusNode.hasFocus ? 16 : 10,
-                       offset: const Offset(0, 4),
-                     )
-                  ],
-                  border: Border.all(
-                    color: _inputFocusNode.hasFocus 
-                        ? AppColors.primary.withValues(alpha: 0.8) 
-                        : Colors.white.withValues(alpha: 0.1),
-                    width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground, 
+                    borderRadius: BorderRadius.circular(16), 
+                    boxShadow: [
+                       BoxShadow(
+                         color: _inputFocusNode.hasFocus 
+                             ? AppColors.primary.withValues(alpha: 0.2) 
+                             : Colors.black.withValues(alpha: 0.2),
+                         blurRadius: _inputFocusNode.hasFocus ? 16 : 10,
+                         offset: const Offset(0, 4),
+                       )
+                    ],
+                    border: Border.all(
+                      color: _inputFocusNode.hasFocus 
+                          ? AppColors.primary.withValues(alpha: 0.8) 
+                          : Colors.white.withValues(alpha: 0.1),
+                      width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                     const SizedBox(width: 16),
-                     Expanded(
-                       child: TextField(
-                          controller: _controller,
-                          focusNode: _inputFocusNode,
-                          maxLines: 5,
-                          minLines: 1,
-                          keyboardType: TextInputType.multiline,
-                          textInputAction: TextInputAction.send, 
-                          obscureText: false, 
-                          enableSuggestions: false, 
-                          autocorrect: false,
-                          style: const TextStyle(color: Colors.white, fontSize: 15),
-                          decoration: const InputDecoration(
-                            hintText: 'Pergunte sobre sua energia...',
-                            border: InputBorder.none,
-                            enabledBorder: InputBorder.none,
-                            focusedBorder: InputBorder.none,
-                            errorBorder: InputBorder.none,
-                            disabledBorder: InputBorder.none,
-                            filled: false, 
-                            isDense: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 14),
-                            hintStyle: TextStyle(color: Colors.white30),
+                  child: Row(
+                    children: [
+                       const SizedBox(width: 16),
+                       Expanded(
+                         child: TextField(
+                            controller: _controller,
+                            focusNode: _inputFocusNode,
+                            maxLines: 5,
+                            minLines: 1,
+                            keyboardType: TextInputType.multiline,
+                            textInputAction: TextInputAction.send, 
+                            obscureText: false, 
+                            enableSuggestions: false, 
+                            autocorrect: false,
+                            style: const TextStyle(color: Colors.white, fontSize: 15),
+                            decoration: const InputDecoration(
+                              hintText: 'Pergunte sobre sua energia...',
+                              border: InputBorder.none,
+                              enabledBorder: InputBorder.none,
+                              focusedBorder: InputBorder.none,
+                              errorBorder: InputBorder.none,
+                              disabledBorder: InputBorder.none,
+                              filled: false, 
+                              isDense: true,
+                              contentPadding: EdgeInsets.symmetric(vertical: 14),
+                              hintStyle: TextStyle(color: Colors.white30),
+                            ),
+                            onSubmitted: (_) => _send(),
                           ),
-                          onSubmitted: (_) => _send(),
-                        ),
-                     ),
-                  ],
+                       ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            
-            GestureDetector(
-               onTap: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
-               child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 48,
-                  height: 48, 
-                  decoration: BoxDecoration(
-                     gradient: _isListening 
-                        ? const LinearGradient(colors: [Colors.redAccent, Colors.red])
-                        : const LinearGradient(colors: [AppColors.primary, AppColors.primaryAccent]),
-                     borderRadius: BorderRadius.circular(16), 
-                     boxShadow: [
-                        BoxShadow(
-                          color: (_isListening ? Colors.red : AppColors.primaryAccent).withValues(alpha: 0.4),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        )
-                     ],
-                  ),
-                  child: Center(
-                     child: _isSending 
-                       ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                       : Icon(
-                           _isInputEmpty ? (_isListening ? Icons.stop : Icons.mic) : Icons.arrow_upward_rounded,
-                           color: Colors.white,
-                           size: 24,
-                       ),
-                  ),
-               ),
-            ),
-          ],
+              const SizedBox(width: 12),
+              
+              GestureDetector(
+                 onTap: _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
+                 child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 48,
+                    constraints: const BoxConstraints(minHeight: 48),
+                    decoration: BoxDecoration(
+                       gradient: _isListening 
+                          ? const LinearGradient(colors: [Colors.redAccent, Colors.red])
+                          : const LinearGradient(colors: [AppColors.primary, AppColors.primaryAccent]),
+                       borderRadius: BorderRadius.circular(16), 
+                       boxShadow: [
+                          BoxShadow(
+                            color: (_isListening ? Colors.red : AppColors.primaryAccent).withValues(alpha: 0.4),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          )
+                       ],
+                    ),
+                    child: Center(
+                       child: _isSending 
+                         ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                         : Icon(
+                             _isInputEmpty ? (_isListening ? Icons.stop : Icons.mic) : Icons.arrow_upward_rounded,
+                             color: Colors.white,
+                             size: 24,
+                         ),
+                    ),
+                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );

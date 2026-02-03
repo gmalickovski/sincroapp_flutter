@@ -83,10 +83,10 @@ class UserModel {
       photoUrl: data['photoUrl'],
       username: data['username'], // NOVO: pode ser null se usuário ainda não criou
       gender: data['gender'], // NOVO
-      primeiroNome: data['primeiroNome'] ?? '',
-      sobrenome: data['sobrenome'] ?? '',
-      nomeAnalise: data['nomeAnalise'] ?? '',
-      dataNasc: data['dataNasc'] ?? '',
+      primeiroNome: data['first_name'] ?? data['primeiroNome'] ?? '',
+      sobrenome: data['last_name'] ?? data['sobrenome'] ?? '',
+      nomeAnalise: data['analysis_name'] ?? data['nomeAnalise'] ?? '',
+      dataNasc: data['birth_date'] ?? data['dataNasc'] ?? '',
       plano: data['plano'] ?? 'gratuito',
       isAdmin: data['isAdmin'] ?? false,
       dashboardCardOrder: cardOrder,
@@ -100,12 +100,12 @@ class UserModel {
       'email': email,
       'photoUrl': photoUrl,
       'photoUrl': photoUrl,
-      'username': username, // NOVO
-      'gender': gender, // NOVO
-      'primeiroNome': primeiroNome,
-      'sobrenome': sobrenome,
-      'nomeAnalise': nomeAnalise,
-      'dataNasc': dataNasc,
+      'username': username,
+      'gender': gender,
+      'first_name': primeiroNome,
+      'last_name': sobrenome,
+      'analysis_name': nomeAnalise,
+      'birth_date': dataNasc,
       'isAdmin': isAdmin,
       'dashboardCardOrder': dashboardCardOrder,
       'dashboardHiddenCards': dashboardHiddenCards,

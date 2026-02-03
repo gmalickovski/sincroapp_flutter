@@ -19,7 +19,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'widgets/calendar_header.dart';
 import 'widgets/day_detail_panel.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
@@ -553,6 +553,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
   }
 
+  void _openNewTaskDetail() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Usa dia selecionado ou hoje
+        final date = _selectedDay ?? DateTime.now();
+        
+        return TaskDetailModal(
+          task: TaskModel(
+            id: const Uuid().v4(), 
+            text: '',
+            createdAt: DateTime.now(),
+            dueDate: date,
+          ),
+          userData: widget.userData,
+          isNew: true,
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Adiciona verificação de _userId no início do build
@@ -590,18 +611,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
       ),
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
-        child: (widget.userData.subscription.isActive &&
-                widget.userData.subscription.plan == SubscriptionPlan.premium)
-            ? ExpandingAssistantFab(
-                onPrimary: _openAddTaskModal,
-                primaryIcon: Icons.edit_calendar, // Ícone de agendamento
-                primaryTooltip: 'Nova Tarefa',
-                onOpenAssistant: (message) {
-                  AssistantPanel.show(context, widget.userData, initialMessage: message);
-                },
-              )
-            : FloatingActionButton(
-                onPressed: _openAddTaskModal,
+        child: FloatingActionButton(
+                onPressed: _openNewTaskDetail,
                 backgroundColor: AppColors.primary,
                 tooltip: 'Nova Tarefa',
                 heroTag: 'calendar_fab',

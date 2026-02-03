@@ -79,15 +79,16 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
   }
 
   void _openAddContactModal() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) => AddContactDialog(
         existingContactIds: _contacts.map((c) => c.userId).toList(),
       ),
     ).then((result) {
-      // Refresh list if needed (result not strictly passed currently in dialog, but we could)
-      // For now, always refresh
-      _fetchContacts(); 
+      // Refresh list if needed
+      _fetchContacts();
     });
   }
 

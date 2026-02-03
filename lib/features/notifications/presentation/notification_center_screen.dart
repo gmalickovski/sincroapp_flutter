@@ -411,7 +411,6 @@ class _NotificationTile extends StatelessWidget {
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           color: isSelected 
               ? AppColors.primary.withOpacity(0.15)
@@ -431,79 +430,97 @@ class _NotificationTile extends StatelessWidget {
             )
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            if (isSelectionMode)
-              Padding(
-                padding: const EdgeInsets.only(right: 12, top: 2),
-                child: Icon(
-                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                  color: isSelected ? AppColors.primary : AppColors.tertiaryText,
-                  size: 24,
-                ),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: theme.color.withOpacity(0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(theme.icon, color: theme.color, size: 24),
-              ),
-              
-            const SizedBox(width: 16),
-            
-            Expanded(
-              child: Column(
+            // Main content with padding
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          notification.title,
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
+                  if (isSelectionMode)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12, top: 2),
+                      child: Icon(
+                        isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                        color: isSelected ? AppColors.primary : AppColors.tertiaryText,
+                        size: 24,
                       ),
-                      if (!notification.isRead)
-                        Container(
-                          margin: const EdgeInsets.only(left: 8),
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: theme.color.withOpacity(0.15),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(theme.icon, color: theme.color, size: 24),
+                    ),
+                    
+                  const SizedBox(width: 16),
+                  
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 24), // Space for delete icon
+                                child: Text(
+                                  notification.title,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (!notification.isRead)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8, right: 24),
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
                         ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  RichText(
-                    text: _buildHighlightedNotificationText(notification.body),
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _formatTime(notification.createdAt),
-                    style: const TextStyle(color: AppColors.tertiaryText, fontSize: 12),
+                        const SizedBox(height: 6),
+                        RichText(
+                          text: _buildHighlightedNotificationText(notification.body),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _formatTime(notification.createdAt),
+                          style: const TextStyle(color: AppColors.tertiaryText, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-
+            
+            // Delete button at top-right
             if (!isSelectionMode)
-              IconButton(
-                icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.tertiaryText),
-                tooltip: 'Excluir',
-                splashRadius: 20,
-                onPressed: onDelete,
+              Positioned(
+                top: 4,
+                right: 4,
+                child: IconButton(
+                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.tertiaryText),
+                  tooltip: 'Excluir',
+                  splashRadius: 20,
+                  onPressed: onDelete,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                ),
               ),
           ],
         ),

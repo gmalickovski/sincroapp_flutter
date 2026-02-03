@@ -27,7 +27,6 @@ import 'package:sincro_app_flutter/common/widgets/multi_number_card.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_app_bar.dart';
 import 'package:sincro_app_flutter/common/widgets/dashboard_sidebar.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
 
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import '../../calendar/presentation/calendar_screen.dart';
@@ -2269,8 +2268,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       case 0: return 'Dashboard';
       case 1: return 'Calendar';
       case 2: return 'Journal';
-      case 3: return 'Foco do Dia (Tasks)';
-      case 4: return 'Jornadas (Goals)';
+      case 3: return 'Tarefas';
+      case 4: return 'Metas';
       default: return 'Dashboard';
     }
   }
@@ -2279,9 +2278,15 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
     Widget? fab;
-    // STANDARD ACCESS: Button available for all paid plans (Essencial, Desperta, Sinergia)
-    // Assuming subscription.isActive covers these.
-    if (_userData != null && _userData!.subscription.isActive) {
+    // Only show FAB on mobile via Scaffold - Desktop FAB is inside the layout
+    if (!isDesktop && _userData != null && _sidebarIndex == 0 && !_isEditMode) {
+      fab = FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        shape: const CircleBorder(),
+        heroTag: 'dashboard_fab',
+        onPressed: _handleAddTask,
+        child: const Icon(Icons.add, color: Colors.white),
+      );
     }
     return Scaffold(
       body: ScreenInteractionListener(
@@ -2297,6 +2302,21 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildDesktopLayout() {
+    // Build FAB for desktop - positioned inside the layout
+    Widget? desktopFab;
+    if (_userData != null && _sidebarIndex == 0 && !_isEditMode) {
+      desktopFab = TransparentFabWrapper(
+        controller: _fabOpacityController,
+        child: FloatingActionButton(
+          backgroundColor: AppColors.primary,
+          shape: const CircleBorder(),
+          heroTag: 'dashboard_fab_desktop',
+          onPressed: _handleAddTask,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      );
+    }
+
     return AssistantLayoutManager(
       isMobile: false,
       isAiSidebarOpen: _isAiSidebarOpen,
@@ -2309,60 +2329,73 @@ class _DashboardScreenState extends State<DashboardScreen>
               onClose: () => setState(() => _isAiSidebarOpen = false),
             )
           : const SizedBox.shrink(),
-      child: Column(
+      child: Stack(
         children: [
-          CustomAppBar(
-            userData: _userData,
-            menuAnimationController: _menuAnimationController,
-            isEditMode: _isEditMode,
-            actions: [
-              if (!_isAiSidebarOpen)
-                IconButton(
-                  icon: const Icon(Icons.chat_bubble_outline),
-                  color: AppColors.primaryText,
-                  tooltip: 'Sincro IA',
-                  onPressed: () {
-                    setState(() {
-                      _isAiSidebarOpen = true;
-                    });
-                  },
+          Column(
+            children: [
+              CustomAppBar(
+                userData: _userData,
+                menuAnimationController: _menuAnimationController,
+                isEditMode: _isEditMode,
+                showSearch: _sidebarIndex == 0,
+                actions: [
+                  if (!_isAiSidebarOpen)
+                    IconButton(
+                      icon: const Icon(Icons.chat_bubble_outline),
+                      color: AppColors.primaryText,
+                      tooltip: 'Sincro IA',
+                      onPressed: () {
+                        setState(() {
+                          _isAiSidebarOpen = true;
+                        });
+                      },
+                    ),
+                  const SizedBox(width: 8),
+                ],
+                onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+                    ? _openReorderModal
+                    : null,
+                onSearchChanged: (query) {
+                  setState(() {
+                    _searchQuery = query;
+                    _buildCardList();
+                  });
+                },
+                onMenuPressed: () {
+                  setState(() {
+                    _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
+                    _isDesktopSidebarExpanded
+                        ? _menuAnimationController.forward()
+                        : _menuAnimationController.reverse();
+                  });
+                },
+              ),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_userData != null)
+                      DashboardSidebar(
+                          isExpanded: _isDesktopSidebarExpanded,
+                          selectedIndex: _sidebarIndex,
+                          userData: _userData!,
+                          isMobile: false,
+                          onDestinationSelected: _navigateToPage),
+                     Expanded(
+                       child: _buildCurrentPage(),
+                     ),
+                  ],
                 ),
-              const SizedBox(width: 8),
+              ),
             ],
-            onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
-                ? _openReorderModal
-                : null,
-            onSearchChanged: (query) {
-              setState(() {
-                _searchQuery = query;
-                _buildCardList();
-              });
-            },
-            onMenuPressed: () {
-              setState(() {
-                _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
-                _isDesktopSidebarExpanded
-                    ? _menuAnimationController.forward()
-                    : _menuAnimationController.reverse();
-              });
-            },
           ),
-          Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_userData != null)
-                  DashboardSidebar(
-                      isExpanded: _isDesktopSidebarExpanded,
-                      selectedIndex: _sidebarIndex,
-                      userData: _userData!,
-                      onDestinationSelected: _navigateToPage),
-                 Expanded(
-                   child: _buildCurrentPage(),
-                 ),
-              ],
+          // FAB positioned inside the dashboard area
+          if (desktopFab != null)
+            Positioned(
+              right: 16,
+              bottom: 16,
+              child: desktopFab,
             ),
-          ),
         ],
       ),
     );
@@ -2391,6 +2424,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 userData: _userData,
                 menuAnimationController: _menuAnimationController,
                 isEditMode: _isEditMode,
+                showSearch: _sidebarIndex == 0, // Only show search on Dashboard tab
                 onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
                     ? _openReorderModal
                     : null,
@@ -2448,6 +2482,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                     isExpanded: true,
                     selectedIndex: _sidebarIndex,
                     userData: _userData!,
+                    isMobile: true, // NOVO
                     onDestinationSelected: (index) {
                       _navigateToPage(index);
                     },

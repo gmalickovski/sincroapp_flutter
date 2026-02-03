@@ -113,156 +113,183 @@ class _AddContactDialogState extends State<AddContactDialog> {
 
   @override
   Widget build(BuildContext context) {
-    // Floating centered dialog design
-    return Dialog(
-      backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 0,
-      insetPadding: const EdgeInsets.all(24), 
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(
-          maxWidth: 500, // Max width for tablet/desktop
-          maxHeight: 600, // Max height
+    // Bottom Sheet design matching TagSelectionModal/GoalSelectionModal
+    return Container(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.85, // Updated to 0.85 based on user preference or standard
+      ),
+      padding: EdgeInsets.fromLTRB(
+          16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
+      decoration: const BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24.0),
+          topRight: Radius.circular(24.0),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+            child: Row(
+              children: [
+                 IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 24),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: 'Fechar',
+                  ),
+                Expanded(
+                  child: Text(
                     'Adicionar Contato',
+                    textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                          color: Colors.white,
+                          color: AppColors.primaryText,
                           fontWeight: FontWeight.bold,
-                          fontSize: 20,
+                          fontSize: 18, // Adjusted to match other modals
                         ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              
-              const SizedBox(height: 24),
-              
-              // Search Input
-              TextField(
-                controller: _searchController,
-                style: const TextStyle(color: Colors.white),
-                onChanged: _onSearchChanged,
-                decoration: InputDecoration(
-                  hintText: 'Buscar por @username...',
-                  hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
-                  // Inherits standard AppTheme input decoration
                 ),
-                autofillHints: const [], // Explicitly empty to disable autofill
-                enableSuggestions: false,
-                autocorrect: false,
-                keyboardType: TextInputType.text,
-                textInputAction: TextInputAction.search,
-              ),
-              
-              const SizedBox(height: 16),
-              
-              // Success Feedback
-              if (_successMessage != null)
-                Container(
-                   margin: const EdgeInsets.only(bottom: 16),
-                   padding: const EdgeInsets.all(12),
-                   decoration: BoxDecoration(
-                     color: Colors.green.withValues(alpha: 0.15),
-                     borderRadius: BorderRadius.circular(8),
-                     border: Border.all(color: Colors.green.withOpacity(0.5)),
-                   ),
-                   child: Row(
-                     children: [
-                       const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                       const SizedBox(width: 8),
-                       Expanded(
-                         child: Text(
-                           _successMessage!,
-                           style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500),
-                         ),
-                       ),
-                     ],
-                   ),
-                ),
-
-              // Results List or Status
-              if (_isLoading)
-                 const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 32.0),
-                    child: Center(child: CircularProgressIndicator()),
-                 )
-              else if (_searchResults.isEmpty) 
-                 Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 32.0),
-                    child: Center(
-                      child: Text(
-                        _searchController.text.isEmpty 
-                            ? 'Digite o nome de usuário para buscar.\nO convite será enviado após sua confirmação.'
-                            : 'Nenhum usuário encontrado com esse nome.',
-                        style: const TextStyle(color: AppColors.secondaryText),
-                        textAlign: TextAlign.center,
+                // Empty SizedBox to balance the IconButton
+                const SizedBox(width: 48),
+              ],
+            ),
+          ),
+          
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                    const SizedBox(height: 16),
+                  
+                  // Search Input
+                  TextField(
+                    controller: _searchController,
+                    style: const TextStyle(color: Colors.white),
+                    onChanged: _onSearchChanged,
+                    decoration: InputDecoration(
+                      hintText: 'Buscar por @username...',
+                      hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
+                      prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                      filled: true,
+                      fillColor: AppColors.background,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.border),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
                       ),
                     ),
-                 )
-              else
-                   Flexible(
-                   child: ListView.builder(
-                     shrinkWrap: true,
-                     itemCount: _searchResults.length,
-                     itemBuilder: (context, index) {
-                       final user = _searchResults[index];
-                       final contactCandidate = ContactModel.fromUserModel(user);
-                       
-                       // Check if already a contact or request pending
-                       final isAlreadyContact = widget.existingContactIds.contains(user.uid);
-                       final isPending = _pendingRequests.contains(user.uid);
-                       final showCheck = isAlreadyContact || isPending;
+                    autofillHints: const [], 
+                    enableSuggestions: false,
+                    autocorrect: false,
+                    keyboardType: TextInputType.text,
+                    textInputAction: TextInputAction.search,
+                  ),
+                  
+                  const SizedBox(height: 16),
+                  
+                  // Success Feedback
+                  if (_successMessage != null)
+                    Container(
+                       margin: const EdgeInsets.only(bottom: 16),
+                       padding: const EdgeInsets.all(12),
+                       decoration: BoxDecoration(
+                         color: Colors.green.withValues(alpha: 0.15),
+                         borderRadius: BorderRadius.circular(8),
+                         border: Border.all(color: Colors.green.withOpacity(0.5)),
+                       ),
+                       child: Row(
+                         children: [
+                           const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                           const SizedBox(width: 8),
+                           Expanded(
+                             child: Text(
+                               _successMessage!,
+                               style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500),
+                             ),
+                           ),
+                         ],
+                       ),
+                    ),
 
-                       return ContactListItem(
-                          contact: contactCandidate,
-                          onTap: () {}, 
-                          customTrailing: showCheck 
-                            ? Container(
-                                height: 36,
-                                width: 36,
-                                alignment: Alignment.centerRight, // Align with typical trailing position
-                                child: const Icon(
-                                  Icons.check, 
-                                  color: AppColors.tertiaryText,
-                                  size: 24,
-                                ),
-                              )
-                            : SizedBox(
-                                height: 40, 
-                                width: 40,
-                                child: IconButton(
-                                  onPressed: () => _addContact(user),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: AppColors.primary,
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  // Results List or Status
+                  if (_isLoading)
+                     const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 32.0),
+                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                     )
+                  else if (_searchResults.isEmpty) 
+                     Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 32.0),
+                        child: Center(
+                          child: Text(
+                            _searchController.text.isEmpty 
+                                ? 'Digite o nome de usuário para buscar.\nO convite será enviado após sua confirmação.'
+                                : 'Nenhum usuário encontrado com esse nome.',
+                            style: const TextStyle(color: AppColors.secondaryText),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                     )
+                  else
+                       ListView.separated(
+                         shrinkWrap: true,
+                         physics: const NeverScrollableScrollPhysics(),
+                         itemCount: _searchResults.length,
+                         separatorBuilder: (context, index) => const SizedBox(height: 8),
+                         itemBuilder: (context, index) {
+                           final user = _searchResults[index];
+                           final contactCandidate = ContactModel.fromUserModel(user);
+                           
+                           // Check if already a contact or request pending
+                           final isAlreadyContact = widget.existingContactIds.contains(user.uid);
+                           final isPending = _pendingRequests.contains(user.uid);
+                           final showCheck = isAlreadyContact || isPending;
+
+                           return ContactListItem(
+                              contact: contactCandidate,
+                              onTap: () {}, 
+                              customTrailing: showCheck 
+                                ? Container(
+                                    height: 36,
+                                    width: 36,
+                                    alignment: Alignment.centerRight, 
+                                    child: const Icon(
+                                      Icons.check, 
+                                      color: AppColors.tertiaryText,
+                                      size: 24,
+                                    ),
+                                  )
+                                : SizedBox(
+                                    height: 40, 
+                                    width: 40,
+                                    child: IconButton(
+                                      onPressed: () => _addContact(user),
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: AppColors.primary,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                      ),
+                                      icon: const Icon(Icons.add, color: Colors.white, size: 24),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.add, color: Colors.white, size: 24),
-                                ),
-                              ),
-                       );
-                     },
-                   ),
-                 ),
-            ],
+                           );
+                         },
+                       ),
+                ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

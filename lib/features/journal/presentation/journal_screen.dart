@@ -10,7 +10,7 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'journal_editor_screen.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'widgets/journal_entry_card.dart';
@@ -153,7 +153,7 @@ class _JournalScreenState extends State<JournalScreen> {
           children: [
             Padding(
               padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 40 : 16, 24, isDesktop ? 40 : 16, 16),
+                  isDesktop ? 40 : 16, 8, isDesktop ? 40 : 16, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -298,22 +298,12 @@ class _JournalScreenState extends State<JournalScreen> {
       ),
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
-        child: (widget.userData.subscription.isActive &&
-                widget.userData.subscription.plan == SubscriptionPlan.premium)
-            ? ExpandingAssistantFab(
-                onPrimary: () => _openJournalEditor(),
-                primaryIcon: Icons.edit_note,
-                primaryTooltip: 'Nova Anotação',
-                onOpenAssistant: (message) => AssistantPanel.show(context, widget.userData, initialMessage: message),
-              )
-            : FloatingActionButton(
+                  child: FloatingActionButton(
                 onPressed: () => _openJournalEditor(),
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
+                shape: const CircleBorder(),
                 child: const Icon(Icons.add),
               ),
       ),

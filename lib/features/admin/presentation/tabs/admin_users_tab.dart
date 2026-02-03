@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
@@ -164,16 +165,6 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Gestão de Usuários (${_allUsers.length})',
-                style: const TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: 24, 
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5
-                ),
-              ),
-              const SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(
@@ -333,107 +324,111 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showEditDialog(user), // Click card triggers edit
+          onTap: () => _showEditDialog(user),
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Avatar Area
-                Hero(
-                  tag: 'avatar_${user.uid}',
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: planColor, width: 2),
-                    ),
-                    child: CircleAvatar(
-                      radius: 24,
-                      backgroundColor: planColor.withOpacity(0.1),
-                      backgroundImage: user.photoUrl != null
-                          ? NetworkImage(user.photoUrl!)
-                          : null,
-                      child: user.photoUrl == null
-                          ? Icon(Icons.person, color: planColor, size: 24)
-                          : null,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                
-                // Info Area
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              (user.primeiroNome.isEmpty && user.sobrenome.isEmpty) 
-                                 ? 'Usuário Sem Nome' 
-                                 : '${user.primeiroNome} ${user.sobrenome}',
-                              style: const TextStyle(
-                                color: AppColors.primaryText,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (user.isAdmin)
-                             Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.amber.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: const Text('ADMIN', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
-                             )
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.email,
-                        style: const TextStyle(
-                          color: AppColors.secondaryText,
-                          fontSize: 13,
+          child: Stack(
+            children: [
+              // Main Content
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 40, 16), // Right padding for menu button
+                child: Row(
+                  children: [
+                    // Avatar Area using unified UserAvatar
+                    Hero(
+                      tag: 'avatar_${user.uid}',
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: planColor, width: 2),
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        child: UserAvatar(
+                          photoUrl: user.photoUrl,
+                          firstName: user.primeiroNome,
+                          lastName: user.sobrenome,
+                          radius: 24,
+                        ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
+                    ),
+                    const SizedBox(width: 16),
+                    
+                    // Info Area
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildMiniBadge(
-                            user.planDisplayName, 
-                            planColor, 
-                            isActive: isActiveSubscription
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  (user.primeiroNome.isEmpty && user.sobrenome.isEmpty) 
+                                     ? 'Usuário Sem Nome' 
+                                     : '${user.primeiroNome} ${user.sobrenome}',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryText,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (user.isAdmin)
+                                 Container(
+                                    margin: const EdgeInsets.only(left: 8),
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.amber.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('ADMIN', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
+                                 )
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          if (user.subscription.systemPlan != null)
-                             _buildMiniBadge('Sistema (Manual)', Colors.amber.shade700, isActive: true),
-                          if (user.subscription.systemPlan != null)
-                             const SizedBox(width: 8),
-                          
-                           if (!isActiveSubscription)
-                             _buildMiniBadge('Expirado', Colors.red, isActive: true),
-                           
-                           const SizedBox(width: 8),
-                           if (_userUsage.containsKey(user.uid) && _userUsage[user.uid]! > 0)
-                              _buildMiniBadge('${NumberFormat.compact().format(_userUsage[user.uid])} Tokens', Colors.purple, isActive: true),
+                          const SizedBox(height: 4),
+                          Text(
+                            user.email,
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8.0,
+                            runSpacing: 8.0,
+                            children: [
+                              _buildMiniBadge(
+                                user.planDisplayName, 
+                                planColor, 
+                                isActive: isActiveSubscription
+                              ),
+                              if (user.subscription.systemPlan != null)
+                                 _buildMiniBadge('Sistema (Manual)', Colors.amber.shade700, isActive: true),
+                              
+                               if (!isActiveSubscription)
+                                 _buildMiniBadge('Expirado', Colors.red, isActive: true),
+                               
+                               if (_userUsage.containsKey(user.uid) && _userUsage[user.uid]! > 0)
+                                  _buildMiniBadge('${NumberFormat.compact().format(_userUsage[user.uid])} Tokens', Colors.purple, isActive: true),
+                            ],
+                          )
                         ],
-                      )
-                    ],
-                  ),
+                      ),
+                    ),
+                  ],
                 ),
-                
-                // Action Menu
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
+              ),
+              
+              // Positioned Action Menu at top-right
+              Positioned(
+                top: 4,
+                right: 4,
+                child: PopupMenuButton<String>(
+                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText, size: 20),
+                  padding: EdgeInsets.zero,
                   color: AppColors.cardBackground,
                   onSelected: (value) {
                     if (value == 'edit') {
@@ -465,8 +460,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),

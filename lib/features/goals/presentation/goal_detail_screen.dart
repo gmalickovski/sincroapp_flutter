@@ -21,7 +21,7 @@ import 'package:sincro_app_flutter/features/tasks/services/task_action_service.d
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upload_dialog.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_filter_panel.dart';
@@ -749,24 +749,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               ? null
               : TransparentFabWrapper(
                   controller: _fabOpacityController,
-                  child: (widget.userData.subscription.isActive &&
-                          widget.userData.subscription.plan ==
-                              SubscriptionPlan.premium)
-                      ? ExpandingAssistantFab(
-                          onPrimary: () => _addMilestone(currentGoal),
-                          primaryIcon: Icons.place, // Ação principal: Novo Marco
-                          fabIcon: Icons.add, // Toggle do menu: "+" (Expandir)
-                          primaryTooltip: 'Novo Marco',
-                          onOpenAssistant: (message) {
-                            AssistantPanel.show(context, widget.userData,
-                                initialMessage: message);
-                          },
-                        )
-                      : FloatingActionButton(
+                  child: FloatingActionButton(
                           onPressed: () => _addMilestone(currentGoal),
                           backgroundColor: AppColors.primary,
                           tooltip: 'Novo Marco',
                           heroTag: 'fab_goal_detail',
+                          shape: const CircleBorder(),
                           child: const Icon(Icons.place, color: Colors.white), // Free: Novo Marco direto
                         ),
                 ),

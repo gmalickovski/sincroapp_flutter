@@ -246,27 +246,31 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                       children: [
                         Icon(Icons.calendar_month, color: (isGood ? feedbackColor : AppColors.primaryAccent), size: 20),
                         const SizedBox(width: 8),
-                         Column(
-                           crossAxisAlignment: CrossAxisAlignment.start,
-                           children: [
-                             Text(
-                                // Check if time was specified. If not (params['time_specified'] == false), show only Date
-                                timeSpecified
-                                    // If specified (or null/default), show Date + Time
-                                    ? DateFormat("EEEE, d 'de' MMMM • HH:mm", 'pt_BR').format(_selectedDate!)
-                                    // If NOT specified, show only Date
-                                    : DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(_selectedDate!),
-                               style: const TextStyle(
-                                 color: Colors.white,
-                                 fontSize: 16,
-                                 fontWeight: FontWeight.w600,
-                               ),
-                             ),
+                         Expanded(
+                           child: Column(
+                             crossAxisAlignment: CrossAxisAlignment.start,
+                             children: [
                                Text(
-                                 feedbackText,
-                                 style: TextStyle(color: feedbackColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                  // Check if time was specified. If not (params['time_specified'] == false), show only Date
+                                  timeSpecified
+                                      // If specified (or null/default), show Date + Time
+                                      ? DateFormat("EEEE, d 'de' MMMM • HH:mm", 'pt_BR').format(_selectedDate!)
+                                      // If NOT specified, show only Date
+                                      : DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(_selectedDate!),
+                                 style: const TextStyle(
+                                   color: Colors.white,
+                                   fontSize: 16,
+                                   fontWeight: FontWeight.w600,
+                                 ),
+                                 softWrap: true,
                                ),
-                           ],
+                                 Text(
+                                   feedbackText,
+                                   style: TextStyle(color: feedbackColor, fontSize: 11, fontWeight: FontWeight.bold),
+                                   softWrap: true,
+                                 ),
+                             ],
+                           ),
                          ),
                       ],
                     ),

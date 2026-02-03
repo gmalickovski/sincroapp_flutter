@@ -1034,8 +1034,8 @@ class NumerologyEngine {
         date.isBefore(aniversarioNoAno) ? date.year - 1 : date.year;
 
     final anoPessoal =
-        _reduzirNumero(dataNasc.day + dataNasc.month + anoParaCalculo);
-    final mesPessoal = _reduzirNumero(anoPessoal + date.month);
+        _reduzirNumero(dataNasc.day + dataNasc.month + anoParaCalculo, mestre: true);
+    final mesPessoal = _reduzirNumero(anoPessoal + date.month, mestre: true);
     final diaPessoal = _reduzirNumero(
         mesPessoal + _reduzirNumero(date.day, mestre: true),
         mestre: true);

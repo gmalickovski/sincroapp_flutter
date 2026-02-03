@@ -15,7 +15,7 @@ import 'package:uuid/uuid.dart';
 import 'widgets/task_input_modal.dart';
 import 'widgets/task_detail_modal.dart';
 import 'widgets/tag_selection_modal.dart';
-import 'package:sincro_app_flutter/features/assistant/widgets/expanding_assistant_fab.dart';
+
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 
@@ -790,18 +790,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // --- INÍCIO DA MUDANÇA (Solicitação 1): Esconde FAB em modo de seleção ---
       floatingActionButton: _isSelectionMode
           ? null
-          : (widget.userData != null &&
-                  widget.userData!.subscription.isActive &&
-                  widget.userData!.subscription.plan ==
-                      SubscriptionPlan.premium)
-              ? ExpandingAssistantFab(
-                  onPrimary: _openAddTaskModal,
-                  primaryIcon: Icons.add_task,
-                  primaryTooltip: 'Nova Tarefa',
-                  onOpenAssistant: (message) =>
-                      AssistantPanel.show(context, widget.userData!, initialMessage: message),
-                )
-              : FloatingActionButton(
+          : FloatingActionButton(
                   onPressed: _openAddTaskModal,
                   backgroundColor: AppColors.primary,
                   tooltip: 'Adicionar Tarefa',
@@ -866,7 +855,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

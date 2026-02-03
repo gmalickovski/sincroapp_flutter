@@ -8,7 +8,8 @@ import 'package:sincro_app_flutter/features/settings/presentation/settings_scree
 import 'package:sincro_app_flutter/features/authentication/presentation/login/login_screen.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/admin_screen.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // NOVO
-import 'package:sincro_app_flutter/features/notifications/presentation/notification_center_screen.dart'; // NOVO
+import 'package:sincro_app_flutter/features/notifications/presentation/notification_center_screen.dart';
+import 'package:sincro_app_flutter/common/widgets/user_avatar.dart'; // NOVO
 
 class DashboardSidebar extends StatelessWidget {
   final bool isExpanded;
@@ -22,7 +23,10 @@ class DashboardSidebar extends StatelessWidget {
     required this.selectedIndex,
     required this.onDestinationSelected,
     required this.userData,
+    this.isMobile = false, // NOVO
   });
+
+  final bool isMobile; // NOVO
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +34,9 @@ class DashboardSidebar extends StatelessWidget {
       {'icon': Icons.home_outlined, 'label': 'Rota do Dia'},
       {'icon': Icons.calendar_today_outlined, 'label': 'Agenda'},
       {'icon': Icons.book_outlined, 'label': 'Diário de Bordo'},
-      {'icon': Icons.check_box_outlined, 'label': 'Foco do Dia'},
+      {'icon': Icons.check_box_outlined, 'label': 'Tarefas'},
       // Metas/Jornadas: troca ícone de "alvo" para "bandeira" (flag)
-      {'icon': Icons.flag_outlined, 'label': 'Jornadas'},
+      {'icon': Icons.flag_outlined, 'label': 'Metas'},
     ];
 
     return AnimatedContainer(
@@ -48,6 +52,66 @@ class DashboardSidebar extends StatelessWidget {
       child: SafeArea(
         child: Column(
           children: [
+            // --- AVATAR NO MOBILE (NOVO) ---
+            if (isMobile) ...[
+              const SizedBox(height: 24),
+              GestureDetector(
+                onTap: () {
+                   Navigator.of(context).push(MaterialPageRoute(
+                    builder: (context) => SettingsScreen(userData: userData),
+                  ));
+                },
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: isExpanded ? 20.0 : 8.0),
+                  child: Row(
+                    mainAxisAlignment: isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+                    children: [
+                       // Avatar on the LEFT now
+                       UserAvatar(
+                        photoUrl: userData.photoUrl,
+                        firstName: userData.primeiroNome,
+                        lastName: userData.sobrenome,
+                        radius: 20, 
+                      ),
+                       if (isExpanded) ...[
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                userData.primeiroNome, // Already first name
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16, // Reduced from 18
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2), 
+                              if (userData.username != null && userData.username!.isNotEmpty)
+                                Text(
+                                  "@${userData.username}",
+                                  style: const TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 13, // Slightly smaller
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                       ],
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Divider(color: Color(0x804B5563), height: 1),
+            ],
+            // -------------------------------
             Expanded(
               child: ListView(
                 // Ajusta padding geral da lista
