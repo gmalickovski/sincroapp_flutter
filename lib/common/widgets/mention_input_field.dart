@@ -260,6 +260,7 @@ class _MentionInputFieldState extends State<MentionInputField> {
       child: TextField(
         controller: widget.controller,
         focusNode: widget.focusNode,
+        autofillHints: const [], // Prevent browser password save prompt
         maxLines: widget.maxLines,
         style: const TextStyle(color: Colors.white),
         decoration: widget.decoration ?? InputDecoration(

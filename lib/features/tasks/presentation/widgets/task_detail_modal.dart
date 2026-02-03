@@ -694,7 +694,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: TextFormField(
+                    onChanged: (_) => setState(() {}),
                     controller: _textController,
+                    autofillHints: const [], // Prevent browser password save prompt
                     style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 18,
@@ -1216,6 +1218,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   child: TextField(
                     controller: _tagInputController,
                     focusNode: _tagFocusNode,
+                    autofillHints: const [], // Prevent browser password save prompt
                     textAlignVertical: TextAlignVertical.top,
                     style: const TextStyle(
                         color: AppColors.secondaryText, fontSize: 14),

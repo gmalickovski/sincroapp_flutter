@@ -209,6 +209,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         child: TextField(
           controller: controller,
           focusNode: focusNode,
+          autofillHints: const [], // Prevent browser password save prompt
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           inputFormatters: [

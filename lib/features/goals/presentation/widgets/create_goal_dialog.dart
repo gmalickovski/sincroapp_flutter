@@ -242,6 +242,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                       children: [
                         TextFormField(
                           controller: _titleController,
+                          autofillHints: const [], // Prevent browser password save prompt
                           style: const TextStyle(color: Colors.white, fontSize: 16),
                           decoration: _buildInputDecoration(
                             labelText: 'Título da Jornada *',
@@ -263,6 +264,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                         
                         TextFormField(
                           controller: _descriptionController,
+                          autofillHints: const [], // Prevent browser password save prompt
                           style: const TextStyle(color: Colors.white, fontSize: 16),
                           maxLines: 5,
                           minLines: 3,

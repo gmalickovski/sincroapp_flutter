@@ -247,6 +247,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                     children: [
                       TextFormField(
                         controller: _titleController,
+                        autofillHints: const [], // Prevent browser password save prompt
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -270,6 +271,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       const SizedBox(height: 24),
                       TextFormField(
                         controller: _descriptionController,
+                        autofillHints: const [], // Prevent browser password save prompt
                         style: const TextStyle(color: Colors.white, fontSize: 16),
                         maxLines: 6,
                         minLines: 4,

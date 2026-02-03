@@ -211,6 +211,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
         TextField(
           controller: _newTagController,
           autofocus: true,
+          autofillHints: const [], // Prevent browser password save prompt
           style: const TextStyle(color: AppColors.primaryText),
           decoration: InputDecoration(
             hintText: 'Ex: Trabalho',

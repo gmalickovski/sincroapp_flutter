@@ -14,7 +14,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_onboarding_modal.dart';
+
 import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
@@ -690,53 +690,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   },
                 ),
 
-                if (milestones.isEmpty && !_isLoading)
-                  GoalOnboardingModal(
-                    onAddMilestone: (String title, String? dateStr) {
-                      DateTime? dueDate;
-                      if (dateStr != null) {
-                        try {
-                          final parts = dateStr.split('/');
-                          if (parts.length == 3) {
-                            dueDate = DateTime(
-                              int.parse(parts[2]), // ano
-                              int.parse(parts[1]), // mês
-                              int.parse(parts[0]), // dia
-                            ).toUtc();
-                          }
-                        } catch (e) {
-                          debugPrint('Erro ao converter data: $e');
-                        }
-                      }
 
-                      final dateForPersonalDay = dueDate ?? DateTime.now().toUtc();
-                      final int? personalDay = _calculatePersonalDay(dateForPersonalDay);
-
-                      final newTask = TaskModel(
-                        id: '',
-                        text: title,
-                        createdAt: DateTime.now().toUtc(),
-                        dueDate: dueDate,
-                        journeyId: widget.initialGoal.id,
-                        journeyTitle: widget.initialGoal.title,
-                        tags: [],
-                        personalDay: personalDay,
-                      );
-
-                      _supabaseService.addTask(widget.userData.uid, newTask).catchError((error) {
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Erro ao salvar marco: $error'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      });
-                    },
-                    onClose: () {},
-                    userData: widget.userData,
-                    onSuggestWithAI: null,
-                  ),
 
                 if (_isLoading)
                   Container(

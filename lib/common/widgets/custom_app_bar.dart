@@ -223,6 +223,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
+                  autofillHints: const [], // Prevent browser password save prompt
                   style: const TextStyle(color: Colors.white, fontSize: 14),
                   textAlignVertical: TextAlignVertical.center, // Center vertically
                   decoration: const InputDecoration(

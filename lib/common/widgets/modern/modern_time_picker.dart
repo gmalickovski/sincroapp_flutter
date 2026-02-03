@@ -302,6 +302,7 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
       child: TextField(
         controller: controller,
         focusNode: focus,
+        autofillHints: const [], // Prevent browser password save prompt
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],

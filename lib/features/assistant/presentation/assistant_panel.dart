@@ -635,6 +635,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                             obscureText: false, 
                             enableSuggestions: false, 
                             autocorrect: false,
+                            autofillHints: const [], // Prevent browser password save prompt
                             style: const TextStyle(color: Colors.white, fontSize: 15),
                             decoration: const InputDecoration(
                               hintText: 'Pergunte sobre sua energia...',
