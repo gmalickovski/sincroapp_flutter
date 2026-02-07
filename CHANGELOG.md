@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.0...v1.2.1) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** upgrade flutter version to 3.24.1 to support dart 3.4+ ([c0e4521](https://github.com/gmalickovski/sincroapp_flutter/commit/c0e45219e342a66753a2165308f2734d297b6c80))
+
 ## [1.2.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.1.1...v1.2.0) (2026-02-07)
 
 
