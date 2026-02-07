@@ -25,6 +25,15 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # Cria o arquivo .env (necessário para o build)
+      - name: Create .env
+        run: |
+          if [ -n "${{ secrets.ENV_FILE }}" ]; then
+            echo "${{ secrets.ENV_FILE }}" > .env
+          else
+            touch .env
+          fi
+
       # 4. COMPILA O SITE
       - name: Build Web
         run: flutter build web --release --no-tree-shake-icons
