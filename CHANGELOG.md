@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.4...v1.2.5) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** use correct secret name VPS_USERNAME instead of VPS_USER ([9ec49ee](https://github.com/gmalickovski/sincroapp_flutter/commit/9ec49ee4e48a5719e9202c820ba58b433cafc1fd))
+
 ### [1.2.4](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.3...v1.2.4) (2026-02-07)
 
 ### [1.2.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.2...v1.2.3) (2026-02-07)
