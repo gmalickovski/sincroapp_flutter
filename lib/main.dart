@@ -106,34 +106,40 @@ Future<void> main() async {
   // ========================================
   // INICIALIZAÇÃO SUPABASE (USANDO .ENV)
   // ========================================
+  // ========================================
+  // INICIALIZAÇÃO SUPABASE (ROBUST FAILSAFE)
+  // ========================================
+  
+  // 1. Definição das chaves (Hardcoded para garantir funcionamento em Prod se .env falhar)
+  const String kSupabaseUrl = 'https://supabase.studiomlk.com.br';
+  const String kSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3MTYzMTYyLCJleHAiOjIwODI1MjMxNjIsInJlZiI6InNpbmNyb2FwcF9hbm9uIn0.fxAcgzxGZe3ybA1-Ocu2AhvlNPuM2-ysE05IAcgfBaA';
+
   try {
-    // Tenta pegar do .env
+    // Tenta pegar do .env carregado anteriormente, se disponível
     final envUrl = dotenv.env['SUPABASE_URL'];
-    final envKey = dotenv.env['ANON_KEY'] ?? dotenv.env['SUPABASE_ANON_KEY']; // Tenta os dois nomes
-
-    // debugPrint('🔍 DEBUG ENV: URL found? ${envUrl != null}');
-    // debugPrint('🔍 DEBUG ENV: KEY found? ${envKey != null}');
-    // if (envKey != null) debugPrint('🔍 DEBUG KEY Start: ${envKey.substring(0, 10)}...');
+    final envKey = dotenv.env['ANON_KEY'] ?? dotenv.env['SUPABASE_ANON_KEY'];
     
-    // Fallback
-    final fallbackUrl = const String.fromEnvironment('SUPABASE_URL');
-    final fallbackKey = const String.fromEnvironment('SUPABASE_ANON_KEY'); 
-    
-    final finalUrl = envUrl ?? fallbackUrl;
-    // Hardcoded fallback for SAFETY if all else fails (Localhost Dev)
-    final finalKey = envKey ?? (fallbackKey.isNotEmpty ? fallbackKey : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY3MTYzMTYyLCJleHAiOjIwODI1MjMxNjIsInJlZiI6InNpbmNyb2FwcF9hbm9uIn0.fxAcgzxGZe3ybA1-Ocu2AhvlNPuM2-ysE05IAcgfBaA');
-
-    // debugPrint('🚀 Initializing Supabase with:');
-    // debugPrint('   URL: $finalUrl');
-    // debugPrint('   KEY: ${finalKey.substring(0, 10)}... (Length: ${finalKey.length})');
+    // Usa env variables se existirem e não forem vazias, senão usa as constantes
+    final String finalUrl = (envUrl != null && envUrl.isNotEmpty) ? envUrl : kSupabaseUrl;
+    final String finalKey = (envKey != null && envKey.isNotEmpty) ? envKey : kSupabaseAnonKey;
 
     await Supabase.initialize(
-      url: finalUrl.isNotEmpty ? finalUrl : 'https://supabase.studiomlk.com.br', 
+      url: finalUrl,
       anonKey: finalKey,
     );
-    // debugPrint('🚀 Supabase inicializado com sucesso usando .env!');
+    debugPrint('🚀 Supabase inicializado com sucesso! (${finalUrl})');
   } catch (e) {
-    debugPrint('❌ Erro ao inicializar Supabase: $e');
+    debugPrint('❌ Erro principal na inicialização do Supabase: $e');
+    // Tentativa final desesperada com constantes puras se a lógica acima falhou
+    try {
+        await Supabase.initialize(
+          url: kSupabaseUrl,
+          anonKey: kSupabaseAnonKey,
+        );
+        debugPrint('✅ Supabase inicializado via Failover Hardcoded.');
+    } catch (e2) {
+        debugPrint('💀 Falha catastrófica ao inicializar Supabase: $e2');
+    }
   }
 
   // Inicializa notificações sem Firebase
