@@ -48,7 +48,7 @@ jobs:
           port: 22
           # Copia o conteúdo da pasta build/web do GitHub para sua VPS
           source: "build/web/*"
-          target: "/var/www/sincroapp/html" # Caminho onde o Nginx lê o site
+          target: "/var/www/webapp/sincroapp_flutter/build/web" # Caminho onde o Nginx lê o site
           strip_components: 2 # Remove 'build/web' do caminho ao copiar
 
       # 6. Atualiza o Backend (Node.js) na mesma sequência
@@ -61,19 +61,27 @@ jobs:
           script: |
             # Comandos que rodam dentro da sua VPS
             echo "Iniciando atualização do Backend..."
-            cd /var/www/sincroapp/backend
             
-            # Atualiza o código
+            # Navega para a pasta do projeto (conforme update.sh)
+            cd /var/www/webapp/sincroapp_flutter
+            
+            # Atualiza o código (Backend e estrutura)
             git pull origin main
+            
+            # Navega para o servidor (Backend)
+            cd server
             
             # Instala dependências e reinicia
             npm install
-            pm2 restart sincro-api
+            pm2 restart sincroapp-server
+            
+            # Reinicia notificações se existir (conforme update.sh)
+            pm2 restart sincroapp-notifications || true
 
             # Ajusta permissões do Frontend Web (crítico para Nginx)
             echo "Ajustando permissões e recarregando Nginx..."
-            chown -R www-data:www-data /var/www/sincroapp/html
-            chmod -R 755 /var/www/sincroapp/html
+            chown -R www-data:www-data /var/www/webapp/sincroapp_flutter/build/web
+            chmod -R 755 /var/www/webapp/sincroapp_flutter/build/web
             systemctl reload nginx
             
             echo "Backend atualizado, Nginx recarregado e serviços operacionais!"
