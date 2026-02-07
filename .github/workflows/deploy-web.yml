@@ -51,12 +51,7 @@ jobs:
           target: "/var/www/sincroapp/html" # Caminho onde o Nginx lê o site
           strip_components: 2 # Remove 'build/web' do caminho ao copiar
 
-  deploy-server:
-    name: Update Node Backend
-    runs-on: ubuntu-latest
-    needs: deploy-web # Roda apenas se o deploy web funcionar (ou pode rodar em paralelo se preferir)
-    
-    steps:
+      # 6. Atualiza o Backend (Node.js) na mesma sequência
       - name: Restart Node Backend via SSH
         uses: appleboy/ssh-action@master
         with:
