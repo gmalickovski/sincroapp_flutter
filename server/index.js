@@ -890,6 +890,75 @@ const checkReminders = async () => {
 setInterval(checkReminders, 60000);
 console.log('[SERVER] Reminder polling started (60s interval).');
 
+// --- APP VERSION & CHANGELOG ---
+app.get('/api/version', async (req, res) => {
+    try {
+        const fs = require('fs');
+
+        // 1. Read Package.json for version
+        const packageJsonPath = path.resolve(__dirname, '../package.json');
+
+        if (!fs.existsSync(packageJsonPath)) {
+            console.error('[VERSION] package.json not found at:', packageJsonPath);
+            return res.status(404).json({ error: "package.json not found" });
+        }
+
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+        const version = packageJson.version;
+
+        // 2. Read Changelog for latest notes
+        const changelogPath = path.resolve(__dirname, '../CHANGELOG.md');
+        let latestNotes = '';
+
+        if (fs.existsSync(changelogPath)) {
+            const changelogContent = fs.readFileSync(changelogPath, 'utf8');
+
+            // Try to find the section for the current version
+            // Matches "## [1.1.0]" or "### [1.1.0]"
+            const versionHeaderRegex = new RegExp(`##\\s+\\[?${version.replace(/\./g, '\\.')}\\]?|###\\s+\\[?${version.replace(/\./g, '\\.')}\\]?`);
+            const matchIndex = changelogContent.search(versionHeaderRegex);
+
+            if (matchIndex !== -1) {
+                // Found current version header
+                // Extract until next version header
+                const contentFromVersion = changelogContent.substring(matchIndex);
+                const lines = contentFromVersion.split('\n');
+
+                // Keep lines until next check
+                const extractedLines = [];
+                // Add header (first line)
+                extractedLines.push(lines[0]);
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i];
+                    // Stop if line is another header (## [ or ### [)
+                    if (line.match(/^##\s+\[/) || (line.match(/^###\s+\[/) && !line.includes(version))) {
+                        break;
+                    }
+                    extractedLines.push(line);
+                }
+                latestNotes = extractedLines.join('\n').trim();
+            } else {
+                // If version specific notes not found, maybe show generic or first n lines?
+                // For now, simple fallback
+                latestNotes = `Versão ${version} lançada! Detalhes em breve.`;
+            }
+        } else {
+            console.warn('[VERSION] CHANGELOG.md not found at:', changelogPath);
+            latestNotes = "Notas de lançamento indisponíveis no momento.";
+        }
+
+        res.json({
+            version: version,
+            notes: latestNotes
+        });
+
+    } catch (error) {
+        console.error("Version API Error:", error);
+        res.status(500).json({ error: "Failed to fetch version info" });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });

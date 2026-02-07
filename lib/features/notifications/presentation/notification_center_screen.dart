@@ -7,6 +7,11 @@ import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/compatibility_suggestion_modal.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/notification_detail_modal.dart';
+import 'package:sincro_app_flutter/features/notifications/presentation/widgets/update_detail_modal.dart'; // NOVO import
+import 'package:package_info_plus/package_info_plus.dart'; // NOVO
+import 'package:http/http.dart' as http; // NOVO
+import 'dart:convert'; // NOVO
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // NOVO
 
 class NotificationCenterScreen extends StatefulWidget {
   final String userId;
@@ -24,6 +29,68 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   String _selectedFilter = 'all'; // all, invites, tasks, system
   Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+
+  // Update State
+  bool _updateAvailable = false;
+  String? _remoteVersion;
+  String? _changelog;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkForUpdate();
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      // 1. Get Local Version
+      final packageInfo = await PackageInfo.fromPlatform();
+      final localVersion = packageInfo.version;
+
+      // 2. Get Remote Version
+      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000'; // Fallback for dev
+      // Adjust for Android Emulator if needed
+      final apiUrl = Uri.parse('$baseUrl/api/version');
+      
+      final response = await http.get(apiUrl);
+      
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final remoteVersion = data['version'] as String;
+        final notes = data['notes'] as String;
+
+        // Simple semantic version comparison logic
+        if (_isNewerVersion(localVersion, remoteVersion)) {
+           if (mounted) {
+             setState(() {
+               _updateAvailable = true;
+               _remoteVersion = remoteVersion;
+               _changelog = notes;
+             });
+           }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking for updates: $e');
+    }
+  }
+
+  bool _isNewerVersion(String local, String remote) {
+    try {
+      List<int> lParts = local.split('.').map(int.parse).toList();
+      List<int> rParts = remote.split('.').map(int.parse).toList();
+      
+      for (int i = 0; i < 3; i++) {
+        int l = i < lParts.length ? lParts[i] : 0;
+        int r = i < rParts.length ? rParts[i] : 0;
+        if (r > l) return true;
+        if (r < l) return false;
+      }
+      return false;
+    } catch (e) {
+      return false; 
+    }
+  }
 
   void _toggleSelectionMode(String? initialId) {
     setState(() {
@@ -88,6 +155,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         child: Column(
           children: [
             _buildHeader(context),
+            if (_updateAvailable) _buildUpdateBanner(), // NOVO BANNER
             if (!_isSelectionMode) _buildFilterBar(),
             Expanded(
               child: StreamBuilder<List<NotificationModel>>(
@@ -382,6 +450,82 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
            type == NotificationType.contactAccepted ||
            type == NotificationType.reminder || 
            type == NotificationType.taskUpdate;
+  }
+
+  Widget _buildUpdateBanner() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            if (_remoteVersion != null && _changelog != null) {
+              UpdateDetailModal.show(
+                context, 
+                version: _remoteVersion!, 
+                changelog: _changelog!
+              );
+            }
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.system_update, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Nova Atualização Disponível!',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Versão $_remoteVersion - Toque para detalhes',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.9),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 

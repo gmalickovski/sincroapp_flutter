@@ -6,7 +6,8 @@ import 'tabs/account_settings_tab.dart';
 import 'tabs/numerology_settings_tab.dart';
 import 'tabs/plan_settings_tab.dart';
 import 'tabs/integrations_settings_tab.dart';
-import 'tabs/contacts_settings_tab.dart'; // NOVO import
+import 'tabs/contacts_settings_tab.dart'; 
+import 'tabs/about_settings_tab.dart'; // NOVO import
 
 class SettingsScreen extends StatefulWidget {
   final UserModel userData;
@@ -49,6 +50,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         icon: Icons.hub_outlined,
         title: 'Integrações',
         page: const IntegrationsSettingsTab(),
+      ),
+      (
+        icon: Icons.info_outline,
+        title: 'Sobre o App',
+        page: const AboutSettingsTab(),
       ),
     ];
   }
