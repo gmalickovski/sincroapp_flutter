@@ -36,7 +36,7 @@ jobs:
 
       # 4. COMPILA O SITE
       - name: Build Web
-        run: flutter build web --release --no-tree-shake-icons
+        run: flutter build web --release --base-href /app/ --no-tree-shake-icons
 
       # 5. Conecta na sua VPS e envia SÓ os arquivos prontos
       - name: Deploy to VPS via SSH
@@ -72,12 +72,15 @@ jobs:
             # Navega para o servidor (Backend)
             cd server
             
-            # Instala dependências e reinicia
+            # Instala dependências
             npm install
-            pm2 restart sincroapp-server
-            
-            # Reinicia notificações se existir (conforme update.sh)
-            pm2 restart sincroapp-notifications || true
+
+            # Reinicia na porta 4545 (Porta exclusiva para evitar conflitos)
+            echo "Iniciando servidor na porta 4545..."
+            export PORT=4545
+            pm2 delete sincroapp-server 2>/dev/null || true
+            pm2 start index.js --name sincroapp-server --time --no-autorestart
+            pm2 save
 
             # Ajusta permissões do Frontend Web (crítico para Nginx)
             echo "Ajustando permissões e recarregando Nginx..."
