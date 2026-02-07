@@ -18,7 +18,7 @@ jobs:
       # 2. Prepara o Flutter no ambiente do GitHub
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.19.0' # Ajuste conforme a versão do seu projeto (verifique com flutter --version)
+          flutter-version: '3.24.1' # Ajuste conforme a versão do seu projeto (verifique com flutter --version)
           channel: 'stable'
 
       # 3. Baixa as dependências
