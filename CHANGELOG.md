@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.2.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.1.1...v1.2.0) (2026-02-07)
+
+
+### Funcionalidades ✨
+
+* **system:** add in-app update notification and about screen ([60140e1](https://github.com/gmalickovski/sincroapp_flutter/commit/60140e16eabe6184dfd77cb9971ebe5edd2b6659))
+
 ### [1.1.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.1.0...v1.1.1) (2026-02-07)
 
 ## 1.1.0 (2026-02-07)
