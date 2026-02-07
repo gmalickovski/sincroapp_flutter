@@ -1,0 +1,21 @@
+{
+  "name": "sincro_app_flutter",
+  "version": "1.0.0",
+  "description": "Aplicativo de autoconhecimento e produtividade que une numerologia, IA e organização pessoal em uma experiência integrada.",
+  "main": "fix_ui.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "release": "standard-version"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "standard-version": "^9.5.0"
+  }
+}

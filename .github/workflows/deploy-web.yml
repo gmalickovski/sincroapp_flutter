@@ -1,0 +1,75 @@
+name: Deploy SincroApp Web & VPS
+
+# Dispara APENAS quando você sobe uma tag de versão (v1.0.0, etc)
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  deploy-web:
+    name: Build & Deploy Web
+    runs-on: ubuntu-latest
+    
+    steps:
+      # 1. Baixa o código do repositório
+      - uses: actions/checkout@v3
+
+      # 2. Prepara o Flutter no ambiente do GitHub
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.19.0' # Ajuste conforme a versão do seu projeto (verifique com flutter --version)
+          channel: 'stable'
+
+      # 3. Baixa as dependências
+      - name: Install dependencies
+        run: flutter pub get
+
+      # 4. COMPILA O SITE
+      - name: Build Web
+        run: flutter build web --release --no-tree-shake-icons
+
+      # 5. Conecta na sua VPS e envia SÓ os arquivos prontos
+      - name: Deploy to VPS via SSH
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          # Copia o conteúdo da pasta build/web do GitHub para sua VPS
+          source: "build/web/*"
+          target: "/var/www/sincroapp/html" # Caminho onde o Nginx lê o site
+          strip_components: 2 # Remove 'build/web' do caminho ao copiar
+
+  deploy-server:
+    name: Update Node Backend
+    runs-on: ubuntu-latest
+    needs: deploy-web # Roda apenas se o deploy web funcionar (ou pode rodar em paralelo se preferir)
+    
+    steps:
+      - name: Restart Node Backend via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Comandos que rodam dentro da sua VPS
+            echo "Iniciando atualização do Backend..."
+            cd /var/www/sincroapp/backend
+            
+            # Atualiza o código
+            git pull origin main
+            
+            # Instala dependências e reinicia
+            npm install
+            pm2 restart sincro-api
+
+            # Ajusta permissões do Frontend Web (crítico para Nginx)
+            echo "Ajustando permissões e recarregando Nginx..."
+            chown -R www-data:www-data /var/www/sincroapp/html
+            chmod -R 755 /var/www/sincroapp/html
+            systemctl reload nginx
+            
+            echo "Backend atualizado, Nginx recarregado e serviços operacionais!"

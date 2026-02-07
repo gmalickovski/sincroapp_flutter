@@ -1,0 +1,51 @@
+{
+    "header": "# Registro de Mudanças\n\nTodas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.",
+    "types": [
+        {
+            "type": "feat",
+            "section": "Funcionalidades ✨"
+        },
+        {
+            "type": "fix",
+            "section": "Correções de Bugs 🐛"
+        },
+        {
+            "type": "chore",
+            "hidden": true
+        },
+        {
+            "type": "docs",
+            "hidden": true
+        },
+        {
+            "type": "style",
+            "hidden": true
+        },
+        {
+            "type": "refactor",
+            "hidden": true
+        },
+        {
+            "type": "perf",
+            "hidden": true
+        },
+        {
+            "type": "test",
+            "hidden": true
+        }
+    ],
+    "bumpFiles": [
+        {
+            "filename": "package.json",
+            "type": "json"
+        },
+        {
+            "filename": "pubspec.yaml",
+            "updater": "version-updater.js"
+        },
+        {
+            "filename": "server/package.json",
+            "type": "json"
+        }
+    ]
+}
