@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.1...v1.2.2) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** use latest stable flutter version instead of pinned ([dfb6615](https://github.com/gmalickovski/sincroapp_flutter/commit/dfb6615ccba647e203a71998187d5259f6fae95a))
+
 ### [1.2.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.0...v1.2.1) (2026-02-07)
 
 
