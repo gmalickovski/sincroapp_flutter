@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.2...v1.2.3) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** create .env file during workflow to satisfy build requirements ([76ad361](https://github.com/gmalickovski/sincroapp_flutter/commit/76ad361b1b86f69d77b9596d4596089769b08ee0))
+
 ### [1.2.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.1...v1.2.2) (2026-02-07)
 
 
