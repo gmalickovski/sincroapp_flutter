@@ -154,6 +154,7 @@ class SincroApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: NavigationService.navigatorKey,
       title: 'SincroApp',
       debugShowCheckedModeBanner: false,
       routes: AppRouter.routes,

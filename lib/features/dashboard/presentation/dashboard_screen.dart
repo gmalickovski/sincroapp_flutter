@@ -46,6 +46,7 @@ import 'package:sincro_app_flutter/features/tasks/services/task_action_service.d
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart';
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart'; // NEW IMPORT
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_star_icon.dart'; // IMPORT AGENT ICON
 
 
 // Comportamento de scroll (inalterado)
@@ -90,6 +91,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   final FabOpacityController _fabOpacityController = FabOpacityController();
   StrategyRecommendation? _strategyRecommendation; // State for AI strategy
   String _searchQuery = ''; // Search state replacement
+  String? _initialTaskFilter; // Filtro inicial para tarefas (via deep link)
+  bool _pendingFavorableDayModal = false; // Flag para abrir modal de dias favoráveis após carregar dados
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -109,6 +112,40 @@ class _DashboardScreenState extends State<DashboardScreen>
         _loadInitialData();
       }
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Verificar argumentos de rota para deep linking (ex: vindo de notificação)
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map) {
+      final view = args['view'];
+      final filter = args['filter'];
+      
+      if (view == 'tasks') {
+        // Muda para a aba de tarefas
+        // Usa addPostFrameCallback para evitar erro de setState durante build/layout
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _sidebarIndex = 3; 
+                _initialTaskFilter = filter;
+              });
+            }
+        });
+      } else if (view == 'favorable_days') {
+         // Marca para abrir o modal assim que os dados carregarem (ou agora se já estiverem)
+         _pendingFavorableDayModal = true;
+         // Tenta abrir imediatamente se possível
+         WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted && _numerologyData != null && !_isLoading) {
+               _showFavorableDaysModal();
+               _pendingFavorableDayModal = false;
+            }
+         });
+      }
+    }
   }
 
   @override
@@ -188,6 +225,12 @@ class _DashboardScreenState extends State<DashboardScreen>
               userData.dataNasc
            );
         }
+        
+        // Tenta abrir modal pendente (deep link)
+        if (_pendingFavorableDayModal && mounted) {
+           _showFavorableDaysModal();
+           _pendingFavorableDayModal = false;
+        }
       }
     } catch (e, stackTrace) {
       debugPrint(
@@ -214,6 +257,17 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           setState(() {
             _currentTodayTasks = tasks;
+            
+            // Sincroniza notificações com os dados mais recentes
+            if (_userData != null && _userData!.dataNasc.isNotEmpty && !kIsWeb) {
+               NotificationService.instance.syncDailyNotifications(
+                  userId: _userData!.uid,
+                  userName: _userData!.nomeAnalise,
+                  birthDate: _userData!.dataNasc,
+                  todayTasks: tasks
+               );
+            }
+
             if (_isLoading) {
               _isLoading = false;
             }
@@ -2201,7 +2255,10 @@ class _DashboardScreenState extends State<DashboardScreen>
             ? JournalScreen(userData: _userData!)
             : const Center(child: CustomLoadingSpinner()), // Aba 2
         _userData != null
-            ? FocoDoDiaScreen(userData: _userData!)
+            ? FocoDoDiaScreen(
+                userData: _userData!, 
+                initialFilter: _initialTaskFilter, // Passa o filtro inicial
+              )
             : const Center(child: CustomLoadingSpinner()), // Aba 3
         _userData != null
             ? GoalsScreen(userData: _userData!)
@@ -2277,45 +2334,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
-    Widget? fab;
-    // Only show FAB on mobile via Scaffold - Desktop FAB is inside the layout
-    if (!isDesktop && _userData != null && _sidebarIndex == 0 && !_isEditMode) {
-      fab = FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        shape: const CircleBorder(),
-        heroTag: 'dashboard_fab',
-        onPressed: _handleAddTask,
-        child: const Icon(Icons.add, color: Colors.white),
-      );
-    }
     return Scaffold(
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
-      ),
-      floatingActionButton: TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: fab ?? const SizedBox.shrink(),
       ),
       floatingActionButtonAnimator: NoScalingAnimation(),
     );
   }
 
   Widget _buildDesktopLayout() {
-    // Build FAB for desktop - positioned inside the layout
-    Widget? desktopFab;
-    if (_userData != null && _sidebarIndex == 0 && !_isEditMode) {
-      desktopFab = TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: FloatingActionButton(
-          backgroundColor: AppColors.primary,
-          shape: const CircleBorder(),
-          heroTag: 'dashboard_fab_desktop',
-          onPressed: _handleAddTask,
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      );
-    }
+
 
     return AssistantLayoutManager(
       isMobile: false,
@@ -2338,18 +2367,39 @@ class _DashboardScreenState extends State<DashboardScreen>
                 menuAnimationController: _menuAnimationController,
                 isEditMode: _isEditMode,
                 showSearch: _sidebarIndex == 0,
+                assistantIcon: !_isAiSidebarOpen 
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Material(
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            onTap: () => setState(() => _isAiSidebarOpen = true),
+                            customBorder: const CircleBorder(),
+                            hoverColor: AppColors.primary.withValues(alpha: 0.1),
+                            splashColor: AppColors.primary.withValues(alpha: 0.2),
+                            child: Center(
+                              child: AgentStarIcon( 
+                                size: 28, // Matches other icons better (24-34 range)
+                                isStatic: true,
+                                isHollow: false,
+                                isWhiteFilled: true, 
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : null,
                 actions: [
-                  if (!_isAiSidebarOpen)
-                    IconButton(
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      color: AppColors.primaryText,
-                      tooltip: 'Sincro IA',
-                      onPressed: () {
-                        setState(() {
-                          _isAiSidebarOpen = true;
-                        });
-                      },
-                    ),
+                  if (_isEditMode) // Removed isDesktop since we are in _buildDesktopLayout
+                     IconButton(
+                        icon: const Icon(Icons.check, color: AppColors.primary),
+                        onPressed: () => setState(() => _isEditMode = false),
+                     ),
                   const SizedBox(width: 8),
                 ],
                 onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
@@ -2390,12 +2440,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ],
           ),
           // FAB positioned inside the dashboard area
-          if (desktopFab != null)
-            Positioned(
-              right: 16,
-              bottom: 16,
-              child: desktopFab,
-            ),
+
         ],
       ),
     );
@@ -2403,19 +2448,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildMobileLayout() {
     const double sidebarWidth = 280;
-    return AssistantLayoutManager(
-      isMobile: true,
-      isAiSidebarOpen: false, 
-      onToggleAiSidebar: () {}, 
-      assistant: _userData != null
-          ? AssistantPanel(
-              userData: _userData!,
-              numerologyData: _numerologyData,
-              activeContext: _getPageName(_sidebarIndex),
-              isFullScreen: true,
-              onClose: () {}, // Swipe handles close usually
-            )
-          : const SizedBox.shrink(),
+    return ScreenInteractionListener(
+      controller: _fabOpacityController,
+      child: AssistantLayoutManager(
+        isMobile: true,
+        isAiSidebarOpen: false, 
+        onToggleAiSidebar: () {}, 
+        opacityController: _fabOpacityController, // Pass controller
+        assistant: _userData != null
+            ? AssistantPanel(
+                userData: _userData!,
+                numerologyData: _numerologyData,
+                activeContext: _getPageName(_sidebarIndex),
+                isFullScreen: true,
+                onClose: () {}, // Swipe handles close usually
+              )
+            : const SizedBox.shrink(),
       child: Stack(
         children: [
           Column(
@@ -2491,7 +2539,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildDashboardContent({required bool isDesktop}) {
@@ -2551,4 +2599,41 @@ class _DashboardScreenState extends State<DashboardScreen>
       );
     }
   }
+
+  void _showFavorableDaysModal() {
+    if (_numerologyData == null) return;
+    final content = _buildDiasFavoraveisCompleteContent();
+    _showNumerologyDetail(
+      title: content.titulo,
+      content: content,
+      color: const Color(0xFFFFD700), // Gold/Amber para dias favoráveis
+      icon: Icons.calendar_today_rounded,
+    );
+  }
+
 } // Fim da classe _DashboardScreenState
+
+// Classes auxiliares para o conteúdo de numerologia
+class NumerologyContent {
+  final String titulo;
+  final String intro;
+  final List<NumerologyTopic> topicos;
+  final String conclusao;
+
+  NumerologyContent({
+    required this.titulo,
+    required this.intro,
+    required this.topicos,
+    required this.conclusao,
+  });
+}
+
+class NumerologyTopic {
+  final String titulo;
+  final String descricao;
+
+  NumerologyTopic({
+    required this.titulo,
+    required this.descricao,
+  });
+}

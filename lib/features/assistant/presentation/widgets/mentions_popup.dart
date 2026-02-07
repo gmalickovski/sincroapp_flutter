@@ -48,7 +48,7 @@ class MentionsPopup extends StatelessWidget {
               leading: _buildIcon(candidate.type),
               title: Text(
                 candidate.label,
-                style: const TextStyle(color: Colors.white, fontFamily: 'Inter'),
+                style: const TextStyle(color: Colors.white, fontFamily: 'Poppins'),
               ),
               subtitle: candidate.description != null 
                  ? Text(candidate.description!, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 10))

@@ -23,7 +23,10 @@ class MentionInputField extends StatefulWidget {
     required this.onSubmitted,
     this.maxLines = 1,
     this.decoration,
+    this.textCapitalization = TextCapitalization.none, // Default
   });
+
+  final TextCapitalization textCapitalization;
 
   @override
   State<MentionInputField> createState() => _MentionInputFieldState();
@@ -268,6 +271,7 @@ class _MentionInputFieldState extends State<MentionInputField> {
           hintStyle: const TextStyle(color: AppColors.secondaryText),
           border: InputBorder.none,
         ),
+        textCapitalization: widget.textCapitalization, // Pass to TextField
         onSubmitted: widget.onSubmitted,
       ),
     );

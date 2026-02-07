@@ -200,7 +200,7 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
-                      fontFamily: 'Inter',
+                      fontFamily: 'Poppins',
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),

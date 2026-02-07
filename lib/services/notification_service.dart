@@ -2,27 +2,27 @@
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
 import 'package:flutter/foundation.dart'; // Import kIsWeb
+import 'package:flutter/material.dart'; // Import Material for TimeOfDay, Colors
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // import 'package:sincro_app_flutter/firebase_options.dart'; // Removido
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter/material.dart'; // Para TimeOfDay
+import 'package:sincro_app_flutter/core/services/navigation_service.dart'; // Import NavigationService
+import 'dart:convert'; // Para JSON decode
 
 // Importa os DADOS de fuso horário (do arquivo 'latest.dart') com um apelido ÚNICO
 import 'package:timezone/data/latest.dart' as tz_data;
-// Importa as FUNÇÕES de fuso horário (do arquivo 'timezone.dart') com outro apelido ÚNICO
 import 'package:timezone/timezone.dart' as tz;
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 // --- IMPORTANTE ---
 // Esta função DEVE ser de nível superior (fora de qualquer classe)
 // para funcionar em background no Android.
 @pragma('vm:entry-point')
 Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
-  // Precisamos inicializar o binding aqui para acesso em background
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializa Supabase para uso em background
   try {
      await Supabase.initialize(
       url: const String.fromEnvironment(
@@ -31,7 +31,7 @@ Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
       ),
       anonKey: const String.fromEnvironment(
         'SUPABASE_ANON_KEY',
-        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a', // Ajustar se necessário, ou confiar que será injetado
+        defaultValue: '7ff55347e5f6d2b5ec1cd3ee9c4375280f3a4ca30c98594e29e3ac028806370a',
       ),
     );
   } catch (e) {
@@ -43,21 +43,35 @@ Future<void> _showEndOfDayReminder(fln.NotificationResponse response) async {
 
   final supabaseService = SupabaseService();
   final tasks = await supabaseService.getTasksForToday(userId);
-  final uncompletedCount = tasks.where((t) => !t.completed).length;
+  final uncompletedTasks = tasks.where((t) => !t.completed).toList();
 
-  if (uncompletedCount > 0) {
-    String title = "Você tem $uncompletedCount tarefas pendentes";
-    String body = "Não se esqueça de concluir seu foco do dia!";
-    if (uncompletedCount == 1) {
-      title = "Você tem 1 tarefa pendente";
-      body = "Não se esqueça de concluir seu foco do dia!";
+  if (uncompletedTasks.isNotEmpty) {
+    // Categorização
+    int agendamentos = 0;
+    int tarefas = 0;
+
+    for (var t in uncompletedTasks) {
+      if (t.isAppointment) {
+        agendamentos++;
+      } else {
+        tarefas++;
+      }
     }
 
-    // Exibe a notificação final com a contagem
+    // Construção da mensagem gramaticalmente correta
+    List<String> parts = [];
+    if (agendamentos > 0) parts.add("$agendamentos ${agendamentos == 1 ? 'agendamento' : 'agendamentos'}");
+    if (tarefas > 0) parts.add("$tarefas ${tarefas == 1 ? 'tarefa' : 'tarefas'}");
+
+    String body = "Você tem ${parts.join(' e ')} para hoje. Mantenha o foco!";
+    String title = "Foco do Dia 🎯";
+
+    // Exibe a notificação
     await NotificationService.instance.showNotification(
-      id: 99, // ID diferente para a notificação de resultado
+      id: 99, 
       title: title,
       body: body,
+      payload: '{"view": "tasks", "filter": "today"}', // Deep link payload
     );
   }
 }
@@ -187,7 +201,29 @@ class NotificationService {
 
   /// Callback para quando uma notificação é tocada
   static void _onNotificationResponse(fln.NotificationResponse response) {
-    // Handle notification tap
+    if (response.payload != null) {
+      if (response.payload!.startsWith('{')) {
+        // É um JSON payload customizado
+        try {
+          final data = jsonDecode(response.payload!);
+          final view = data['view'];
+          final filter = data['filter'];
+          
+          if (view == 'tasks') {
+             NavigationService.navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                '/', 
+                (route) => false, 
+                arguments: {'view': 'tasks', 'filter': filter} 
+             );
+          }
+        } catch (e) {
+          debugPrint("Erro ao parsear payload da notificação: $e");
+        }
+      } else {
+         // Payload antigo (apenas ID ou algo simples)
+         // Mantemos comportamento padrão ou ignoramos se não for relevante para navegação global
+      }
+    }
   }
 
   /// Converte um TimeOfDay para um tz.TZDateTime na próxima ocorrência
@@ -423,22 +459,178 @@ class NotificationService {
       // Se não tivermos um método getOverdueTasks, vamos focar no "Lembrete do dia"
       // ou implementar uma query rápida aqui.
       
-      final overdueCount = tasks.where((t) => 
+      // Contagem categorizada de itens atrasados
+      int agendamentos = 0;
+      int tarefas = 0;
+      
+      final overdueTasks = tasks.where((t) => 
         !t.completed && 
         t.dueDate != null && 
         t.dueDate!.isBefore(now)
-      ).length;
+      );
 
-      if (overdueCount > 0) {
+      for (var t in overdueTasks) {
+        if (t.isAppointment) {
+          agendamentos++;
+        } else {
+          tarefas++;
+        }
+      }
+
+      int totalOverdue = agendamentos + tarefas;
+
+      if (totalOverdue > 0) {
+        List<String> parts = [];
+        if (agendamentos > 0) parts.add("$agendamentos ${agendamentos == 1 ? 'agendamento atrasado' : 'agendamentos atrasados'}");
+        if (tarefas > 0) parts.add("$tarefas ${tarefas == 1 ? 'tarefa atrasada' : 'tarefas atrasadas'}");
+
         showNotification(
           id: 88,
           title: "Atenção aos Prazos ⏰",
-          body: "Você possui $overdueCount tarefas ou agendamentos atrasados. Coloque em dia!",
+          body: "Você possui ${parts.join(' e ')}. Coloque em dia!",
           channelId: _channelIdReminder,
+          payload: '{"view": "tasks", "filter": "overdue"}',
         );
       }
     } catch (e) {
        debugPrint("Erro check overdue: $e");
     }
+  }
+
+  /// Sincroniza todas as notificações diárias baseadas no estado atual das tarefas.
+  /// Deve ser chamado sempre que as tarefas de hoje mudam ou o app abre.
+  Future<void> syncDailyNotifications({
+    required String userId,
+    required String userName,
+    required String birthDate,
+    required List<TaskModel> todayTasks,
+  }) async {
+    final now = DateTime.now();
+    
+    // 1. Manhã: Foco do Dia (08:30)
+    // Se hoje já passou das 08:30, agenda para amanhã com texto genérico (pois não sabemos tarefas de amanhã)
+    // Se hoje é antes das 08:30, agenda para hoje com tarefas de hoje.
+    final morningTime = _instanceOfDateTime(now, const TimeOfDay(hour: 8, minute: 30));
+    if (morningTime.isAfter(now)) {
+       await _scheduleMorningFocus(todayTasks, morningTime);
+    } else {
+       // Agenda para amanhã (genérico)
+       // Idealmente, precisaríamos das tarefas de amanhã, mas vamos usar uma msg de incentivo
+       await scheduleDailyPersonalDayNotification(
+          title: "Planeje seu dia ☀️",
+          body: "Comece o dia organizando suas prioridades no Sincro.",
+          scheduleTime: const TimeOfDay(hour: 8, minute: 30),
+       );
+    }
+
+    // 2. Manhã: Dia Favorável (10:00)
+    final favorableTime = _instanceOfDateTime(now, const TimeOfDay(hour: 10, minute: 0));
+    if (favorableTime.isAfter(now)) {
+      await _scheduleFavorableDay(userName, birthDate, favorableTime);
+    }
+
+    // 3. Noite: Check de Fim de Dia (20:00)
+    final eveningTime = _instanceOfDateTime(now, const TimeOfDay(hour: 20, minute: 0));
+    if (eveningTime.isAfter(now)) {
+      await _scheduleEveningCheck(todayTasks, eveningTime);
+    }
+  }
+
+  Future<void> _scheduleMorningFocus(List<TaskModel> tasks, tz.TZDateTime scheduledDate) async {
+    // Conta tarefas para hoje
+    int agendamentos = 0, tarefas = 0;
+    final uncompleted = tasks.where((t) => !t.completed).toList();
+
+    for (var t in uncompleted) {
+      if (t.isAppointment) agendamentos++;
+      else tarefas++;
+    }
+
+    String body = "Prepare-se para hoje! 🚀";
+    if (uncompleted.isNotEmpty) {
+      List<String> parts = [];
+      if (agendamentos > 0) parts.add("$agendamentos ${agendamentos == 1 ? 'agendamento' : 'agendamentos'}");
+      if (tarefas > 0) parts.add("$tarefas ${tarefas == 1 ? 'tarefa' : 'tarefas'}");
+      body = "Você tem ${parts.join(' e ')} para hoje. Mantenha o foco!";
+    }
+
+     await _scheduleOneShot(
+      id: 101, 
+      title: "Foco do Dia 🎯", 
+      body: body, 
+      date: scheduledDate,
+      payload: '{"view": "tasks", "filter": "today"}'
+    );
+  }
+
+  Future<void> _scheduleFavorableDay(String nome, String dataNasc, tz.TZDateTime scheduledDate) async {
+    if (nome.isEmpty || dataNasc.isEmpty) return;
+    try {
+      final engine = NumerologyEngine(nomeCompleto: nome, dataNascimento: dataNasc);
+      final diaFavoravel = engine.calculatePersonalDayForDate(scheduledDate); // Reusing logic or accessing days list
+      // calculatePersonalDayForDate retorna o dia pessoal (1-9), não se é favorável.
+      // Precisamos verificar se o DIA HOJE está na lista de dias favoráveis.
+      
+      final result = engine.calculateProfile();
+      final diasFavoraveis = (result.listas['diasFavoraveis'] as List?)?.cast<int>() ?? [];
+      
+      if (diasFavoraveis.contains(scheduledDate.day)) {
+        await _scheduleOneShot(
+          id: 102,
+          title: "Hoje é um Dia Favorável! 🌟",
+          body: "Aproveite a energia de hoje para realizar seus objetivos!",
+          date: scheduledDate,
+          payload: '{"view": "favorable_days"}'
+        );
+      }
+    } catch (e) {
+      debugPrint("Erro favorable day: $e");
+    }
+  }
+
+  Future<void> _scheduleEveningCheck(List<TaskModel> tasks, tz.TZDateTime scheduledDate) async {
+    int agendamentos = 0, tarefas = 0;
+    // Pega APENAS as não concluídas
+    final uncompleted = tasks.where((t) => !t.completed).toList();
+    
+    // Se não tiver pendências, talvez não enviar nada? Ou enviar parabéns?
+    // Usuário pediu: "se tiver tarefas pendentes... surge mensagem"
+    if (uncompleted.isEmpty) return; 
+
+    for (var t in uncompleted) {
+       if (t.isAppointment) agendamentos++;
+       else tarefas++;
+    }
+
+    List<String> parts = [];
+    if (agendamentos > 0) parts.add("$agendamentos ${agendamentos == 1 ? 'agendamento' : 'agendamentos'}");
+    if (tarefas > 0) parts.add("$tarefas ${tarefas == 1 ? 'tarefa' : 'tarefas'}");
+
+    String msg = "Olá, vejo que você ainda tem ${parts.join(' e ')} pendentes. Que tal dar uma olhadinha? 👀";
+
+    await _scheduleOneShot(
+      id: 103,
+      title: "Check de Fim de Dia 🌙",
+      body: msg,
+      date: scheduledDate,
+      payload: '{"view": "tasks", "filter": "today"}' // Leva para a lista de hoje para remarcar
+    );
+  }
+
+  Future<void> _scheduleOneShot({required int id, required String title, required String body, required tz.TZDateTime date, String? payload}) async {
+    const androidDetails = fln.AndroidNotificationDetails(
+      _channelIdDaily, _channelNameDaily,
+      importance: fln.Importance.defaultImportance,
+      priority: fln.Priority.defaultPriority,
+    );
+    const iosDetails = fln.DarwinNotificationDetails();
+    const platformDetails = fln.NotificationDetails(android: androidDetails, iOS: iosDetails);
+
+    await _localNotifications.zonedSchedule(
+      id, title, body, date, platformDetails,
+      payload: payload,
+      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: fln.UILocalNotificationDateInterpretation.absoluteTime,
+    );
   }
 }

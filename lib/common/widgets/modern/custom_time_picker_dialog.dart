@@ -3,8 +3,17 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/common/widgets/scrollable_chips_row.dart';
 
 enum _TimePickerMode { hour, minute }
+enum _TimeField { start, end } // Novo enum para controlar qual horário está sendo editado
+
+class TimePickerResult {
+  final TimeOfDay time;
+  final int? durationMinutes;
+
+  TimePickerResult(this.time, this.durationMinutes);
+}
 
 class CustomTimePickerDialog extends StatefulWidget {
   final TimeOfDay initialTime;
@@ -19,7 +28,15 @@ class CustomTimePickerDialog extends StatefulWidget {
 }
 
 class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
-  late TimeOfDay _selectedTime;
+  late TimeOfDay _selectedTime; // Horário de Início
+  TimeOfDay? _endTime; // Horário de Fim (para Definir Período)
+  
+  int? _selectedDuration; // Duração em minutos (Predefinição)
+  bool _isCustomPeriod = false; // Se "Definir Período" está ativo
+  bool _isRestOfDay = true; // Default selected
+  
+  _TimeField _activeField = _TimeField.start; // Qual campo o relógio controla
+  
   _TimePickerMode _mode = _TimePickerMode.hour;
   
   late TextEditingController _hourController;
@@ -27,10 +44,18 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
   late FocusNode _hourFocus;
   late FocusNode _minuteFocus;
 
+  // REMOVED ScrollController (managed internally)
+
   @override
   void initState() {
     super.initState();
     _selectedTime = widget.initialTime;
+    // Calculate default Rest of Day duration
+    final now = DateTime.now();
+    final timeDate = DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute);
+    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
+    final diff = endOfDay.difference(timeDate).inMinutes;
+    _selectedDuration = diff > 0 ? diff : 0;
     
     _hourController = TextEditingController(text: _selectedTime.hour.toString().padLeft(2, '0'));
     _minuteController = TextEditingController(text: _selectedTime.minute.toString().padLeft(2, '0'));
@@ -55,8 +80,6 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
   
   @override
   void dispose() {
-    _hourController.dispose();
-    _minuteController.dispose();
     _hourFocus.dispose();
     _minuteFocus.dispose();
     super.dispose();
@@ -64,15 +87,31 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
 
   void _handleTimeChanged(TimeOfDay newTime) {
     setState(() {
-      _selectedTime = newTime;
+      if (_activeField == _TimeField.start) {
+        _selectedTime = newTime;
+        if (_isRestOfDay) {
+          _selectedDuration = _calculateRestOfDay();
+        }
+      } else {
+        _endTime = newTime;
+      }
     });
     // Update text fields if they are not focused (i.e. change came from Dial)
     
-    if (!_hourFocus.hasFocus) {
-      _hourController.text = newTime.hour.toString().padLeft(2, '0');
-    }
-    if (!_minuteFocus.hasFocus) {
-      _minuteController.text = newTime.minute.toString().padLeft(2, '0');
+    if (_activeField == _TimeField.start) {
+      if (!_hourFocus.hasFocus) {
+        _hourController.text = newTime.hour.toString().padLeft(2, '0');
+      }
+      if (!_minuteFocus.hasFocus) {
+        _minuteController.text = newTime.minute.toString().padLeft(2, '0');
+      }
+    } else {
+       if (!_hourFocus.hasFocus) {
+        _hourController.text = newTime.hour.toString().padLeft(2, '0');
+      }
+      if (!_minuteFocus.hasFocus) {
+        _minuteController.text = newTime.minute.toString().padLeft(2, '0');
+      }
     }
   }
 
@@ -86,7 +125,12 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
     final int? newHour = int.tryParse(value);
     if (newHour != null && newHour >= 0 && newHour < 24) {
       setState(() {
-        _selectedTime = _selectedTime.replacing(hour: newHour);
+        if (_activeField == _TimeField.start) {
+          _selectedTime = _selectedTime.replacing(hour: newHour);
+          if (_isRestOfDay) _selectedDuration = _calculateRestOfDay();
+        } else {
+          _endTime = (_endTime ?? _selectedTime).replacing(hour: newHour);
+        }
       });
       if (value.length == 2) {
         _minuteFocus.requestFocus();
@@ -98,7 +142,12 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
     final int? newMinute = int.tryParse(value);
     if (newMinute != null && newMinute >= 0 && newMinute < 60) {
       setState(() {
-        _selectedTime = _selectedTime.replacing(minute: newMinute);
+        if (_activeField == _TimeField.start) {
+          _selectedTime = _selectedTime.replacing(minute: newMinute);
+          if (_isRestOfDay) _selectedDuration = _calculateRestOfDay();
+        } else {
+          _endTime = (_endTime ?? _selectedTime).replacing(minute: newMinute);
+        }
       });
     }
   }
@@ -110,7 +159,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: Container(
-        width: 312,
+        width: 340, // Expanded width as requested
         padding: const EdgeInsets.all(16.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -118,11 +167,15 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
             _buildHeader(),
             const SizedBox(height: 24),
             _buildTimeDisplay(),
+            if (_isCustomPeriod) ...[
+               const SizedBox(height: 16),
+               _buildPeriodInputs(),
+            ],
             const SizedBox(height: 24),
             SizedBox(
               height: 280,
               child: _ClockDial(
-                selectedTime: _selectedTime,
+                selectedTime: _activeField == _TimeField.start ? _selectedTime : (_endTime ?? _selectedTime),
                 mode: _mode,
                 onTimeChanged: _handleTimeChanged,
                 onModeChanged: (mode) {
@@ -134,7 +187,199 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
               ),
             ),
             const SizedBox(height: 16),
+            _buildDurationChips(),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPeriodInputs() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildPeriodInputBox("Início", _selectedTime, _activeField == _TimeField.start, () {
+             _switchField(_TimeField.start);
+          }),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildPeriodInputBox("Fim", _endTime, _activeField == _TimeField.end, () {
+             _switchField(_TimeField.end);
+          }),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodInputBox(String label, TimeOfDay? time, bool isActive, VoidCallback onTap) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Container(
+           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+           decoration: BoxDecoration(
+             color: isActive ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+             border: Border.all(
+               color: isActive ? AppColors.primary : AppColors.border,
+               width: isActive ? 2 : 1,
+             ),
+             borderRadius: BorderRadius.circular(12),
+           ),
+           child: Column(
+             children: [
+               Text(
+                 label,
+                 style: TextStyle(
+                   color: isActive ? AppColors.primary : AppColors.secondaryText,
+                   fontSize: 12,
+                   fontWeight: FontWeight.w500,
+                 ),
+               ),
+               const SizedBox(height: 4),
+               Text(
+                 time?.format(context) ?? "--:--",
+                 style: TextStyle(
+                   color: AppColors.primaryText,
+                   fontSize: 18,
+                   fontWeight: FontWeight.bold,
+                   fontFamily: "Poppins",
+                 ),
+               ),
+             ],
+           ),
+        ),
+      );
+  }
+
+  void _switchField(_TimeField field) {
+     if (_activeField == field) return;
+     
+     setState(() {
+       _activeField = field;
+       // Initial value for end time if null
+       if (field == _TimeField.end && _endTime == null) {
+          _endTime = _selectedTime.replacing(hour: (_selectedTime.hour + 1) % 24);
+       }
+       
+       // Update controllers to match new field
+       final timeToShow = field == _TimeField.start ? _selectedTime : _endTime!;
+       _hourController.text = timeToShow.hour.toString().padLeft(2, '0');
+       _minuteController.text = timeToShow.minute.toString().padLeft(2, '0');
+     });
+  }
+
+  Widget _buildDurationChips() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Duração",
+          style: TextStyle(
+            color: AppColors.secondaryText,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 12),
+
+        ScrollableChipsRow(
+          children: [
+            _buildChip("Resto do dia", _calculateRestOfDay(), isRestOfDayOption: true),
+            const SizedBox(width: 8),
+            _buildChip("30 min", 30),
+            const SizedBox(width: 8),
+            _buildChip("1 h", 60),
+            const SizedBox(width: 8),
+            _buildChip("2 h", 120),
+            const SizedBox(width: 8),
+            _buildCustomPeriodChip(),
+          ],
+        ),
+      ],
+    );
+  }
+
+  int _calculateRestOfDay() {
+    final now = DateTime.now();
+    final timeDate = DateTime(now.year, now.month, now.day, _selectedTime.hour, _selectedTime.minute);
+    final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
+    final diff = endOfDay.difference(timeDate).inMinutes;
+    return diff > 0 ? diff : 0;
+  }
+
+  Widget _buildChip(String label, int minutes, {bool isRestOfDayOption = false}) {
+    bool isSelected;
+    if (isRestOfDayOption) {
+       isSelected = !_isCustomPeriod && _isRestOfDay;
+    } else {
+       isSelected = !_isCustomPeriod && !_isRestOfDay && _selectedDuration == minutes;
+    }
+
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _isCustomPeriod = false; 
+            _isRestOfDay = isRestOfDayOption;
+            _selectedDuration = minutes;
+            _activeField = _TimeField.start; 
+            
+            _hourController.text = _selectedTime.hour.toString().padLeft(2, '0');
+            _minuteController.text = _selectedTime.minute.toString().padLeft(2, '0');
+          });
+        }
+      },
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.secondaryText,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? AppColors.primary : AppColors.border,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCustomPeriodChip() {
+     final isSelected = _isCustomPeriod;
+     
+     return ChoiceChip(
+      label: const Text("Definir período"),
+      selected: isSelected,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _isCustomPeriod = true;
+            _selectedDuration = null; // Clear standard duration
+            _activeField = _TimeField.end; // Auto focus End Time for convenience? Or Start?
+            
+            // Initialize End Time if needed
+            if (_endTime == null) {
+               _endTime = _selectedTime.replacing(hour: (_selectedTime.hour + 1) % 24);
+            }
+            
+            // Update controllers to show End Time
+             _hourController.text = _endTime!.hour.toString().padLeft(2, '0');
+             _minuteController.text = _endTime!.minute.toString().padLeft(2, '0');
+          });
+        }
+      },
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.secondaryText,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: isSelected ? AppColors.primary : AppColors.border,
         ),
       ),
     );
@@ -158,7 +403,19 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         ),
         IconButton(
           icon: const Icon(Icons.check, color: AppColors.primary),
-          onPressed: () => Navigator.pop(context, _selectedTime),
+          onPressed: () {
+             int? finalDuration = _selectedDuration;
+             
+             if (_isCustomPeriod && _endTime != null) {
+                final startMin = _selectedTime.hour * 60 + _selectedTime.minute;
+                final endMin = _endTime!.hour * 60 + _endTime!.minute;
+                var diff = endMin - startMin;
+                if (diff < 0) diff += 24 * 60; // Assume next day overlap if end < start
+                finalDuration = diff;
+             }
+             
+             Navigator.pop(context, TimePickerResult(_selectedTime, finalDuration));
+          },
         ),
       ],
     );
@@ -203,13 +460,16 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         width: 96,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+          color: AppColors.background, // Restored dark background
           borderRadius: BorderRadius.circular(12),
+          border: isSelected 
+              ? Border.all(color: AppColors.primary, width: 2) 
+              : Border.all(color: Colors.transparent, width: 2),
         ),
         child: TextField(
           controller: controller,
           focusNode: focusNode,
-          autofillHints: const [], // Prevent browser password save prompt
+          autofillHints: const [], 
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
           inputFormatters: [
@@ -238,7 +498,7 @@ class _ClockDial extends StatefulWidget {
   final TimeOfDay selectedTime;
   final _TimePickerMode mode;
   final ValueChanged<TimeOfDay> onTimeChanged;
-  final ValueChanged<_TimePickerMode>? onModeChanged; // Make optional
+  final ValueChanged<_TimePickerMode>? onModeChanged; 
 
   const _ClockDial({
     required this.selectedTime,

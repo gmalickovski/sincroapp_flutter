@@ -119,7 +119,7 @@ class JournalEntryCard extends StatelessWidget {
                 color: AppColors.secondaryText,
                 fontSize: 15,
                 height: 1.5,
-                fontFamily: 'serif',
+                fontFamily: 'Poppins',
               ),
             ),
             const SizedBox(height: 12),

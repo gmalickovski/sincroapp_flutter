@@ -16,6 +16,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final ValueChanged<String>? onSearchChanged; // New callback
   final List<Widget>? actions; // New Parameter
   final bool showSearch; // New Parameter to toggle search visibility
+  final Widget? assistantIcon; // New Parameter
 
   const CustomAppBar({
     super.key,
@@ -27,6 +28,7 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.onSearchChanged,
     this.actions,
     this.showSearch = true, // Default to true
+    this.assistantIcon, // New Parameter
   });
 
   @override
@@ -139,7 +141,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
 
         if (isDesktop && widget.onEditPressed != null && !widget.isEditMode)
           Padding(
-            padding: const EdgeInsets.only(right: 24.0),
+            padding: const EdgeInsets.only(right: 8.0),
             child: IconButton(
               icon: const Icon(
                 Icons.swap_vert,
@@ -149,6 +151,13 @@ class _CustomAppBarState extends State<CustomAppBar> {
               onPressed: widget.onEditPressed,
             ),
           ),
+
+        // Assistant Icon (Hollow Star) - Positioned BEFORE Avatar or custom actions
+        if (widget.assistantIcon != null)
+           Padding(
+             padding: const EdgeInsets.only(right: 12.0), // Spacing from Avatar
+             child: widget.assistantIcon!,
+           ),
 
         if (widget.userData != null && isDesktop) // Mostra avatar apenas no desktop
           Padding(

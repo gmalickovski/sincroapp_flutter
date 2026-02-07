@@ -33,6 +33,9 @@ class TaskInputModal extends StatefulWidget {
   final DateTime? initialDueDate;
   final TaskModel? taskToEdit;
   final Goal? preselectedGoal;
+  final DateTime? preselectedDate;
+  final RecurrenceRule? preselectedRecurrence;
+  final VoidCallback? onClose; // Callback para modo embedado
 
   const TaskInputModal({
     super.key,
@@ -43,6 +46,9 @@ class TaskInputModal extends StatefulWidget {
     this.initialDueDate,
     this.taskToEdit,
     this.preselectedGoal,
+    this.preselectedDate,
+    this.preselectedRecurrence,
+    this.onClose,
   });
 
   @override
@@ -501,6 +507,14 @@ class _TaskInputModalState extends State<TaskInputModal> {
     super.dispose();
   }
 
+  void _handleClose() {
+    if (widget.onClose != null) {
+      widget.onClose!();
+    } else {
+      Navigator.pop(context);
+    }
+  }
+
   // --- IN├ìCIO DA MUDAN├çA: build() atualizado com "Pills" ---
   @override
   Widget build(BuildContext context) {
@@ -526,7 +540,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Substitu├¡do TextField por MentionInputField
+              // --- Título (Solicitação: Substituir X por Título) ---
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: Text(
+                  _isEditing ? 'Editar Tarefa' : 'Nova Tarefa',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primaryText,
+                  ),
+                ),
+              ),
+              // Substituído TextField por MentionInputField
               MentionInputField(
                 controller: _textController,
                 focusNode: _textFieldFocusNode,
@@ -534,8 +560,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 hintText: _selectedGoalId != null
                     ? "Adicionar novo marco... use @ para mencionar"
                     : "Adicionar tarefa... use @ para mencionar",
-                decoration: InputDecoration(
-                  hintStyle: const TextStyle(color: AppColors.tertiaryText),
+                decoration: const InputDecoration(
+                  hintStyle: TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
@@ -547,6 +573,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   hoverColor: Colors.transparent,
                 ),
                 maxLines: null,
+                textCapitalization: TextCapitalization.sentences, // Capitalize first letter
               ),
 
               // --- IN├ìCIO: ├üREA DE "PILLS" ---

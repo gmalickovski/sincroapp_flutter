@@ -23,6 +23,7 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart'; // Ta
 import 'package:sincro_app_flutter/models/recurrence_rule.dart'; // RecurrenceType enum
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart'; // NOVO: Task Detail Modal
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart'; // Vibration Pill for dynamic colors
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_star_icon.dart'; // Animated Icon
 
 class AssistantPanel extends StatefulWidget {
   final UserModel userData;
@@ -92,6 +93,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   final Set<String> _animatedMessageIds = {};
 
   // --- State Variables ---
+  String? _currentConversationId; // Tracks active conversation
   List<AssistantMessage> _messages = [];
   bool _isLoading = false;
   bool _isSending = false;
@@ -269,22 +271,19 @@ class _AssistantPanelState extends State<AssistantPanel>
   Future<void> _loadHistory() async {
     setState(() => _isLoading = true);
     try {
-      final history = await AssistantService.fetchHistory(widget.userData.uid);
-      if (history.isNotEmpty) {
+      // 1. Fetch recent conversations
+      final conversations = await AssistantService.fetchConversations(widget.userData.uid);
+      if (conversations.isNotEmpty) {
+        // 2. Load the most recent one
+        final lastConv = conversations.first;
+        _currentConversationId = lastConv.id;
+        final msgs = await AssistantService.fetchMessages(widget.userData.uid, lastConv.id);
         setState(() {
-          _messages = history;
-        });
-      } else {
-        // Add welcome message if history is empty
-        setState(() {
-            _messages.add(AssistantMessage(
-                id: const Uuid().v4(),
-                content: "Olá, ${widget.userData.primeiroNome}! Eu sou a Sincro IA. Como posso te ajudar a elevar sua energia hoje?",
-                role: 'assistant',
-                time: DateTime.now(),
-            ));
+          _messages = msgs;
         });
       }
+    } catch (e) {
+      debugPrint("Error loading history: $e");
     } finally {
       setState(() => _isLoading = false);
     }
@@ -308,8 +307,15 @@ class _AssistantPanelState extends State<AssistantPanel>
     _controller.clear();
     _scrollToBottom();
     
-    // Persist User Message
-    AssistantService.saveMessage(widget.userData.uid, userMsg);
+    // Persist User Message (Create conversation if needed)
+    if (_currentConversationId == null) {
+      // Generate title from message (truncated)
+      final title = text.length > 30 ? "${text.substring(0, 30)}..." : text;
+      _currentConversationId = await AssistantService.createConversation(widget.userData.uid, title);
+    }
+    
+    // Log message linked to conversation
+    AssistantService.saveMessage(widget.userData.uid, userMsg, _currentConversationId);
 
     try {
       // 1. Call AssistantService (Wrapper that handles Context & Logic)
@@ -343,7 +349,7 @@ class _AssistantPanelState extends State<AssistantPanel>
         });
         
         // Persist Assistant Message
-        await AssistantService.saveMessage(widget.userData.uid, assistantMsg);
+        await AssistantService.saveMessage(widget.userData.uid, assistantMsg, _currentConversationId);
         
         // Handle Actions (Navigations, Creations) if any
         if (answer.actions.isNotEmpty) {
@@ -473,6 +479,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     // Determine scroll controller to use
     final scrollCtrl = widget.sheetScrollController ?? _scrollController;
@@ -480,118 +487,337 @@ class _AssistantPanelState extends State<AssistantPanel>
     final isModal = !isDesktop; 
 
     return Material(
-      color: AppColors.background,
-      child: Column(
+      color: Colors.transparent, // Root is transparent for "floating" effect
+      child: Stack(
         children: [
-           // Header (Top)
-           _buildHeader(isModal, isDesktop),
-
-           // Messages Layer
-           Expanded(
-             child: ListView.builder(
-               controller: scrollCtrl,
-               reverse: true,
-               padding: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-               itemCount: _messages.length,
-               itemBuilder: (context, index) {
-                  final msg = _messages[index];
-                  bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
-                  if (shouldAnimate) _animatedMessageIds.add(msg.id);
-                  
-                  return ChatMessageItem(
-                    message: msg, 
-                    isUser: msg.isUser,
-                    animate: shouldAnimate,
-                    onActionConfirm: _handleActionConfirm,
-                    onActionCancel: (action) {
-                        debugPrint("Action cancelled: ${action.type}");
-                    },
-                    userData: widget.userData,
-                  );
-               },
+           // 1. Messages Layer (Behind Header/Footer)
+           Positioned.fill(
+             child: Container(
+               color: AppColors.background, // Base solid background
+               child: ListView.builder(
+                 controller: scrollCtrl,
+                 reverse: true,
+                 // Add padding to avoid content being hidden behind fixed Header and Input
+                 // Header is ~90, Input ~80. Adding extra breathing room.
+                 padding: const EdgeInsets.fromLTRB(16, 110, 16, 100), 
+                 itemCount: _messages.length,
+                 itemBuilder: (context, index) {
+                    final msg = _messages[index];
+                    bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
+                    if (shouldAnimate) _animatedMessageIds.add(msg.id);
+                    
+                    return ChatMessageItem(
+                      message: msg, 
+                      isUser: msg.isUser,
+                      animate: shouldAnimate,
+                      onActionConfirm: _handleActionConfirm,
+                      onActionCancel: (action) {
+                          debugPrint("Action cancelled: ${action.type}");
+                      },
+                      userData: widget.userData,
+                    );
+                 },
+               ),
              ),
            ),
 
-           // Input (Bottom)
-           _buildInputArea(),
+           // 2. Header (Top Overlay)
+           Positioned(
+             top: 0,
+             left: 0,
+             right: 0,
+             child: _buildHeader(isModal, isDesktop),
+           ),
+
+           // 3. Input (Bottom Overlay)
+           Positioned(
+             bottom: 0,
+             left: 0,
+             right: 0,
+             child: _buildInputArea(),
+           ),
         ],
       ),
     );
   }
 
   Widget _buildHeader(bool isModal, bool isDesktop) {
-    // Universal Header: Use AppBar for exact visual parity on both Mobile and Desktop
-    return AppBar(
-      backgroundColor: AppColors.background,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      automaticallyImplyLeading: false,
-      primary: true, // Render with status bar padding
-      shape: const Border(
-        bottom: BorderSide(color: AppColors.border, width: 1.0),
+    return Container(
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.background, 
+            AppColors.background.withValues(alpha: 0.7),
+          ],
+        ),
+        border: const Border(bottom: BorderSide(color: Colors.transparent)),
       ),
-      titleSpacing: 16,
-      title: Row(
-        children: [
-           Padding(
-             padding: const EdgeInsets.symmetric(horizontal: 4.0),
-             child: SvgPicture.asset(
-                'assets/images/icon-ia-sincroapp-v1.svg',
-                width: 28, 
-                height: 28,
-                colorFilter: const ColorFilter.mode(AppColors.primaryAccent, BlendMode.srcIn),
-             ),
-           ),
-           const SizedBox(width: 12),
-           Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Sincro IA',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.primaryText,
-                    fontFamily: 'Inter',
-                    height: 1.1,
+      child: SafeArea( // Ensure it doesn't clip on notches
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center, // Center items vertically
+            children: [
+               // 1. Floating Animated Star
+               const AgentStarIcon(
+                 size: 50, 
+                 mode: AgentStarMode.dashboard,
+                 isStatic: false, 
+                 isHollow: false, 
+                 slowAnimation: true, 
+               ),
+               
+               const SizedBox(width: 8),
+
+               // 2. Dynamic Bubble (Flexible)
+               Flexible(
+                 child: AnimatedSwitcher(
+                   duration: const Duration(milliseconds: 500),
+                   layoutBuilder: (Widget? currentChild, List<Widget> previousChildren) {
+                     return Stack(
+                       alignment: Alignment.centerLeft, 
+                       children: <Widget>[
+                         ...previousChildren,
+                         if (currentChild != null) currentChild,
+                       ],
+                     );
+                   },
+                   transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(opacity: animation, child: child);
+                   },
+                   child: (_messages.isEmpty && !_isSending)
+                     ? Container(
+                         key: const ValueKey('idle_greeting'),
+                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                         decoration: BoxDecoration(
+                           color: AppColors.cardBackground,
+                           borderRadius: BorderRadius.circular(12).copyWith(
+                               bottomLeft: const Radius.circular(0), 
+                           ),
+                           border: Border.all(color: AppColors.primary, width: 1.5), 
+                         ),
+                         child: const Text(
+                           "Olá, eu sou o Sincro IA, como posso te ajudar hoje?",
+                           style: TextStyle(
+                             color: AppColors.secondaryText,
+                             fontSize: 13,
+                             fontWeight: FontWeight.w500,
+                           ),
+                           softWrap: true, // Allow wrapping
+                         ),
+                       )
+                     : ConstrainedBox(
+                         key: const ValueKey('active_title'),
+                         constraints: const BoxConstraints(minHeight: 48), 
+                         child: const Align(
+                           alignment: Alignment.centerLeft,
+                           child: Text(
+                             "Sincro IA",
+                             style: TextStyle(
+                               color: Colors.white,
+                               fontSize: 18, 
+                               fontWeight: FontWeight.bold,
+                               letterSpacing: 0.5,
+                             ),
+                           ),
+                         ),
+                     ),
+                 ),
+               ),
+
+               const SizedBox(width: 16), // Gap between bubble and buttons
+
+               // 3. Right Controls
+               Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.add_comment_rounded, color: AppColors.secondaryText),
+                    onPressed: () {
+                         if (!_isSending) {
+                           setState(() {
+                             _messages.clear();
+                             _animatedMessageIds.clear();
+                             _currentConversationId = null; // Start Fresh
+                           });
+                         }
+                    },
+                    tooltip: 'Nova Conversa',
                   ),
-                ),
-                Text(
-                  'Assistente Pessoal',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.secondaryText.withValues(alpha: 0.7),
-                    height: 1.1,
+                  const SizedBox(width: 8), 
+                  IconButton(
+                    icon: const Icon(Icons.history_rounded, color: AppColors.secondaryText),
+                    onPressed: _showHistory,
+                    tooltip: 'Histórico',
                   ),
-                ),
-              ],
-           ),
-        ],
-      ),
-      actions: [
-          IconButton(
-              icon: const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-              onPressed: () {
-                 if (widget.onClose != null) {
-                    widget.onClose!();
-                  } else {
-                    Navigator.of(context, rootNavigator: true).pop();
-                  }
-              },
-              tooltip: 'Fechar',
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_forward_rounded, color: AppColors.secondaryText),
+                    onPressed: widget.onClose ?? () => Navigator.of(context, rootNavigator: true).pop(),
+                    tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
+                  ),
+                ],
+               ),
+            ],
           ),
-          const SizedBox(width: 8), 
-      ],
+        ),
+      ),
     );
+  }
+
+  void _showHistory() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 500,
+          constraints: const BoxConstraints(maxHeight: 600),
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    "Histórico de Conversas",
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                    onPressed: () => Navigator.pop(context),
+                  )
+                ],
+              ),
+              const SizedBox(height: 16),
+              Flexible(
+                fit: FlexFit.tight,
+                child: FutureBuilder<List<AssistantConversation>>(
+                  future: AssistantService.fetchConversations(widget.userData.uid),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                       return const Center(
+                         child: Text("Nenhuma conversa recente.", style: TextStyle(color: AppColors.secondaryText)),
+                       );
+                    }
+                    
+                    final conversations = snapshot.data!;
+
+                    return ListView.separated(
+                      itemCount: conversations.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final conv = conversations[index];
+                        final formattedDate = DateFormat('dd/MM HH:mm').format(conv.createdAt);
+                        final isSelected = conv.id == _currentConversationId;
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary.withOpacity(0.2) : AppColors.cardBackground,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                                color: isSelected 
+                                   ? AppColors.primary 
+                                   : Colors.white.withOpacity(0.05)),
+                          ),
+                          child: ListTile(
+                            leading: Icon(
+                                Icons.chat_bubble_outline, 
+                                color: isSelected ? AppColors.primary : AppColors.secondaryText, 
+                                size: 20
+                            ),
+                            title: Text(
+                              conv.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(color: Colors.white, fontSize: 14),
+                            ),
+                            subtitle: Text(
+                              formattedDate,
+                              style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                            ),
+                            onTap: () async {
+                               Navigator.pop(context); // Close dialog
+                               if (conv.id == _currentConversationId) return;
+
+                               setState(() {
+                                 _isLoading = true;
+                                 _currentConversationId = conv.id;
+                               });
+                               
+                               try {
+                                  final msgs = await AssistantService.fetchMessages(widget.userData.uid, conv.id);
+                                  if (mounted) {
+                                    setState(() {
+                                       _messages = msgs;
+                                       _isLoading = false;
+                                    });
+                                  }
+                               } catch (e) {
+                                  if (mounted) setState(() => _isLoading = false);
+                               }
+                            },
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  Widget _buildTypingIndicator() {
+     return Container(
+         key: const ValueKey('typing_indicator'),
+         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+         decoration: BoxDecoration(
+           color: AppColors.cardBackground,
+           borderRadius: BorderRadius.circular(12).copyWith(
+             topLeft: const Radius.circular(0),
+           ),
+           border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+         ),
+         child: const Row(
+           mainAxisSize: MainAxisSize.min,
+           children: [
+             Text(
+               "Pensando",
+               style: TextStyle(color: AppColors.secondaryText, fontSize: 13),
+             ),
+             SizedBox(width: 4),
+             TypingIndicator(color: AppColors.primary),
+           ],
+         ),
+     );
   }
 
   Widget _buildInputArea() {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        // Optional: Add background to input area for separation
+      decoration: BoxDecoration(
+         gradient: LinearGradient(
+           begin: Alignment.bottomCenter,
+           end: Alignment.topCenter,
+           colors: [
+             AppColors.background, 
+             AppColors.background.withValues(alpha: 0.7),
+           ],
+         ),
       ),
       child: SafeArea(
         top: false,

@@ -124,9 +124,16 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/icon_master_1024.png"
+  image_path: "assets/images/icon_app2.png"
   ios_remove_alpha: true # O iOS não permite transparência no ícone principal
   web:
     generate: true
     image_path: "assets/images/favicon_master_512.png"
     # Você pode adicionar mais configurações de favicon aqui se desejar
+  windows:
+    generate: true
+    icon_size: 256 # Recommended for Windows
+  macos:
+    generate: true
+  linux:
+    generate: true

@@ -11,6 +11,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_month_year_picker.dart'
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:sincro_app_flutter/common/widgets/scrollable_chips_row.dart';
 
 class ScheduleTaskSheet extends StatefulWidget {
   final DateTime? initialDate;
@@ -46,7 +47,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   bool _isAllDay = false;
   
   // Reminder State
+  bool _showReminder = false; // Controls visibility of reminder options
   Duration? _selectedReminderOffset;
+  
+  // Recurrence State
+  bool _showRecurrence = false; // Controls visibility of recurrence options
+  
+  // Duration State
+  int? _selectedDuration;
+
+  // REMOVED ScrollControllers (managed internally by ScrollableChipsRow)
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -57,8 +72,11 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     
     _focusedDay = widget.initialDate ?? now;
     _selectedDay = widget.initialDate ?? now;
+    _selectedDay = widget.initialDate ?? now;
     _selectedTime = widget.initialTime;
     _recurrenceRule = widget.initialRecurrence ?? RecurrenceRule();
+    _showRecurrence = _recurrenceRule.type != RecurrenceType.none;
+    _showReminder = _selectedReminderOffset != null;
     
     _isAllDay = _selectedTime == null;
 
@@ -100,16 +118,25 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     final now = TimeOfDay.now();
     final initial = _selectedTime ?? TimeOfDay(hour: now.hour + 1, minute: 0);
 
-    final TimeOfDay? picked = await showDialog<TimeOfDay>(
+    final dynamic picked = await showDialog(
       context: context,
       builder: (context) => CustomTimePickerDialog(initialTime: initial),
     );
 
     if (picked != null) {
-      setState(() {
-        _selectedTime = picked;
-        _isAllDay = false; // Ensure it's not all day if time picked
-      });
+      if (picked is TimePickerResult) {
+         setState(() {
+           _selectedTime = picked.time;
+           _selectedDuration = picked.durationMinutes;
+           _isAllDay = false;
+         });
+      } else if (picked is TimeOfDay) {
+         // Fallback just in case
+         setState(() {
+           _selectedTime = picked;
+           _isAllDay = false;
+         });
+      }
     } else {
         // user cancelled picker
         if (_selectedTime == null) {
@@ -180,6 +207,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
        reminderTime: reminderTime,
        reminderOffset: _selectedReminderOffset,
        hasTime: !_isAllDay && _selectedTime != null,
+       durationMinutes: _selectedDuration,
      );
      
      Navigator.pop(context, result);
@@ -298,48 +326,105 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     );
   }
 
+  // --- Helpers ---
+  
+  bool get _isFreePlan {
+    final plan = widget.userData.subscription.plan.name.toLowerCase();
+    return plan == 'essencial' || plan == 'gratuito' || plan == 'free';
+  }
+
+  bool get _canUseRecurrence {
+    // Only Desperta and Sinergia
+    return !_isFreePlan;
+  }
+
+  bool get _canUseReminders {
+    // Only Desperta and Sinergia
+    return !_isFreePlan;
+  }
+
+  void _showUpgradeDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Visualizar recurso: $feature"),
+        content: const Text(
+          "Este recurso está disponível apenas nos planos Desperta e Sinergia.\n\n"
+          "Faça o upgrade para desbloquear recorrência, lembretes e muito mais!",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Agora não"),
+          ),
+          FilledButton(
+            onPressed: () {
+               Navigator.pop(context);
+               // TODO: Navigate to subscription page
+            },
+            child: const Text("Ver Planos"),
+          ),
+        ],
+      ),
+    );
+  }
+
   // --- Widget Builders ---
 
   Widget _buildTimeRow() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.access_time, color: AppColors.secondaryText),
-              SizedBox(width: 12),
-              Text("Horário", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
-            ],
-          ),
-          Row(
-            children: [
-              InkWell(
-                onTap: _isAllDay ? null : _pickTime,
-                borderRadius: BorderRadius.circular(8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+    String timeText = _isAllDay ? "Dia inteiro" : (_selectedTime?.format(context) ?? "Definir");
+    if (!_isAllDay && _selectedDuration != null) {
+       if (_selectedDuration! >= 60) {
+          final h = _selectedDuration! ~/ 60;
+          final m = _selectedDuration! % 60;
+          if (m > 0) {
+            timeText += " • ${h}h ${m}min";
+          } else {
+            timeText += " • ${h}h";
+          }
+       } else {
+          timeText += " • ${_selectedDuration} min";
+       }
+    }
+
+    return InkWell(
+      onTap: _isAllDay ? null : _pickTime,
+      hoverColor: AppColors.primary.withOpacity(0.05),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: const [
+                Icon(Icons.access_time, color: AppColors.secondaryText),
+                SizedBox(width: 12),
+                Text("Horário", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
+              ],
+            ),
+            Row(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Text(
-                    _isAllDay ? "Dia inteiro" : (_selectedTime?.format(context) ?? "Definir"),
+                    timeText,
                     style: TextStyle(
                       color: _isAllDay ? AppColors.secondaryText : AppColors.primary,
-                      fontSize: 14, // Reduced from 16 to match "Nunca"
-                      fontWeight: _isAllDay ? FontWeight.normal : FontWeight.w600, // Non-bold for "Dia inteiro"
+                      fontSize: 14,
+                      fontWeight: _isAllDay ? FontWeight.normal : FontWeight.w600,
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Switch(
-                value: !_isAllDay, 
-                activeColor: AppColors.primary,
-                overlayColor: WidgetStateProperty.all(Colors.transparent),
-                onChanged: (val) => _toggleAllDay(!val),
-              ),
-            ],
-          ),
-        ],
+                Switch(
+                  value: !_isAllDay, 
+                  activeColor: AppColors.primary,
+                  overlayColor: WidgetStateProperty.all(Colors.transparent),
+                  onChanged: (val) => _toggleAllDay(!val),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -350,38 +435,64 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
     return Column(
       children: [
-        Padding(
-           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-           child: Row(
-             children: [
-                const Icon(Icons.repeat, color: AppColors.secondaryText),
-                const SizedBox(width: 12),
-                const Text("Repetir", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
-                const Spacer(),
-                Text(
-                  summary,
-                  style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
-                ),
-                const SizedBox(width: 12),
-                Switch(
-                  value: isRepeating,
-                  activeColor: AppColors.primary,
-                  overlayColor: WidgetStateProperty.all(Colors.transparent),
-                  onChanged: (val) {
-                    setState(() {
-                      if (val) {
-                        // Default to Daily AND Default End Date (30 days) to prevent infinite loops
-                        _recurrenceRule = RecurrenceRule(
-                           type: RecurrenceType.daily,
-                           endDate: null, // Infinite recurrence (Smart Completion)
-                        ); 
-                      } else {
-                        _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
-                      }
-                    });
-                  },
-                ),
-             ],
+        InkWell(
+           onTap: () {
+             if (!_canUseRecurrence) {
+               _showUpgradeDialog("Recorrência");
+               return;
+             }
+             // Toggle switch logic here if tap row
+             setState(() {
+                if (isRepeating) {
+                   _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
+                } else {
+                   _recurrenceRule = RecurrenceRule(
+                      type: RecurrenceType.daily,
+                      endDate: null, 
+                   ); 
+                }
+             });
+           },
+           hoverColor: AppColors.primary.withOpacity(0.05),
+           child: Padding(
+             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+             child: Row(
+               children: [
+                  const Icon(Icons.repeat, color: AppColors.secondaryText),
+                  const SizedBox(width: 12),
+                  const Text("Repetir", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
+                  if (!_canUseRecurrence) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.lock_outline, size: 16, color: AppColors.secondaryText),
+                  ],
+                  const Spacer(),
+                  Text(
+                    summary,
+                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                  ),
+                  const SizedBox(width: 12),
+                  Switch(
+                    value: _showRecurrence,
+                    activeColor: AppColors.primary,
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
+                    onChanged: !_canUseRecurrence ? null : (val) {
+                      setState(() {
+                        _showRecurrence = val;
+                        if (!val) {
+                          _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
+                        } else {
+                          // Allow "No Selection" state - implicit RecurrenceType.none until user picks
+                          // OR default to Daily as user convenience?
+                          // User requested "sem seleção". So we keep it as none until they pick.
+                          if (_recurrenceRule.type == RecurrenceType.none) {
+                              // Ensure it's none.
+                          }
+                        }
+                      });
+                    },
+                  ),
+               ],
+             ),
            ),
         ),
         
@@ -389,24 +500,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         AnimatedSize(
            duration: const Duration(milliseconds: 300),
            curve: Curves.easeInOut,
-           child: isRepeating 
+           child: _showRecurrence // Use decoupled state 
              ? Padding(
                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                  child: Column(
                    crossAxisAlignment: CrossAxisAlignment.start,
                    children: [
                      // Frequency Chips
-                     SingleChildScrollView(
-                       scrollDirection: Axis.horizontal,
-                       child: Row(
-                         children: [
+                     ScrollableChipsRow(
+                       children: [
                            _buildRecurrenceChip("Diariamente", RecurrenceType.daily),
                            const SizedBox(width: 8),
                            _buildRecurrenceChip("Semanalmente", RecurrenceType.weekly),
                            const SizedBox(width: 8),
                            _buildRecurrenceChip("Mensalmente", RecurrenceType.monthly),
-                         ],
-                       ),
+                       ],
                      ),
                      
                       // Weekly Days Selection (if Weekly)
@@ -592,36 +700,98 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     final bool hasReminder = _selectedReminderOffset != null;
     final String summary = _getReminderSummary();
 
+    final bool canRemind = _canUseReminders && !_isAllDay;
+    // Opacity logic: If AllDay, reduce opacity of Icon/Title.
+    final double contentOpacity = _isAllDay ? 0.5 : 1.0;
+
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-          child: Row(
-            children: [
-               const Icon(Icons.notifications_none_rounded, color: AppColors.secondaryText),
-               const SizedBox(width: 12),
-               const Text("Lembrete", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
-               const Spacer(),
-               Text(
-                 summary,
-                 style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
-               ),
-               const SizedBox(width: 12),
-               Switch(
-                 value: hasReminder,
-                 activeColor: AppColors.primary,
-                 overlayColor: WidgetStateProperty.all(Colors.transparent),
-                 onChanged: (val) {
-                   setState(() {
-                     if (val) {
-                       _selectedReminderOffset = Duration.zero; // Default to "Na hora"
-                     } else {
-                       _selectedReminderOffset = null;
-                     }
-                   });
-                 },
-               ),
-            ],
+        InkWell(
+          onTap: () {
+            if (!_canUseReminders) {
+               _showUpgradeDialog("Lembretes");
+               return;
+            }
+            if (_isAllDay) return;
+
+            setState(() {
+               _showReminder = !_showReminder; // Toggle the visibility state
+               if (!_showReminder) {
+                 _selectedReminderOffset = null;
+               } else {
+                 // If turning on, and no reminder is set, default to "Na hora"
+                 if (_selectedReminderOffset == null) {
+                   _selectedReminderOffset = Duration.zero;
+                 }
+               }
+            });
+          },
+          hoverColor: AppColors.primary.withOpacity(0.05),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            child: Row(
+              children: [
+                 // Opacity wrapper for Icon and Title
+                 Opacity(
+                   opacity: contentOpacity,
+                   child: Row(
+                     mainAxisSize: MainAxisSize.min,
+                     children: const [
+                       Icon(Icons.notifications_none_rounded, color: AppColors.secondaryText),
+                       SizedBox(width: 12),
+                       Text("Lembrete", style: TextStyle(color: AppColors.primaryText, fontSize: 16)),
+                     ],
+                   ),
+                 ),
+                 
+                 if (!_canUseReminders && !_isAllDay) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.lock_outline, size: 16, color: AppColors.secondaryText),
+                 ],
+                 
+                 const Spacer(),
+                 
+                 // Trailing Content Logic
+                 if (_isAllDay)
+                    Text(
+                      "Defina um horário",
+                      style: TextStyle(color: AppColors.secondaryText.withOpacity(0.6), fontSize: 14),
+                    )
+                 else ...[
+                    // Normal or Premium-locked State
+                    if (!_canUseReminders)
+                       Text(
+                         "Recurso Premium",
+                         style: TextStyle(color: AppColors.secondaryText.withOpacity(0.6), fontSize: 12),
+                       )
+                    else
+                       Text(
+                         summary,
+                         style: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                       ),
+                    
+                    const SizedBox(width: 12),
+                     Switch(
+                        value: _showReminder,
+                        activeColor: AppColors.primary,
+                        overlayColor: WidgetStateProperty.all(Colors.transparent),
+                        onChanged: !_canUseReminders ? null : (val) {
+                          setState(() {
+                            _showReminder = val;
+                            if (!val) {
+                              _selectedReminderOffset = null;
+                            } else {
+                              // If turning on, and no reminder is set, default to "Na hora"
+                              if (_selectedReminderOffset == null) {
+                                _selectedReminderOffset = Duration.zero;
+                              }
+                            }
+                          });
+                        },
+                     ),
+                 ]
+              ],
+            ),
           ),
         ),
         
@@ -629,13 +799,11 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         AnimatedSize(
            duration: const Duration(milliseconds: 300),
            curve: Curves.easeInOut,
-           child: hasReminder 
+           child: _showReminder && !_isAllDay // Use decoupled state
              ? Padding(
                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                 child: SingleChildScrollView(
-                   scrollDirection: Axis.horizontal,
-                   child: Row(
-                     children: [
+                 child: ScrollableChipsRow(
+                   children: [
                        _buildReminderChip("Na hora", Duration.zero),
                        const SizedBox(width: 8),
                        _buildReminderChip("10 min antes", const Duration(minutes: 10)),
@@ -647,7 +815,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                        _buildReminderChip("1 dia antes", const Duration(days: 1)),
                        const SizedBox(width: 8),
                        ActionChip(
-                         label: const Text("Definir hor├írio"),
+                         label: const Text("Definir horário"),
                          onPressed: _pickReminderTime,
                          backgroundColor: AppColors.background,
                          labelStyle: const TextStyle(color: AppColors.primary),
@@ -656,8 +824,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                            side: const BorderSide(color: AppColors.primary),
                          ),
                        ),
-                     ],
-                   ),
+                   ],
                  ),
                )
              : const SizedBox.shrink(),
@@ -955,4 +1122,5 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       ),
     );
   }
+
 }

@@ -1,4 +1,4 @@
-// lib/features/tasks/presentation/foco_do_dia_screen.dart
+﻿// lib/features/tasks/presentation/foco_do_dia_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -19,20 +19,27 @@ import 'widgets/tag_selection_modal.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 
-// --- INÍCIO DA MUDANÇA: Importar o motor de numerologia ---
+// --- INÃCIO DA MUDANÃ‡A: Importar o motor de numerologia ---
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'widgets/task_filter_panel.dart';
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
-// --- FIM DA MUDANÇA ---
+// --- FIM DA MUDANÃ‡A ---
 
-// --- INÍCIO DA MUDANÇA (Solicitação 2): Adicionado 'concluidas' ---
+// --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 2): Adicionado 'concluidas' ---
 enum TaskViewScope { focoDoDia, todas, concluidas, atrasadas }
-// --- FIM DA MUDANÇA ---
+// --- FIM DA MUDANÃ‡A ---
 
 class FocoDoDiaScreen extends StatefulWidget {
   final UserModel? userData;
-  const FocoDoDiaScreen({super.key, required this.userData});
+  final String? initialFilter; // NOVO PARAMETRO
+  
+  const FocoDoDiaScreen({
+    super.key, 
+    required this.userData,
+    this.initialFilter,
+  });
+  
   @override
   State<FocoDoDiaScreen> createState() => _FocoDoDiaScreenState();
 }
@@ -47,33 +54,58 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   DateTime? _selectedDate; // NOVO: Filtro de data
   int? _selectedVibrationNumber;
   final List<int> _vibrationNumbers = List.generate(9, (i) => i + 1) + [11, 22];
+  
+  // Stream to prevent rebuilds
+  late Stream<List<TaskModel>> _tasksStream;
 
-  // --- INÍCIO DA MUDANÇA (Solicitação 1 & 3): Estados de seleção e filtro ---
+  // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 1 & 3): Estados de seleÃ§Ã£o e filtro ---
   bool _isSelectionMode = false;
   Set<String> _selectedTaskIds = {};
   String? _selectedTag;
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDANÃ‡A ---
+
+  // Desktop Split View State
+  TaskModel? _selectedTaskDesktop;
+  bool _isCreatingTaskDesktop = false;
 
   @override
   void initState() {
     super.initState();
     _userId = AuthRepository().currentUser?.id ?? '';
+    if (_userId.isNotEmpty) {
+       _tasksStream = _supabaseService.getTasksStream(_userId);
+    }
     if (_userId.isEmpty) {
-      debugPrint("ERRO: FocoDoDiaScreen acessada sem usuário logado!");
+      debugPrint("ERRO: FocoDoDiaScreen acessada sem usuÃ¡rio logado!");
+    }
+    
+    // Configurar filtro inicial baseado no parametro
+    if (widget.initialFilter == 'overdue') {
+      _currentScope = TaskViewScope.atrasadas;
+    } else if (widget.initialFilter == 'today') {
+      _currentScope = TaskViewScope.focoDoDia;
     }
   }
 
   void _openAddTaskModal() {
     if (widget.userData == null || _userId.isEmpty) {
-      _showErrorSnackbar('Erro: Não foi possível obter dados do usuário.');
+      _showErrorSnackbar('Erro: NÃ£o foi possÃ­vel obter dados do usuÃ¡rio.');
       return;
     }
 
-    // --- INÍCIO DA MUDANÇA (Solicitação 1): Cancela seleção ao abrir modal ---
+    // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 1): Cancela seleÃ§Ã£o ao abrir modal ---
     if (_isSelectionMode) {
       _clearSelection();
     }
-    // --- FIM DA MUDANÇA ---
+    // --- FIM DA MUDANÃ‡A ---
+
+    if (MediaQuery.of(context).size.width > 900) {
+      setState(() {
+        _isCreatingTaskDesktop = true;
+        _selectedTaskDesktop = null;
+      });
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -82,8 +114,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       builder: (context) => TaskInputModal(
         userData: widget.userData!,
         userId: _userId,
-        // NÃO passa initialDueDate para que o pill de data não apareça
-        // O modal vai calcular a vibração para "hoje" mas não mostra o pill
+        // NÃƒO passa initialDueDate para que o pill de data nÃ£o apareÃ§a
+        // O modal vai calcular a vibraÃ§Ã£o para "hoje" mas nÃ£o mostra o pill
         onAddTask: (ParsedTask parsedTask) {
           if (parsedTask.recurrenceRule.type == RecurrenceType.none) {
             _createSingleTask(parsedTask);
@@ -95,15 +127,15 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     );
   }
 
-  // --- INÍCIO DA MUDANÇA: Função helper para calcular o Dia Pessoal ---
-  /// Calcula o Dia Pessoal para uma data específica.
-  /// Retorna null se os dados do usuário não estiverem disponíveis ou a data for nula.
+  // --- INÃCIO DA MUDANÃ‡A: FunÃ§Ã£o helper para calcular o Dia Pessoal ---
+  /// Calcula o Dia Pessoal para uma data especÃ­fica.
+  /// Retorna null se os dados do usuÃ¡rio nÃ£o estiverem disponÃ­veis ou a data for nula.
   int? _calculatePersonalDay(DateTime? date) {
     if (widget.userData == null ||
         widget.userData!.dataNasc.isEmpty ||
         widget.userData!.nomeAnalise.isEmpty ||
         date == null) {
-      return null; // Retorna nulo se não pode calcular
+      return null; // Retorna nulo se nÃ£o pode calcular
     }
 
     final engine = NumerologyEngine(
@@ -120,7 +152,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       return null;
     }
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDANÃ‡A ---
 
   void _createSingleTask(ParsedTask parsedTask, {String? recurrenceId}) {
     // Garante que a data seja convertida para UTC
@@ -128,16 +160,16 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
-      // Se tem data específica, usa ela
+      // Se tem data especÃ­fica, usa ela
       final dateLocal = parsedTask.dueDate!.toLocal();
       finalDueDateUtc =
           DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
       dateForPersonalDay = finalDueDateUtc;
     } else {
-      // Se não tem data específica, usa a data atual (não a de amanhã)
+      // Se nÃ£o tem data especÃ­fica, usa a data atual (nÃ£o a de amanhÃ£)
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
+      // NÃƒO define finalDueDateUtc - deixa null para tarefas sem data especÃ­fica
     }
 
     // Calcula o dia pessoal usando a data determinada
@@ -148,10 +180,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       text: parsedTask.cleanText,
       createdAt: DateTime.now().toUtc(),
       dueDate: finalDueDateUtc,
-      // --- INÍCIO DA MUDANÇA: Campos de Meta/Jornada (Já estavam corretos) ---
+      // --- INÃCIO DA MUDANÃ‡A: Campos de Meta/Jornada (JÃ¡ estavam corretos) ---
       journeyId: parsedTask.journeyId,
       journeyTitle: parsedTask.journeyTitle,
-      // --- FIM DA MUDANÇA ---
+      // --- FIM DA MUDANÃ‡A ---
       tags: parsedTask.tags,
       reminderTime: parsedTask.reminderTime,
       reminderAt: parsedTask.reminderAt,
@@ -159,9 +191,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
       recurrenceId: recurrenceId,
-      // --- INÍCIO DA MUDANÇA: Salvar o Dia Pessoal calculado ---
+      // --- INÃCIO DA MUDANÃ‡A: Salvar o Dia Pessoal calculado ---
       personalDay: finalPersonalDay,
-      // --- FIM DA MUDANÇA ---
+      // --- FIM DA MUDANÃ‡A ---
     );
 
     _supabaseService.addTask(_userId, newTask).catchError((error) {
@@ -170,11 +202,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   void _createRecurringTasks(ParsedTask parsedTask) {
-    // Geração de ID único para agrupar (se necessário no futuro)
+    // GeraÃ§Ã£o de ID Ãºnico para agrupar (se necessÃ¡rio no futuro)
     final String recurrenceId = _uuid.v4();
     
     // A logica antiga gerava 100+ tarefas. 
-    // A nova lógica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a próxima ao concluir.
+    // A nova lÃ³gica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a prÃ³xima ao concluir.
     
     // Usa a data definida ou 'Hoje'
     final firstDate = parsedTask.dueDate ?? DateTime.now();
@@ -199,7 +231,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   //
-  // --- Nenhuma mudança nas funções de cálculo de recorrência ---
+  // --- Nenhuma mudanÃ§a nas funÃ§Ãµes de cÃ¡lculo de recorrÃªncia ---
   //
   List<DateTime> _calculateRecurrenceDates(
       RecurrenceRule rule, DateTime? startDate) {
@@ -273,7 +305,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         return DateTime.now().add(const Duration(days: 365 * 10));
     }
   }
-  // --- Fim das funções de cálculo de recorrência ---
+  // --- Fim das funÃ§Ãµes de cÃ¡lculo de recorrÃªncia ---
   //
 
   void _showErrorSnackbar(String message) {
@@ -285,9 +317,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   void _handleTaskTap(TaskModel task) {
-    // --- INÍCIO DA MUDANÇA (Solicitação 1): Trava clique normal em modo de seleção ---
+    // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 1): Trava clique normal em modo de seleÃ§Ã£o ---
     if (_isSelectionMode) return;
-    // --- FIM DA MUDANÇA ---
+    // --- FIM DA MUDANÃ‡A ---
 
     if (widget.userData == null) return;
 
@@ -301,6 +333,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           return TaskDetailModal(
             task: task,
             userData: widget.userData!,
+            onReschedule: (date) => _rescheduleTaskToDate(task, date),
           );
         },
       );
@@ -311,6 +344,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           builder: (context) => TaskDetailModal(
             task: task,
             userData: widget.userData!,
+            onReschedule: (date) => _rescheduleTaskToDate(task, date),
           ),
           fullscreenDialog: true,
         ),
@@ -320,9 +354,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
   // Note: date comparisons now use explicit local-date logic where needed.
 
-  // --- INÍCIO DA MUDANÇA (Solicitação 1): Métodos de gerenciamento de seleção ---
+  // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 1): MÃ©todos de gerenciamento de seleÃ§Ã£o ---
 
-  /// Alterna o modo de seleção.
+  /// Alterna o modo de seleÃ§Ã£o.
   void _toggleSelectionMode() {
     setState(() {
       _isSelectionMode = !_isSelectionMode;
@@ -332,7 +366,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     });
   }
 
-  /// Limpa a seleção e sai do modo de seleção.
+  /// Limpa a seleÃ§Ã£o e sai do modo de seleÃ§Ã£o.
   void _clearSelection() {
     setState(() {
       _isSelectionMode = false;
@@ -351,20 +385,20 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     });
   }
 
-  /// Seleciona todas as tarefas visíveis atualmente.
+  /// Seleciona todas as tarefas visÃ­veis atualmente.
   void _selectAll(List<TaskModel> tasksToShow) {
     setState(() {
       if (_selectedTaskIds.length == tasksToShow.length) {
-        // Se todos já estão selecionados, limpa
+        // Se todos jÃ¡ estÃ£o selecionados, limpa
         _selectedTaskIds.clear();
       } else {
-        // Senão, seleciona todos
+        // SenÃ£o, seleciona todos
         _selectedTaskIds = tasksToShow.map((t) => t.id).toSet();
       }
     });
   }
 
-  /// Exibe um diálogo de confirmação e exclui as tarefas selecionadas.
+  /// Exibe um diÃ¡logo de confirmaÃ§Ã£o e exclui as tarefas selecionadas.
   Future<void> _deleteSelectedTasks() async {
     final count = _selectedTaskIds.length;
     if (count == 0) return;
@@ -376,7 +410,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         title: const Text('Excluir Tarefas',
             style: TextStyle(color: Colors.white)),
         content: Text(
-            'Você tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
+            'VocÃª tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
             style: const TextStyle(color: AppColors.secondaryText)),
         actions: [
           TextButton(
@@ -399,7 +433,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
                 content: Text(
-                    '$count ${count == 1 ? 'tarefa excluída' : 'tarefas excluídas'}.'),
+                    '$count ${count == 1 ? 'tarefa excluÃ­da' : 'tarefas excluÃ­das'}.'),
                 backgroundColor: Colors.green),
           );
           _clearSelection();
@@ -409,9 +443,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       }
     }
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDANÃ‡A ---
 
-  // --- INÍCIO DA MUDANÇA (Solicitação 2 & 3): Lógica de filtro atualizada ---
+  // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 2 & 3): LÃ³gica de filtro atualizada ---
   List<TaskModel> _filterTasks(List<TaskModel> allTasks, int? userPersonalDay) {
     List<TaskModel> filteredTasks;
 
@@ -496,9 +530,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     return filteredTasks;
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDANÃ‡A ---
 
-  // --- INÍCIO DA MUDANÇA (Swipe Actions) ---
+  // --- INÃCIO DA MUDANÃ‡A (Swipe Actions) ---
   // Swipe Left: Excluir Tarefa
   Future<bool?> _handleSwipeLeft(TaskModel task) async {
     final confirmed = await showDialog<bool>(
@@ -508,7 +542,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         title: const Text('Excluir Tarefa?',
             style: TextStyle(color: Colors.white)),
         content: const Text(
-            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
+            'Tem certeza que deseja excluir esta tarefa? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
         actions: [
           TextButton(
@@ -531,12 +565,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Tarefa excluída com sucesso'),
+              content: Text('Tarefa excluÃ­da com sucesso'),
               backgroundColor: AppColors.success,
             ),
           );
         }
-        return true; // Confirma a exclusão visual
+        return true; // Confirma a exclusÃ£o visual
       } catch (e) {
         debugPrint("Erro ao excluir tarefa: $e");
         if (mounted) {
@@ -564,12 +598,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     );
 
     if (newDate != null) {
-      // Lógica de remoção visual baseada no filtro
+      // LÃ³gica de remoÃ§Ã£o visual baseada no filtro
       if (_currentScope == TaskViewScope.focoDoDia) {
-        // Se estava no Foco do Dia (Hoje), e mudou a data (para Amanhã), remove.
-        // Se era Atrasada e veio para Hoje, mantém (mas a lista deve atualizar via stream).
+        // Se estava no Foco do Dia (Hoje), e mudou a data (para AmanhÃ£), remove.
+        // Se era Atrasada e veio para Hoje, mantÃ©m (mas a lista deve atualizar via stream).
         // Como o reschedule sempre joga para o futuro (exceto atrasada -> hoje),
-        // vamos simplificar: se a nova data NÃO é hoje, removemos da lista de "Hoje".
+        // vamos simplificar: se a nova data NÃƒO Ã© hoje, removemos da lista de "Hoje".
         final now = DateTime.now();
         final today = DateTime(now.year, now.month, now.day);
         final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
@@ -584,7 +618,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     }
     return false; // Deixa o StreamBuilder atualizar
   }
-  // --- FIM DA MUDANÇA ---
+  // --- FIM DA MUDANÃ‡A ---
 
   @override
   Widget build(BuildContext context) {
@@ -593,218 +627,38 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         backgroundColor: AppColors.background,
         body: Center(
           child: Text(
-            'Erro: Dados do usuário não disponíveis.',
+            'Erro: Dados do usuÃ¡rio nÃ£o disponÃ­veis.',
             style: TextStyle(color: Colors.red),
           ),
         ),
       );
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-    final bool isMobile = screenWidth < 600;
+    final bool isDesktop = MediaQuery.of(context).size.width > 900;
 
     return Scaffold(
-      resizeToAvoidBottomInset: false,
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 800),
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: isMobile ? 4.0 : 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-
-                  Expanded(
-                    child: StreamBuilder<List<TaskModel>>(
-                      stream: _supabaseService.getTasksStream(_userId),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                                ConnectionState.waiting &&
-                            !snapshot.hasData) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: _buildHeader(isMobile: isMobile, availableTags: []),
-                              ),
-                              const Expanded(child: Center(child: CustomLoadingSpinner())),
-                            ],
-                          );
-                        }
-                        if (snapshot.hasError) {
-                          debugPrint(
-                              "Erro no Stream de Tarefas: ${snapshot.error}");
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                                child: _buildHeader(isMobile: isMobile, availableTags: []),
-                              ),
-                              Expanded(
-                                child: Center(
-                                    child: Text(
-                                        'Erro ao carregar tarefas: ${snapshot.error}')),
-                              ),
-                            ],
-                          );
-                        }
-
-                        final allTasks = snapshot.data ?? [];
-
-                        // --- INÍCIO DA MUDANÇA (Solicitação 3): Extração de Tags ---
-                        // Extrai tags dinamicamente da lista de tarefas pendentes
-                        final allTags = allTasks
-                            .where((task) => !task.completed)
-                            .expand((task) => task.tags)
-                            .toSet()
-                            .toList();
-                        allTags.sort(); // Ordena alfabeticamente
-
-                        int? personalDay;
-                        if (widget.userData?.nomeAnalise.isNotEmpty == true && widget.userData?.dataNasc.isNotEmpty == true) {
-                             final engine = NumerologyEngine(
-                                  nomeCompleto: widget.userData!.nomeAnalise,
-                                  dataNascimento: widget.userData!.dataNasc,
-                               );
-                             personalDay = engine.calculatePersonalDayForDate(DateTime.now());
-                        }
-                        final tasksToShow = _filterTasks(allTasks, personalDay);
-                        // --- FIM DA MUDANÇA ---
-
-                        // Lógica de mensagens de "lista vazia" (atualizada)
-                        String emptyMsg = 'Tudo limpo por aqui!';
-                        String emptySubMsg = 'Nenhuma tarefa encontrada.';
-
-                        if (_currentScope == TaskViewScope.focoDoDia &&
-                            tasksToShow.isEmpty) {
-                          emptyMsg = 'Foco do dia concluído!';
-                          emptySubMsg =
-                              'Você não tem tarefas pendentes para hoje.';
-                        } else if (_currentScope == TaskViewScope.todas &&
-                            tasksToShow.isEmpty) {
-                          emptyMsg = 'Caixa de entrada vazia!';
-                          emptySubMsg = 'Você não tem nenhuma tarefa pendente.';
-                        } else if (_currentScope ==
-                                TaskViewScope.concluidas &&
-                            tasksToShow.isEmpty) {
-                          emptyMsg = 'Nenhuma tarefa concluída.';
-                          emptySubMsg = 'Complete tarefas para vê-las aqui.';
-                        } else if (_currentScope == TaskViewScope.atrasadas &&
-                            tasksToShow.isEmpty) {
-                          emptyMsg = 'Nenhuma tarefa atrasada.';
-                          emptySubMsg = 'Parabéns! Você está em dia com suas tarefas.';
-                        }
-
-
-                        // Se um filtro de tag estiver ativo e a lista vazia
-                        if (_selectedTag != null &&
-                            tasksToShow.isEmpty &&
-                            _currentScope != TaskViewScope.concluidas) {
-                          emptyMsg = 'Nenhuma tarefa encontrada.';
-                          emptySubMsg =
-                              'Não há tarefas pendentes com a tag "$_selectedTag".';
-                        }
-
-                        return Column(
-                          children: [
-                             // Header (título e filtros principais) - Moved inside to access allTags
-                             Padding(
-                               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                               child: _buildHeader(isMobile: isMobile, availableTags: allTags),
-                             ),
-
-
-                            // 2. Controles de Seleção (nova UI)
-                            // Sempre mostrar os controles de seleção, independente do filtro
-                            Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8.0),
-                              child: _buildSelectionControls(tasksToShow),
-                            ),
-                            // --- FIM DA MUDANÇA ---
-
-                            Expanded(
-                              child: TasksListView(
-                                tasks: tasksToShow,
-                                userData: widget.userData,
-                                emptyListMessage: emptyMsg,
-                                emptyListSubMessage: emptySubMsg,
-                                // --- INÍCIO DA MUDANÇA (Solicitação 1): Passa parâmetros ---
-                                selectionMode: _isSelectionMode,
-                                selectedTaskIds: _selectedTaskIds,
-                                onTaskSelected:
-                                    _onTaskSelected, // A tela de Foco *passa* a função
-                                onTaskTap: (task) {
-                                  // Lógica de toque principal
-                                  if (_isSelectionMode) {
-                                    _onTaskSelected(task.id,
-                                        !_selectedTaskIds.contains(task.id));
-                                  } else {
-                                    _handleTaskTap(task); // Abre detalhes
-                                  }
-                                },
-                                // --- FIM DA MUDANÇA ---
-                                onToggle: (task, isCompleted) {
-                                  // Desabilita o toggle de conclusão durante o modo de seleção
-                                  if (_isSelectionMode) return;
-
-                                  _supabaseService.updateTaskFields(
-                                    _userId,
-                                    task.id,
-                                    {
-                                      'completed': isCompleted,
-                                      'completedAt': isCompleted ? DateTime.now() : null,
-                                    },
-                                  ).then((_) {
-                                    if (task.journeyId != null &&
-                                        task.journeyId!.isNotEmpty) {
-                                      _supabaseService.updateGoalProgress(
-                                          _userId, task.journeyId!);
-                                    }
-                                  }).catchError((error) {
-                                    _showErrorSnackbar(
-                                        "Erro ao atualizar tarefa: $error");
-                                  });
-                                },
-                                // Callbacks de Swipe
-                                onSwipeLeft: _handleSwipeLeft,
-                                onSwipeRight: _handleSwipeRight,
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
+        child: _buildTaskListContent(isMobile: !isDesktop),
       ),
-      // --- INÍCIO DA MUDANÇA (Solicitação 1): Esconde FAB em modo de seleção ---
-      floatingActionButton: _isSelectionMode
+
+      // Esconde FAB em modo de seleÃ§Ã£o e Desktop
+      floatingActionButton: (_isSelectionMode || isDesktop)
           ? null
           : FloatingActionButton(
-                  onPressed: _openAddTaskModal,
-                  backgroundColor: AppColors.primary,
-                  tooltip: 'Adicionar Tarefa',
-                  heroTag: 'foco_fab',
-                  child: const Icon(Icons.add, color: Colors.white),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                ),
-      // --- FIM DA MUDANÇA ---
+              onPressed: _openAddTaskModal,
+              backgroundColor: AppColors.primary,
+              tooltip: 'Adicionar Tarefa',
+              heroTag: 'foco_fab',
+              child: const Icon(Icons.add, color: Colors.white),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(28),
+              ),
+            ),
     );
   }
 
-  // _buildHeader (original) MODIFICADO para (Solicitação 1 e 3)
+  // _buildHeader (original) MODIFICADO para (SolicitaÃ§Ã£o 1 e 3)
   final GlobalKey _filterButtonKey = GlobalKey();
   
   // Removed duplicate _selectedDate
@@ -859,11 +713,17 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Tarefas',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: titleFontSize,
-                    fontWeight: FontWeight.bold)),
+            // Title + Button
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Tarefas',
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: titleFontSize,
+                        fontWeight: FontWeight.bold)),
+              ],
+            ),
             
             // Buttons Row: Selection + Filters
             Row(
@@ -934,17 +794,17 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
      switch (type) {
        case TaskViewScope.focoDoDia: return 'Foco do Dia';
        case TaskViewScope.todas: return 'Todas';
-       case TaskViewScope.concluidas: return 'Concluídas';
+       case TaskViewScope.concluidas: return 'ConcluÃ­das';
        case TaskViewScope.atrasadas: return 'Atrasadas';
      }
    }
 
 
-  // --- INÍCIO DA MUDANÇA (Solicitação 1 & 3): Widgets de UI refatorados ---
+  // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 1 & 3): Widgets de UI refatorados ---
 
 
 
-  /// Constrói o botão de seleção de tarefas
+  /// ConstrÃ³i o botÃ£o de seleÃ§Ã£o de tarefas
   Widget _buildSelectionButton() {
     return IconButton(
       onPressed: _toggleSelectionMode,
@@ -952,7 +812,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           _isSelectionMode ? Icons.close : Icons.checklist_rounded, 
           color: _isSelectionMode ? Colors.white : AppColors.secondaryText
       ),
-      tooltip: _isSelectionMode ? 'Cancelar Seleção' : 'Selecionar Tarefas',
+      tooltip: _isSelectionMode ? 'Cancelar SeleÃ§Ã£o' : 'Selecionar Tarefas',
       style: IconButton.styleFrom(
         shape: RoundedRectangleBorder(
            borderRadius: BorderRadius.circular(8),
@@ -962,9 +822,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     );
   }
 
-  /// (Solicitação 1 - Nova UI) Constrói os controles de seleção
+  /// (SolicitaÃ§Ã£o 1 - Nova UI) ConstrÃ³i os controles de seleÃ§Ã£o
   Widget _buildSelectionControls(List<TaskModel> tasksToShow) {
-    // Se estiver no modo de seleção
+    // Se estiver no modo de seleÃ§Ã£o
     if (_isSelectionMode) {
       final int count = _selectedTaskIds.length;
       final bool allSelected =
@@ -1002,7 +862,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
             const SizedBox(width: 16),
 
-            // 2. Excluir (Segundo, Logo após)
+            // 2. Excluir (Segundo, Logo apÃ³s)
             TextButton.icon(
               icon: Icon(Icons.delete_outline_rounded,
                   color: count > 0 ? Colors.redAccent : AppColors.tertiaryText),
@@ -1020,15 +880,15 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             IconButton(
               icon: const Icon(Icons.close_rounded, color: Colors.white),
               onPressed: _clearSelection,
-              tooltip: 'Cancelar seleção',
+              tooltip: 'Cancelar seleÃ§Ã£o',
             ),
           ],
         ),
       );
     }
 
-    // Modo Padrão (Botão para ativar seleção)
-    // Não mostrar o botão se não houver tarefas para selecionar
+    // Modo PadrÃ£o (BotÃ£o para ativar seleÃ§Ã£o)
+    // NÃ£o mostrar o botÃ£o se nÃ£o houver tarefas para selecionar
     if (tasksToShow.isEmpty) {
       return const SizedBox(height: 8); // Apenas padding
     }
@@ -1037,5 +897,291 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // Keep a small spacer here so layout remains consistent.
     return const SizedBox(height: 8);
   }
-}
-bool isSameDay(DateTime? a, DateTime? b) { if (a == null || b == null) return false; return a.year == b.year && a.month == b.month && a.day == b.day; }
+
+  // --- SPLIT VIEW HELPERS ---
+
+  Widget _buildTaskListContent({required bool isMobile}) {
+    return StreamBuilder<List<TaskModel>>(
+      stream: _tasksStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Erro ao carregar tarefas: ${snapshot.error}'));
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CustomLoadingSpinner());
+        }
+
+        final tasks = snapshot.data ?? [];
+        final allTags = tasks.expand((t) => t.tags).toSet().toList();
+        // Calculate personal day if needed for Foco do Dia
+        int? userPersonalDay;
+        if (_currentScope == TaskViewScope.focoDoDia) {
+           userPersonalDay = _calculatePersonalDay(DateTime.now());
+        }
+        final tasksToShow = _filterTasks(tasks, userPersonalDay);
+        
+        // Empty state logic
+        String emptyMsg = 'Tudo limpo por aqui!';
+        String emptySubMsg = 'VocÃª nÃ£o tem tarefas pendentes.';
+        
+        if (_currentScope == TaskViewScope.focoDoDia && tasksToShow.isEmpty) {
+          emptyMsg = 'Foco do dia concluÃ­do!';
+          emptySubMsg = 'VocÃª nÃ£o tem tarefas pendentes para hoje.';
+        } else if (_currentScope == TaskViewScope.todas && tasksToShow.isEmpty) {
+          emptyMsg = 'Caixa de entrada vazia!';
+          emptySubMsg = 'VocÃª nÃ£o tem nenhuma tarefa pendente.';
+        } else if (_currentScope == TaskViewScope.concluidas && tasksToShow.isEmpty) {
+          emptyMsg = 'Nenhuma tarefa concluÃ­da.';
+          emptySubMsg = 'Complete tarefas para vÃª-las aqui.';
+        } else if (_currentScope == TaskViewScope.atrasadas && tasksToShow.isEmpty) {
+          emptyMsg = 'Nenhuma tarefa atrasada.';
+          emptySubMsg = 'ParabÃ©ns! VocÃª estÃ¡ em dia com suas tarefas.';
+        }
+
+        // Se um filtro de tag estiver ativo e a lista vazia
+        if (_selectedTag != null && tasksToShow.isEmpty && _currentScope != TaskViewScope.concluidas) {
+          emptyMsg = 'Nenhuma tarefa encontrada.';
+          emptySubMsg = 'NÃ£o hÃ¡ tarefas pendentes com a tag "$_selectedTag".';
+        }
+
+        return Column(
+          children: [
+            if (isMobile) ...[
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildHeader(isMobile: isMobile, availableTags: allTags),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: _buildSelectionControls(tasksToShow),
+              ),
+              Expanded(
+                child: TasksListView(
+                  tasks: tasksToShow,
+                  userData: widget.userData,
+                  emptyListMessage: emptyMsg,
+                  emptyListSubMessage: emptySubMsg,
+                  selectionMode: _isSelectionMode,
+                  selectedTaskIds: _selectedTaskIds,
+                  activeTaskId: _selectedTaskDesktop?.id,
+                  onTaskSelected: _onTaskSelected,
+                  onTaskTap: (task) {
+                    if (_isSelectionMode) {
+                      _onTaskSelected(
+                          task.id, !_selectedTaskIds.contains(task.id));
+                    } else {
+                       if(MediaQuery.of(context).size.width > 900) {
+                          setState(() {
+                             _selectedTaskDesktop = task;
+                             _isCreatingTaskDesktop = false;
+                          });
+                       } else {
+                          _handleTaskTap(task);
+                       }
+                    }
+                  },
+                  onToggle: (task, isCompleted) {
+                    if (_isSelectionMode) return;
+                    _supabaseService.updateTaskFields(_userId, task.id, {
+                       'completed': isCompleted,
+                       'completedAt': isCompleted ? DateTime.now() : null,
+                    }).then((_) {
+                       if (task.journeyId != null && task.journeyId!.isNotEmpty) {
+                          _supabaseService.updateGoalProgress(_userId, task.journeyId!);
+                       }
+                    });
+                  },
+                  onSwipeLeft: _handleSwipeLeft,
+                  onSwipeRight: _handleSwipeRight,
+                  onRefresh: () async {
+                    setState(() {});
+                  },
+                  onRescheduleDate: _rescheduleTaskToDate,
+                ),
+              ),
+            ] else ...[
+              Expanded(
+                  child: Row(
+                    children: [
+                      // List Pane (60%)
+                      Expanded(
+                        flex: 3,
+                        child: Container(
+                          padding: const EdgeInsets.only(
+                            left: 24.0, 
+                            top: 24.0, 
+                            bottom: 24.0, 
+                            right: 12.0 
+                          ),
+                          child: Column(
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 16.0),
+                                child: _buildHeader(isMobile: false, availableTags: allTags),
+                              ),
+                              if (_isSelectionMode)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 8.0),
+                                  child: _buildSelectionControls(tasksToShow),
+                                ),
+                              Expanded(
+                                child: TasksListView(
+                                    tasks: tasksToShow, 
+                                    userData: widget.userData!,
+                                    emptyListMessage: emptyMsg, 
+                                    emptyListSubMessage: emptySubMsg, 
+                                    onRefresh: () async {
+                                      setState(() {});
+                                    },
+                                    selectionMode: _isSelectionMode,
+                                    selectedTaskIds: _selectedTaskIds,
+                                    activeTaskId: _selectedTaskDesktop?.id,
+                                    onTaskSelected: _onTaskSelected,
+                                    onTaskTap: (task) {
+                                      if (_isSelectionMode) {
+                                        _onTaskSelected(
+                                            task.id, !_selectedTaskIds.contains(task.id));
+                                      } else {
+                                        if (MediaQuery.of(context).size.width > 900) {
+                                          setState(() {
+                                            _selectedTaskDesktop = task;
+                                            _isCreatingTaskDesktop = false;
+                                          });
+                                        } else {
+                                          _handleTaskTap(task);
+                                        }
+                                      }
+                                    },
+                                    onToggle: (task, isCompleted) {
+                                      if (_isSelectionMode) return;
+                                      _supabaseService.updateTaskFields(_userId, task.id, {
+                                        'completed': isCompleted,
+                                        'completedAt': isCompleted ? DateTime.now() : null,
+                                      }).then((_) {
+                                        if (task.journeyId != null &&
+                                            task.journeyId!.isNotEmpty) {
+                                          _supabaseService.updateGoalProgress(
+                                              _userId, task.journeyId!);
+                                        }
+                                      });
+                                    },
+                                    onSwipeLeft: _handleSwipeLeft,
+                                    onSwipeRight: _handleSwipeRight,
+                                    onRescheduleDate: _rescheduleTaskToDate,
+                                  ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Detail/Input Pane (40%)
+                      Expanded(
+                        flex: 2,
+                        child: Container(
+                          padding: const EdgeInsets.only(
+                            left: 12.0, 
+                            top: 24.0, 
+                            bottom: 24.0, 
+                            right: 24.0 
+                          ),
+                          child: _buildDesktopRightPane(),
+                        ),
+                      ),
+                    ],
+                  ),
+              ),
+            ],
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopRightPane() {
+    if (_isCreatingTaskDesktop) {
+       // Cria uma tarefa "em branco" para o formulário
+       final emptyTask = TaskModel(
+          id: '',
+          text: '',
+          completed: false,
+          createdAt: DateTime.now(),
+       );
+
+       return TaskDetailModal(
+          task: emptyTask,
+          userData: widget.userData!,
+          isNew: true, // Indica modo de criação
+          onClose: () {
+             setState(() {
+                _isCreatingTaskDesktop = false;
+             });
+          },
+       );
+    }
+
+  if (_selectedTaskDesktop != null) {
+     return TaskDetailModal(
+           task: _selectedTaskDesktop!,
+           userData: widget.userData!,
+           onClose: () {
+              setState(() {
+                 _selectedTaskDesktop = null;
+              });
+           },
+            onReschedule: (date) => _rescheduleTaskToDate(_selectedTaskDesktop!, date),
+     );
+  }
+
+    return Center(
+       child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+             Icon(Icons.task_alt_rounded, size: 64, color: AppColors.tertiaryText.withOpacity(0.5)),
+             const SizedBox(height: 16),
+             Text(
+                'Selecione uma tarefa ou crie uma nova',
+                style: TextStyle(color: AppColors.tertiaryText.withOpacity(0.7), fontSize: 18),
+             ),
+             const SizedBox(height: 24),
+             FilledButton.icon(
+                onPressed: _openAddTaskModal,
+                icon: const Icon(Icons.add),
+                label: const Text('Nova Tarefa'),
+                style: FilledButton.styleFrom(
+                   backgroundColor: AppColors.primary,
+                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+             ),
+          ],
+       ),
+    );
+  }
+
+
+
+  bool isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+  
+  Future<void> _rescheduleTaskToDate(TaskModel task, DateTime date) async {
+      DateTime newDate = date;
+      if (task.dueDate != null) {
+          final old = task.dueDate!.toLocal();
+          newDate = DateTime(date.year, date.month, date.day, old.hour, old.minute);
+      } else {
+          newDate = DateTime(date.year, date.month, date.day);
+      }
+
+      await _supabaseService.updateTaskFields(_userId, task.id, {
+          'dueDate': newDate.toUtc().toIso8601String(),
+      });
+      
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+             const SnackBar(content: Text("Tarefa reagendada com sucesso"), duration: Duration(seconds: 1))
+         );
+      }
+  }
+} // End of State class

@@ -8,6 +8,7 @@ class DatePickerResult {
   final TimeOfDay? reminderTime;
   final Duration? reminderOffset; // Novo campo
   final bool hasTime;
+  final int? durationMinutes; // Novo campo
   
   DatePickerResult(
     this.dateTime, 
@@ -15,7 +16,8 @@ class DatePickerResult {
     {
       this.reminderTime, 
       this.reminderOffset,
-      this.hasTime = false
+      this.hasTime = false,
+      this.durationMinutes,
     }
   );
 }

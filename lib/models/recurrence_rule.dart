@@ -1,4 +1,5 @@
 ﻿import 'package:intl/intl.dart';
+import 'package:collection/collection.dart';
 
 enum RecurrenceType { none, daily, weekly, monthly }
 
@@ -78,4 +79,21 @@ class RecurrenceRule {
     }
     return DateFormat('E', 'pt_BR').format(refDate);
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    final listEquals = const DeepCollectionEquality().equals;
+
+    return other is RecurrenceRule &&
+        other.type == type &&
+        listEquals(other.daysOfWeek, daysOfWeek) &&
+        other.endDate == endDate;
+  }
+
+  @override
+  int get hashCode =>
+      type.hashCode ^
+      const DeepCollectionEquality().hash(daysOfWeek) ^
+      endDate.hashCode;
 }

@@ -127,7 +127,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 maxLines: null,
                 expands: true,
                 style: const TextStyle(
-                    color: Colors.white, fontSize: 18, fontFamily: 'serif'),
+                    color: Colors.white, fontSize: 18, fontFamily: 'Poppins'),
                 decoration: const InputDecoration(
                   hintText:
                       "Escreva seus pensamentos, sentimentos e reflexões do dia aqui...",

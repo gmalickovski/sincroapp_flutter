@@ -13,6 +13,7 @@ import 'package:sincro_app_flutter/core/services/navigation_service.dart';
 import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
 import 'package:sincro_app_flutter/services/harmony_service.dart'; // 🚀 Import
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart';
 
 
 class AssistantService {
@@ -361,20 +362,47 @@ class AssistantService {
 
   // --- Persistence & History Management ---
 
-  static Future<List<AssistantMessage>> fetchHistory(String userId) async {
+  // --- Conversations Management ---
+
+  static Future<String?> createConversation(String userId, String title) async {
+    // Single Table Mode: We just generate an ID client-side. 
+    // The conversation "exists" once a message is saved with this ID.
+    return const Uuid().v4();
+  }
+
+  static Future<List<AssistantConversation>> fetchConversations(String userId) async {
     try {
       final response = await Supabase.instance.client
-          .schema('sincroapp') // Use correct schema
-          .from('assistant_messages')
+          .schema('sincroapp')
+          .from('view_conversations') // Query the View
           .select()
           .eq('user_id', userId)
-          .order('created_at', ascending: false) // Latest first
-          .limit(30); // Load last 30 for UI
+          .order('created_at', ascending: false);
+
+      final List<AssistantConversation> list = [];
+      for (final row in response) {
+        list.add(AssistantConversation.fromJson(row));
+      }
+      return list;
+    } catch (e) {
+      debugPrint('Erro ao buscar conversas: $e');
+      return [];
+    }
+  }
+
+  static Future<List<AssistantMessage>> fetchMessages(String userId, String conversationId) async {
+    try {
+      final response = await Supabase.instance.client
+          .schema('sincroapp')
+          .from('assistant_messages')
+          .select()
+          .eq('conversation_id', conversationId) // Filter by conversation
+          .order('created_at', ascending: false)
+          .limit(50);
 
       final List<AssistantMessage> history = [];
       for (final row in response) {
         final actionsList = <AssistantAction>[];
-        // Parse from 'actions' column (JSONB)
         if (row['actions'] != null) {
           final acts = row['actions'] as List;
           actionsList.addAll(acts.map((e) => AssistantAction.fromJson(e)));
@@ -387,15 +415,15 @@ class AssistantService {
             time: DateTime.parse(row['created_at']),
             actions: actionsList));
       }
-      return history; // Return [Newest, ..., Oldest] for reverse:true List
+      return history;
     } catch (e) {
-      debugPrint('Erro ao buscar histórico: $e');
+      debugPrint('Erro ao buscar mensagens: $e');
       return [];
     }
   }
 
   static Future<void> saveMessage(
-      String userId, AssistantMessage message) async {
+      String userId, AssistantMessage message, String? conversationId) async {
     try {
       final actionsJson = message.actions.map((e) => e.toJson()).toList();
       
@@ -404,6 +432,7 @@ class AssistantService {
           .from('assistant_messages')
           .insert({
         'user_id': userId,
+        'conversation_id': conversationId, // Link to conversation
         'role': message.role,
         'content': message.content,
         //'created_at': message.time.toIso8601String(), // Let DB handle default now()

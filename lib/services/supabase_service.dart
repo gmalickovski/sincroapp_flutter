@@ -652,6 +652,11 @@ class SupabaseService {
           ...task.sharedWith, 
           ...UsernameValidator.extractMentionsFromText(task.text)
         ].toSet().toList(), // NOVO: Parse mentions + explicit shared
+        'task_type': (task.reminderTime != null || 
+                     (task.dueDate != null && (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
+                     ? 'appointment' 
+                     : 'task',
+        'duration_minutes': task.durationMinutes,
       };
       
       final response = await _supabase.schema('sincroapp').from('tasks').insert(taskData).select().single();
@@ -729,6 +734,11 @@ class SupabaseService {
           ...task.sharedWith, 
           ...UsernameValidator.extractMentionsFromText(task.text)
         ].toSet().toList(),
+        'task_type': (task.reminderTime != null || 
+                     (task.dueDate != null && (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
+                     ? 'appointment' 
+                     : 'task',
+        'duration_minutes': task.durationMinutes,
       };
       
       await _supabase
@@ -1172,6 +1182,7 @@ class SupabaseService {
 
     return TaskModel(
       id: data['id'], // UUID do Supabase
+      taskType: data['task_type'], // Carrega o tipo do banco
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
       createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
@@ -1188,6 +1199,7 @@ class SupabaseService {
       recurrenceId: data['recurrence_id'],
       goalId: data['goal_id'],
       completedAt: data['completed_at'] != null ? DateTime.tryParse(data['completed_at']) : null,
+      durationMinutes: data['duration_minutes'],
     );
   }
 

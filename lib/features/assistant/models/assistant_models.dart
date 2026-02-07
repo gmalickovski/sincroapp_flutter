@@ -220,3 +220,23 @@ class AssistantMessage {
     );
   }
 }
+
+class AssistantConversation {
+  final String id;
+  final String title;
+  final DateTime createdAt;
+
+  AssistantConversation({
+    required this.id,
+    required this.title,
+    required this.createdAt,
+  });
+
+  factory AssistantConversation.fromJson(Map<String, dynamic> json) {
+    return AssistantConversation(
+      id: json['id'].toString(),
+      title: json['title'] ?? 'Nova Conversa',
+      createdAt: DateTime.parse(json['created_at']),
+    );
+  }
+}

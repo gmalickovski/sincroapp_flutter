@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_peeking_handle.dart';
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 class AssistantLayoutManager extends StatefulWidget {
   final Widget child;
@@ -7,6 +10,7 @@ class AssistantLayoutManager extends StatefulWidget {
   final bool isAiSidebarOpen;
   final VoidCallback onToggleAiSidebar; // For Desktop
   final bool isMobile; // To explicitly control mode if needed
+  final FabOpacityController? opacityController; // Optional controller for opacity linkage
 
   const AssistantLayoutManager({
     super.key,
@@ -15,6 +19,7 @@ class AssistantLayoutManager extends StatefulWidget {
     required this.isAiSidebarOpen,
     required this.onToggleAiSidebar,
     this.isMobile = false,
+    this.opacityController,
   });
 
   @override
@@ -59,42 +64,55 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
     }
   }
 
+  bool _isScrolling = false; // Track vertical scroll for transparency
+  
   Widget _buildMobileLayout() {
     return Stack(
       children: [
         // Background (Assistant is functionally on the right/page 1)
-        PageView(
-          controller: _pageController,
-          physics: const BouncingScrollPhysics(),
-          children: [
-            // Page 0: Main App (with Scale Effect)
-            AnimatedBuilder(
-              animation: _pageController,
-              builder: (context, child) {
-                 // Calculate progress even if controller isn't attached yet (fallback 0)
-                 double progress = 0.0;
-                 if (_pageController.hasClients && _pageController.position.haveDimensions) {
-                    progress = _pageController.page ?? 0.0;
-                 }
-                return Transform.scale(
-                  scale: 1.0 - (progress * 0.1), // Scales down to 0.9
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(progress * 24),
-                    child: widget.child,
-                  ),
-                );
-              },
-            ),
-            // Page 1: Assistant
-            widget.assistant,
-          ],
+        NotificationListener<UserScrollNotification>(
+          onNotification: (notification) {
+            // Only use internal scroll tracking if no external controller
+            if (widget.opacityController == null) {
+              if (notification.metrics.axis == Axis.vertical) {
+                if (notification.direction != ScrollDirection.idle) {
+                  if (!_isScrolling) setState(() => _isScrolling = true);
+                } else {
+                  if (_isScrolling) setState(() => _isScrolling = false);
+                }
+              }
+            }
+            return false;
+          },
+          child: PageView(
+            controller: _pageController,
+            physics: const BouncingScrollPhysics(),
+            children: [
+              // Page 0: Main App (with Scale Effect)
+              AnimatedBuilder(
+                animation: _pageController,
+                builder: (context, child) {
+                   // Calculate progress even if controller isn't attached yet (fallback 0)
+                   double progress = 0.0;
+                   if (_pageController.hasClients && _pageController.position.haveDimensions) {
+                      progress = _pageController.page ?? 0.0;
+                   }
+                  return Transform.scale(
+                    scale: 1.0 - (progress * 0.1), // Scales down to 0.9
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(progress * 24),
+                      child: widget.child,
+                    ),
+                  );
+                },
+              ),
+              // Page 1: Assistant
+              widget.assistant,
+            ],
+          ),
         ),
         
         // Interactive Handle Animation
-        // The handle should move LEFT as the swipe progresses (progress 0 -> 1)
-        // Position = ScreenWidth - (progress * ScreenWidth) ?? No, that would move all the way to left.
-        // User wants the "button to come along".
-        // Let's bind the 'right' position to the swipe.
         AnimatedBuilder(
           animation: _pageController,
           builder: (context, child) {
@@ -103,34 +121,63 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
                 progress = _pageController.page ?? 0.0;
              }
              
-             // If fully open (1.0), hide handle or keep it?
-             // Usually handles vanish or morph. Let's make it fade out after 50%.
+             // If fully open (1.0), hide handle
              if (progress > 0.9) return const SizedBox.shrink();
 
-             final screenWidth = MediaQuery.of(context).size.width;
-             // Moves from right:0 to right:screenWidth (following the page)
-             // But the assistant page comes IN from the right.
-             // If we attach it to the "edge" of the assistant page.
-             // Page 1 is at Offset(screenWidth, 0) initially.
-             // As we swipe left, Page 1 Offset goes to (0,0).
-             // We want the handle to be on the LEFT edge of Page 1?
-             // No, the user said "button subtle on lateral... comes together".
-             
-             // Let's position it relative to the progress.
-             // right: (progress * screenWidth) would make it travel across the screen.
-             // Let's add a slight clamp so it doesn't fly off if overscrolled.
-             
-             return Positioned(
-               right: (progress * screenWidth).clamp(0.0, screenWidth),
-               top: 0,
-               bottom: 0,
-               child: Opacity(
-                 opacity: (1.0 - progress).clamp(0.0, 1.0), // Fade out as it opens
-                 child: Center(
-                   child: _PulsingIndicator(),
-                 ),
-               ),
-             );
+              // Peeking Handle (Fixed to Right Edge)
+              // Only show when closed or partially open
+              if (progress > 0.1) return const SizedBox.shrink();
+
+              Widget handle = AgentPeekingHandle(
+                opacity: widget.opacityController != null 
+                    ? 1.0 // If using controller, handle internal opacity via wrapper
+                    : (_isScrolling ? 0.05 : 1.0), 
+              );
+              
+              if (widget.opacityController != null) {
+                handle = TransparentFabWrapper(
+                  controller: widget.opacityController!,
+                  child: handle,
+                );
+              }
+
+              return Positioned(
+                right: 0, 
+                // Adjust vertical position
+                top: MediaQuery.of(context).size.height * 0.4, 
+                  child: GestureDetector(
+                    onTap: () {
+                      _pageController.animateToPage(
+                        1, 
+                        duration: const Duration(milliseconds: 400), 
+                        curve: Curves.easeInOutCubicEmphasized
+                      );
+                    },
+                    onHorizontalDragUpdate: (details) {
+                       _pageController.position.jumpTo(_pageController.offset - details.delta.dx);
+                    },
+                    onHorizontalDragEnd: (details) {
+                       final velocity = details.primaryVelocity ?? 0;
+                       
+                       // Snap Logic
+                       // If moving Left fast (< -300) OR passed 30% of screen width, open.
+                       if (velocity < -300 || _pageController.page! > 0.3) {
+                          _pageController.animateToPage(
+                            1, 
+                            duration: const Duration(milliseconds: 300), 
+                            curve: Curves.easeOut
+                          );
+                       } else {
+                          _pageController.animateToPage(
+                            0, 
+                            duration: const Duration(milliseconds: 300), 
+                            curve: Curves.easeOut
+                          );
+                       }
+                    },
+                    child: handle,
+                  ),
+              );
           },
         ),
       ],
@@ -169,13 +216,6 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
                      topLeft: Radius.circular(24),
                      bottomLeft: Radius.circular(24),
                    ),
-                   // Optional: Border only if needed, but if transparent, maybe not?
-                   // User wants "flutuando no mesmo fundo do sistema do app".
-                   // If transparent, it shows whatever is BEHIND it.
-                   // In Desktop layout, the Sidebar is adjacent to content.
-                   // Is there a background behind the main Row?
-                   // Usually Scaffold background. So transparent means it shows Scaffold background.
-                   // If we want it "floating", the AssistantPanel inside should be self-contained.
                  ),
                  child: widget.assistant,
                ),
@@ -183,51 +223,6 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _PulsingIndicator extends StatefulWidget {
-  const _PulsingIndicator();
-
-  @override
-  State<_PulsingIndicator> createState() => _PulsingIndicatorState();
-}
-
-class _PulsingIndicatorState extends State<_PulsingIndicator> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _opacity;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1500))
-      ..repeat(reverse: true);
-    _opacity = Tween<double>(begin: 0.2, end: 0.8).animate(_controller);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return FadeTransition(
-      opacity: _opacity,
-      child: Container(
-        width: 4,
-        height: 48,
-        decoration: BoxDecoration(
-          color: AppColors.primaryAccent,
-          borderRadius: BorderRadius.circular(2),
-          boxShadow: [
-             BoxShadow(color: AppColors.primaryAccent.withValues(alpha: 0.5), blurRadius: 4),
-          ]
-        ),
-      ),
     );
   }
 }

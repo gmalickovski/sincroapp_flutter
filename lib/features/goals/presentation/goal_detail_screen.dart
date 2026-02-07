@@ -943,34 +943,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             final task = milestones[index];
             return Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
-            child: Dismissible(
-              key: Key(task.id),
-              direction: _isSelectionMode ? DismissDirection.none : DismissDirection.horizontal,
-              confirmDismiss: (direction) async {
-                if (direction == DismissDirection.endToStart) {
-                  return await _handleSwipeLeft(task);
-                } else {
-                  return await _handleSwipeRight(task); 
-                }
-              },
-              background: Container(
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.only(left: 20.0),
-                decoration: BoxDecoration(
-                  color: Colors.orangeAccent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.schedule, color: Colors.white),
-              ),
-              secondaryBackground: Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 20.0),
-                decoration: BoxDecoration(
-                  color: Colors.redAccent,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.delete, color: Colors.white),
-              ),
               child: TaskItem(
                 key: ValueKey(task.id),
                 task: task,
@@ -990,8 +962,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   }
                 },
                 onTap: () => _handleMilestoneTap(task),
+                // Fix: Pass swipe callbacks directly to TaskItem
+                onSwipeLeft: (t) => _handleSwipeLeft(t),
+                onSwipeRight: (t) => _handleSwipeRight(t),
               ),
-            ),
             );
           },
           childCount: milestones.length,
