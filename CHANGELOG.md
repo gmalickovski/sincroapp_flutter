@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.8...v1.2.9) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Add GitHub Actions workflow to build and deploy Flutter web and update Node.js backend to VPS on version tag pushes. ([4b85c9a](https://github.com/gmalickovski/sincroapp_flutter/commit/4b85c9a490368227c87db9cf9455d40fb28e6e2a))
+
 ### [1.2.8](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.7...v1.2.8) (2026-02-07)
 
 ### [1.2.7](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.6...v1.2.7) (2026-02-07)
