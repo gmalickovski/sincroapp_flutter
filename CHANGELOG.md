@@ -1,6 +1,14 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.6](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.5...v1.2.6) (2026-02-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** merge deploy jobs to run sequentially on same runner to avoid timeouts ([3b0c106](https://github.com/gmalickovski/sincroapp_flutter/commit/3b0c106cf63cde4929072f32233b8525631453e9))
+* **ci:** update deploy paths and service names to match production environment ([be4eb48](https://github.com/gmalickovski/sincroapp_flutter/commit/be4eb489090dd051732a923b2755d1d012ba3c35))
+
 ### [1.2.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.4...v1.2.5) (2026-02-07)
 
 
