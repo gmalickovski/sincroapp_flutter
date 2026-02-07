@@ -7,7 +7,12 @@ import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class N8nService {
   // Agora lê do arquivo .env
-  static String get _webhookUrl => dotenv.env['ASSISTANT_WEBHOOK_URL'] ?? '';
+  // failover
+  static String get _webhookUrl {
+     final envUrl = dotenv.env['ASSISTANT_WEBHOOK_URL'];
+     if (envUrl != null && envUrl.isNotEmpty) return envUrl;
+     return 'https://n8n.studiomlk.com.br/webhook/sincroapp-assistant';
+  }
 
   /// Envia o payload estruturado para o n8n
   Future<String> chat({

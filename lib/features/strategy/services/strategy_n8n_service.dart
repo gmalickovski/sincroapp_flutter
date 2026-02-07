@@ -20,9 +20,14 @@ class StrategyN8NService {
     required String modeTitle,
     required String modeDescription,
   }) async {
-    final webhookUrl = dotenv.env[_webhookEnvKey];
-
+    // Failover: Try dotenv, then fallback to hardcoded
+    String? webhookUrl = dotenv.env[_webhookEnvKey];
     if (webhookUrl == null || webhookUrl.isEmpty) {
+      webhookUrl = 'https://n8n.studiomlk.com.br/webhook/sincroapp-sincroflow';
+      debugPrint('⚠️ .env not loaded. Using Hardcoded Sincroflow Webhook.');
+    }
+
+    if (webhookUrl.isEmpty) {
       debugPrint('⚠️ N8N Webhook URL not found in .env ($_webhookEnvKey)');
       throw Exception('Configuration Error: N8N Webhook URL missing.');
     }
@@ -91,9 +96,14 @@ class StrategyN8NService {
     required NumerologyResult profile,
     required String professionName,
   }) async {
-    final webhookUrl = dotenv.env['PROFESSIONAL_APTITUDE_WEBHOOK'];
-
+    // Failover: Try dotenv, then fallback to hardcoded
+    String? webhookUrl = dotenv.env['PROFESSIONAL_APTITUDE_WEBHOOK'];
     if (webhookUrl == null || webhookUrl.isEmpty) {
+       webhookUrl = 'https://n8n.studiomlk.com.br/webhook/sincroapp-professional-aptitude';
+       debugPrint('⚠️ .env not loaded. Using Hardcoded Professional Aptitude Webhook.');
+    }
+
+    if (webhookUrl.isEmpty) {
       debugPrint('⚠️ Professional Aptitude Webhook URL not found in .env');
       throw Exception('Configuration Error: Webhook URL missing.');
     }

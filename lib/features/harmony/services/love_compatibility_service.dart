@@ -5,7 +5,12 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class LoveCompatibilityService {
-  static String get _webhookUrl => dotenv.env['COMPATIBILITY_WEBHOOK'] ?? '';
+  // failover
+  static String get _webhookUrl {
+    final envUrl = dotenv.env['COMPATIBILITY_WEBHOOK'];
+    if (envUrl != null && envUrl.isNotEmpty) return envUrl;
+    return 'https://n8n.studiomlk.com.br/webhook/sincroapp-compatibility';
+  }
 
   // Cache local estático para evitar chamadas repetidas
   static final Map<String, _CompatibilityCacheEntry> _cache = {};
