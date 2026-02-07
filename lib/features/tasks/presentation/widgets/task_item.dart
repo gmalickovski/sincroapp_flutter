@@ -19,6 +19,8 @@ class TaskItem extends StatelessWidget {
   final bool selectionMode;
   final Set<String> selectedTaskIds;
   final Function(String, bool)? onTaskSelected; // Tornou-se opcional
+  final bool isActive; // Novo parâmetro para indicar item ativo (desktop)
+  final Function(TaskModel, DateTime)? onRescheduleDate; // NOVO: Callback para menu
   // --- FIM DA MUDANÇA ---
 
   // Props de layout (mantidos por enquanto, mas isCompact pode ser obsoleto)
@@ -40,6 +42,8 @@ class TaskItem extends StatelessWidget {
     this.selectionMode = false,
     this.selectedTaskIds = const {},
     this.onTaskSelected, // Não é mais 'required'
+    this.isActive = false, // Novo parâmetro
+    this.onRescheduleDate, // Callback para ações do menu
     // --- FIM DA MUDANÇA ---
     // Props de layout
     this.isCompact = false,
@@ -243,14 +247,16 @@ class TaskItem extends StatelessWidget {
       child: AnimatedContainer(
         // Adicionado para feedback visual
         duration: const Duration(milliseconds: 200),
-        // --- INÍCIO DA MUDANÇA (Solicitação 1): Feedback visual de seleção ---
+        // --- INÍCIO DA MUDANÇA: Feedback visual de seleção e ativo ---
         decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withValues(alpha: 0.2)
-                : Colors.transparent,
+                : (isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent), // Highlight se ativo
             border: Border.all(
-              color: AppColors.border.withValues(alpha: 0.3),
-              width: 0.5,
+              color: isSelected 
+                  ? AppColors.primary 
+                  : (isActive ? AppColors.primary.withValues(alpha: 0.5) : AppColors.border.withValues(alpha: 0.3)),
+              width: (isSelected || isActive) ? 1.0 : 0.5,
             ),
             borderRadius: BorderRadius.circular(8.0)),
         // --- FIM DA MUDANÇA ---
@@ -278,13 +284,17 @@ class TaskItem extends StatelessWidget {
                     baseStyle: TextStyle(
                       color: task.completed
                           ? AppColors.tertiaryText
-                          : AppColors.secondaryText,
+                          : (task.isOverdue
+                              // Red-400 equivalent for good contrast on dark bg
+                              ? const Color(0xFFEF5350) 
+                              : AppColors.secondaryText),
                       decoration: task.completed
                           ? TextDecoration.lineThrough
                           : TextDecoration.none,
                       fontSize: mainFontSize,
                       height: 1.45,
                       letterSpacing: 0.15,
+                      fontFamily: 'Poppins',
                     ),
                     mentionStyle: TextStyle(
                       color: Colors.lightBlueAccent,
@@ -295,6 +305,7 @@ class TaskItem extends StatelessWidget {
                       fontSize: mainFontSize,
                       height: 1.45,
                       letterSpacing: 0.15,
+                      fontFamily: 'Poppins',
                     ),
                     tagStyle: TextStyle(
                       color: const Color(0xFFEC4899), // Pink-500 (mesma cor do ícone antigo)
@@ -305,6 +316,7 @@ class TaskItem extends StatelessWidget {
                       fontSize: mainFontSize,
                       height: 1.45,
                       letterSpacing: 0.15,
+                      fontFamily: 'Poppins',
                     ),
                   ),
                 ),
@@ -331,7 +343,7 @@ class TaskItem extends StatelessWidget {
                           child: Icon(
                             task.isOverdue ? Icons.event_busy : Icons.calendar_today_outlined,
                             size: iconIndicatorSize,
-                            color: task.isOverdue ? Colors.red : const Color(
+                            color: task.isOverdue ? const Color(0xFFEF5350) : const Color(
                                 0xFFFB923C), // orange-400
                           ),
                         ),
@@ -384,6 +396,67 @@ class TaskItem extends StatelessWidget {
                           ),
                         ),
                     ],
+                  ),
+                ),
+                
+              // (Solicitação 3) Menu de 3 Pontos com Ações Rápidas
+              if (!selectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(left: 2.0),
+                  child: PopupMenuButton<String>(
+                    icon: const Icon(Icons.more_vert_rounded,
+                        size: 20, color: AppColors.secondaryText),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    tooltip: 'Opções da tarefa',
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    onSelected: (value) async {
+                      if (value == 'today') {
+                        onRescheduleDate?.call(task, DateTime.now());
+                      } else if (value == 'tomorrow') {
+                        final now = DateTime.now();
+                        final tomorrow = DateTime(now.year, now.month, now.day + 1);
+                        onRescheduleDate?.call(task, tomorrow);
+                      } else if (value == 'reschedule') {
+                        if (onSwipeRight != null) {
+                          await onSwipeRight!(task);
+                        }
+                      }
+                    },
+                    itemBuilder: (context) {
+                      final List<PopupMenuEntry<String>> items = [];
+
+                      if (task.isOverdue) {
+                        items.add(const PopupMenuItem(
+                          value: 'today',
+                          child: Row(children: [
+                            Icon(Icons.today, color: AppColors.primary, size: 18),
+                            SizedBox(width: 8),
+                             Text('Enviar para Hoje', style: TextStyle(fontSize: 14, fontFamily: 'Poppins'))
+                          ]),
+                        ));
+                      } else {
+                        items.add(const PopupMenuItem(
+                          value: 'tomorrow',
+                          child: Row(children: [
+                            Icon(Icons.event_repeat, color: AppColors.primary, size: 18),
+                            SizedBox(width: 8),
+                            Text('Mover para Amanhã', style: TextStyle(fontSize: 14, fontFamily: 'Poppins'))
+                          ]),
+                        ));
+                      }
+
+                      items.add(const PopupMenuItem(
+                         value: 'reschedule',
+                         child: Row(children: [
+                             Icon(Icons.edit_calendar, color: AppColors.secondaryText, size: 18),
+                             SizedBox(width: 8),
+                             Text('Reagendar...', style: TextStyle(fontSize: 14, fontFamily: 'Poppins'))
+                         ])
+                      ));
+
+                      return items;
+                    },
                   ),
                 ),
             ],

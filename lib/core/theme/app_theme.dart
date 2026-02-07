@@ -26,8 +26,7 @@ class AppTheme {
       ),
 
       // Text Theme
-      textTheme: GoogleFonts.interTextTheme(
-        TextTheme(
+      textTheme: TextTheme(
           displayLarge: const TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.bold,
@@ -68,8 +67,7 @@ class AppTheme {
             fontWeight: FontWeight.w500,
             color: AppColors.tertiaryText,
           ),
-        ),
-      ),
+        ).apply(fontFamily: 'Poppins'),
 
       // Card Theme
       cardTheme: CardThemeData(
