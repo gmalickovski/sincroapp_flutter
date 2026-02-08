@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.14](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.12...v1.2.14) (2026-02-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement web deployment workflow, comprehensive Supabase service, app versioning, new backend server, update service, dashboard, and notification UI. ([9efbe6f](https://github.com/gmalickovski/sincroapp_flutter/commit/9efbe6f1ae3b71a2aba3be7084a99161e693d305))
+
 ### [1.2.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.8...v1.2.9) (2026-02-07)
 
 

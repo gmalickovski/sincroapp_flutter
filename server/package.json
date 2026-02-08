@@ -1,6 +1,6 @@
 {
   "name": "sincroapp-backend",
-  "version": "1.2.13",
+  "version": "1.2.14",
   "description": "Backend API for SincroApp (VPS)",
   "main": "index.js",
   "scripts": {
