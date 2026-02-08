@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.15](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.14...v1.2.15) (2026-02-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement app update notification service and foundational Supabase data operations. ([d2bec85](https://github.com/gmalickovski/sincroapp_flutter/commit/d2bec850e026591e50e3f00ee4022c8b2b281978))
+
 ### [1.2.14](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.12...v1.2.14) (2026-02-08)
 
 
