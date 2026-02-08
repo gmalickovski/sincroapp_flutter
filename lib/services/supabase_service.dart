@@ -1926,7 +1926,6 @@ class SupabaseService {
       return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
     }).toList();
   }
-  }
 
   /// Fetches release notes for a specific version from Supabase
   Future<Map<String, dynamic>?> getAppVersionDetails(String version) async {

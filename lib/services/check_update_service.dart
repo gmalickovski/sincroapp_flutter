@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 
 class CheckUpdateService {
   final SupabaseService _supabaseService = SupabaseService();
