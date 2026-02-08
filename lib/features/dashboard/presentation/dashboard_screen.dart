@@ -45,6 +45,7 @@ import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendat
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart';
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart';
+import 'package:sincro_app_flutter/services/check_update_service.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart'; // NEW IMPORT
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_star_icon.dart'; // IMPORT AGENT ICON
 
@@ -213,8 +214,12 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
       _initializeTasksStream(currentUser.id);
       _initializeGoalsStream(currentUser.id);
-      // _initializeGoalsStream(currentUser.id); // Duplicado no original, removendo
-      _loadStrategy(); // Load AI strategy
+      
+      // Load AI Strategy
+      _loadStrategy(); 
+
+      // Check for App Updates (Release Notes)
+      CheckUpdateService().checkForUpdates();
       
       // NOTIFICATIONS INIT
       if (!kIsWeb) {

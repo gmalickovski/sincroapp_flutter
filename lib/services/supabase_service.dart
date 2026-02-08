@@ -1926,4 +1926,21 @@ class SupabaseService {
       return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
     }).toList();
   }
+  }
+
+  /// Fetches release notes for a specific version from Supabase
+  Future<Map<String, dynamic>?> getAppVersionDetails(String version) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('app_versions')
+          .select()
+          .eq('version', version)
+          .maybeSingle();
+      return response;
+    } catch (e) {
+      debugPrint('Error fetching app version details: $e');
+      return null;
+    }
+  }
 }

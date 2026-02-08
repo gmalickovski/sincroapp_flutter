@@ -89,3 +89,4 @@ jobs:
             systemctl reload nginx
             
             echo "Backend atualizado, Nginx recarregado e serviços operacionais!"
+

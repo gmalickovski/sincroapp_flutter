@@ -130,6 +130,8 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
 
   @override
   Widget build(BuildContext context) {
+    final isSystemUpdate = widget.notification.type == NotificationType.system;
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: const BoxDecoration(
@@ -138,38 +140,57 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Icon
-          _buildIcon(),
+          Center(child: _buildIcon()),
           const SizedBox(height: 16),
           
-          // Title with calendar icon
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.event, color: Colors.amber, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Convite de Agendamento',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+          // Title
+          if (isSystemUpdate)
+            Text(
+              widget.notification.title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-            ],
-          ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.event, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  'Convite de Agendamento',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           const SizedBox(height: 16),
           
-          // Body - formatted with colored username and date
+          // Body
           _buildFormattedBody(),
+          
           const SizedBox(height: 24),
           
-          // Personal Day Card
+          // Personal Day context only for tasks
           if (widget.notification.type == NotificationType.taskInvite && _personalDayText != null)
-            _buildPersonalDayCard(),
-            
-          const SizedBox(height: 24),
+             _buildPersonalDayCard(),
+
+          if (isSystemUpdate) ...[
+             const Divider(color: AppColors.border),
+             const SizedBox(height: 16),
+             _buildSystemUpdateDetails(),
+             const SizedBox(height: 24),
+          ] else
+             const SizedBox(height: 24),
 
           // Actions
           if (widget.notification.type == NotificationType.contactRequest || 
@@ -179,18 +200,88 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.cardBackground,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30), side: const BorderSide(color: AppColors.border)),
+                backgroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 minimumSize: const Size(double.infinity, 50),
               ),
-              child: const Text('Fechar', style: TextStyle(color: Colors.white)),
+              child: const Text('Entendi', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             ),
         ],
       ),
     );
   }
+
+  Widget _buildSystemUpdateDetails() {
+    final metadata = widget.notification.metadata;
+    final List<dynamic> details = metadata['details'] is List ? metadata['details'] : [];
+    final String version = metadata['version'] ?? '';
+    final String date = metadata['date'] ?? '';
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (version.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary),
+                  ),
+                  child: Text(
+                    'Versão $version',
+                    style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold, fontSize: 12),
+                  ),
+                ),
+                if (date.isNotEmpty) ...[
+                  const SizedBox(width: 12),
+                  Text(
+                    date,
+                    style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                  ),
+                ]
+              ],
+            ),
+          ),
+        
+        ...details.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('•', style: TextStyle(color: AppColors.primary, fontSize: 16, height: 1.2)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  item.toString(),
+                  style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
+                ),
+              ),
+            ],
+          ),
+        )).toList(),
+      ],
+    );
+  }
   
   Widget _buildFormattedBody() {
+    if (widget.notification.type == NotificationType.system) {
+       return Text(
+          widget.notification.body,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.secondaryText,
+            fontSize: 16,
+            height: 1.4,
+          ),
+        );
+    }
+
     final username = _senderUsername ?? 'Alguém';
     final taskText = _taskText ?? widget.notification.body;
     final dateFormatted = _targetDate != null 
@@ -287,6 +378,10 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
       case NotificationType.sincroAlert:
         iconData = Icons.auto_awesome;
         color = Colors.purple;
+        break;
+      case NotificationType.system:
+        iconData = Icons.rocket_launch;
+        color = Colors.orangeAccent;
         break;
       default:
         iconData = Icons.notifications;
