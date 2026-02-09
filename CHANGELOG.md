@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.2.16](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.15...v1.2.16) (2026-02-09)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Introduce SincroFlow AI agent with n8n-powered knowledge base management and fix app_versions table permissions. ([9fe759a](https://github.com/gmalickovski/sincroapp_flutter/commit/9fe759a8d534110f2af4c5c4e4c0386c22ac4069))
+
 ### [1.2.15](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.14...v1.2.15) (2026-02-08)
 
 
