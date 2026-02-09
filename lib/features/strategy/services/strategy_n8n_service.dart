@@ -35,8 +35,12 @@ class StrategyN8NService {
     // Construct the Structured Payload (Sincroflow expects this at root)
     final payload = {
       'user': {
-        'name': user.primeiroNome,
+        'name': '${user.primeiroNome} ${user.sobrenome}', // Full Name
+        'firstName': user.primeiroNome,
+        'lastName': user.sobrenome,
+        'analysisName': user.nomeAnalise,
         'id': user.uid,
+        'gender': user.gender, // Nullable
         'numerology': {
           'personalDay': personalDay,
           'mode': mode.name,
@@ -46,6 +50,7 @@ class StrategyN8NService {
       'context': {
         'modeTitle': modeTitle,
         'modeDescription': modeDescription,
+        'sincroflowMode': mode.name, // Explicit mode name for context
         'timestamp': DateTime.now().toIso8601String(),
       }
     };

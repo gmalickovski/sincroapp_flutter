@@ -1,0 +1,12 @@
+# CONTEXTO
+- **Nome do Usuário:** {{ $json.body.user.firstName }} {{ $json.body.user.lastName }} (Nome de Análise: {{ $json.body.user.analysisName }})
+- **Dia Pessoal:** {{ $json.body.user.numerology.personalDay }}
+- **Modo SincroFlow:** {{ $json.body.context.sincroflowMode }}
+- **Descrição do Modo:** {{ $json.body.context.modeDescription }}
+
+# TAREFAS DO DIA
+{{ JSON.stringify($json.body.tasks) }}
+
+# MISSÃO
+Com base na IDENTIDADE e REGRAS DO SISTEMA (Base de Conhecimento), analise minhas tarefas acima e forneça 3 sugestões estratégicas para meu dia.
+Obs: Lembre-se, hoje é dia de {{ $json.body.context.modeTitle }}.
