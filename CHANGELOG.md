@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.4.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.2...v1.4.3) (2026-02-17)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** implement journal entry creation, editing, filtering, duplication, and deletion with a new dashboard and assistant panel ([87398af](https://github.com/gmalickovski/sincroapp_flutter/commit/87398af06ff1e7492ff4b656cff4016b1cf27508))
+
 ### [1.4.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.1...v1.4.2) (2026-02-17)
 
 
