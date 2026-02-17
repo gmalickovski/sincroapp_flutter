@@ -261,31 +261,30 @@ class JournalEntryCard extends StatelessWidget {
   }
 
   void _openEditor(BuildContext context) {
-    // Desktop/Web: Open in a styled Dialog
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.7),
-      builder: (context) {
-        return Dialog(
-          backgroundColor: AppColors.cardBackground,
-          insetPadding: const EdgeInsets.all(24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border, width: 1),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 900),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: JournalEditorScreen(
-                userData: userData,
-                entry: entry,
-              ),
+    if (kIsWeb ||
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      // Desktop: Open in our new responsive dialog
+      showJournalEditorDialog(
+        context,
+        userData: widget.userData,
+        entry: widget.entry,
+      );
+    } else {
+      // Mobile: Use existing OpenContainer logic or simple push if preferred
+      // For now, OpenContainer is handled in the build method wrapper.
+      // If we are here, it might be triggered by menu.
+      // On mobile, let's just push the route conventionally if not using container transform
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => JournalEditorScreen(
+              userData: widget.userData,
+              entry: widget.entry,
             ),
           ),
         );
-      },
-    );
+    }
   }
 
   @override

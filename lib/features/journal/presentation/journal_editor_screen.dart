@@ -27,10 +27,15 @@ class JournalEditorScreen extends StatefulWidget {
   final UserModel userData;
   final JournalEntry? entry;
 
+  final bool isFullscreen;
+  final VoidCallback? onToggleFullscreen;
+
   const JournalEditorScreen({
     super.key,
     required this.userData,
     this.entry,
+    this.isFullscreen = false,
+    this.onToggleFullscreen,
   });
 
   @override
@@ -38,6 +43,52 @@ class JournalEditorScreen extends StatefulWidget {
 }
 
 class _JournalEditorScreenState extends State<JournalEditorScreen> {
+  // ... existing state ...
+
+  @override
+  Widget build(BuildContext context) {
+    // ... existing logic ...
+
+    return CallbackShortcuts(
+      bindings: {
+        // ... bindings ...
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          backgroundColor: AppColors.cardBackground,
+          appBar: AppBar(
+            backgroundColor: AppColors.cardBackground,
+            elevation: 0,
+            leading: const CloseButton(color: AppColors.secondaryText),
+            title: Text(
+              _isEditing ? 'Editar Anotação' : 'Nova Anotação',
+              style: const TextStyle(
+                  color: Colors.white, fontSize: 18, fontFamily: 'Poppins'),
+            ),
+            actions: [
+              // Fullscreen Toggle (Desktop Only)
+              if (widget.onToggleFullscreen != null)
+                IconButton(
+                  icon: Icon(
+                    widget.isFullscreen
+                        ? Icons.fullscreen_exit_rounded
+                        : Icons.fullscreen_rounded,
+                    color: AppColors.secondaryText,
+                  ),
+                  tooltip: widget.isFullscreen
+                      ? 'Sair da Tela Cheia'
+                      : 'Tela Cheia',
+                  onPressed: widget.onToggleFullscreen,
+                ),
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: VibrationPill(vibrationNumber: _personalDay),
+              ),
+            ],
+          ),
+          // ... rest of Scaffold ...
+
   final _supabaseService = SupabaseService();
   late QuillController _controller;
 
@@ -1566,7 +1617,19 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                   color: Colors.white, fontSize: 18, fontFamily: 'Poppins'),
             ),
             actions: [
-              // Fullscreen toggle removed for Dialog mode
+              if (widget.onToggleFullscreen != null)
+                IconButton(
+                  icon: Icon(
+                    widget.isFullscreen
+                        ? Icons.fullscreen_exit_rounded
+                        : Icons.fullscreen_rounded,
+                    color: AppColors.secondaryText,
+                  ),
+                  tooltip: widget.isFullscreen
+                      ? 'Sair da Tela Cheia'
+                      : 'Tela Cheia',
+                  onPressed: widget.onToggleFullscreen,
+                ),
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: VibrationPill(vibrationNumber: _personalDay),
@@ -2362,6 +2425,80 @@ class _SincroCheckboxBuilder extends QuillCheckboxBuilder {
                     ),
                   )
                 : null,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// --- Helper for Desktop Dialog Mode ---
+
+Future<void> showJournalEditorDialog(
+  BuildContext context, {
+  required UserModel userData,
+  JournalEntry? entry,
+}) async {
+  await showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: 'Fechar',
+    barrierColor: Colors.black.withOpacity(0.7),
+    transitionDuration: const Duration(milliseconds: 200),
+    pageBuilder: (context, animation, secondaryAnimation) {
+      return _JournalDialogWrapper(userData: userData, entry: entry);
+    },
+    transitionBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+  );
+}
+
+class _JournalDialogWrapper extends StatefulWidget {
+  final UserModel userData;
+  final JournalEntry? entry;
+
+  const _JournalDialogWrapper({required this.userData, this.entry});
+
+  @override
+  State<_JournalDialogWrapper> createState() => _JournalDialogWrapperState();
+}
+
+class _JournalDialogWrapperState extends State<_JournalDialogWrapper> {
+  bool _isFullscreen = false; // Default to Windowed mode
+
+  void _toggleFullscreen() {
+    setState(() {
+      _isFullscreen = !_isFullscreen;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // If fullscreen, use zero padding and full size.
+    // If windowed, use padding and constrained size.
+    final padding = _isFullscreen ? EdgeInsets.zero : const EdgeInsets.all(24);
+    final borderRadius =
+        _isFullscreen ? BorderRadius.zero : BorderRadius.circular(16);
+
+    return Padding(
+      padding: padding, // Padding handles the "margin" from screen edges
+      child: Center(
+        child: Material(
+          color: Colors.transparent,
+          child: ConstrainedBox(
+            constraints: _isFullscreen
+                ? const BoxConstraints.expand()
+                : const BoxConstraints(maxWidth: 1000, maxHeight: 900),
+            child: ClipRRect(
+              borderRadius: borderRadius,
+              child: JournalEditorScreen(
+                userData: widget.userData,
+                entry: widget.entry,
+                isFullscreen: _isFullscreen,
+                onToggleFullscreen: _toggleFullscreen,
+              ),
+            ),
           ),
         ),
       ),

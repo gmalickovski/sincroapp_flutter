@@ -16,6 +16,9 @@ add_executable(${BINARY_NAME} WIN32
   "runner.exe.manifest"
 )
 
+# Rename the output executable to "SincroApp" while keeping the target name "sincro_app_flutter"
+set_target_properties(${BINARY_NAME} PROPERTIES OUTPUT_NAME "SincroApp")
+
 # Apply the standard set of build settings. This can be removed for applications
 # that need different build settings.
 apply_standard_settings(${BINARY_NAME})

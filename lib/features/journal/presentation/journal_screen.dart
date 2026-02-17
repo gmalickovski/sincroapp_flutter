@@ -65,15 +65,28 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
   void _openJournalEditor({JournalEntry? entry}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => JournalEditorScreen(
-          userData: widget.userData,
-          entry: entry,
+    // Desktop/Web Check
+    if (kIsWeb ||
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      showJournalEditorDialog(
+        context,
+        userData: widget.userData,
+        entry: entry,
+      );
+    } else {
+      // Mobile - Fullscreen Page
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => JournalEditorScreen(
+            userData: widget.userData,
+            entry: entry,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   void _openFilterUI() {

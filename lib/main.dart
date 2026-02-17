@@ -207,30 +207,29 @@ class SincroApp extends StatelessWidget {
           return Column(
             children: [
               // Custom Title Bar Area
-              SizedBox(
+              Container(
                 height: 32,
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Color(0xFF2A2A2A), // Subtle horizontal line
+                      width: 1.0,
+                    ),
+                  ),
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: DragToMoveArea(
                         child: Container(
-                          color: AppColors.background,
-                          alignment: Alignment.centerLeft,
-                          padding: const EdgeInsets.only(left: 16),
-                          child: const Text(
-                            'SincroApp',
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 12,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
+                          color: Colors.transparent,
                         ),
                       ),
                     ),
                     const WindowCaption(
                       brightness: Brightness.dark,
-                      backgroundColor: Colors.transparent,
+                      backgroundColor: AppColors.background,
                     ),
                   ],
                 ),
@@ -255,6 +254,7 @@ class SincroGlobalScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.stylus,
         PointerDeviceKind.invertedStylus,
         PointerDeviceKind.trackpad, // Fix for Windows touchpad scroll
+        PointerDeviceKind.unknown,
       };
 }
 
