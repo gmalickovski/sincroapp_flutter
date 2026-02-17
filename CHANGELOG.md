@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.3.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.16...v1.3.0) (2026-02-17)
+
+
+### Funcionalidades ✨
+
+* Introduce core application structure, authentication, dashboard, goals, tasks, calendar, journal, assistant, and various common components and services. ([c1c33e2](https://github.com/gmalickovski/sincroapp_flutter/commit/c1c33e244256a009c0dfa0f5c69e6fa34f66623d))
+
 ### [1.2.16](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.2.15...v1.2.16) (2026-02-09)
 
 
