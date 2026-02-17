@@ -14,7 +14,7 @@ class LoveCompatibilityService {
 
   // Cache local estático para evitar chamadas repetidas
   static final Map<String, _CompatibilityCacheEntry> _cache = {};
-  
+
   // Validade do cache: 30 minutos (suficiente para a sessão atual)
   static const Duration _cacheValidity = Duration(minutes: 30);
 
@@ -25,20 +25,22 @@ class LoveCompatibilityService {
     required String partnerName,
     required String partnerBirthDate, // dd/MM/yyyy
     required NumerologyResult partnerProfile,
-
     required Map<String, dynamic> synastryResult,
     Map<String, dynamic>? relationshipRules,
   }) async {
     if (_webhookUrl.isEmpty) {
-      throw Exception('Webhook URL not configured (LOVE_COMPATIBILITY_WEBHOOK_URL)');
+      throw Exception(
+          'Webhook URL not configured (LOVE_COMPATIBILITY_WEBHOOK_URL)');
     }
 
     // 1. Check Cache
-    final cacheKey = '${currentUser.uid}|${partnerName.trim().toLowerCase()}|${partnerBirthDate.trim()}';
+    final cacheKey =
+        '${currentUser.uid}|${partnerName.trim().toLowerCase()}|${partnerBirthDate.trim()}';
     if (_cache.containsKey(cacheKey)) {
       final entry = _cache[cacheKey]!;
       if (DateTime.now().difference(entry.timestamp) < _cacheValidity) {
-        print('✅ [LoveCompatibilityService] Returning cached result for $cacheKey');
+        print(
+            '✅ [LoveCompatibilityService] Returning cached result for $cacheKey');
         return entry.response;
       } else {
         _cache.remove(cacheKey); // Expired
@@ -47,9 +49,11 @@ class LoveCompatibilityService {
 
     try {
       final payload = {
-        'instructions': 'CRITICAL: You are an expert Numerologist. You MUST use the pre-calculated numbers provided in this JSON under "profile" and "synastry". DO NOT recalculate them based on names/dates. The provided numbers (Destiny, Expression, Synastry Score) are the ABSOLUTE TRUTH for this analysis. Ignore any internal calculation that differs. Focus on interpreting the provided numbers.',
+        'instructions':
+            'CRITICAL: You are an expert Numerologist. You MUST use the pre-calculated numbers provided in this JSON under "profile" and "synastry". DO NOT recalculate them based on names/dates. The provided numbers (Destiny, Expression, Synastry Score) are the ABSOLUTE TRUTH for this analysis. Ignore any internal calculation that differs. Focus on interpreting the provided numbers.',
         'user': {
-          'name': currentUser.nomeAnalise, // Use explicit analysis name to avoid duplication
+          'name': currentUser
+              .nomeAnalise, // Use explicit analysis name to avoid duplication
           'birthDate': currentUser.dataNasc,
           'profile': currentUserProfile.numeros,
         },
@@ -82,14 +86,17 @@ class LoveCompatibilityService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         // Assume N8N returns { "analysis": "Markdown text..." } or { "output": "..." }
         final data = jsonDecode(response.body);
-        final resultText = data['analysis'] ?? data['output'] ?? data['text'] ?? 'Análise concluída, mas sem texto retornado.';
-        
+        final resultText = data['analysis'] ??
+            data['output'] ??
+            data['text'] ??
+            'Análise concluída, mas sem texto retornado.';
+
         // 2. Save to Cache
         _cache[cacheKey] = _CompatibilityCacheEntry(
           response: resultText,
           timestamp: DateTime.now(),
         );
-        
+
         return resultText;
       } else {
         throw Exception('Failed to get analysis: ${response.statusCode}');

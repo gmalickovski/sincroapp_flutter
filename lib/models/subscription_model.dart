@@ -24,25 +24,27 @@ enum BillingCycle {
 /// Modelo de assinatura do usuário
 class SubscriptionModel {
   final SubscriptionPlan? stripePlan; // Plano conforme Stripe/Pagamento
-  final SubscriptionPlan? systemPlan; // Plano definido manualmente pelo Admin (Override)
-  
+  final SubscriptionPlan?
+      systemPlan; // Plano definido manualmente pelo Admin (Override)
+
   // O plano efetivo é o System (se houver) ou Stripe, fallback para Free
-  SubscriptionPlan get plan => systemPlan ?? stripePlan ?? SubscriptionPlan.free;
+  SubscriptionPlan get plan =>
+      systemPlan ?? stripePlan ?? SubscriptionPlan.free;
 
   final SubscriptionStatus status;
-  final BillingCycle billingCycle; 
-  final DateTime? validUntil; 
+  final BillingCycle billingCycle;
+  final DateTime? validUntil;
   final DateTime startedAt;
-  final int aiSuggestionsUsed; 
-  final int aiSuggestionsLimit; 
-  final DateTime? lastAiReset; 
+  final int aiSuggestionsUsed;
+  final int aiSuggestionsLimit;
+  final DateTime? lastAiReset;
   final String? stripeId;
 
   const SubscriptionModel({
     this.stripePlan,
     this.systemPlan,
     required this.status,
-    this.billingCycle = BillingCycle.monthly, 
+    this.billingCycle = BillingCycle.monthly,
     this.validUntil,
     required this.startedAt,
     this.aiSuggestionsUsed = 0,
@@ -58,10 +60,10 @@ class SubscriptionModel {
       systemPlan: null,
       status: SubscriptionStatus.active,
       billingCycle: BillingCycle.monthly,
-      validUntil: null, 
+      validUntil: null,
       startedAt: DateTime.now().toUtc(),
       aiSuggestionsUsed: 0,
-      aiSuggestionsLimit: 0, 
+      aiSuggestionsLimit: 0,
       lastAiReset: DateTime.now().toUtc(),
       stripeId: null,
     );
@@ -79,7 +81,7 @@ class SubscriptionModel {
         (e) => e.name == stripePlanName,
         orElse: () => SubscriptionPlan.free,
       ),
-      systemPlan: systemPlanName != null 
+      systemPlan: systemPlanName != null
           ? SubscriptionPlan.values.firstWhere(
               (e) => e.name == systemPlanName,
               orElse: () => SubscriptionPlan.free,
@@ -96,14 +98,16 @@ class SubscriptionModel {
       validUntil: _parseDate(data['validUntil']),
       startedAt: _parseDate(data['startedAt']) ?? DateTime.now().toUtc(),
       aiSuggestionsUsed: data['aiSuggestionsUsed'] ?? 0,
-      aiSuggestionsLimit: data['aiSuggestionsLimit'] ?? 0, // Will settle in constructor or usage
+      aiSuggestionsLimit: data['aiSuggestionsLimit'] ??
+          0, // Will settle in constructor or usage
       lastAiReset: _parseDate(data['lastAiReset']),
       stripeId: data['stripeId'],
     );
   }
 
   // Mantido para compatibilidade se houver chamadas antigas, mas redireciona para fromMap
-  factory SubscriptionModel.fromFirestore(Map<String, dynamic> data) => SubscriptionModel.fromMap(data);
+  factory SubscriptionModel.fromFirestore(Map<String, dynamic> data) =>
+      SubscriptionModel.fromMap(data);
 
   static DateTime? _parseDate(dynamic value) {
     if (value == null) return null;
@@ -279,7 +283,7 @@ class PlanLimits {
   static double getAnnualPrice(SubscriptionPlan plan) {
     final monthlyPrice = getPlanPrice(plan);
     if (monthlyPrice == 0) return 0.0;
-    
+
     // 12 meses com 20% de desconto
     // Preço Anual = Mensal * 12 * 0.8
     return monthlyPrice * 12 * 0.8;

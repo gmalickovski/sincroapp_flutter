@@ -12,7 +12,10 @@ const Map<String, Map<String, dynamic>> _cardDisplayData = {
   },
   'focusDay': {'name': 'Foco do Dia', 'icon': Icons.check_circle_outline},
   'vibracaoDia': {'name': 'Dia Pessoal', 'icon': Icons.sunny},
-  'sincroflow': {'name': 'Sincroflow', 'icon': Icons.hub_outlined}, // ATUALIZADO
+  'sincroflow': {
+    'name': 'Sincroflow',
+    'icon': Icons.hub_outlined
+  }, // ATUALIZADO
   'vibracaoMes': {'name': 'Mês Pessoal', 'icon': Icons.nightlight_round},
   'vibracaoAno': {'name': 'Ano Pessoal', 'icon': Icons.star_border},
   'cicloVida': {'name': 'Ciclo de Vida', 'icon': Icons.repeat},
@@ -119,7 +122,7 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
   void initState() {
     super.initState();
     _currentOrder = List.from(widget.initialOrder);
-    
+
     // ATUALIZAÇÃO: Se 'bussola' ainda estiver salvo, migrar para 'sincroflow' visualmente
     if (_currentOrder.contains('bussola')) {
       final index = _currentOrder.indexOf('bussola');
@@ -139,11 +142,11 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     }
     // 3) Filtra o conjunto de ocultos para conter apenas IDs válidos
     _hidden = {...widget.initialHidden};
-    
+
     // Migração de ocultos também
     if (_hidden.contains('bussola')) {
-        _hidden.remove('bussola');
-        _hidden.add('sincroflow');
+      _hidden.remove('bussola');
+      _hidden.add('sincroflow');
     }
 
     _hidden.removeWhere((id) => !_cardDisplayData.containsKey(id));
@@ -160,12 +163,12 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     setState(() => _isLoading = true);
     try {
       debugPrint("ReorderModal: Chamando Supabase update...");
-      
+
       await _supabaseService.updateUserData(widget.userId, {
         'dashboardCardOrder': _currentOrder,
         'dashboardHiddenCards': _hidden.toList(),
       });
-      
+
       debugPrint("ReorderModal: Supabase update finalizado com sucesso.");
       if (mounted) {
         debugPrint("ReorderModal: Chamando onSaveComplete(true).");
@@ -197,7 +200,8 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     return Container(
       constraints: BoxConstraints(
           maxWidth: 500,
-          maxHeight: MediaQuery.of(context).size.height * 0.8), // Limita altura e largura
+          maxHeight: MediaQuery.of(context).size.height *
+              0.8), // Limita altura e largura
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.all(Radius.circular(24)),
@@ -209,24 +213,23 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
 
           // Título centralizado e Fechar
           Padding(
-            padding:
-                const EdgeInsets.fromLTRB(24, 24, 24, 16),
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                 // Título
-                 const Text('Organizar Dashboard',
+                // Título
+                const Text('Organizar Dashboard',
                     style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
                         fontWeight: FontWeight.bold)),
-                 // Fechar
-                 IconButton(
-                    icon:
-                        const Icon(Icons.close_rounded, color: AppColors.secondaryText),
-                    onPressed: () => widget.onSaveComplete(false),
-                    tooltip: 'Fechar',
-                  ),
+                // Fechar
+                IconButton(
+                  icon: const Icon(Icons.close_rounded,
+                      color: AppColors.secondaryText),
+                  onPressed: () => widget.onSaveComplete(false),
+                  tooltip: 'Fechar',
+                ),
               ],
             ),
           ),
@@ -325,7 +328,8 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
                 onPressed: _isLoading ? null : _onSave,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(24)), // Pilula
                   elevation: 4,

@@ -41,7 +41,9 @@ class _UserEditDialogState extends State<UserEditDialog> {
 
     try {
       // Determine effective plan for limits
-      final effectivePlan = _selectedSystemPlan ?? widget.user.subscription.stripePlan ?? SubscriptionPlan.free;
+      final effectivePlan = _selectedSystemPlan ??
+          widget.user.subscription.stripePlan ??
+          SubscriptionPlan.free;
       final int aiLimit = PlanLimits.getAiLimit(effectivePlan);
 
       // Cria nova subscription
@@ -84,26 +86,27 @@ class _UserEditDialogState extends State<UserEditDialog> {
   // ... (Keep existing helpers: _selectValidUntil, etc. if they are outside this block, but I am replacing the build method too)
 
   Future<void> _selectValidUntil() async {
-     final picked = await showDatePicker(
-      context: context,
-      initialDate: _validUntil ?? DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 anos
-      builder: (context, child) {
-        return Theme(
-           data: Theme.of(context).copyWith(
+    final picked = await showDatePicker(
+        context: context,
+        initialDate:
+            _validUntil ?? DateTime.now().add(const Duration(days: 30)),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)), // 10 anos
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
               colorScheme: const ColorScheme.dark(
-                 primary: AppColors.primary,
-                 onPrimary: Colors.white,
-                 surface: AppColors.cardBackground,
-                 onSurface: AppColors.primaryText,
+                primary: AppColors.primary,
+                onPrimary: Colors.white,
+                surface: AppColors.cardBackground,
+                onSurface: AppColors.primaryText,
               ),
-              dialogBackgroundColor: AppColors.cardBackground,
-           ),
-           child: child!,
-        );
-      }
-    );
+              dialogTheme: const DialogThemeData(
+                  backgroundColor: AppColors.cardBackground),
+            ),
+            child: child!,
+          );
+        });
 
     if (picked != null) {
       setState(() => _validUntil = picked.toUtc());
@@ -113,10 +116,10 @@ class _UserEditDialogState extends State<UserEditDialog> {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('dd/MM/yyyy');
-    final stripePlanName = widget.user.subscription.stripePlan != null 
-        ? PlanLimits.getPlanName(widget.user.subscription.stripePlan!) 
+    final stripePlanName = widget.user.subscription.stripePlan != null
+        ? PlanLimits.getPlanName(widget.user.subscription.stripePlan!)
         : 'Nenhum';
-    
+
     return Dialog(
       backgroundColor: AppColors.cardBackground,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -174,15 +177,21 @@ class _UserEditDialogState extends State<UserEditDialog> {
               ),
               child: Row(
                 children: [
-                   const Icon(Icons.payment, color: Colors.blue, size: 20),
-                   const SizedBox(width: 12),
-                   Column(
-                     crossAxisAlignment: CrossAxisAlignment.start,
-                     children: [
-                       const Text('Plano Contratado (Stripe)', style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold)),
-                       Text(stripePlanName, style: const TextStyle(color: AppColors.primaryText, fontSize: 14)),
-                     ],
-                   )
+                  const Icon(Icons.payment, color: Colors.blue, size: 20),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Plano Contratado (Stripe)',
+                          style: TextStyle(
+                              color: Colors.blue,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                      Text(stripePlanName,
+                          style: const TextStyle(
+                              color: AppColors.primaryText, fontSize: 14)),
+                    ],
+                  )
                 ],
               ),
             ),
@@ -197,7 +206,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionPlan?>(
-              value: _selectedSystemPlan,
+              initialValue: _selectedSystemPlan,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -210,8 +219,8 @@ class _UserEditDialogState extends State<UserEditDialog> {
               style: const TextStyle(color: AppColors.primaryText),
               items: [
                 const DropdownMenuItem<SubscriptionPlan?>(
-                   value: null,
-                   child: Text('Usar Plano do Stripe (Automático)'),
+                  value: null,
+                  child: Text('Usar Plano do Stripe (Automático)'),
                 ),
                 ...SubscriptionPlan.values.map((plan) {
                   return DropdownMenuItem<SubscriptionPlan?>(
@@ -221,7 +230,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
                 }),
               ],
               onChanged: (value) {
-                 setState(() => _selectedSystemPlan = value);
+                setState(() => _selectedSystemPlan = value);
               },
             ),
             const SizedBox(height: 16),
@@ -236,7 +245,7 @@ class _UserEditDialogState extends State<UserEditDialog> {
             ),
             const SizedBox(height: 8),
             DropdownButtonFormField<SubscriptionStatus>(
-              value: _selectedStatus,
+              initialValue: _selectedStatus,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppColors.background,
@@ -326,7 +335,9 @@ class _UserEditDialogState extends State<UserEditDialog> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      _getPlanInfo(_selectedSystemPlan ?? widget.user.subscription.stripePlan ?? SubscriptionPlan.free),
+                      _getPlanInfo(_selectedSystemPlan ??
+                          widget.user.subscription.stripePlan ??
+                          SubscriptionPlan.free),
                       style: const TextStyle(
                         color: AppColors.primaryText,
                         fontSize: 12,

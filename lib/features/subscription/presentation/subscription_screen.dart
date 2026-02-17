@@ -28,7 +28,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isDesktop = constraints.maxWidth > 1000;
-          
+
           return SingleChildScrollView(
             padding: EdgeInsets.symmetric(
               horizontal: isDesktop ? 64 : 16,
@@ -69,7 +69,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _buildToggleOption('Mensal', BillingCycle.monthly),
-                      _buildToggleOption('Anual', BillingCycle.annual, badge: '20% OFF'),
+                      _buildToggleOption('Anual', BillingCycle.annual,
+                          badge: '20% OFF'),
                     ],
                   ),
                 ),
@@ -86,16 +87,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   Column(
                     children: _buildCards(context, false),
                   ),
-                  
+
                 const SizedBox(height: 64),
-                
+
                 // FAQ ou Informações Adicionais (Opcional)
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: AppColors.border.withValues(alpha: 0.3)),
                   ),
                   child: const Column(
                     children: [
@@ -176,14 +178,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     return plans.map((plan) {
       final isCurrent = widget.user.subscription.plan == plan;
-      
+
       // Lógica de Destaque Dinâmico
       bool isRecommended = false;
-      
+
       switch (widget.user.subscription.plan) {
         case SubscriptionPlan.free:
           // Se for Grátis, destaca Plus e Premium para incentivar upgrade
-          if (plan == SubscriptionPlan.plus || plan == SubscriptionPlan.premium) {
+          if (plan == SubscriptionPlan.plus ||
+              plan == SubscriptionPlan.premium) {
             isRecommended = true;
           }
           break;
@@ -200,7 +203,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           }
           break;
       }
-      
+
       final card = PricingCard(
         plan: plan,
         isCurrent: isCurrent,
@@ -225,12 +228,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }).toList();
   }
 
-  Future<void> _handlePurchase(BuildContext context, SubscriptionPlan plan) async {
+  Future<void> _handlePurchase(
+      BuildContext context, SubscriptionPlan plan) async {
     final service = PaymentService();
     try {
       // Usa Links de Pagamento para Web e Mobile (Uniforme)
       await service.launchPaymentLink(plan, _billingCycle, widget.user.uid);
-      
+
       // Nota: Como o link abre externo, não temos callback de sucesso imediato aqui.
       // O webhook cuidará da liberação.
     } catch (e) {

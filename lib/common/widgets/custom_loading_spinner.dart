@@ -6,7 +6,7 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 class CustomLoadingSpinner extends StatefulWidget {
   final double? size;
   final Color? color;
-  
+
   const CustomLoadingSpinner({
     super.key,
     this.size,
@@ -30,7 +30,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
   @override
   void initState() {
     super.initState();
-    
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
@@ -144,7 +144,7 @@ class _CustomLoadingSpinnerState extends State<CustomLoadingSpinner>
   @override
   Widget build(BuildContext context) {
     final size = widget.size ?? _defaultSize;
-    
+
     return SizedBox(
       width: size,
       height: size,
@@ -211,10 +211,10 @@ class StarCometPainter extends CustomPainter {
 
     // Calcular dash offset e array
     final circumference = 2 * math.pi * tailRadius;
-    
+
     // HTML: dasharray 1, 300 -> 120, 300. (120/300 = 0.4)
-    final dashLength = circumference * (0.01 + dashProgress * 0.39); 
-    
+    final dashLength = circumference * (0.01 + dashProgress * 0.39);
+
     // HTML: dashoffset 0 -> -260. (260/300 = 0.86)
     // Offset negativo move "para frente" no sentido horário (ou anti dependendo da implementação)
     // Aqui simulamos movendo o ponto de início.
@@ -224,22 +224,20 @@ class StarCometPainter extends CustomPainter {
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth * (radius / 100) // Escala baseada no tamanho
-      ..strokeCap = dashProgress < 0.15 
-          ? StrokeCap.round
-          : StrokeCap.butt;
+      ..strokeCap = dashProgress < 0.15 ? StrokeCap.round : StrokeCap.butt;
 
     // Caminho base: Círculo completo começando do topo (-pi/2)
     final path = Path()..addArc(rect, -math.pi / 2, 2 * math.pi);
-    
+
     // Extrair o sub-caminho baseado no offset e length
     // Como é um círculo fechado, precisamos lidar com o wrap-around
     final metrics = path.computeMetrics().first;
-    
+
     final start = currentOffset;
     final end = start + dashLength;
-    
+
     final extractedPath = Path();
-    
+
     if (end <= metrics.length) {
       // Caso simples: não dá a volta
       extractedPath.addPath(
@@ -266,7 +264,8 @@ class StarCometPainter extends CustomPainter {
     final starPath = _createStarPath(starRadius);
 
     canvas.save();
-    canvas.translate(0, -radius * 0.42); // Posição da estrela no topo do círculo
+    canvas.translate(
+        0, -radius * 0.42); // Posição da estrela no topo do círculo
     canvas.scale(scale);
 
     // Stroke da estrela (sempre visível)

@@ -117,61 +117,65 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
   @override
   Widget build(BuildContext context) {
     final content = Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        decoration: widget.isPopup 
+      constraints: const BoxConstraints(maxWidth: 400),
+      decoration: widget.isPopup
           ? BoxDecoration(
               color: AppColors.cardBackground,
               borderRadius: BorderRadius.circular(24.0),
               boxShadow: [
-                 BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                 ),
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
               ],
             )
           : null,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header com X e Check
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                   IconButton(
-                     onPressed: () => Navigator.pop(context),
-                     icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                     tooltip: 'Cancelar',
-                   ),
-                   Text(
-                     "Selecionar Data",
-                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                         color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 18),
-                   ),
-                   IconButton(
-                     onPressed: () => Navigator.pop(context, _selectedDate),
-                     icon: const Icon(Icons.check, color: AppColors.primary), // Check de confirmação
-                     tooltip: 'Confirmar',
-                   ),
-                ],
-              ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Header com X e Check
+          Padding(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                  tooltip: 'Cancelar',
+                ),
+                Text(
+                  "Selecionar Data",
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context, _selectedDate),
+                  icon: const Icon(Icons.check,
+                      color: AppColors.primary), // Check de confirmação
+                  tooltip: 'Confirmar',
+                ),
+              ],
             ),
-            const Divider(color: AppColors.border, height: 1),
+          ),
+          const Divider(color: AppColors.border, height: 1),
 
-            Flexible(
-              child: SingleChildScrollView(
-                // Adicionado padding que antes estava no header
-                padding: const EdgeInsets.only(top: 16.0),
-                child: _buildFullCalendarView(context),
-              ),
+          Flexible(
+            child: SingleChildScrollView(
+              // Adicionado padding que antes estava no header
+              padding: const EdgeInsets.only(top: 16.0),
+              child: _buildFullCalendarView(context),
             ),
-            // Bottom buttons removed per request
-            const SizedBox(height: 16),
-          ],
-        ),
-      );
+          ),
+          // Bottom buttons removed per request
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
 
     if (widget.isPopup) {
       return content;
@@ -220,10 +224,10 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
           rightChevronPadding: EdgeInsets.zero,
           leftChevronMargin: EdgeInsets.symmetric(horizontal: 4),
           rightChevronMargin: EdgeInsets.symmetric(horizontal: 4),
-          leftChevronIcon: Icon(Icons.chevron_left,
-              color: AppColors.primaryText, size: 24),
-          rightChevronIcon: Icon(Icons.chevron_right,
-              color: AppColors.primaryText, size: 24),
+          leftChevronIcon:
+              Icon(Icons.chevron_left, color: AppColors.primaryText, size: 24),
+          rightChevronIcon:
+              Icon(Icons.chevron_right, color: AppColors.primaryText, size: 24),
         ),
         daysOfWeekStyle: const DaysOfWeekStyle(
           weekdayStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),

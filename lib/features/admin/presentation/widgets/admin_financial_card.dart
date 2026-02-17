@@ -19,7 +19,8 @@ class AdminFinancialCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final SupabaseService supabaseService = SupabaseService();
-    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    final currencyFormat =
+        NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
 
     return StreamBuilder<Map<String, dynamic>>(
       stream: supabaseService.getAdminFinancialSettingsStream(),
@@ -29,7 +30,7 @@ class AdminFinancialCard extends StatelessWidget {
         }
 
         final settings = snapshot.data ?? {};
-        
+
         // --- Extração de Dados ---
         final double mrr = (stats['estimatedMRR'] ?? 0.0).toDouble();
         final int totalUsers = (stats['totalUsers'] ?? 0).toInt();
@@ -37,27 +38,35 @@ class AdminFinancialCard extends StatelessWidget {
         final int storeSubscribers = (stats['storeSubscribers'] ?? 0).toInt();
         // Estimativa de receita por fonte (proporcional ao número de assinantes se não tivermos valor exato)
         final int totalPaid = stripeSubscribers + storeSubscribers;
-        final double stripeRevenue = totalPaid > 0 ? (mrr * (stripeSubscribers / totalPaid)) : 0.0;
-        final double storeRevenue = totalPaid > 0 ? (mrr * (storeSubscribers / totalPaid)) : 0.0;
+        final double stripeRevenue =
+            totalPaid > 0 ? (mrr * (stripeSubscribers / totalPaid)) : 0.0;
+        final double storeRevenue =
+            totalPaid > 0 ? (mrr * (storeSubscribers / totalPaid)) : 0.0;
 
         // --- Configurações ---
-        final double stripeFeePercent = (settings['stripeFeePercent'] ?? 3.99).toDouble();
-        final double stripeFixedFee = (settings['stripeFixedFee'] ?? 0.39).toDouble();
-        final double storeFeePercent = (settings['storeFeePercent'] ?? 15.0).toDouble();
-        final double aiCostPerUser = (settings['aiCostPerUser'] ?? 0.50).toDouble();
+        final double stripeFeePercent =
+            (settings['stripeFeePercent'] ?? 3.99).toDouble();
+        final double stripeFixedFee =
+            (settings['stripeFixedFee'] ?? 0.39).toDouble();
+        final double storeFeePercent =
+            (settings['storeFeePercent'] ?? 15.0).toDouble();
+        final double aiCostPerUser =
+            (settings['aiCostPerUser'] ?? 0.50).toDouble();
         final double cacPerUser = (settings['cacPerUser'] ?? 5.00).toDouble();
         final double fixedCosts = (settings['fixedCosts'] ?? 100.00).toDouble();
         final double taxRate = (settings['taxRate'] ?? 6.0).toDouble();
 
         // --- Cálculos ---
         // 1. Taxas de Processamento
-        final double stripeFees = (stripeRevenue * (stripeFeePercent / 100)) + (stripeSubscribers * stripeFixedFee);
+        final double stripeFees = (stripeRevenue * (stripeFeePercent / 100)) +
+            (stripeSubscribers * stripeFixedFee);
         final double storeFees = storeRevenue * (storeFeePercent / 100);
         final double totalProcessingFees = stripeFees + storeFees;
 
         // 2. Custos Variáveis
-        final double totalAiCost = totalUsers * aiCostPerUser; // Custo IA baseada em todos usuários (ou ajustar para ativos)
-        
+        final double totalAiCost = totalUsers *
+            aiCostPerUser; // Custo IA baseada em todos usuários (ou ajustar para ativos)
+
         // 3. Marketing
         final double estimatedMarketingCost = (totalUsers * 0.05) * cacPerUser;
 
@@ -92,28 +101,41 @@ class AdminFinancialCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 20),
-                
-                _buildCostRow('Processamento (Stripe/Lojas)', totalProcessingFees, currencyFormat, Colors.orange),
-                _buildCostRow('Custos IA (Cloud/Tokens)', totalAiCost, currencyFormat, Colors.purple),
-                _buildCostRow('Marketing (CAC Estimado)', estimatedMarketingCost, currencyFormat, Colors.pink),
-                _buildCostRow('Impostos (${taxRate.toStringAsFixed(1)}%)', taxes, currencyFormat, Colors.red),
-                _buildCostRow('Custos Fixos (Servidor/Outros)', fixedCosts, currencyFormat, Colors.grey),
-                
+
+                _buildCostRow('Processamento (Stripe/Lojas)',
+                    totalProcessingFees, currencyFormat, Colors.orange),
+                _buildCostRow('Custos IA (Cloud/Tokens)', totalAiCost,
+                    currencyFormat, Colors.purple),
+                _buildCostRow('Marketing (CAC Estimado)',
+                    estimatedMarketingCost, currencyFormat, Colors.pink),
+                _buildCostRow('Impostos (${taxRate.toStringAsFixed(1)}%)',
+                    taxes, currencyFormat, Colors.red),
+                _buildCostRow('Custos Fixos (Servidor/Outros)', fixedCosts,
+                    currencyFormat, Colors.grey),
+
                 const Divider(color: AppColors.border, height: 32),
-                
+
                 // Métricas Unitárias
                 const Text(
                   'Métricas Unitárias (KPIs)',
-                  style: TextStyle(color: AppColors.secondaryText, fontSize: 14, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: AppColors.secondaryText,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
                   children: [
-                    _buildKpiChip('CAC (Custo Aquisição)', currencyFormat.format(cacPerUser)),
-                    _buildKpiChip('Custo IA / Usuário', currencyFormat.format(aiCostPerUser)),
-                    _buildKpiChip('LTV Estimado (12m)', currencyFormat.format((mrr / (totalPaid > 0 ? totalPaid : 1)) * 12)),
+                    _buildKpiChip('CAC (Custo Aquisição)',
+                        currencyFormat.format(cacPerUser)),
+                    _buildKpiChip('Custo IA / Usuário',
+                        currencyFormat.format(aiCostPerUser)),
+                    _buildKpiChip(
+                        'LTV Estimado (12m)',
+                        currencyFormat.format(
+                            (mrr / (totalPaid > 0 ? totalPaid : 1)) * 12)),
                   ],
                 ),
               ],
@@ -124,7 +146,8 @@ class AdminFinancialCard extends StatelessWidget {
     );
   }
 
-  Widget _buildCostRow(String label, double value, NumberFormat format, Color color) {
+  Widget _buildCostRow(
+      String label, double value, NumberFormat format, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12.0),
       child: Row(
@@ -173,28 +196,43 @@ class AdminFinancialCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppColors.secondaryText, fontSize: 12)),
           const SizedBox(width: 8),
-          Text(value, style: const TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.bold, fontSize: 12)),
+          Text(value,
+              style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12)),
         ],
       ),
     );
   }
 
-  void _showEditDialog(BuildContext context, Map<String, dynamic> currentSettings, SupabaseService service) {
-    final stripeFeePercentCtrl = TextEditingController(text: currentSettings['stripeFeePercent']?.toString() ?? '3.99');
-    final stripeFixedFeeCtrl = TextEditingController(text: currentSettings['stripeFixedFee']?.toString() ?? '0.39');
-    final storeFeePercentCtrl = TextEditingController(text: currentSettings['storeFeePercent']?.toString() ?? '15.0');
-    final aiCostCtrl = TextEditingController(text: currentSettings['aiCostPerUser']?.toString() ?? '0.50');
-    final cacCtrl = TextEditingController(text: currentSettings['cacPerUser']?.toString() ?? '5.00');
-    final fixedCostsCtrl = TextEditingController(text: currentSettings['fixedCosts']?.toString() ?? '100.00');
-    final taxRateCtrl = TextEditingController(text: currentSettings['taxRate']?.toString() ?? '6.0');
+  void _showEditDialog(BuildContext context,
+      Map<String, dynamic> currentSettings, SupabaseService service) {
+    final stripeFeePercentCtrl = TextEditingController(
+        text: currentSettings['stripeFeePercent']?.toString() ?? '3.99');
+    final stripeFixedFeeCtrl = TextEditingController(
+        text: currentSettings['stripeFixedFee']?.toString() ?? '0.39');
+    final storeFeePercentCtrl = TextEditingController(
+        text: currentSettings['storeFeePercent']?.toString() ?? '15.0');
+    final aiCostCtrl = TextEditingController(
+        text: currentSettings['aiCostPerUser']?.toString() ?? '0.50');
+    final cacCtrl = TextEditingController(
+        text: currentSettings['cacPerUser']?.toString() ?? '5.00');
+    final fixedCostsCtrl = TextEditingController(
+        text: currentSettings['fixedCosts']?.toString() ?? '100.00');
+    final taxRateCtrl = TextEditingController(
+        text: currentSettings['taxRate']?.toString() ?? '6.0');
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Editar Taxas e Custos', style: TextStyle(color: AppColors.primaryText)),
+        title: const Text('Editar Taxas e Custos',
+            style: TextStyle(color: AppColors.primaryText)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -217,9 +255,11 @@ class AdminFinancialCard extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               service.updateAdminFinancialSettings({
-                'stripeFeePercent': double.tryParse(stripeFeePercentCtrl.text) ?? 0,
+                'stripeFeePercent':
+                    double.tryParse(stripeFeePercentCtrl.text) ?? 0,
                 'stripeFixedFee': double.tryParse(stripeFixedFeeCtrl.text) ?? 0,
-                'storeFeePercent': double.tryParse(storeFeePercentCtrl.text) ?? 0,
+                'storeFeePercent':
+                    double.tryParse(storeFeePercentCtrl.text) ?? 0,
                 'aiCostPerUser': double.tryParse(aiCostCtrl.text) ?? 0,
                 'cacPerUser': double.tryParse(cacCtrl.text) ?? 0,
                 'fixedCosts': double.tryParse(fixedCostsCtrl.text) ?? 0,
@@ -244,8 +284,10 @@ class AdminFinancialCard extends StatelessWidget {
         decoration: InputDecoration(
           labelText: label,
           labelStyle: const TextStyle(color: AppColors.secondaryText),
-          enabledBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.border)),
-          focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: AppColors.primary)),
+          enabledBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.border)),
+          focusedBorder: const OutlineInputBorder(
+              borderSide: BorderSide(color: AppColors.primary)),
         ),
       ),
     );

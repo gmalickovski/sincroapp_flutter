@@ -47,7 +47,8 @@ class FeedbackModel {
         typeString = 'Solução de Problemas';
         break;
       case FeedbackType.general:
-        typeString = 'Primeiros Passos'; // Mapping General/Other to Primeiros Passos as per UI
+        typeString =
+            'Primeiros Passos'; // Mapping General/Other to Primeiros Passos as per UI
         break;
     }
 

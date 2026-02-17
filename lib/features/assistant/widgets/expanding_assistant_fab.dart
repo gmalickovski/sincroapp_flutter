@@ -6,10 +6,12 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
 
 class ExpandingAssistantFab extends StatefulWidget {
-  final VoidCallback? onPrimary; // ação principal (ex.: nova tarefa/anotação/meta) - opcional
+  final VoidCallback?
+      onPrimary; // ação principal (ex.: nova tarefa/anotação/meta) - opcional
   final IconData? primaryIcon; // ícone da ação principal - opcional
   final String primaryTooltip; // dica da ação principal
-  final Function(String?) onOpenAssistant; // abrir chat da IA (agora aceita mensagem opcional)
+  final Function(String?)
+      onOpenAssistant; // abrir chat da IA (agora aceita mensagem opcional)
   final IconData? fabIcon; // ícone do botão flutuante (opcional, default é add)
 
   const ExpandingAssistantFab({
@@ -31,20 +33,20 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   static const double _kIconSlot = 48.0;
   static const double _kGap = 8.0;
   static const double _kOuterPad = 12.0;
-  
+
   late AnimationController _controller;
   late Animation<double> _widthAnim;
   late Animation<double> _rotationAnim;
-  
+
   // State for Input Mode
   bool _isInputMode = false;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
-  
+
   // Speech
   final SpeechService _speechService = SpeechService();
   bool _isListening = false;
-  
+
   bool _expanded = false;
   bool _isSimpleButton = false;
   late double _expandedWidth;
@@ -63,21 +65,28 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     _calculateWidths();
 
     _rotationAnim = Tween<double>(begin: 0, end: 0.125).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubicEmphasized),
+      CurvedAnimation(
+          parent: _controller, curve: Curves.easeInOutCubicEmphasized),
     );
-    
+
     _focusNode.addListener(() {
       // Se perder o foco, estiver vazio e NÃO estiver ouvindo, fecha.
-      if (!_focusNode.hasFocus && _isInputMode && _textController.text.isEmpty && !_isListening) {
+      if (!_focusNode.hasFocus &&
+          _isInputMode &&
+          _textController.text.isEmpty &&
+          !_isListening) {
         Future.delayed(const Duration(milliseconds: 200), () {
-           if (mounted && !_focusNode.hasFocus && _isInputMode && !_isListening) {
-             _closeInputMode();
-           }
+          if (mounted &&
+              !_focusNode.hasFocus &&
+              _isInputMode &&
+              !_isListening) {
+            _closeInputMode();
+          }
         });
       }
     });
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -87,7 +96,10 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 
   void _calculateWidths() {
     final int actionsCount = 1 + (widget.onPrimary != null ? 1 : 0);
-    _expandedWidth = _kFabHeight + _kOuterPad + (actionsCount * _kIconSlot) + ((actionsCount > 0 ? actionsCount - 1 : 0) * _kGap);
+    _expandedWidth = _kFabHeight +
+        _kOuterPad +
+        (actionsCount * _kIconSlot) +
+        ((actionsCount > 0 ? actionsCount - 1 : 0) * _kGap);
     _updateAnimation();
   }
 
@@ -98,14 +110,15 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       if (_screenWidth > 768) {
         targetWidth = (_screenWidth / 3).clamp(400.0, 600.0);
       } else {
-        targetWidth = _screenWidth - 32; 
+        targetWidth = _screenWidth - 32;
       }
     } else if (_expanded) {
       targetWidth = _expandedWidth;
     }
 
     _widthAnim = Tween<double>(begin: _kFabHeight, end: targetWidth).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutCubicEmphasized),
+      CurvedAnimation(
+          parent: _controller, curve: Curves.easeInOutCubicEmphasized),
     );
   }
 
@@ -132,7 +145,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
 
   void _toggleMenu() async {
     if (_isInputMode) return;
-    
+
     if (_expanded) {
       // Closing: Reverse animation first, then update state
       await _controller.reverse();
@@ -147,28 +160,28 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       _controller.forward();
     }
   }
-  
+
   void _openInputMode() {
     setState(() {
       _isInputMode = true;
-      _expanded = false; 
+      _expanded = false;
     });
     _updateAnimation();
     _controller.forward(from: 0.0);
-    
+
     Future.delayed(const Duration(milliseconds: 100), () {
       if (mounted) _focusNode.requestFocus();
     });
   }
-  
+
   void _closeInputMode() async {
     _textController.clear();
     _focusNode.unfocus();
     _stopListening();
-    
+
     // Reverse animation first
     await _controller.reverse();
-    
+
     // Then update state to switch back to simple button (if applicable)
     if (mounted) {
       setState(() {
@@ -185,7 +198,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       _closeInputMode();
     }
   }
-  
+
   Future<void> _toggleListening() async {
     if (_isListening) {
       await _stopListening();
@@ -211,7 +224,8 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       if (mounted) {
         setState(() {
           _textController.text = text;
-          _textController.selection = TextSelection.fromPosition(TextPosition(offset: _textController.text.length));
+          _textController.selection = TextSelection.fromPosition(
+              TextPosition(offset: _textController.text.length));
         });
       }
     }, onDone: () {
@@ -235,8 +249,11 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     // 2. Not in input mode
     // 3. Not expanded (menu open)
     // 4. Not animating (forward or reverse)
-    if (_isSimpleButton && !_isInputMode && !_expanded && !_controller.isAnimating) {
-       return SizedBox(
+    if (_isSimpleButton &&
+        !_isInputMode &&
+        !_expanded &&
+        !_controller.isAnimating) {
+      return SizedBox(
         width: _kFabHeight,
         height: _kFabHeight,
         child: FloatingActionButton(
@@ -262,8 +279,9 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       animation: _controller,
       builder: (context, child) {
         // Fix 1: Add padding to move FAB up when keyboard is open (only in input mode)
-        final bottomPadding = _isInputMode ? MediaQuery.of(context).viewInsets.bottom : 0.0;
-        
+        final bottomPadding =
+            _isInputMode ? MediaQuery.of(context).viewInsets.bottom : 0.0;
+
         return Padding(
           padding: EdgeInsets.only(bottom: bottomPadding),
           child: Container(
@@ -287,16 +305,18 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
       },
     );
   }
-  
+
   Widget _buildInputContent() {
     // Animate X to + (Rotation)
     // Refined: Use a FadeTransition combined with Rotation for smoother effect
     final iconRotation = Tween<double>(begin: 0.125, end: 0.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    
+
     final iconOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeIn)),
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.2, 1.0, curve: Curves.easeIn)),
     );
 
     return Row(
@@ -312,7 +332,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
             ),
           ),
         ),
-        
         Expanded(
           child: TextField(
             controller: _textController,
@@ -328,22 +347,24 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
             textInputAction: TextInputAction.send,
           ),
         ),
-        
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: _textController,
           builder: (context, value, child) {
             final hasText = value.text.trim().isNotEmpty;
-            
+
             return IconButton(
               onPressed: hasText ? _handleSend : _toggleListening,
               icon: Icon(
                 hasText ? Icons.send : Icons.mic,
-                color: (hasText || _isListening) ? Colors.white : Colors.white70,
+                color:
+                    (hasText || _isListening) ? Colors.white : Colors.white70,
               ),
-              style: _isListening && !hasText ? IconButton.styleFrom(
-                backgroundColor: Colors.redAccent.withOpacity(0.8),
-                hoverColor: Colors.redAccent,
-              ) : null,
+              style: _isListening && !hasText
+                  ? IconButton.styleFrom(
+                      backgroundColor: Colors.redAccent.withOpacity(0.8),
+                      hoverColor: Colors.redAccent,
+                    )
+                  : null,
               tooltip: hasText ? 'Enviar' : (_isListening ? 'Parar' : 'Falar'),
             );
           },
@@ -358,7 +379,8 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
         if (!_isSimpleButton)
           Positioned.fill(
             child: Padding(
-              padding: const EdgeInsets.only(right: _kFabHeight, left: _kOuterPad),
+              padding:
+                  const EdgeInsets.only(right: _kFabHeight, left: _kOuterPad),
               child: Align(
                 alignment: Alignment.centerRight,
                 child: SingleChildScrollView(
@@ -367,7 +389,8 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (widget.onPrimary != null && widget.primaryIcon != null) ...[
+                      if (widget.onPrimary != null &&
+                          widget.primaryIcon != null) ...[
                         _AnimatedActionSlot(
                           controller: _controller,
                           tooltip: widget.primaryTooltip,
@@ -395,7 +418,6 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
               ),
             ),
           ),
-          
         Align(
           alignment: Alignment.centerRight,
           child: Material(
@@ -407,16 +429,17 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
                 width: _kFabHeight,
                 height: _kFabHeight,
                 alignment: Alignment.center,
-                child: _isSimpleButton 
-                  ? SvgPicture.asset(
-                      'assets/images/icon-ia-sincroapp-branco-v1.svg',
-                      width: 28,
-                      height: 28,
-                    )
-                  : RotationTransition(
-                      turns: _rotationAnim,
-                      child: Icon(widget.fabIcon ?? Icons.add, color: Colors.white, size: 28),
-                    ),
+                child: _isSimpleButton
+                    ? SvgPicture.asset(
+                        'assets/images/icon-ia-sincroapp-branco-v1.svg',
+                        width: 28,
+                        height: 28,
+                      )
+                    : RotationTransition(
+                        turns: _rotationAnim,
+                        child: Icon(widget.fabIcon ?? Icons.add,
+                            color: Colors.white, size: 28),
+                      ),
               ),
             ),
           ),
@@ -461,12 +484,11 @@ class _AnimatedActionSlot extends StatelessWidget {
           tooltip: tooltip,
           onPressed: onPressed,
           padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(width: _slotWidth, height: _slotHeight),
+          constraints: const BoxConstraints.tightFor(
+              width: _slotWidth, height: _slotHeight),
           icon: iconWidget ?? Icon(icon, color: Colors.white, size: 24),
         ),
       ),
     );
   }
 }
-
-

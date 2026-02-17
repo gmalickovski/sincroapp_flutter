@@ -1,7 +1,7 @@
 // lib/common/utils/username_validator.dart
 
 /// Utilitário para validação de usernames
-/// 
+///
 /// Regras:
 /// - 3 a 30 caracteres
 /// - Apenas letras minúsculas, números, underline (_) e ponto (.)
@@ -12,24 +12,24 @@ class UsernameValidator {
   static final RegExp _usernameRegex = RegExp(r'^[a-z0-9_.]{3,30}$');
 
   /// Verifica se o username tem formato válido
-  /// 
+  ///
   /// Retorna true se o username atende aos critérios de formato
   static bool isValidFormat(String username) {
     if (username.isEmpty) return false;
-    
+
     final sanitized = sanitize(username);
     return _usernameRegex.hasMatch(sanitized);
   }
 
   /// Sanitiza o username (converte para lowercase e remove espaços)
-  /// 
+  ///
   /// Use antes de salvar no banco ou fazer validações
   static String sanitize(String username) {
     return username.toLowerCase().trim();
   }
 
   /// Valida o username e retorna mensagem de erro se inválido
-  /// 
+  ///
   /// Retorna null se válido, ou String com mensagem de erro
   static String? validate(String username) {
     if (username.isEmpty) {
@@ -59,7 +59,7 @@ class UsernameValidator {
   }
 
   /// Gera sugestões de username baseadas no email
-  /// 
+  ///
   /// Exemplo: joao.silva@gmail.com → [joao_silva, joaosilva, j.silva]
   static List<String> generateSuggestions(String email) {
     if (email.isEmpty || !email.contains('@')) {
@@ -97,12 +97,12 @@ class UsernameValidator {
   }
 
   /// Extrai possíveis usernames de um texto
-  /// 
+  ///
   /// Busca padrões @username no texto
   static List<String> extractMentionsFromText(String text) {
     final mentionRegex = RegExp(r'@([a-z0-9_.]{3,30})', caseSensitive: false);
     final matches = mentionRegex.allMatches(text);
-    
+
     return matches
         .map((match) => match.group(1)!)
         .map((username) => sanitize(username))

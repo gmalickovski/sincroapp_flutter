@@ -113,7 +113,8 @@ class TasksListView extends StatelessWidget {
               // Callbacks de Swipe
               onSwipeLeft: onSwipeLeft,
               onSwipeRight: onSwipeRight,
-              isActive: activeTaskId != null && task.id == activeTaskId, // Pass highlight state
+              isActive: activeTaskId != null &&
+                  task.id == activeTaskId, // Pass highlight state
               onRescheduleDate: onRescheduleDate, // Pass callback
             ),
           );

@@ -122,19 +122,19 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
     try {
       if (widget.goalToEdit != null) {
         // Editando jornada existente
-        await _supabaseService
-            .updateGoal(Goal(
-              id: widget.goalToEdit!.id,
-              title: _titleController.text.trim(),
-              description: _descriptionController.text.trim(),
-              targetDate: _targetDate,
-              progress: widget.goalToEdit!.progress,
-              userId: widget.userData.uid,
-              createdAt: widget.goalToEdit!.createdAt,
-              subTasks: widget.goalToEdit!.subTasks,
-              imageUrl: widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
-              category: widget.goalToEdit!.category,
-            ));
+        await _supabaseService.updateGoal(Goal(
+          id: widget.goalToEdit!.id,
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+          targetDate: _targetDate,
+          progress: widget.goalToEdit!.progress,
+          userId: widget.userData.uid,
+          createdAt: widget.goalToEdit!.createdAt,
+          subTasks: widget.goalToEdit!.subTasks,
+          imageUrl:
+              widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
+          category: widget.goalToEdit!.category,
+        ));
       } else {
         // Criando nova jornada
         final newGoal = Goal(
@@ -218,7 +218,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
       appBar: AppBar(
         title: Text(
           widget.goalToEdit != null ? 'Editar Jornada' : 'Nova Jornada',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style:
+              const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: AppColors.background,
         elevation: 0,
@@ -272,7 +273,8 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                       TextFormField(
                         controller: _descriptionController,
                         autofillHints: const [], // Prevent browser password save prompt
-                        style: const TextStyle(color: Colors.white, fontSize: 16),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 16),
                         maxLines: 6,
                         minLines: 4,
                         maxLength: 500,
@@ -281,7 +283,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                           labelText: 'Descrição',
                           hintText:
                               'Descreva o que você quer alcançar e por que isso é importante para você.',
-                        ).copyWith(alignLabelWithHint: true), // 3. Top-Left alignment for label
+                        ).copyWith(
+                            alignLabelWithHint:
+                                true), // 3. Top-Left alignment for label
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
                             return 'Por favor, insira uma descrição.';
@@ -293,7 +297,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
-                      
+
                       // Date Picker
                       Material(
                         color: Colors.transparent,
@@ -309,20 +313,21 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                               border: Border.all(
                                 color: _targetDate == null && _isSaving
                                     ? Colors.redAccent
-                                    : Colors.transparent, 
+                                    : Colors.transparent,
                                 width: 1,
                               ),
                             ),
                             child: Row(
                               children: [
                                 Icon(Icons.calendar_today,
-                                    color: _targetDate != null 
-                                      ? AppColors.primary 
-                                      : AppColors.secondaryText),
+                                    color: _targetDate != null
+                                        ? AppColors.primary
+                                        : AppColors.secondaryText),
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Data Alvo',
@@ -335,7 +340,9 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                       Text(
                                         _targetDate == null
                                             ? 'Selecionar data'
-                                            : DateFormat('dd ' 'MMM' ' yyyy', 'pt_BR').format(_targetDate!),
+                                            : DateFormat('dd ' 'MMM' ' yyyy',
+                                                    'pt_BR')
+                                                .format(_targetDate!),
                                         style: TextStyle(
                                           color: _targetDate == null
                                               ? AppColors.tertiaryText
@@ -349,15 +356,18 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                                 ),
                                 if (_targetDate != null)
                                   IconButton(
-                                    icon: const Icon(Icons.clear, size: 20, color: AppColors.tertiaryText),
+                                    icon: const Icon(Icons.clear,
+                                        size: 20,
+                                        color: AppColors.tertiaryText),
                                     onPressed: () {
                                       setState(() {
                                         _targetDate = null;
                                       });
                                     },
                                   )
-                                else 
-                                  const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.tertiaryText),
+                                else
+                                  const Icon(Icons.arrow_forward_ios,
+                                      size: 16, color: AppColors.tertiaryText),
                               ],
                             ),
                           ),
@@ -380,7 +390,7 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
                 ),
               ),
             ),
-            
+
             // Fixed Bottom Container
             Container(
               padding: const EdgeInsets.all(20),

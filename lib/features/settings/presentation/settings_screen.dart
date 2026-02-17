@@ -6,7 +6,7 @@ import 'tabs/account_settings_tab.dart';
 import 'tabs/numerology_settings_tab.dart';
 import 'tabs/plan_settings_tab.dart';
 import 'tabs/integrations_settings_tab.dart';
-import 'tabs/contacts_settings_tab.dart'; 
+import 'tabs/contacts_settings_tab.dart';
 import 'tabs/about_settings_tab.dart'; // NOVO import
 
 class SettingsScreen extends StatefulWidget {
@@ -62,7 +62,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     // Determine layout based on screen width
-    final isDesktop = MediaQuery.of(context).size.width >= 720; // Matching the sidebar breakpoint
+    final isDesktop = MediaQuery.of(context).size.width >=
+        720; // Matching the sidebar breakpoint
 
     if (isDesktop) {
       return _buildDesktopDialog(context);
@@ -96,10 +97,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     padding: const EdgeInsets.all(24.0),
                     child: Text(
                       'Configurações',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            color: AppColors.primaryText,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                color: AppColors.primaryText,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                   ),
                   Expanded(
@@ -131,8 +133,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 color: isSelected
                                     ? AppColors.primaryText
                                     : AppColors.secondaryText,
-                                fontWeight:
-                                    isSelected ? FontWeight.w600 : FontWeight.normal,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                                 fontSize: 14,
                               ),
                             ),
@@ -159,7 +162,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Container(
                     // Adjusted padding to match sidebar title padding (horizontal 24)
                     // Reduced vertical padding to 16 to tighten spacing
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 16),
                     decoration: const BoxDecoration(),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -168,10 +172,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         // Support Button
                         // Support Button
                         OutlinedButton(
-                          onPressed: () => FeedbackModal.show(context, widget.userData),
+                          onPressed: () =>
+                              FeedbackModal.show(context, widget.userData),
                           style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: AppColors.primary, width: 1.5),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            side: const BorderSide(
+                                color: AppColors.primary, width: 1.5),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 24, vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -187,7 +194,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                         const SizedBox(width: 16),
                         IconButton(
-                          icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                          icon: const Icon(Icons.close,
+                              color: AppColors.secondaryText),
                           onPressed: () => Navigator.of(context).pop(),
                           tooltip: 'Fechar',
                         ),
@@ -231,7 +239,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: IconButton(
-                icon: const Icon(Icons.feedback_outlined, color: AppColors.primary),
+                icon: const Icon(Icons.feedback_outlined,
+                    color: AppColors.primary),
                 tooltip: 'Enviar Feedback',
                 onPressed: () => FeedbackModal.show(context, widget.userData),
               ),
@@ -242,16 +251,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
             indicatorColor: AppColors.primary,
             labelColor: AppColors.primary,
             unselectedLabelColor: AppColors.secondaryText,
-            overlayColor: WidgetStateProperty.all(Colors.transparent), // Removes the square hover
+            overlayColor: WidgetStateProperty.all(
+                Colors.transparent), // Removes the square hover
             splashFactory: NoSplash.splashFactory, // Removes splash effect
             tabs: _settingsPages.map((page) => Tab(text: page.title)).toList(),
           ),
         ),
         body: TabBarView(
-          children: _settingsPages.map((page) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-            child: page.page,
-          )).toList(),
+          children: _settingsPages
+              .map((page) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16.0, vertical: 16.0),
+                    child: page.page,
+                  ))
+              .toList(),
         ),
       ),
     );

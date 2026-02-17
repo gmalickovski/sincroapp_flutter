@@ -94,15 +94,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Email',
-                          labelStyle: const TextStyle(color: AppColors.secondaryText),
-                          prefixIcon: const Icon(Icons.email_outlined, color: AppColors.secondaryText),
+                          labelStyle:
+                              const TextStyle(color: AppColors.secondaryText),
+                          prefixIcon: const Icon(Icons.email_outlined,
+                              color: AppColors.secondaryText),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide:
+                                const BorderSide(color: AppColors.border),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary),
+                            borderSide:
+                                const BorderSide(color: AppColors.primary),
                           ),
                         ),
                         keyboardType: TextInputType.emailAddress,
@@ -113,15 +117,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Senha',
-                          labelStyle: const TextStyle(color: AppColors.secondaryText),
-                          prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+                          labelStyle:
+                              const TextStyle(color: AppColors.secondaryText),
+                          prefixIcon: const Icon(Icons.lock_outline,
+                              color: AppColors.secondaryText),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.border),
+                            borderSide:
+                                const BorderSide(color: AppColors.border),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: AppColors.primary),
+                            borderSide:
+                                const BorderSide(color: AppColors.primary),
                           ),
                         ),
                         obscureText: true,
@@ -130,8 +138,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       Align(
                         alignment: Alignment.centerRight,
                         child: MouseRegion(
-                          onEnter: (_) => setState(() => _isForgotPasswordHovered = true),
-                          onExit: (_) => setState(() => _isForgotPasswordHovered = false),
+                          onEnter: (_) =>
+                              setState(() => _isForgotPasswordHovered = true),
+                          onExit: (_) =>
+                              setState(() => _isForgotPasswordHovered = false),
                           cursor: SystemMouseCursors.click,
                           child: GestureDetector(
                             onTap: () {
@@ -146,8 +156,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               style: TextStyle(
                                 color: AppColors.secondaryAccent,
                                 fontSize: 12,
-                                decoration: _isForgotPasswordHovered 
-                                    ? TextDecoration.underline 
+                                decoration: _isForgotPasswordHovered
+                                    ? TextDecoration.underline
                                     : TextDecoration.none,
                                 decorationColor: AppColors.secondaryAccent,
                               ),
@@ -204,7 +214,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 32),
                 CustomTextButton(
                   text: 'Voltar',
-                  onPressed: () {}, // TODO: Implement back functionality? Or remove if not needed.
+                  onPressed:
+                      () {}, // TODO: Implement back functionality? Or remove if not needed.
                   color: AppColors.tertiaryText,
                   icon: Icons.arrow_back,
                 ),

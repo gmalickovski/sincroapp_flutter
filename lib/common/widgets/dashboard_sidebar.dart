@@ -46,7 +46,8 @@ class DashboardSidebar extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xff111827), // Cor de fundo da sidebar
         border: Border(
-          right: BorderSide(color: AppColors.border.withValues(alpha: 0.5), width: 1),
+          right: BorderSide(
+              color: AppColors.border.withValues(alpha: 0.5), width: 1),
         ),
       ),
       child: SafeArea(
@@ -57,23 +58,26 @@ class DashboardSidebar extends StatelessWidget {
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: () {
-                   Navigator.of(context).push(MaterialPageRoute(
+                  Navigator.of(context).push(MaterialPageRoute(
                     builder: (context) => SettingsScreen(userData: userData),
                   ));
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: isExpanded ? 20.0 : 8.0),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: isExpanded ? 20.0 : 8.0),
                   child: Row(
-                    mainAxisAlignment: isExpanded ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
+                    mainAxisAlignment: isExpanded
+                        ? MainAxisAlignment.spaceBetween
+                        : MainAxisAlignment.center,
                     children: [
-                       // Avatar on the LEFT now
-                       UserAvatar(
+                      // Avatar on the LEFT now
+                      UserAvatar(
                         photoUrl: userData.photoUrl,
                         firstName: userData.primeiroNome,
                         lastName: userData.sobrenome,
-                        radius: 20, 
+                        radius: 20,
                       ),
-                       if (isExpanded) ...[
+                      if (isExpanded) ...[
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -89,8 +93,9 @@ class DashboardSidebar extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const SizedBox(height: 2), 
-                              if (userData.username != null && userData.username!.isNotEmpty)
+                              const SizedBox(height: 2),
+                              if (userData.username != null &&
+                                  userData.username!.isNotEmpty)
                                 Text(
                                   "@${userData.username}",
                                   style: const TextStyle(
@@ -103,7 +108,7 @@ class DashboardSidebar extends StatelessWidget {
                             ],
                           ),
                         ),
-                       ],
+                      ],
                     ],
                   ),
                 ),
@@ -133,131 +138,140 @@ class DashboardSidebar extends StatelessWidget {
               padding: EdgeInsets.symmetric(
                   horizontal: isExpanded ? 12.0 : 8.0), // Padding padronizado
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch, // Garante que respeita o padding
+                crossAxisAlignment: CrossAxisAlignment
+                    .stretch, // Garante que respeita o padding
                 children: [
-                   const Divider(color: Color(0x804B5563), height: 1),
-                   const SizedBox(height: 8),
-            // Admin - apenas se for admin
-            if (userData.isAdmin)
-              _buildNavItem(
-                context: context,
-                icon: Icons.admin_panel_settings_outlined,
-                text: 'Admin',
-                index: 97,
-                onTap: () {
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => AdminScreen(userData: userData),
-                  ));
-                  },
-                ),
+                  const Divider(color: Color(0x804B5563), height: 1),
+                  const SizedBox(height: 8),
+                  // Admin - apenas se for admin
+                  if (userData.isAdmin)
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.admin_panel_settings_outlined,
+                      text: 'Admin',
+                      index: 97,
+                      onTap: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (context) => AdminScreen(userData: userData),
+                        ));
+                      },
+                    ),
 
-              // --- NOTIFICAÇÕES (NOVO) ---
-              StreamBuilder<int>(
-                stream: SupabaseService().getUnreadNotificationsCountStream(userData.uid),
-                builder: (context, snapshot) {
-                  final count = snapshot.data ?? 0;
-                  return _buildNavItem(
+                  // --- NOTIFICAÇÕES (NOVO) ---
+                  StreamBuilder<int>(
+                    stream: SupabaseService()
+                        .getUnreadNotificationsCountStream(userData.uid),
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      return _buildNavItem(
+                        context: context,
+                        icon: count > 0
+                            ? Icons.notifications_active
+                            : Icons.notifications_none,
+                        text: 'Notificações',
+                        index: 96,
+                        badgeCount: count, // PASSA O BADGE
+                        onTap: () {
+                          if (MediaQuery.of(context).size.width >= 720) {
+                            showDialog(
+                              context: context,
+                              builder: (_) => NotificationCenterScreen(
+                                  userId: userData.uid),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => NotificationCenterScreen(
+                                      userId: userData.uid)),
+                            );
+                          }
+                        },
+                      );
+                    },
+                  ),
+
+                  _buildNavItem(
                     context: context,
-                    icon: count > 0 ? Icons.notifications_active : Icons.notifications_none,
-                    text: 'Notificações',
-                    index: 96,
-                    badgeCount: count, // PASSA O BADGE
+                    icon: Icons.settings_outlined,
+                    text: 'Configurações',
+                    index: 98,
                     onTap: () {
+                      // Se for desktop (largura > 720), abre como Modal
                       if (MediaQuery.of(context).size.width >= 720) {
                         showDialog(
                           context: context,
-                          builder: (_) => NotificationCenterScreen(userId: userData.uid),
+                          builder: (context) =>
+                              SettingsScreen(userData: userData),
                         );
                       } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => NotificationCenterScreen(userId: userData.uid)),
+                        // Se for mobile, navega para a tela
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (context) =>
+                              SettingsScreen(userData: userData),
+                        ));
+                      }
+                    },
+                  ),
+                  _buildNavItem(
+                    context: context,
+                    icon: Icons.logout,
+                    text: 'Sair',
+                    index: 99,
+                    isLogout: true,
+                    onTap: () async {
+                      // Confirmação simples antes de sair
+                      final shouldLogout = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          backgroundColor: const Color(0xFF0F1623),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          title: const Text(
+                            'Sair da conta?',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          content: const Text(
+                            'Você tem certeza que deseja sair?',
+                            style: TextStyle(color: Color(0xFF9CA3AF)),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Sair'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (shouldLogout != true) return;
+
+                      try {
+                        await AuthRepository().signOut();
+                        if (!context.mounted) return;
+                        // Limpa a pilha de rotas e leva para a tela de Login
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                          (route) => false,
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            backgroundColor: Colors.redAccent,
+                            content: Text('Erro ao sair: $e'),
+                          ),
                         );
                       }
                     },
-                  );
-                },
-              ),
-
-            _buildNavItem(
-              context: context,
-              icon: Icons.settings_outlined,
-              text: 'Configurações',
-              index: 98,
-              onTap: () {
-                // Se for desktop (largura > 720), abre como Modal
-                if (MediaQuery.of(context).size.width >= 720) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => SettingsScreen(userData: userData),
-                  );
-                } else {
-                  // Se for mobile, navega para a tela
-                  Navigator.of(context).push(MaterialPageRoute(
-                    builder: (context) => SettingsScreen(userData: userData),
-                  ));
-                }
-              },
-            ),
-            _buildNavItem(
-              context: context,
-              icon: Icons.logout,
-              text: 'Sair',
-              index: 99,
-              isLogout: true,
-              onTap: () async {
-                // Confirmação simples antes de sair
-                final shouldLogout = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    backgroundColor: const Color(0xFF0F1623),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    title: const Text(
-                      'Sair da conta?',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    content: const Text(
-                      'Você tem certeza que deseja sair?',
-                      style: TextStyle(color: Color(0xFF9CA3AF)),
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(false),
-                        child: const Text('Cancelar'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(true),
-                        child: const Text('Sair'),
-                      ),
-                    ],
                   ),
-                );
-
-                if (shouldLogout != true) return;
-
-                try {
-                  await AuthRepository().signOut();
-                  if (!context.mounted) return;
-                  // Limpa a pilha de rotas e leva para a tela de Login
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(),
-                    ),
-                    (route) => false,
-                  );
-                } catch (e) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: Colors.redAccent,
-                      content: Text('Erro ao sair: $e'),
-                    ),
-                  );
-                }
-              },
-            ),
                 ],
               ),
             ),
@@ -375,13 +389,16 @@ class _SidebarItemState extends State<_SidebarItem> {
             mainAxisSize: MainAxisSize
                 .min, // <<< Adicionado para Row encolher ao redor do conteúdo
             children: [
-              widget.badgeCount > 0 
+              widget.badgeCount > 0
                   ? Badge(
                       label: Text('${widget.badgeCount}'),
                       backgroundColor: Colors.redAccent,
-                      child: Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
+                      child: Icon(widget.icon,
+                          size: 20,
+                          color: _isHovered ? hoverTextColor : iconColor),
                     )
-                  : Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
+                  : Icon(widget.icon,
+                      size: 20, color: _isHovered ? hoverTextColor : iconColor),
               // Mostra o texto apenas se estiver expandido
               if (widget.isExpanded)
                 Expanded(

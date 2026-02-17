@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 
 enum StrategyMode {
   grounding, // Aterramento (GTD)
-  focus,     // Foco (One Thing)
-  flow,      // Fluxo (Intuitivo)
-  rescue;    // Resgate (Mini Habits)
+  focus, // Foco (One Thing)
+  flow, // Fluxo (Intuitivo)
+  rescue; // Resgate (Mini Habits)
 
   String get title {
     switch (this) {
@@ -57,7 +57,7 @@ enum StrategyMode {
         return const Color(0xFFBA68C8); // Purple-ish
     }
   }
-  
+
   List<Color> get gradient {
     switch (this) {
       case StrategyMode.grounding:
@@ -70,6 +70,7 @@ enum StrategyMode {
         return [const Color(0xFFAB47BC), const Color(0xFF7B1FA2)];
     }
   }
+
   String get detailedDescription {
     switch (this) {
       case StrategyMode.focus:

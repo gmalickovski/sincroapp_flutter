@@ -7,7 +7,6 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // MIGRATED
 import 'package:intl/intl.dart';
-import 'package:sincro_app_flutter/features/admin/presentation/widgets/admin_financial_card.dart';
 
 class AdminDashboardTab extends StatefulWidget {
   final UserModel userData;
@@ -61,17 +60,19 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         final double grossMrr = (stats['estimatedMRR'] ?? 0.0).toDouble();
         final double totalAiCost = (stats['totalAiCost'] ?? 0.0).toDouble();
         final double netProfit = (stats['netProfit'] ?? 0.0).toDouble();
-        
+
         // Users Breakdown
         final int freeUsers = stats['freeUsers'] ?? 0;
         final int plusUsers = stats['plusUsers'] ?? 0;
         final int premiumUsers = stats['premiumUsers'] ?? 0;
-        
+
         // Demographics
         final Map<String, dynamic> demographics = stats['demographics'] ?? {};
-        final Map<String, int> ageBuckets = Map<String, int>.from(demographics['age'] ?? {});
-        final Map<String, int> sexDistribution = Map<String, int>.from(demographics['sex'] ?? {});
-        
+        final Map<String, int> ageBuckets =
+            Map<String, int>.from(demographics['age'] ?? {});
+        final Map<String, int> sexDistribution =
+            Map<String, int>.from(demographics['sex'] ?? {});
+
         // AI Stats
         final int totalAiUsed = stats['totalAiUsed'] ?? 0;
         final int totalAiTokens = stats['totalAiTokens'] ?? 0;
@@ -104,9 +105,10 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               const SizedBox(height: 32),
 
               // 2. AI Usage & Costs
-              _buildAiUsageSection(totalAiUsed, totalAiTokens, totalAiCost, isDesktop),
+              _buildAiUsageSection(
+                  totalAiUsed, totalAiTokens, totalAiCost, isDesktop),
               const SizedBox(height: 32),
-              
+
               // 3. Demographics Row (Age & Sex)
               Text(
                 'Demografia do Usuário',
@@ -131,7 +133,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 const SizedBox(height: 16),
                 _buildSexDistributionCard(sexDistribution),
               ],
-              
+
               const SizedBox(height: 32),
 
               // 4. Plan Distribution & Subscriptions (Existing, polished)
@@ -176,7 +178,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         value: totalUsers.toString(),
         icon: Icons.people_alt_outlined,
         color: Colors.blue,
-        trend: '+12% este mês', 
+        trend: '+12% este mês',
         trendUp: true,
       ),
       _buildStatCard(
@@ -190,10 +192,10 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       _buildStatCard(
         title: 'Custo IA',
         value: _currencyFormat.format(aiCost),
-        icon: Icons.psychology, 
+        icon: Icons.psychology,
         color: Colors.redAccent,
         trend: 'Gasto Estimado',
-        trendUp: false, 
+        trendUp: false,
       ),
       _buildStatCard(
         title: 'Lucro Líquido',
@@ -205,22 +207,26 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       ),
     ];
 
-    
     if (isDesktop) {
-       return Row(
-          children: cards.map((c) => Expanded(child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: c))).toList(),
-       );
+      return Row(
+        children: cards
+            .map((c) => Expanded(
+                child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: c)))
+            .toList(),
+      );
     } else {
-       // Grid layout for mobile (2x2) is often better than single column for KPIs
-       return GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.3,
-          children: cards,
-       );
+      // Grid layout for mobile (2x2) is often better than single column for KPIs
+      return GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.3,
+        children: cards,
+      );
     }
   }
 
@@ -269,26 +275,26 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.primaryText,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: -0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              Text(
+                value,
+                style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: -0.5,
                 ),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppColors.secondaryText,
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppColors.secondaryText,
+                  fontSize: 12,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           )
         ],
@@ -330,15 +336,18 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 children: [
                   Expanded(
                     flex: 1,
-                    child: total > 0 ? RepaintBoundary(
-                      child: PieChart(
-                        PieChartData(
-                          sectionsSpace: 2,
-                          centerSpaceRadius: 40,
-                          sections: _buildPieSections(free, plus, premium, total),
-                        ),
-                      ),
-                    ) : const Center(child: Text("Sem dados")),
+                    child: total > 0
+                        ? RepaintBoundary(
+                            child: PieChart(
+                              PieChartData(
+                                sectionsSpace: 2,
+                                centerSpaceRadius: 40,
+                                sections: _buildPieSections(
+                                    free, plus, premium, total),
+                              ),
+                            ),
+                          )
+                        : const Center(child: Text("Sem dados")),
                   ),
                   const SizedBox(width: 24),
                   Expanded(
@@ -346,11 +355,14 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
+                        _buildLegendItem(
+                            'Essencial (Free)', free, Colors.grey.shade400),
                         const SizedBox(height: 12),
-                        _buildLegendItem('Desperta (Plus)', plus, Colors.blue.shade400),
+                        _buildLegendItem(
+                            'Desperta (Plus)', plus, Colors.blue.shade400),
                         const SizedBox(height: 12),
-                        _buildLegendItem('Sinergia (Premium)', premium, Colors.purple.shade400),
+                        _buildLegendItem('Sinergia (Premium)', premium,
+                            Colors.purple.shade400),
                       ],
                     ),
                   ),
@@ -363,22 +375,27 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               children: [
                 SizedBox(
                   height: 200,
-                  child: total > 0 ? RepaintBoundary(
-                    child: PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 40,
-                        sections: _buildPieSections(free, plus, premium, total),
-                      ),
-                    ),
-                  ) : const Center(child: Text("Sem dados")),
+                  child: total > 0
+                      ? RepaintBoundary(
+                          child: PieChart(
+                            PieChartData(
+                              sectionsSpace: 2,
+                              centerSpaceRadius: 40,
+                              sections:
+                                  _buildPieSections(free, plus, premium, total),
+                            ),
+                          ),
+                        )
+                      : const Center(child: Text("Sem dados")),
                 ),
                 const SizedBox(height: 24),
-                _buildLegendItem('Essencial (Free)', free, Colors.grey.shade400),
+                _buildLegendItem(
+                    'Essencial (Free)', free, Colors.grey.shade400),
                 const SizedBox(height: 12),
                 _buildLegendItem('Desperta (Plus)', plus, Colors.blue.shade400),
                 const SizedBox(height: 12),
-                _buildLegendItem('Sinergia (Premium)', premium, Colors.purple.shade400),
+                _buildLegendItem(
+                    'Sinergia (Premium)', premium, Colors.purple.shade400),
               ],
             ),
         ],
@@ -386,9 +403,10 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     );
   }
 
-  List<PieChartSectionData> _buildPieSections(int free, int plus, int premium, int total) {
+  List<PieChartSectionData> _buildPieSections(
+      int free, int plus, int premium, int total) {
     if (total == 0) return [];
-    
+
     return [
       if (free > 0)
         PieChartSectionData(
@@ -432,12 +450,14 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(color: AppColors.secondaryText, fontSize: 13),
+            style:
+                const TextStyle(color: AppColors.secondaryText, fontSize: 13),
           ),
         ),
         Text(
           value.toString(),
-          style: const TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+              color: AppColors.primaryText, fontWeight: FontWeight.bold),
         ),
       ],
     );
@@ -508,7 +528,8 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     );
   }
 
-  Widget _buildAiUsageSection(int totalAiUsed, int totalAiTokens, double totalAiCost, bool isDesktop) {
+  Widget _buildAiUsageSection(
+      int totalAiUsed, int totalAiTokens, double totalAiCost, bool isDesktop) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -534,7 +555,8 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.purple.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
@@ -552,94 +574,95 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           ),
           const SizedBox(height: 16),
           // Adaptive Layout for 3 metrics
-          isDesktop 
-          ? Row(
-            children: [
-              Expanded(
-                child: _buildMiniMetric(
-                  "Requisições", 
-                  totalAiUsed.toString(), 
-                  Icons.chat_bubble_outline, 
-                  Colors.purple
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildMiniMetric(
-                  "Tokens Totais", 
-                  NumberFormat.compact().format(totalAiTokens), 
-                  Icons.token, 
-                  Colors.amber
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildMiniMetric(
-                  "Custo Estimado", 
-                  _currencyFormat.format(totalAiCost), 
-                  Icons.attach_money, 
-                  Colors.redAccent
-                ),
-              ),
-            ],
-          )
-          : Column(
-             children: [
-                Row(
-                   children: [
-                      Expanded(
-                        child: _buildMiniMetric(
-                          "Requisições", 
-                          totalAiUsed.toString(), 
-                          Icons.chat_bubble_outline, 
-                          Colors.purple
+          isDesktop
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: _buildMiniMetric(
+                          "Requisições",
+                          totalAiUsed.toString(),
+                          Icons.chat_bubble_outline,
+                          Colors.purple),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMiniMetric(
+                          "Tokens Totais",
+                          NumberFormat.compact().format(totalAiTokens),
+                          Icons.token,
+                          Colors.amber),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMiniMetric(
+                          "Custo Estimado",
+                          _currencyFormat.format(totalAiCost),
+                          Icons.attach_money,
+                          Colors.redAccent),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMiniMetric(
+                              "Requisições",
+                              totalAiUsed.toString(),
+                              Icons.chat_bubble_outline,
+                              Colors.purple),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildMiniMetric(
-                          "Tokens", 
-                          NumberFormat.compact().format(totalAiTokens), 
-                          Icons.token, 
-                          Colors.amber
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildMiniMetric(
+                              "Tokens",
+                              NumberFormat.compact().format(totalAiTokens),
+                              Icons.token,
+                              Colors.amber),
                         ),
-                      ),
-                   ],
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _buildMiniMetric(
+                        "Custo Estimado",
+                        _currencyFormat.format(totalAiCost),
+                        Icons.attach_money,
+                        Colors.redAccent),
+                  ],
                 ),
-                const SizedBox(height: 12),
-                _buildMiniMetric(
-                  "Custo Estimado", 
-                  _currencyFormat.format(totalAiCost), 
-                  Icons.attach_money, 
-                  Colors.redAccent
-                ),
-             ],
-          ),
         ],
       ),
     );
   }
-  
-  Widget _buildMiniMetric(String label, String value, IconData icon, Color color) {
+
+  Widget _buildMiniMetric(
+      String label, String value, IconData icon, Color color) {
     return Container(
-       padding: const EdgeInsets.all(16),
-       decoration: BoxDecoration(
-         color: AppColors.background,
-         borderRadius: BorderRadius.circular(12),
-       ),
-       child: Row(
-         children: [
-           Icon(icon, color: color, size: 28),
-           const SizedBox(width: 16),
-           Column(
-             crossAxisAlignment: CrossAxisAlignment.start,
-             children: [
-               Text(label, style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
-               Text(value, style: const TextStyle(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
-             ],
-           )
-         ],
-       ),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      color: AppColors.secondaryText, fontSize: 12)),
+              Text(value,
+                  style: const TextStyle(
+                      color: AppColors.primaryText,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+            ],
+          )
+        ],
+      ),
     );
   }
 
@@ -655,7 +678,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
   }
 
   Widget _buildSexDistributionCard(Map<String, int> distribution) {
-     return _buildDemographicPieCard("Distribuição por Sexo", distribution, [
+    return _buildDemographicPieCard("Distribuição por Sexo", distribution, [
       Colors.blueAccent,
       Colors.pinkAccent,
       Colors.purpleAccent, // Outro
@@ -663,27 +686,27 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     ]);
   }
 
-  Widget _buildDemographicPieCard(String title, Map<String, int> data, List<Color> colors) {
+  Widget _buildDemographicPieCard(
+      String title, Map<String, int> data, List<Color> colors) {
     int total = data.values.fold(0, (sum, val) => sum + val);
-    
+
     // Convert to Chart Sections
     int colorIndex = 0;
     List<PieChartSectionData> sections = [];
-    
+
     data.forEach((key, value) {
-        if (value > 0) {
-           final double percentage = (value / total) * 100;
-           sections.add(
-             PieChartSectionData(
-               color: colors[colorIndex % colors.length],
-               value: value.toDouble(),
-               title: '${percentage.toStringAsFixed(0)}%',
-               radius: 40,
-               titleStyle: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
-             )
-           );
-        }
-        colorIndex++;
+      if (value > 0) {
+        final double percentage = (value / total) * 100;
+        sections.add(PieChartSectionData(
+          color: colors[colorIndex % colors.length],
+          value: value.toDouble(),
+          title: '${percentage.toStringAsFixed(0)}%',
+          radius: 40,
+          titleStyle: const TextStyle(
+              fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+        ));
+      }
+      colorIndex++;
     });
 
     return Container(
@@ -696,7 +719,11 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: const TextStyle(color: AppColors.primaryText, fontSize: 18, fontWeight: FontWeight.bold)),
+          Text(title,
+              style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -704,15 +731,15 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               SizedBox(
                 height: 150,
                 width: 150,
-                child: total > 0 
-                  ? PieChart(
-                      PieChartData(
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 30,
-                        sections: sections,
-                      ),
-                    )
-                  : const Center(child: Text("Sem dados")),
+                child: total > 0
+                    ? PieChart(
+                        PieChartData(
+                          sectionsSpace: 2,
+                          centerSpaceRadius: 30,
+                          sections: sections,
+                        ),
+                      )
+                    : const Center(child: Text("Sem dados")),
               ),
               const SizedBox(width: 24),
               // Legend
@@ -899,9 +926,12 @@ class _SiteControlCardState extends State<_SiteControlCard> {
               dropdownColor: AppColors.cardBackground,
               style: const TextStyle(color: AppColors.primaryText),
               items: const [
-                DropdownMenuItem(value: 'active', child: Text('Ativo (Online)')),
-                DropdownMenuItem(value: 'maintenance', child: Text('Manutenção')),
-                DropdownMenuItem(value: 'construction', child: Text('Em Construção')),
+                DropdownMenuItem(
+                    value: 'active', child: Text('Ativo (Online)')),
+                DropdownMenuItem(
+                    value: 'maintenance', child: Text('Manutenção')),
+                DropdownMenuItem(
+                    value: 'construction', child: Text('Em Construção')),
               ],
               onChanged: (v) => setState(() => _selectedStatus = v!),
             ),
@@ -915,7 +945,8 @@ class _SiteControlCardState extends State<_SiteControlCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Senha Bypass', style: TextStyle(color: AppColors.secondaryText)),
+        const Text('Senha Bypass',
+            style: TextStyle(color: AppColors.secondaryText)),
         const SizedBox(height: 8),
         TextField(
           controller: _passwordController,
@@ -924,7 +955,8 @@ class _SiteControlCardState extends State<_SiteControlCard> {
             hintText: 'Senha...',
             filled: true,
             fillColor: AppColors.background,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           ),
         ),
@@ -947,7 +979,11 @@ class _SiteControlCardState extends State<_SiteControlCard> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       ),
       child: _isLoading
-          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                  color: Colors.white, strokeWidth: 2))
           : const Text('Salvar', style: TextStyle(color: Colors.white)),
     );
   }

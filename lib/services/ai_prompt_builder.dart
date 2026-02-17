@@ -27,7 +27,8 @@ class AIPromptBuilder {
     }
 
     if (sourceMap == null) return "Tipo de vibração desconhecido: $type";
-    content = (sourceMap[number] ?? sourceMap[number.toString()]) as VibrationContent?;
+    content = (sourceMap[number] ?? sourceMap[number.toString()])
+        as VibrationContent?;
     if (content == null) return "Descrição não encontrada para $type $number.";
     // Usamos o .descricaoCompleta que parece ser o padrão no seu app
     return "${content.titulo}: ${content.descricaoCompleta}";
@@ -100,23 +101,27 @@ class AIPromptBuilder {
     // Se não tiver Dia Pessoal (ex: erro), assume Grounding
     final int todayPersonalDay = numerologyResult.numeros['diaPessoal'] ?? 4;
     final strategyMode = StrategyEngine.calculateMode(todayPersonalDay);
-    
+
     final strategyTitle = StrategyEngine.getModeTitle(strategyMode);
     final strategyDesc = StrategyEngine.getModeDescription(strategyMode);
-    
+
     String strategyInstruction = "";
     switch (strategyMode) {
       case StrategyMode.focus:
-        strategyInstruction = "MODO FOCUS DETECTADO: Sugira marcos de ALTO IMPACTO e EXECUÇÃO IMEDIATA. Priorize 'fazer' sobre 'planejar'.";
+        strategyInstruction =
+            "MODO FOCUS DETECTADO: Sugira marcos de ALTO IMPACTO e EXECUÇÃO IMEDIATA. Priorize 'fazer' sobre 'planejar'.";
         break;
       case StrategyMode.flow:
-        strategyInstruction = "MODO FLOW DETECTADO: Sugira marcos que envolvam CONEXÃO, CRIATIVIDADE e INTUIÇÃO. Seja flexível nas datas.";
+        strategyInstruction =
+            "MODO FLOW DETECTADO: Sugira marcos que envolvam CONEXÃO, CRIATIVIDADE e INTUIÇÃO. Seja flexível nas datas.";
         break;
       case StrategyMode.grounding:
-        strategyInstruction = "MODO GROUNDING DETECTADO: Sugira marcos de ORGANIZAÇÃO, ESTRUTURAÇÃO e LIMPEZA de pendências.";
+        strategyInstruction =
+            "MODO GROUNDING DETECTADO: Sugira marcos de ORGANIZAÇÃO, ESTRUTURAÇÃO e LIMPEZA de pendências.";
         break;
       case StrategyMode.rescue:
-        strategyInstruction = "MODO RESCUE DETECTADO: Sugira marcos PEQUENOS, FÁCEIS e de RÁPIDA VITÓRIA (Quick Wins) para evitar sobrecarga.";
+        strategyInstruction =
+            "MODO RESCUE DETECTADO: Sugira marcos PEQUENOS, FÁCEIS e de RÁPIDA VITÓRIA (Quick Wins) para evitar sobrecarga.";
         break;
     }
 

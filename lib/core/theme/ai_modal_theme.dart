@@ -44,7 +44,8 @@ class AIModalTheme {
             Positioned(
               left: 0,
               child: IconButton(
-                icon: Icon(Icons.arrow_back_ios_rounded, color: Colors.white70, size: 20),
+                icon: const Icon(Icons.arrow_back_ios_rounded,
+                    color: Colors.white70, size: 20),
                 onPressed: onBack,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -168,7 +169,8 @@ class AIModalTheme {
       hintText: hint,
       hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
       helperText: helperText,
-      helperStyle: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+      helperStyle:
+          TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
       filled: true,
       fillColor: Colors.white.withOpacity(0.05),
       border: OutlineInputBorder(
@@ -202,7 +204,7 @@ class AIModalTheme {
       child: ElevatedButton.icon(
         onPressed: isLoading ? null : onPressed,
         icon: isLoading
-            ? SizedBox(
+            ? const SizedBox(
                 width: 18,
                 height: 18,
                 child: CircularProgressIndicator(

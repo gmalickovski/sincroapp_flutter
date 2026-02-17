@@ -29,10 +29,12 @@ class CompatibilitySuggestionModal extends StatefulWidget {
   });
 
   @override
-  State<CompatibilitySuggestionModal> createState() => _CompatibilitySuggestionModalState();
+  State<CompatibilitySuggestionModal> createState() =>
+      _CompatibilitySuggestionModalState();
 }
 
-class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionModal> {
+class _CompatibilitySuggestionModalState
+    extends State<CompatibilitySuggestionModal> {
   late double compatibilityScore;
   late List<DateTime> suggestions;
   bool isLoading = true;
@@ -46,7 +48,7 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
   }
 
   final _harmonyService = HarmonyService();
-  
+
   void _calculateLogic() async {
     // Simulate slight delay for smooth UX transition if needed
     await Future.delayed(const Duration(milliseconds: 300));
@@ -77,9 +79,9 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
     if (widget.taskId == null || widget.ownerId == null) {
       // Fallback local only if data missing
       if (accepted) {
-         setState(() => hasAccepted = true);
+        setState(() => hasAccepted = true);
       } else {
-         Navigator.pop(context);
+        Navigator.pop(context);
       }
       return;
     }
@@ -90,7 +92,8 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
       taskId: widget.taskId!,
       ownerId: widget.ownerId!,
       responderUid: widget.currentUserId,
-      responderName: widget.userBName, // Assuming userBName is 'You' or mapped correctly, actually userB is Recipient.
+      responderName: widget
+          .userBName, // Assuming userBName is 'You' or mapped correctly, actually userB is Recipient.
       accepted: accepted,
     );
 
@@ -116,8 +119,8 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
         padding: const EdgeInsets.all(24),
         constraints: const BoxConstraints(maxWidth: 400),
         child: AnimatedSwitcher(
-           duration: const Duration(milliseconds: 300),
-           child: hasAccepted ? _buildDetailsView() : _buildInvitationView(),
+          duration: const Duration(milliseconds: 300),
+          child: hasAccepted ? _buildDetailsView() : _buildInvitationView(),
         ),
       ),
     );
@@ -130,7 +133,7 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
       children: [
         const Icon(Icons.event_available, color: AppColors.primary, size: 48),
         const SizedBox(height: 16),
-        Text(
+        const Text(
           'Um Evento foi Sincronizado contigo!',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -143,20 +146,22 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: const TextStyle(color: AppColors.secondaryText, fontSize: 16),
+            style:
+                const TextStyle(color: AppColors.secondaryText, fontSize: 16),
             children: [
               const TextSpan(text: 'De '),
               TextSpan(
-                text: '@${widget.userAName}', 
-                style: const TextStyle(color: Colors.lightBlueAccent, fontWeight: FontWeight.bold)
-              ),
+                  text: '@${widget.userAName}',
+                  style: const TextStyle(
+                      color: Colors.lightBlueAccent,
+                      fontWeight: FontWeight.bold)),
               const TextSpan(text: '\nVocê deseja aceitar?'),
             ],
           ),
         ),
         const SizedBox(height: 24),
         if (isProcessing)
-           const CircularProgressIndicator()
+          const CircularProgressIndicator()
         else
           Row(
             children: [
@@ -167,9 +172,11 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
                     foregroundColor: Colors.redAccent,
                     side: const BorderSide(color: Colors.redAccent),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)), // Pill style
                   ),
-                  child: const Text('Recusar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Recusar',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -180,9 +187,11 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
                     backgroundColor: Colors.green,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Pill style
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)), // Pill style
                   ),
-                  child: const Text('Aceitar', style: TextStyle(fontWeight: FontWeight.bold)),
+                  child: const Text('Aceitar',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
@@ -194,7 +203,8 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
   // --- VIEW 2: DETAILS & SYNERGY ---
   Widget _buildDetailsView() {
     if (isLoading) {
-      return const Center(child: CircularProgressIndicator(color: AppColors.primary));
+      return const Center(
+          child: CircularProgressIndicator(color: AppColors.primary));
     }
 
     final isGoodSynergy = compatibilityScore > 0.4; // 0.9 = Great, >0.4 = OK
@@ -213,7 +223,7 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
             constraints: const BoxConstraints(),
           ),
         ),
-        
+
         // Event Details
         Container(
           padding: const EdgeInsets.all(16),
@@ -225,7 +235,9 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
           child: Column(
             children: [
               Text(
-                DateFormat('dd/MM/yyyy (EEEE)', 'pt_BR').format(widget.targetDate).toUpperCase(),
+                DateFormat('dd/MM/yyyy (EEEE)', 'pt_BR')
+                    .format(widget.targetDate)
+                    .toUpperCase(),
                 style: const TextStyle(
                   color: Colors.amber,
                   fontSize: 12,
@@ -245,11 +257,11 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
             ],
           ),
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Synergy Section
-        Text(
+        const Text(
           'Sinergia da Data',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -259,89 +271,102 @@ class _CompatibilitySuggestionModalState extends State<CompatibilitySuggestionMo
           ),
         ),
         const SizedBox(height: 8),
-        
+
         // Synergy Indicator
         Center(
-           child: Container(
-             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-             decoration: BoxDecoration(
-               color: isGoodSynergy ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
-               borderRadius: BorderRadius.circular(20),
-               border: Border.all(color: isGoodSynergy ? Colors.green : Colors.red),
-             ),
-             child: Row(
-               mainAxisSize: MainAxisSize.min,
-               children: [
-                 Icon(
-                   isGoodSynergy ? Icons.check_circle : Icons.warning_amber_rounded,
-                   color: isGoodSynergy ? Colors.green : Colors.red,
-                   size: 20,
-                 ),
-                 const SizedBox(width: 8),
-                 Text(
-                   isGoodSynergy ? 'Compatibilidade Boa' : 'Baixa Sinergia',
-                   style: TextStyle(
-                     color: isGoodSynergy ? Colors.green : Colors.red,
-                     fontWeight: FontWeight.bold,
-                   ),
-                 ),
-               ],
-             ),
-           ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: isGoodSynergy
+                  ? Colors.green.withOpacity(0.2)
+                  : Colors.red.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  Border.all(color: isGoodSynergy ? Colors.green : Colors.red),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isGoodSynergy
+                      ? Icons.check_circle
+                      : Icons.warning_amber_rounded,
+                  color: isGoodSynergy ? Colors.green : Colors.red,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isGoodSynergy ? 'Compatibilidade Boa' : 'Baixa Sinergia',
+                  style: TextStyle(
+                    color: isGoodSynergy ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
 
         const SizedBox(height: 24),
 
         // Suggestions (Only if bad synergy or user wants to change)
-        if (!isGoodSynergy || true) ...[ // Always showing suggestions based on user request ("aparecer duas opção")
-             if (!isGoodSynergy)
-               const Padding(
-                 padding: EdgeInsets.only(bottom: 12.0),
-                 child: Text(
-                   'Datas sugeridas para ambos:',
-                   textAlign: TextAlign.center,
-                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                 ),
-               ),
-             
-             // Horizontal Scrollable Suggestions ("Pill Style")
-             SingleChildScrollView(
-               scrollDirection: Axis.horizontal,
-               child: Row(
-                 mainAxisAlignment: MainAxisAlignment.center,
-                 children: suggestions.map((date) {
-                   return Padding(
-                     padding: const EdgeInsets.only(right: 8.0),
-                     child: ActionChip(
-                       backgroundColor: AppColors.background,
-                       label: Text(
-                         DateFormat('dd/MM', 'pt_BR').format(date),
-                         style: const TextStyle(color: AppColors.primary),
-                       ),
-                       avatar: const Icon(Icons.calendar_month, size: 16, color: AppColors.primary),
-                       onPressed: () {
-                         // Suggest new date
-                         // Would notify sender logic here
-                         Navigator.pop(context, date); 
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           SnackBar(content: Text('Sugestão enviada para ${widget.userAName}!')),
-                         );
-                       },
-                       side: const BorderSide(color: AppColors.primary),
-                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                     ),
-                   );
-                 }).toList(),
-               ),
-             ),
+        if (!isGoodSynergy || true) ...[
+          // Always showing suggestions based on user request ("aparecer duas opção")
+          if (!isGoodSynergy)
+            const Padding(
+              padding: EdgeInsets.only(bottom: 12.0),
+              child: Text(
+                'Datas sugeridas para ambos:',
+                textAlign: TextAlign.center,
+                style:
+                    TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+
+          // Horizontal Scrollable Suggestions ("Pill Style")
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: suggestions.map((date) {
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: ActionChip(
+                    backgroundColor: AppColors.background,
+                    label: Text(
+                      DateFormat('dd/MM', 'pt_BR').format(date),
+                      style: const TextStyle(color: AppColors.primary),
+                    ),
+                    avatar: const Icon(Icons.calendar_month,
+                        size: 16, color: AppColors.primary),
+                    onPressed: () {
+                      // Suggest new date
+                      // Would notify sender logic here
+                      Navigator.pop(context, date);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                            content: Text(
+                                'Sugestão enviada para ${widget.userAName}!')),
+                      );
+                    },
+                    side: const BorderSide(color: AppColors.primary),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20)),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
         ],
-        
+
         const SizedBox(height: 16),
-        
+
         // "Entendido" / Close Button
         TextButton(
-          onPressed: () => Navigator.pop(context, widget.targetDate), // Returns confirmed date
-          child: const Text('Manter data atual', style: TextStyle(color: AppColors.secondaryText)),
+          onPressed: () => Navigator.pop(
+              context, widget.targetDate), // Returns confirmed date
+          child: const Text('Manter data atual',
+              style: TextStyle(color: AppColors.secondaryText)),
         ),
       ],
     );

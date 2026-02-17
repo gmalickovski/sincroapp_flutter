@@ -6,12 +6,11 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart'; // Added
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
@@ -24,7 +23,6 @@ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_pan
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_filter_panel.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // For TaskViewScope
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 
@@ -47,21 +45,21 @@ class GoalDetailScreen extends StatefulWidget {
 class _GoalDetailScreenState extends State<GoalDetailScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
-  bool _isLoading = false;
+  final bool _isLoading = false;
   bool _isAiSidebarOpen = false;
   // NEW STATE: Controls the visibility of the top carousel
-  bool _isMilestonesExpanded = false; 
-  final FabOpacityController _fabOpacityController = FabOpacityController(); 
+  bool _isMilestonesExpanded = false;
+  final FabOpacityController _fabOpacityController = FabOpacityController();
 
   static const double kDesktopBreakpoint = 768.0;
   static const double kMaxContentWidth = 1200.0;
-  
+
   // Filter States
   TaskViewScope _currentScope = TaskViewScope.todas;
   DateTime? _filterDate;
   int? _filterVibration;
   String? _filterTag;
-  
+
   // Selection Mode States
   bool _isSelectionMode = false;
   Set<String> _selectedTaskIds = {}; // IDs of selected tasks
@@ -81,12 +79,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   void initState() {
     super.initState();
     _pageController = PageController(viewportFraction: 1.0);
-    
+
     // Initialize Streams ONCE
     _goalStream = _supabaseService.getSingleGoalStream(
-          widget.userData.uid, widget.initialGoal.id);
+        widget.userData.uid, widget.initialGoal.id);
     _tasksStream = _supabaseService.getTasksForGoalStream(
-          widget.userData.uid, widget.initialGoal.id);
+        widget.userData.uid, widget.initialGoal.id);
   }
 
   @override
@@ -98,7 +96,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // Handle goal editing
   void _handleEditGoal(Goal goal) {
-    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+    final bool isDesktop =
+        MediaQuery.of(context).size.width >= kDesktopBreakpoint;
 
     if (isDesktop) {
       // Desktop: Show dialog
@@ -161,8 +160,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     if (confirmed == true) {
       try {
-        await _supabaseService.deleteGoal(
-            widget.userData.uid, goal.id);
+        await _supabaseService.deleteGoal(widget.userData.uid, goal.id);
         if (mounted) {
           Navigator.of(context).pop(); // Return to previous screen
           ScaffoldMessenger.of(context).showSnackBar(
@@ -202,8 +200,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         return TaskInputModal(
           userData: widget.userData,
           userId: widget.userData.uid,
-          preselectedGoal: goal, 
-          initialDueDate: DateTime.now(), 
+          preselectedGoal: goal,
+          initialDueDate: DateTime.now(),
           onAddTask: (ParsedTask parsedTask) {
             DateTime? finalDueDateUtc = parsedTask.dueDate?.toUtc();
             DateTime dateForPersonalDay;
@@ -222,15 +220,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               id: '',
               text: parsedTask.cleanText,
               createdAt: DateTime.now().toUtc(),
-              dueDate: finalDueDateUtc, 
-              journeyId: goal.id, 
-              journeyTitle: goal.title, 
+              dueDate: finalDueDateUtc,
+              journeyId: goal.id,
+              journeyTitle: goal.title,
               tags: parsedTask.tags,
               personalDay: finalPersonalDay,
               // Recurrence Mapping
-              recurrenceType: parsedTask.recurrenceRule?.type ?? RecurrenceType.none,
-              recurrenceDaysOfWeek: parsedTask.recurrenceRule?.daysOfWeek ?? [],
-              recurrenceEndDate: parsedTask.recurrenceRule?.endDate,
+              recurrenceType:
+                  parsedTask.recurrenceRule.type ?? RecurrenceType.none,
+              recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek ?? [],
+              recurrenceEndDate: parsedTask.recurrenceRule.endDate,
               // Reminder Mapping
               reminderTime: parsedTask.reminderTime,
               reminderAt: parsedTask.reminderAt,
@@ -292,49 +291,54 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       }
     });
   }
-  
+
   // Bulk Delete
   Future<void> _deleteSelectedTasks() async {
-      if (_selectedTaskIds.isEmpty) return;
+    if (_selectedTaskIds.isEmpty) return;
 
-      final confirmed = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: AppColors.cardBackground,
-          title: Text('Excluir ${_selectedTaskIds.length} marcos?', style: const TextStyle(color: Colors.white)),
-          content: const Text(
-              'Tem certeza que deseja excluir os marcos selecionados? Esta ação não pode ser desfeita.',
-              style: TextStyle(color: AppColors.secondaryText)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(false),
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppColors.secondaryText)),
-            ),
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Excluir',
-                  style: TextStyle(color: Colors.redAccent)),
-            ),
-          ],
-        ),
-      );
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: Text('Excluir ${_selectedTaskIds.length} marcos?',
+            style: const TextStyle(color: Colors.white)),
+        content: const Text(
+            'Tem certeza que deseja excluir os marcos selecionados? Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancelar',
+                style: TextStyle(color: AppColors.secondaryText)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
 
-      if (confirmed == true) {
-         try {
-           for (var id in _selectedTaskIds) {
-             await _supabaseService.deleteTask(widget.userData.uid, id);
-           }
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Marcos excluídos com sucesso!'), backgroundColor: AppColors.success));
-             _toggleSelectionMode(); // Exit selection mode
-           }
-         } catch (e) {
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red));
-           }
-         }
+    if (confirmed == true) {
+      try {
+        for (var id in _selectedTaskIds) {
+          await _supabaseService.deleteTask(widget.userData.uid, id);
+        }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Marcos excluídos com sucesso!'),
+              backgroundColor: AppColors.success));
+          _toggleSelectionMode(); // Exit selection mode
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Erro ao excluir: $e'),
+              backgroundColor: Colors.red));
+        }
       }
+    }
   }
 
   void _openFilterUI() {
@@ -357,13 +361,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           Navigator.pop(context); // Close dialog
         },
         onClearInPanel: () {
-            setState(() {
-              _currentScope = TaskViewScope.todas;
-              _filterDate = null;
-              _filterVibration = null;
-              _filterTag = null;
-            });
-            // goal_filter_panel handles pop on Clear internally
+          setState(() {
+            _currentScope = TaskViewScope.todas;
+            _filterDate = null;
+            _filterVibration = null;
+            _filterTag = null;
+          });
+          // goal_filter_panel handles pop on Clear internally
         },
       ),
     );
@@ -371,9 +375,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // _closeFilterUI removed as showDialog manages dismissal
 
-
   void _handleImageTap(Goal goal) {
-    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+    final bool isDesktop =
+        MediaQuery.of(context).size.width >= kDesktopBreakpoint;
 
     if (isDesktop) {
       showDialog(
@@ -395,8 +399,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // _refreshGoal removed as stream handles updates
-
-
 
   int? _calculatePersonalDay(DateTime? date) {
     if (widget.userData.dataNasc.isEmpty ||
@@ -424,8 +426,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Excluir Marco?',
-            style: TextStyle(color: Colors.white)),
+        title:
+            const Text('Excluir Marco?', style: TextStyle(color: Colors.white)),
         content: const Text(
             'Tem certeza que deseja excluir este marco? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
@@ -455,7 +457,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             ),
           );
         }
-        return true; 
+        return true;
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -470,8 +472,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     }
     return false;
   }
-
-
 
   Future<bool?> _handleSwipeRight(TaskModel task) async {
     await _taskActionService.rescheduleTask(
@@ -488,15 +488,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       stream: _goalStream,
       initialData: widget.initialGoal, // INSTANT LOAD - No Spinner
       builder: (context, goalSnapshot) {
-        // Only show error if strictly necessary. 
-        // With initialData, we might not need loading check, 
+        // Only show error if strictly necessary.
+        // With initialData, we might not need loading check,
         // but if stream errors out, we might want to show it.
         // If connection is waiting, we use initialData.
-        
+
         if (goalSnapshot.hasError) {
           return Scaffold(
               backgroundColor: AppColors.background,
-              body: Center(child: Text("Erro ao carregar meta: ${goalSnapshot.error}")));
+              body: Center(
+                  child: Text("Erro ao carregar meta: ${goalSnapshot.error}")));
         }
 
         final Goal currentGoal = goalSnapshot.data ?? widget.initialGoal;
@@ -505,20 +506,21 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           stream: _tasksStream,
           builder: (context, snapshot) {
             // Note: Tasks depend on Goal ID, which doesn't change.
-            // If we changed goals, we would need to update stream, 
+            // If we changed goals, we would need to update stream,
             // but this is a detail screen for a specific ID.
-            
+
             if (snapshot.connectionState == ConnectionState.waiting) {
-               // Tasks loading... show spinner only for tasks part?
-               // Or show empty list until loaded?
-               // Ideally show spinner.
-               return const Scaffold(
+              // Tasks loading... show spinner only for tasks part?
+              // Or show empty list until loaded?
+              // Ideally show spinner.
+              return const Scaffold(
                   backgroundColor: AppColors.background,
                   body: Center(child: CustomLoadingSpinner()));
             }
 
             if (snapshot.hasError) {
-              debugPrint("Erro no Stream de Tarefas da Meta: ${snapshot.error}");
+              debugPrint(
+                  "Erro no Stream de Tarefas da Meta: ${snapshot.error}");
               return Scaffold(
                   backgroundColor: AppColors.background,
                   body: Center(
@@ -538,181 +540,221 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             if (_currentScope == TaskViewScope.concluidas) {
               milestones = milestones.where((t) => t.completed).toList();
             } else if (_currentScope == TaskViewScope.atrasadas) {
-               final now = DateTime.now();
-               milestones = milestones.where((t) => !t.completed && t.dueDate != null && t.dueDate!.isBefore(now)).toList();
-            } 
+              final now = DateTime.now();
+              milestones = milestones
+                  .where((t) =>
+                      !t.completed &&
+                      t.dueDate != null &&
+                      t.dueDate!.isBefore(now))
+                  .toList();
+            }
 
             if (_filterDate != null) {
               milestones = milestones.where((t) {
                 if (t.dueDate == null) return false;
                 final tDate = t.dueDate!.toLocal();
                 final fDate = _filterDate!;
-                return tDate.year == fDate.year && tDate.month == fDate.month && tDate.day == fDate.day;
+                return tDate.year == fDate.year &&
+                    tDate.month == fDate.month &&
+                    tDate.day == fDate.day;
               }).toList();
             }
 
             if (_filterVibration != null) {
-              milestones = milestones.where((t) => t.personalDay == _filterVibration).toList();
+              milestones = milestones
+                  .where((t) => t.personalDay == _filterVibration)
+                  .toList();
             }
 
             if (_filterTag != null && _filterTag!.isNotEmpty) {
-              milestones = milestones.where((t) => t.tags.contains(_filterTag)).toList();
+              milestones =
+                  milestones.where((t) => t.tags.contains(_filterTag)).toList();
             }
 
             return AssistantLayoutManager(
-              isMobile: MediaQuery.of(context).size.width < kDesktopBreakpoint,
-              isAiSidebarOpen: _isAiSidebarOpen,
-              onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
-              assistant: AssistantPanel(
-                userData: widget.userData,
-                activeContext: 'Goal Detail: ${currentGoal.title}',
-                onClose: () => setState(() => _isAiSidebarOpen = false),
-              ),
-              child: Scaffold(
-                backgroundColor: AppColors.background,
-                body: ScreenInteractionListener(
-                  controller: _fabOpacityController,
-                  child: Stack(
-                    children: [
+                isMobile:
+                    MediaQuery.of(context).size.width < kDesktopBreakpoint,
+                isAiSidebarOpen: _isAiSidebarOpen,
+                onToggleAiSidebar: () =>
+                    setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
+                assistant: AssistantPanel(
+                  userData: widget.userData,
+                  activeContext: 'Goal Detail: ${currentGoal.title}',
+                  onClose: () => setState(() => _isAiSidebarOpen = false),
+                ),
+                child: Scaffold(
+                  backgroundColor: AppColors.background,
+                  body: ScreenInteractionListener(
+                    controller: _fabOpacityController,
+                    child: Stack(
+                      children: [
                         LayoutBuilder(
-                        builder: (context, constraints) {
-                          final bool isDesktop =
-                              constraints.maxWidth >= kDesktopBreakpoint;
-                          final double horizontalPadding = isDesktop ? 24.0 : 12.0;
-                          final double listHorizontalPadding = isDesktop ? 24.0 : 12.0;
+                          builder: (context, constraints) {
+                            final bool isDesktop =
+                                constraints.maxWidth >= kDesktopBreakpoint;
+                            final double horizontalPadding =
+                                isDesktop ? 24.0 : 12.0;
+                            final double listHorizontalPadding =
+                                isDesktop ? 24.0 : 12.0;
 
-                          if (isDesktop) {
-                            return _buildDesktopLayout(context, currentGoal, milestones, progress);
-                          }
+                            if (isDesktop) {
+                              return _buildDesktopLayout(
+                                  context, currentGoal, milestones, progress);
+                            }
 
-                          return SafeArea(
-                            child: CustomScrollView(
-                              physics: _isMilestonesExpanded 
-                                  ? const ClampingScrollPhysics() 
-                                  : const AlwaysScrollableScrollPhysics(),
-                              slivers: [
-                                // Mobile App Bar
-                                const SliverAppBar(
-                            backgroundColor: AppColors.background,
-                            elevation: 0,
-                            pinned: true,
-                            leading: BackButton(color: AppColors.primary),
-                            title: Text('Jornadas',
-                                style:
-                                    TextStyle(color: Colors.white, fontSize: 18)),
-                          ),
-                          
-                          // Mobile Content
-                          // Collapsible Header (Carousel)
-                          SliverToBoxAdapter(
-                            child: AnimatedCrossFade(
-                              firstChild: Column( 
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AspectRatio(
-                                  aspectRatio: 16 / 9, 
-                                  child: PageView(
-                                    padEnds: false,
-                                    controller: _pageController, 
-                                    onPageChanged: (index) {
-                                      setState(() {
-                                        _currentPage = index;
-                                      });
-                                    },
-                                    children: [
-                                      // 1. Image Card (First)
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: horizontalPadding, vertical: 8.0),
-                                        child: GoalImageCard(
-                                          goal: currentGoal,
-                                          onTap: () => _handleImageTap(currentGoal),
-                                        ),
-                                      ),
-                                      // 2. Info Card (Second)
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(
-                                            horizontal: horizontalPadding, vertical: 8.0),
-                                        child: _CollapsibleGoalInfoCard(
-                                          goal: currentGoal,
-                                          progress: progress,
-                                          onEdit: () => _handleEditGoal(currentGoal),
-                                          onDelete: () => _handleDeleteGoal(currentGoal),
-                                        ),
-                                      ),
-                                    ],
+                            return SafeArea(
+                              child: CustomScrollView(
+                                physics: _isMilestonesExpanded
+                                    ? const ClampingScrollPhysics()
+                                    : const AlwaysScrollableScrollPhysics(),
+                                slivers: [
+                                  // Mobile App Bar
+                                  const SliverAppBar(
+                                    backgroundColor: AppColors.background,
+                                    elevation: 0,
+                                    pinned: true,
+                                    leading:
+                                        BackButton(color: AppColors.primary),
+                                    title: Text('Jornadas',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 18)),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                // Custom Icon Indicators
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    _buildIndicatorIcon(0, Icons.image),
-                                    const SizedBox(width: 16),
-                                    _buildIndicatorIcon(1, Icons.bar_chart_rounded),
-                                  ],
-                                ),
+
+                                  // Mobile Content
+                                  // Collapsible Header (Carousel)
+                                  SliverToBoxAdapter(
+                                    child: AnimatedCrossFade(
+                                      firstChild: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          AspectRatio(
+                                            aspectRatio: 16 / 9,
+                                            child: PageView(
+                                              padEnds: false,
+                                              controller: _pageController,
+                                              onPageChanged: (index) {
+                                                setState(() {
+                                                  _currentPage = index;
+                                                });
+                                              },
+                                              children: [
+                                                // 1. Image Card (First)
+                                                Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal:
+                                                          horizontalPadding,
+                                                      vertical: 8.0),
+                                                  child: GoalImageCard(
+                                                    goal: currentGoal,
+                                                    onTap: () =>
+                                                        _handleImageTap(
+                                                            currentGoal),
+                                                  ),
+                                                ),
+                                                // 2. Info Card (Second)
+                                                Padding(
+                                                  padding: EdgeInsets.symmetric(
+                                                      horizontal:
+                                                          horizontalPadding,
+                                                      vertical: 8.0),
+                                                  child:
+                                                      _CollapsibleGoalInfoCard(
+                                                    goal: currentGoal,
+                                                    progress: progress,
+                                                    onEdit: () =>
+                                                        _handleEditGoal(
+                                                            currentGoal),
+                                                    onDelete: () =>
+                                                        _handleDeleteGoal(
+                                                            currentGoal),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          // Custom Icon Indicators
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
+                                            children: [
+                                              _buildIndicatorIcon(
+                                                  0, Icons.image),
+                                              const SizedBox(width: 16),
+                                              _buildIndicatorIcon(
+                                                  1, Icons.bar_chart_rounded),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      secondChild: const SizedBox.shrink(),
+                                      crossFadeState: _isMilestonesExpanded
+                                          ? CrossFadeState.showSecond
+                                          : CrossFadeState.showFirst,
+                                      duration:
+                                          const Duration(milliseconds: 300),
+                                      sizeCurve: Curves.easeInOut,
+                                    ),
+                                  ),
+
+                                  // Header for Milestones
+                                  SliverToBoxAdapter(
+                                    child: Padding(
+                                      padding: EdgeInsets.fromLTRB(
+                                          horizontalPadding,
+                                          8.0,
+                                          horizontalPadding,
+                                          8.0),
+                                      child:
+                                          _buildMilestonesHeader(currentGoal),
+                                    ),
+                                  ),
+
+                                  // Selection Actions (only if active)
+                                  if (_isSelectionMode ||
+                                      _currentScope != TaskViewScope.todas ||
+                                      _filterDate != null ||
+                                      _filterVibration != null ||
+                                      _filterTag != null)
+                                    SliverToBoxAdapter(
+                                      child: _buildSelectionControls(milestones,
+                                          horizontalPadding: horizontalPadding),
+                                    ),
+
+                                  _buildMilestonesListSliver(
+                                      milestones: milestones,
+                                      horizontalPadding: listHorizontalPadding),
+
+                                  const SliverToBoxAdapter(
+                                      child: SizedBox(height: 80)),
                                 ],
                               ),
-                              secondChild: const SizedBox.shrink(),
-                              crossFadeState: _isMilestonesExpanded
-                                  ? CrossFadeState.showSecond
-                                  : CrossFadeState.showFirst,
-                              duration: const Duration(milliseconds: 300),
-                              sizeCurve: Curves.easeInOut,
-                            ),
-                          ),
-                          
-                          // Header for Milestones
-                          SliverToBoxAdapter(
-                            child: Padding(
-                              padding: EdgeInsets.fromLTRB(horizontalPadding,
-                                  8.0, horizontalPadding, 8.0),
-                              child: _buildMilestonesHeader(currentGoal),
-                            ),
-                          ),
-                          
-                          // Selection Actions (only if active)
-                           if (_isSelectionMode || _currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null)
-                              SliverToBoxAdapter(
-                                child: _buildSelectionControls(milestones, horizontalPadding: horizontalPadding),
-                              ),
-
-                          _buildMilestonesListSliver(
-                              milestones: milestones,
-                              horizontalPadding: listHorizontalPadding),
-                              
-                          const SliverToBoxAdapter(child: SizedBox(height: 80)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-
-
-
-                if (_isLoading)
-                  Container(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      child: const Center(child: CustomLoadingSpinner())),
-              ],
-            ),
-          ),
-          floatingActionButton: milestones.isEmpty
-              ? null
-              : TransparentFabWrapper(
-                  controller: _fabOpacityController,
-                  child: FloatingActionButton(
-                          onPressed: () => _addMilestone(currentGoal),
-                          backgroundColor: AppColors.primary,
-                          tooltip: 'Novo Marco',
-                          heroTag: 'fab_goal_detail',
-                          shape: const CircleBorder(),
-                          child: const Icon(Icons.place, color: Colors.white), // Free: Novo Marco direto
+                            );
+                          },
                         ),
-                ),
-            ));
+                        if (_isLoading)
+                          Container(
+                              color: Colors.black.withValues(alpha: 0.6),
+                              child:
+                                  const Center(child: CustomLoadingSpinner())),
+                      ],
+                    ),
+                  ),
+                  floatingActionButton: milestones.isEmpty
+                      ? null
+                      : TransparentFabWrapper(
+                          controller: _fabOpacityController,
+                          child: FloatingActionButton(
+                            onPressed: () => _addMilestone(currentGoal),
+                            backgroundColor: AppColors.primary,
+                            tooltip: 'Novo Marco',
+                            heroTag: 'fab_goal_detail',
+                            shape: const CircleBorder(),
+                            child: const Icon(Icons.place,
+                                color: Colors.white), // Free: Novo Marco direto
+                          ),
+                        ),
+                ));
           },
         );
       },
@@ -720,11 +762,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   }
 
   // Controls for Selection Mode (Shared between Mobile/Desktop)
-  Widget _buildSelectionControls(List<TaskModel> milestones, {double horizontalPadding = 0}) {
+  Widget _buildSelectionControls(List<TaskModel> milestones,
+      {double horizontalPadding = 0}) {
     if (!_isSelectionMode) return const SizedBox.shrink();
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8.0),
+      padding:
+          EdgeInsets.symmetric(horizontal: horizontalPadding, vertical: 8.0),
       child: Row(
         children: [
           // 1. Selecionar Todas (Primeiro)
@@ -733,9 +777,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             child: Checkbox(
               value: milestones.isNotEmpty &&
                   _selectedTaskIds.length == milestones.length,
-              onChanged: milestones.isEmpty
-                  ? null
-                  : (value) => _selectAll(milestones),
+              onChanged:
+                  milestones.isEmpty ? null : (value) => _selectAll(milestones),
               visualDensity: VisualDensity.compact,
               checkColor: Colors.white,
               activeColor: AppColors.primary,
@@ -756,8 +799,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
           // 2. Botão Excluir (Segundo)
           TextButton.icon(
-            onPressed:
-                _selectedTaskIds.isEmpty ? null : _deleteSelectedTasks,
+            onPressed: _selectedTaskIds.isEmpty ? null : _deleteSelectedTasks,
             icon: Icon(Icons.delete_outline,
                 color: _selectedTaskIds.isNotEmpty
                     ? Colors.redAccent
@@ -784,8 +826,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
   // Header do marcos (com botão de expandir e IA simplificado)
   Widget _buildMilestonesHeader(Goal goal) {
-    final bool isDesktop = MediaQuery.of(context).size.width >= kDesktopBreakpoint;
-    
+    final bool isDesktop =
+        MediaQuery.of(context).size.width >= kDesktopBreakpoint;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -802,14 +845,17 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             IconButton(
               onPressed: _toggleSelectionMode,
               icon: Icon(
-                  _isSelectionMode ? Icons.close : Icons.checklist_rounded,
-                  color: _isSelectionMode ? Colors.white : AppColors.secondaryText,
+                _isSelectionMode ? Icons.close : Icons.checklist_rounded,
+                color:
+                    _isSelectionMode ? Colors.white : AppColors.secondaryText,
               ),
               tooltip: _isSelectionMode ? 'Cancelar' : 'Selecionar',
-               style: IconButton.styleFrom(
+              style: IconButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                   borderRadius: BorderRadius.circular(8),
-                   side: BorderSide(color: _isSelectionMode ? Colors.white : AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                      color:
+                          _isSelectionMode ? Colors.white : AppColors.border),
                 ),
               ),
             ),
@@ -822,19 +868,28 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               onPressed: _openFilterUI,
               icon: Icon(
                 Icons.filter_alt_outlined, // Funnel Icon
-                color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) 
-                    ? AppColors.primary 
+                color: (_currentScope != TaskViewScope.todas ||
+                        _filterDate != null ||
+                        _filterVibration != null ||
+                        _filterTag != null)
+                    ? AppColors.primary
                     : AppColors.secondaryText,
               ),
               tooltip: 'Filtrar',
-               style: IconButton.styleFrom(
+              style: IconButton.styleFrom(
                 shape: RoundedRectangleBorder(
-                   borderRadius: BorderRadius.circular(8),
-                   side: BorderSide(color: (_currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null) ? AppColors.primary : AppColors.border),
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                      color: (_currentScope != TaskViewScope.todas ||
+                              _filterDate != null ||
+                              _filterVibration != null ||
+                              _filterTag != null)
+                          ? AppColors.primary
+                          : AppColors.border),
                 ),
               ),
             ),
-            
+
             // Expand/Collapse Button (Mobile Only)
             if (!isDesktop)
               IconButton(
@@ -844,7 +899,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   });
                 },
                 icon: AnimatedRotation(
-                  turns: _isMilestonesExpanded ? 0.5 : 0.0, 
+                  turns: _isMilestonesExpanded ? 0.5 : 0.0,
                   duration: const Duration(milliseconds: 300),
                   child: const Icon(
                     Icons.keyboard_arrow_up,
@@ -883,32 +938,32 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           return Padding(
             padding: const EdgeInsets.only(bottom: 8.0),
             child: TaskItem(
-            key: ValueKey(task.id),
-            task: task,
-            showGoalIconFlag: false,
-            showTagsIconFlag: true,
-            showVibrationPillFlag: true,
-            selectionMode: _isSelectionMode,
-            selectedTaskIds: _selectedTaskIds,
-            onTaskSelected: _onTaskSelected,
-            onToggle: (isCompleted) async {
-              final messenger = ScaffoldMessenger.of(context);
-              try {
-                await _supabaseService.updateTaskCompletion(
-                    widget.userData.uid, task.id,
-                    completed: isCompleted);
-              } catch (e) {
-                if (mounted) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                        content: Text('Erro ao atualizar marco: $e'),
-                        backgroundColor: Colors.red),
-                  );
+              key: ValueKey(task.id),
+              task: task,
+              showGoalIconFlag: false,
+              showTagsIconFlag: true,
+              showVibrationPillFlag: true,
+              selectionMode: _isSelectionMode,
+              selectedTaskIds: _selectedTaskIds,
+              onTaskSelected: _onTaskSelected,
+              onToggle: (isCompleted) async {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await _supabaseService.updateTaskCompletion(
+                      widget.userData.uid, task.id,
+                      completed: isCompleted);
+                } catch (e) {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                          content: Text('Erro ao atualizar marco: $e'),
+                          backgroundColor: Colors.red),
+                    );
+                  }
                 }
-              }
-            },
-            onSwipeLeft: (t) => _handleSwipeLeft(t),
-            onTap: () => _handleMilestoneTap(task),
+              },
+              onSwipeLeft: (t) => _handleSwipeLeft(t),
+              onTap: () => _handleMilestoneTap(task),
             ),
           );
         }),
@@ -948,7 +1003,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 task: task,
                 showGoalIconFlag: false,
                 showTagsIconFlag: true,
-                showVibrationPillFlag: true, 
+                showVibrationPillFlag: true,
                 selectionMode: _isSelectionMode,
                 selectedTaskIds: _selectedTaskIds,
                 onTaskSelected: _onTaskSelected,
@@ -958,7 +1013,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                         widget.userData.uid, task.id,
                         completed: isCompleted);
                   } catch (e) {
-                     // handled
+                    // handled
                   }
                 },
                 onTap: () => _handleMilestoneTap(task),
@@ -973,20 +1028,24 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       ),
     );
   }
-  Widget _buildDesktopLayout(BuildContext context, Goal currentGoal, List<TaskModel> milestones, int progress) {
+
+  Widget _buildDesktopLayout(BuildContext context, Goal currentGoal,
+      List<TaskModel> milestones, int progress) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const BackButton(color: AppColors.primary),
-        title: const Text('Jornadas', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text('Jornadas',
+            style: TextStyle(color: Colors.white, fontSize: 18)),
       ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -999,9 +1058,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                       child: Column(
                         children: [
                           GoalImageCard(
-                            goal: currentGoal, 
-                            onTap: () => _handleImageTap(currentGoal)
-                          ),
+                              goal: currentGoal,
+                              onTap: () => _handleImageTap(currentGoal)),
                           const SizedBox(height: 24),
                           _CircularGoalInfoCard(
                             goal: currentGoal,
@@ -1015,7 +1073,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   ),
                 ),
                 const SizedBox(width: 32),
-                
+
                 // RIGHT COLUMN (Fixed Header + Scrollable List)
                 Expanded(
                   flex: 7,
@@ -1027,25 +1085,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _buildMilestonesHeader(currentGoal),
-                             if (_isSelectionMode || _currentScope != TaskViewScope.todas || _filterDate != null || _filterVibration != null || _filterTag != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 16.0),
-                                  child: _buildSelectionControls(milestones, horizontalPadding: 0),
-                                ),
+                            if (_isSelectionMode ||
+                                _currentScope != TaskViewScope.todas ||
+                                _filterDate != null ||
+                                _filterVibration != null ||
+                                _filterTag != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16.0),
+                                child: _buildSelectionControls(milestones,
+                                    horizontalPadding: 0),
+                              ),
                           ],
                         ),
                       ),
-                      
+
                       // SCROLLABLE LIST
                       Expanded(
                         child: CustomScrollView(
                           physics: const AlwaysScrollableScrollPhysics(),
                           slivers: [
-                             _buildMilestonesListSliver(
-                                milestones: milestones,
-                                horizontalPadding: 0,
-                             ),
-                             const SliverToBoxAdapter(child: SizedBox(height: 80)),
+                            _buildMilestonesListSliver(
+                              milestones: milestones,
+                              horizontalPadding: 0,
+                            ),
+                            const SliverToBoxAdapter(
+                                child: SizedBox(height: 80)),
                           ],
                         ),
                       ),
@@ -1065,23 +1129,23 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     final bool isSelected = _currentPage == index;
     return GestureDetector(
       onTap: () {
-        _pageController.animateToPage(
-          index, 
-          duration: const Duration(milliseconds: 300), 
-          curve: Curves.easeInOut
-        );
+        _pageController.animateToPage(index,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut);
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: isSelected 
-              ? AppColors.primary.withValues(alpha: 0.15) 
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.15)
               : Colors.transparent,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border.withValues(alpha: 0.4),
+            color: isSelected
+                ? AppColors.primary
+                : AppColors.border.withValues(alpha: 0.4),
             width: 1.0,
           ),
         ),
@@ -1133,24 +1197,26 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: _isHovering 
-                ? AppColors.primary.withOpacity(0.5) 
+            color: _isHovering
+                ? AppColors.primary.withOpacity(0.5)
                 : AppColors.border.withOpacity(0.3),
             width: _isHovering ? 1.5 : 1.0,
           ),
-          boxShadow: _isHovering ? [
-             BoxShadow(
-              color: AppColors.primary.withOpacity(0.15),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            )
-          ] : [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 5,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          boxShadow: _isHovering
+              ? [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.15),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Stack(
           children: [
@@ -1160,7 +1226,8 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                 // Original had Row(Expanded(Text), Menu).
                 // Now we Center the content but Menu is absolute.
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0), // Avoid overlap with menu
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0), // Avoid overlap with menu
                   child: Text(
                     widget.goal.title,
                     textAlign: TextAlign.center,
@@ -1173,20 +1240,21 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                
+
                 const SizedBox(height: 24),
                 // Circular Progress
                 Stack(
                   alignment: Alignment.center,
                   children: [
                     SizedBox(
-                      width: 180, 
+                      width: 180,
                       height: 180,
                       child: CircularProgressIndicator(
                         value: widget.progress / 100,
-                        strokeWidth: 12, 
+                        strokeWidth: 12,
                         backgroundColor: AppColors.background,
-                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.primary),
                       ),
                     ),
                     Column(
@@ -1196,13 +1264,14 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                           '${widget.progress}%',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 42, 
+                            fontSize: 42,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                         const Text(
                           'Concluído',
-                          style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                          style: TextStyle(
+                              color: AppColors.secondaryText, fontSize: 14),
                         ),
                       ],
                     ),
@@ -1219,35 +1288,42 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                       style: const TextStyle(color: AppColors.secondaryText),
                     ),
                   ),
-                
+
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E2C), 
+                    color: const Color(0xFF1E1E2C),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.flag, color: Color(0xFF8B5CF6), size: 16),
+                      const Icon(Icons.flag,
+                          color: Color(0xFF8B5CF6), size: 16),
                       const SizedBox(width: 8),
                       Text(
                         widget.goal.targetDate != null
-                            ? DateFormat('dd MMM yyyy').format(widget.goal.targetDate!)
+                            ? DateFormat('dd MMM yyyy')
+                                .format(widget.goal.targetDate!)
                             : 'Sem data',
-                        style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-             // Menu Button (Absolute Top Right)
+            // Menu Button (Absolute Top Right)
             Positioned(
               top: -10, // Adjust to move higher
               right: -10, // Adjust to move right
               child: PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
+                icon:
+                    const Icon(Icons.more_vert, color: AppColors.secondaryText),
                 color: AppColors.cardBackground,
                 onSelected: (value) {
                   if (value == 'edit') widget.onEdit();
@@ -1258,7 +1334,8 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                     value: 'edit',
                     child: ListTile(
                       leading: Icon(Icons.edit, color: Colors.white),
-                      title: Text('Editar', style: TextStyle(color: Colors.white)),
+                      title:
+                          Text('Editar', style: TextStyle(color: Colors.white)),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1266,7 +1343,8 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
                     value: 'delete',
                     child: ListTile(
                       leading: Icon(Icons.delete, color: Colors.redAccent),
-                      title: Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+                      title: Text('Excluir',
+                          style: TextStyle(color: Colors.redAccent)),
                       contentPadding: EdgeInsets.zero,
                     ),
                   ),
@@ -1303,7 +1381,7 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
-         boxShadow: [
+        boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 5,
@@ -1311,44 +1389,43 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Column(
+      child: Stack(children: [
+        Column(
           mainAxisSize: MainAxisSize.max, // Fill parent
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-             // Header: Title (With padding right to avoid menu)
-             Padding(
-                padding: const EdgeInsets.only(right: 32.0),
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        goal.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (goal.description.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          goal.description,
-                          style: const TextStyle(
-                            color: AppColors.secondaryText,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
+            // Header: Title (With padding right to avoid menu)
+            Padding(
+              padding: const EdgeInsets.only(right: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    goal.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-             ),
-            
+                  if (goal.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      goal.description,
+                      style: const TextStyle(
+                        color: AppColors.secondaryText,
+                        fontSize: 13,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
             const SizedBox(height: 32), // Spacer + more height
 
             // Footer: Date + Percent + Progress Bar
@@ -1356,13 +1433,13 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 if (goal.targetDate != null)
-                   _buildDateBadge(goal.targetDate!)
+                  _buildDateBadge(goal.targetDate!)
                 else
-                   const SizedBox(),
+                  const SizedBox(),
                 Text(
                   '$progress%',
                   style: const TextStyle(
-                    color: Colors.white, 
+                    color: Colors.white,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -1375,7 +1452,8 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress / 100,
                 backgroundColor: AppColors.background,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 6,
               ),
             ),
@@ -1387,7 +1465,8 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
           right: -8,
           child: PopupMenuButton<String>(
             padding: EdgeInsets.zero,
-            icon: const Icon(Icons.more_vert, color: AppColors.secondaryText, size: 20),
+            icon: const Icon(Icons.more_vert,
+                color: AppColors.secondaryText, size: 20),
             color: AppColors.cardBackground,
             onSelected: (value) {
               if (value == 'edit') onEdit();
@@ -1406,22 +1485,32 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
                 value: 'delete',
                 child: ListTile(
                   leading: Icon(Icons.delete, color: Colors.redAccent),
-                  title: Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+                  title: Text('Excluir',
+                      style: TextStyle(color: Colors.redAccent)),
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
             ],
           ),
         ),
-      ]
-      ),
+      ]),
     );
   }
 
   Widget _buildDateBadge(DateTime date) {
     final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez'
     ];
     final formattedDate =
         '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
@@ -1435,7 +1524,8 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.flag, color: Color(0xFF8B5CF6), size: 16), // Purple Flag
+          const Icon(Icons.flag,
+              color: Color(0xFF8B5CF6), size: 16), // Purple Flag
           const SizedBox(width: 8),
           Text(
             formattedDate,
@@ -1452,9 +1542,8 @@ class _CollapsibleGoalInfoCard extends StatelessWidget {
 
   // Helper method needs to be outside or we need to add it to state class
   // Since we are inside _CollapsibleGoalInfoCard (Stateless), we can't add methods to State class from here easily unless we move it.
-  // Wait, I am replacing _CollapsibleGoalInfoCard. 
+  // Wait, I am replacing _CollapsibleGoalInfoCard.
   // The _buildIndicatorIcon must correspond to the State class method, but I am editing _CollapsibleGoalInfoCard here.
   // I will add the _buildIndicatorIcon method to the _GoalDetailScreenState class (previous chunk).
   // This chunk ONLY updates _buildDateBadge inside _CollapsibleGoalInfoCard.
-
 }

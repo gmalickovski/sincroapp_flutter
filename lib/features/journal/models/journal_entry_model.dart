@@ -6,7 +6,9 @@ class JournalEntry {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int personalDay;
+
   final int? mood; // Mood 1-5
+  final String? title;
 
   JournalEntry({
     required this.id,
@@ -14,7 +16,9 @@ class JournalEntry {
     required this.createdAt,
     required this.updatedAt,
     required this.personalDay,
+
     this.mood,
+    this.title,
   });
 
   factory JournalEntry.fromMap(Map<String, dynamic> map) {
@@ -23,9 +27,13 @@ class JournalEntry {
       content: map['content'] ?? '',
       createdAt: DateTime.tryParse(map['created_at'] ?? '') ?? DateTime.now(),
       // Se não tiver updated_at ou entry_date, usa created_at
-      updatedAt: DateTime.tryParse(map['updated_at'] ?? map['entry_date'] ?? '') ?? DateTime.now(),
+      updatedAt:
+          DateTime.tryParse(map['updated_at'] ?? map['entry_date'] ?? '') ??
+              DateTime.now(),
       personalDay: map['personal_day'] ?? 0,
+
       mood: map['mood'] != null ? int.tryParse(map['mood'].toString()) : null,
+      title: map['title'],
     );
   }
 
@@ -34,9 +42,12 @@ class JournalEntry {
       'content': content,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
-      'entry_date': createdAt.toIso8601String(), // Sync entry_date with createdAt usually
+      'entry_date':
+          createdAt.toIso8601String(), // Sync entry_date with createdAt usually
       'personal_day': personalDay,
+
       'mood': mood?.toString(),
+      'title': title,
     };
   }
 

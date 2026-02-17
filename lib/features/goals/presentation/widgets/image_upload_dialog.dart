@@ -26,7 +26,7 @@ class ImageUploadDialog extends StatefulWidget {
 class _ImageUploadDialogState extends State<ImageUploadDialog> {
   final ImagePicker _picker = ImagePicker();
   final SupabaseService _supabaseService = SupabaseService();
-  
+
   XFile? _selectedImage;
   Uint8List? _imageBytes; // Store bytes for robust upload/preview
   bool _isSaving = false;
@@ -39,11 +39,11 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         maxWidth: 1280, // Optimized for heavy images
         imageQuality: 80, // Good balance of quality/size
       );
-      
+
       if (image != null) {
         // Read bytes immediately to prevent "revoked blob" issues on Web
         final Uint8List bytes = await image.readAsBytes();
-        
+
         setState(() {
           _selectedImage = image;
           _imageBytes = bytes;
@@ -69,8 +69,9 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
 
     try {
       debugPrint('[ImageUploadDialog] Starting upload...');
-      debugPrint('[ImageUploadDialog] File: ${_selectedImage!.name}, Bytes: ${_imageBytes!.length}');
-      
+      debugPrint(
+          '[ImageUploadDialog] File: ${_selectedImage!.name}, Bytes: ${_imageBytes!.length}');
+
       // 1. Upload Image (using bytes)
       final String? downloadUrl = await _supabaseService.uploadGoalImageBytes(
         widget.userData.uid,
@@ -85,15 +86,18 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
 
       // 2. Update Goal in Supabase
       final updatedGoal = widget.goal.copyWith(imageUrl: downloadUrl);
-      
-      debugPrint('[ImageUploadDialog] Updating goal ${widget.goal.id} with imageUrl...');
+
+      debugPrint(
+          '[ImageUploadDialog] Updating goal ${widget.goal.id} with imageUrl...');
       await _supabaseService.updateGoal(updatedGoal);
       debugPrint('[ImageUploadDialog] Goal updated successfully!');
 
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate success
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Imagem atualizada com sucesso!'), backgroundColor: AppColors.primary),
+          const SnackBar(
+              content: Text('Imagem atualizada com sucesso!'),
+              backgroundColor: AppColors.primary),
         );
       }
     } catch (e, stackTrace) {
@@ -123,7 +127,8 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                 children: [
                   Icon(Icons.image, color: AppColors.primary, size: 24),
                   SizedBox(width: 12),
-                  Text("Adicionar Imagem", style: TextStyle(color: Colors.white, fontSize: 18)),
+                  Text("Adicionar Imagem",
+                      style: TextStyle(color: Colors.white, fontSize: 18)),
                 ],
               ),
               backgroundColor: Colors.transparent,
@@ -174,24 +179,25 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
                     children: [
                       // Desktop Header
                       _buildDesktopHeader(),
-                      
+
                       // Content (Scrollable)
                       Flexible(
-                         child: SingleChildScrollView(
-                          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 32, vertical: 0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                               _buildErrorMessage(),
-                               _buildImagePreview(),
-                               const SizedBox(height: 24),
-                               _buildInstructions(),
-                               const SizedBox(height: 24),
+                              _buildErrorMessage(),
+                              _buildImagePreview(),
+                              const SizedBox(height: 24),
+                              _buildInstructions(),
+                              const SizedBox(height: 24),
                             ],
                           ),
                         ),
                       ),
-            
+
                       // Footer (Fixed Buttons)
                       _buildFooterButtons(),
                     ],
@@ -218,7 +224,7 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
               Text(
                 "Adicionar Imagem",
                 style: TextStyle(
-                  fontSize: 20, 
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppColors.primaryText,
                 ),
@@ -261,21 +267,21 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         aspectRatio: 16 / 9,
         child: Container(
           width: double.infinity,
-        decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: _imageBytes != null ? AppColors.primary : AppColors.border, 
-              width: _imageBytes != null ? 1.5 : 1
+          decoration: BoxDecoration(
+            color: AppColors.background,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color:
+                    _imageBytes != null ? AppColors.primary : AppColors.border,
+                width: _imageBytes != null ? 1.5 : 1),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: _buildImageContent(),
           ),
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: _buildImageContent(),
-        ),
       ),
-    ),
-  );
+    );
   }
 
   Widget _buildInstructions() {
@@ -284,12 +290,14 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
       children: [
         Text(
           "Dicas para a imagem:",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+          style: TextStyle(
+              color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
         ),
         SizedBox(height: 8),
         Text(
           "• Use imagens no formato paisagem (horizontal).\n• Escolha imagens que inspirem sua meta.\n• Tamanho máximo recomendado: 2MB.",
-          style: TextStyle(color: AppColors.secondaryText, height: 1.5, fontSize: 13),
+          style: TextStyle(
+              color: AppColors.secondaryText, height: 1.5, fontSize: 13),
         ),
       ],
     );
@@ -299,55 +307,58 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-         border: Border(
+          color: AppColors.cardBackground,
+          border: Border(
             top: BorderSide(color: AppColors.border.withValues(alpha: 0.2)),
-         )
-      ),
+          )),
       child: _isSaving
-        ? const Center(child: CustomLoadingSpinner())
-        : Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+          ? const Center(child: CustomLoadingSpinner())
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
+                    child: const Text("Cancelar",
+                        style: TextStyle(color: AppColors.secondaryText)),
                   ),
-                  child: const Text("Cancelar", style: TextStyle(color: AppColors.secondaryText)),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _imageBytes != null ? _handleSave : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.3),
-                    disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _imageBytes != null ? _handleSave : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor:
+                          AppColors.primary.withValues(alpha: 0.3),
+                      disabledForegroundColor:
+                          Colors.white.withValues(alpha: 0.5),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
                     ),
-                    elevation: 0,
+                    child: const Text("Salvar Imagem",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
-                  child: const Text("Salvar Imagem", style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
     );
   }
-  
+
   // Kept for compatibility with Mobile Layout call
   Widget _buildContent() {
-     return Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -358,43 +369,47 @@ class _ImageUploadDialogState extends State<ImageUploadDialog> {
         const SizedBox(height: 24),
         // On mobile, footer is part of content for now to keep it simple or we could refactor similarly
         _isSaving
-        ? const Center(child: CustomLoadingSpinner())
-        : Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+            ? const Center(child: CustomLoadingSpinner())
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text("Cancelar",
+                          style: TextStyle(color: AppColors.secondaryText)),
                     ),
                   ),
-                  child: const Text("Cancelar", style: TextStyle(color: AppColors.secondaryText)),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: _imageBytes != null ? _handleSave : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.3),
-                    disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _imageBytes != null ? _handleSave : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor:
+                            AppColors.primary.withValues(alpha: 0.3),
+                        disabledForegroundColor:
+                            Colors.white.withValues(alpha: 0.5),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text("Salvar Imagem",
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                    elevation: 0,
                   ),
-                  child: const Text("Salvar Imagem", style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
+                ],
               ),
-            ],
-          ),
       ],
     );
   }

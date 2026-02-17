@@ -107,7 +107,7 @@ class CustomCalendar extends StatelessWidget {
             final today = DateTime(now.year, now.month, now.day);
             final checkDay = DateTime(day.year, day.month, day.day);
             final isPastDay = checkDay.isBefore(today);
-            
+
             return _DayCell(
               day: day,
               isDesktop: isDesktop,
@@ -129,7 +129,8 @@ class CustomCalendar extends StatelessWidget {
               day: day,
               isDesktop: isDesktop,
               isSelected: true, // Permite seleção de qualquer dia
-              personalDayNumber: personalDayNumber, // Sempre mostra cor do dia pessoal
+              personalDayNumber:
+                  personalDayNumber, // Sempre mostra cor do dia pessoal
               events: _getEventsForDay(day),
               isPastDayOverride: isPastDay,
             );
@@ -238,9 +239,10 @@ class _DayCellState extends State<_DayCell> {
             // Vamos manter cores originais por enquanto.
             final markerColor = _getColorForEventType(type)
                 .withValues(alpha: isPast ? 0.9 : 1.0);
-            
+
             // Ajuste para contraste em background roxo
-            final effectiveColor = widget.isSelected ? Colors.white : markerColor;
+            final effectiveColor =
+                widget.isSelected ? Colors.white : markerColor;
 
             return Container(
               width: markerSize,
@@ -268,9 +270,10 @@ class _DayCellState extends State<_DayCell> {
           .map((type) {
             final markerColor = _getColorForEventType(type)
                 .withValues(alpha: isPast ? 0.9 : 1.0);
-             // Ajuste para contraste em background roxo
-            final effectiveColor = widget.isSelected ? Colors.white : markerColor;
-            
+            // Ajuste para contraste em background roxo
+            final effectiveColor =
+                widget.isSelected ? Colors.white : markerColor;
+
             return Container(
               height: 4,
               margin: const EdgeInsets.only(top: 2),
@@ -294,16 +297,17 @@ class _DayCellState extends State<_DayCell> {
     Color cellFillColor = AppColors.cardBackground; // Fundo escuro (card)
     // --- LÓGICA DE BORDA AJUSTADA ---
     // A borda agora deve ser visível (sutil) em todos os estados por padrão
-    Color borderColor = AppColors.border.withValues(alpha: 0.3); 
+    Color borderColor = AppColors.border.withValues(alpha: 0.3);
     double borderWidth = 1.0;
-    
+
     // Texto
     Color baseDayTextColor = const Color(0xFFD1D5DB); // Gray-300
-    
+
     // Hover (Desktop) - Agora inclui dias passados
     if (_isHovered && widget.isDesktop && !widget.isSelected) {
-       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.8);
-       borderColor = Colors.white.withValues(alpha: 0.5); // Borda mais visível no hover
+      cellFillColor = AppColors.cardBackground.withValues(alpha: 0.8);
+      borderColor =
+          Colors.white.withValues(alpha: 0.5); // Borda mais visível no hover
     }
 
     // Hoje (não selecionado)
@@ -314,49 +318,52 @@ class _DayCellState extends State<_DayCell> {
       baseDayTextColor = AppColors.primary; // Texto roxo
     }
 
-
-
     // Selecionado
     if (widget.isSelected) {
       // --- MUDANÇA: Manter fundo do card, apenas destacar borda ---
       cellFillColor = AppColors.cardBackground; // Sem fundo roxo
-      
+
       // Lógica de Borda Dinâmica (Dia Pessoal)
       if (widget.personalDayNumber != null && widget.personalDayNumber! > 0) {
-         final vibrationColors = getColorsForVibration(widget.personalDayNumber!);
-         borderColor = vibrationColors.background; // Cor do dia pessoal
+        final vibrationColors =
+            getColorsForVibration(widget.personalDayNumber!);
+        borderColor = vibrationColors.background; // Cor do dia pessoal
       } else {
-         borderColor = AppColors.primary; // Fallback roxo
+        borderColor = AppColors.primary; // Fallback roxo
       }
-      
+
       borderWidth = 2.0; // Borda visível
       baseDayTextColor = Colors.white; // Texto Branco para contraste
     }
 
     // Dia Passado (e não selecionado, não hoje)
     if (isPast && !widget.isSelected && !widget.isToday) {
-       // --- CORREÇÃO SOLICITADA ---
-       // Mantém o fundo do card (agora sólido) e apenas esmaece o texto
-       cellFillColor = AppColors.cardBackground.withValues(alpha: 0.5); // Fundo levemente mais transparente (opcional) ou igual
-       borderColor = AppColors.border.withValues(alpha: 0.2); // Borda bem sutil
-       baseDayTextColor = AppColors.tertiaryText.withValues(alpha: 0.3); // Texto apagado
-    } 
+      // --- CORREÇÃO SOLICITADA ---
+      // Mantém o fundo do card (agora sólido) e apenas esmaece o texto
+      cellFillColor = AppColors.cardBackground.withValues(
+          alpha: 0.5); // Fundo levemente mais transparente (opcional) ou igual
+      borderColor = AppColors.border.withValues(alpha: 0.2); // Borda bem sutil
+      baseDayTextColor =
+          AppColors.tertiaryText.withValues(alpha: 0.3); // Texto apagado
+    }
 
-    FontWeight dayFontWeight = (widget.isSelected || widget.isToday) 
-        ? FontWeight.bold 
+    FontWeight dayFontWeight = (widget.isSelected || widget.isToday)
+        ? FontWeight.bold
         : FontWeight.normal;
-
 
     return MouseRegion(
       onEnter: (_) {
-        if (widget.isDesktop) setState(() => _isHovered = true); // Permite hover em dias passados
+        if (widget.isDesktop) {
+          setState(() => _isHovered = true); // Permite hover em dias passados
+        }
       },
       onExit: (_) {
         if (widget.isDesktop) setState(() => _isHovered = false);
       },
       cursor: SystemMouseCursors.click, // Permite clique em todos os dias
       child: Container(
-        margin: const EdgeInsets.all(4.0), // Margem para efeito de card separado
+        margin:
+            const EdgeInsets.all(4.0), // Margem para efeito de card separado
         decoration: BoxDecoration(
           color: cellFillColor,
           borderRadius: BorderRadius.circular(8.0), // Cantos arredondados
@@ -367,7 +374,7 @@ class _DayCellState extends State<_DayCell> {
         ),
         child: Stack(
           children: [
-             // Número do dia
+            // Número do dia
             Align(
               alignment: Alignment.topLeft,
               child: Padding(
@@ -382,15 +389,15 @@ class _DayCellState extends State<_DayCell> {
                 ),
               ),
             ),
-            
-             // Marcadores (Eventos)
-             if (widget.events.isNotEmpty)
+
+            // Marcadores (Eventos)
+            if (widget.events.isNotEmpty)
               Positioned(
                 bottom: widget.isDesktop ? 8 : 6,
-                left: widget.isDesktop ? 8 : 4, 
+                left: widget.isDesktop ? 8 : 4,
                 right: widget.isDesktop ? 8 : 4,
-                child: widget.isDesktop 
-                    ? _buildDesktopMarkers() 
+                child: widget.isDesktop
+                    ? _buildDesktopMarkers()
                     : _buildMobileMarkers(),
               ),
           ],

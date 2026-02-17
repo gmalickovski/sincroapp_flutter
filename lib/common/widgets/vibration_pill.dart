@@ -21,13 +21,16 @@ VibrationColors getColorsForVibration(int vibrationNumber) {
           background: Color(0xfff97316), text: Colors.white); // Laranja
     case 3:
       return const VibrationColors(
-          background: Color(0xffca8a04), text: Colors.white); // Amarelo Escuro (Yellow-600)
+          background: Color(0xffca8a04),
+          text: Colors.white); // Amarelo Escuro (Yellow-600)
     case 4:
       return const VibrationColors(
-          background: Color(0xff65a30d), text: Colors.white); // Verde Lima Escuro (Lime-600)
+          background: Color(0xff65a30d),
+          text: Colors.white); // Verde Lima Escuro (Lime-600)
     case 5:
       return const VibrationColors(
-          background: Color(0xff0891b2), text: Colors.white); // Ciano Escuro (Cyan-600)
+          background: Color(0xff0891b2),
+          text: Colors.white); // Ciano Escuro (Cyan-600)
     case 6:
       return const VibrationColors(
           background: Color(0xff3b82f6), text: Colors.white); // Azul
@@ -238,7 +241,8 @@ void showVibrationInfoModal(BuildContext context,
     builder: (ctx) {
       return Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 700),
           child: ClipRRect(
@@ -263,7 +267,7 @@ void showVibrationInfoModal(BuildContext context,
                       ],
                     ),
                   ),
-                  
+
                   // Título e Conteúdo
                   Flexible(
                     child: SingleChildScrollView(
@@ -293,7 +297,7 @@ void showVibrationInfoModal(BuildContext context,
                             textAlign: TextAlign.center,
                           ),
                           const SizedBox(height: 24),
-                          
+
                           // Divisor sutil
                           Container(
                             width: 60,
@@ -314,35 +318,40 @@ void showVibrationInfoModal(BuildContext context,
                               fontSize: 16,
                               height: 1.6,
                             ),
-                            textAlign: TextAlign.center, // Centralizado para leitura fluida
+                            textAlign: TextAlign
+                                .center, // Centralizado para leitura fluida
                           ),
-                          
+
                           if (vibrationContent.inspiracao.isNotEmpty) ...[
-                             const SizedBox(height: 32),
-                             Container(
-                               padding: const EdgeInsets.all(16),
-                               decoration: BoxDecoration(
-                                 color: colors.background.withValues(alpha: 0.1),
-                                 borderRadius: BorderRadius.circular(16),
-                                 border: Border.all(color: colors.background.withValues(alpha: 0.2)),
-                               ),
-                               child: Row(
-                                 children: [
-                                   Icon(Icons.lightbulb_outline_rounded, color: colors.background),
-                                   const SizedBox(width: 12),
-                                   Expanded(
-                                     child: Text(
-                                       vibrationContent.inspiracao,
-                                        style: TextStyle(
-                                          color: AppColors.primaryText.withValues(alpha: 0.9),
-                                          fontSize: 14,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                     ),
-                                   ),
-                                 ],
-                               ),
-                             )
+                            const SizedBox(height: 32),
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: colors.background.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color: colors.background
+                                        .withValues(alpha: 0.2)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.lightbulb_outline_rounded,
+                                      color: colors.background),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      vibrationContent.inspiracao,
+                                      style: TextStyle(
+                                        color: AppColors.primaryText
+                                            .withValues(alpha: 0.9),
+                                        fontSize: 14,
+                                        fontStyle: FontStyle.italic,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
                           ]
                         ],
                       ),

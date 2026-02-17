@@ -120,13 +120,16 @@ class _AdminScreenState extends State<AdminScreen>
                     padding: const EdgeInsets.symmetric(horizontal: 32),
                     decoration: const BoxDecoration(
                       color: AppColors.background,
-                      border: Border(bottom: BorderSide(color: AppColors.border)),
+                      border:
+                          Border(bottom: BorderSide(color: AppColors.border)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _selectedIndex == 0 ? 'Dashboard' : 'Gerenciar Usuários',
+                          _selectedIndex == 0
+                              ? 'Dashboard'
+                              : 'Gerenciar Usuários',
                           style: const TextStyle(
                             color: AppColors.primaryText,
                             fontSize: 24,

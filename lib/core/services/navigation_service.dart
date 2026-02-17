@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class NavigationService {
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   static String? currentRoute;
   static Object? routeArguments;
@@ -11,10 +12,9 @@ class NavigationService {
 }
 
 class NavigationObserver extends RouteObserver<ModalRoute<void>> {
-  
   void _updateContext(PageRoute route) {
-     NavigationService.currentRoute = route.settings.name;
-     NavigationService.routeArguments = route.settings.arguments;
+    NavigationService.currentRoute = route.settings.name;
+    NavigationService.routeArguments = route.settings.arguments;
     //  debugPrint('NavigationService: Context Updated -> ${route.settings.name}');
   }
 
@@ -38,7 +38,7 @@ class NavigationObserver extends RouteObserver<ModalRoute<void>> {
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
     if (previousRoute is PageRoute) {
-       _updateContext(previousRoute);
+      _updateContext(previousRoute);
     }
   }
 }

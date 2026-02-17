@@ -8,7 +8,7 @@ import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
-import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -20,8 +20,6 @@ import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_inpu
 import 'widgets/calendar_header.dart';
 import 'widgets/day_detail_panel.dart';
 
-import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
-import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
@@ -148,9 +146,9 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Ou apenas mantemos o dueDate. Por simplificação, vamos focar no dueDate.
     // Mas se o app usa createdAt para algo, podemos manter.
     // Vou manter simplificado para dueDate por enquanto, mas inicializar a lista.
-    _currentTasksCreatedAt = []; 
+    _currentTasksCreatedAt = [];
     _processEvents();
-    
+
     // --- INÍCIO DA CORREÇÃO (Vibração) ---
     // Atualiza o dia pessoal ao inicializar streams (troca de mês/load)
     _updatePersonalDay(_selectedDay);
@@ -172,10 +170,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       if (task.dueDate != null) {
         // --- INÍCIO DA CORREÇÃO (Marcadores) ---
         // Usa UTC para chave do mapa de eventos (compatível com CustomCalendar)
-        final dateUtc = DateTime.utc(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+        final dateUtc = DateTime.utc(
+            task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
         // Usa Local para chave do mapa de raw events (compatível com DayDetailPanel)
-        final dateLocal = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
-        
+        final dateLocal = DateTime(
+            task.dueDate!.year, task.dueDate!.month, task.dueDate!.day);
+
         // Determina o tipo de evento para o marcador
         EventType eventType = EventType.task;
         if (task.journeyId != null && task.journeyId!.isNotEmpty) {
@@ -210,7 +210,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   // --- INÍCIO DA CORREÇÃO (Vibração) ---
   void _updatePersonalDay(DateTime date) {
-    if (widget.userData.nomeAnalise.isEmpty || widget.userData.dataNasc.isEmpty) {
+    if (widget.userData.nomeAnalise.isEmpty ||
+        widget.userData.dataNasc.isEmpty) {
       return;
     }
 
@@ -223,7 +224,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       // Calcula para o dia selecionado (em UTC para garantir consistência)
       final dateUtc = DateTime.utc(date.year, date.month, date.day);
       final day = engine.calculatePersonalDayForDate(dateUtc);
-      
+
       if (_personalDayNumber != day) {
         setState(() {
           _personalDayNumber = day;
@@ -262,7 +263,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return a.year == b.year && a.month == b.month;
   }
 
-    void _openAddTaskModal() {
+  void _openAddTaskModal() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -450,8 +451,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         SnackBar(content: Text(message), backgroundColor: Colors.red),
       );
     }
-  }    
-  
+  }
+
   Future<void> _onToggleTask(TaskModel task, bool newValue) async {
     try {
       await _supabaseService.updateTaskCompletion(
@@ -531,14 +532,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // O stream de tarefas já deve cuidar disso, mas podemos retornar true
     // se quisermos remover visualmente da lista do dia atual (se a nova data for diferente).
     if (newDate != null) {
-       final now = DateTime.now();
-       final today = DateTime(now.year, now.month, now.day);
-       final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
-       
-       // Se a nova data não for a mesma do dia selecionado, remove visualmente
-       if (!newDateOnly.isAtSameMomentAs(_selectedDay)) {
-          return true;
-       }
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
+
+      // Se a nova data não for a mesma do dia selecionado, remove visualmente
+      if (!newDateOnly.isAtSameMomentAs(_selectedDay)) {
+        return true;
+      }
     }
     return false;
   }
@@ -559,10 +560,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
       builder: (context) {
         // Usa dia selecionado ou hoje
         final date = _selectedDay ?? DateTime.now();
-        
+
         return TaskDetailModal(
           task: TaskModel(
-            id: const Uuid().v4(), 
+            id: const Uuid().v4(),
             text: '',
             createdAt: DateTime.now(),
             dueDate: date,
@@ -587,15 +588,15 @@ class _CalendarScreenState extends State<CalendarScreen> {
       );
     }
 
-
-
     return Scaffold(
       backgroundColor: AppColors.background,
-      resizeToAvoidBottomInset: false, // Prevent body resizing (and sheet moving up) when keyboard opens
+      resizeToAvoidBottomInset:
+          false, // Prevent body resizing (and sheet moving up) when keyboard opens
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: SafeArea(
-          bottom: false, // Prevent SafeArea from reacting to keyboard/bottom insets
+          bottom:
+              false, // Prevent SafeArea from reacting to keyboard/bottom insets
           child: _isScreenLoading
               ? const Center(child: CustomLoadingSpinner())
               : LayoutBuilder(
@@ -612,16 +613,16 @@ class _CalendarScreenState extends State<CalendarScreen> {
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
         child: FloatingActionButton(
-                onPressed: _openNewTaskDetail,
-                backgroundColor: AppColors.primary,
-                tooltip: 'Nova Tarefa',
-                heroTag: 'calendar_fab',
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
+          onPressed: _openNewTaskDetail,
+          backgroundColor: AppColors.primary,
+          tooltip: 'Nova Tarefa',
+          heroTag: 'calendar_fab',
+          elevation: 4,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
@@ -631,7 +632,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     final orientation = MediaQuery.of(context).orientation;
 
     void handleTodayTap() {
-
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       if (!_isSameMonth(_focusedDay, today)) {
@@ -714,15 +714,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
       // --- Layout Mobile Novo (Sem sobreposição) ---
       return Column(
         children: [
+          // Page Title
+          const Padding(
+            padding: EdgeInsets.only(
+                left: 16.0, right: 16.0, top: 8.0, bottom: 16.0),
+            child: Row(
+              children: [
+                Text(
+                  'Agenda',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
           // 1. Calendário (Animado)
           AnimatedCrossFade(
             firstChild: Container(
-             color: AppColors.background, // Fundo correto (não scaffoldBackground)
-             padding: const EdgeInsets.only(bottom: 8.0), // Espaço pro painel não colar
-             child: Column(
+              color: AppColors
+                  .background, // Fundo correto (não scaffoldBackground)
+              padding: const EdgeInsets.only(
+                  bottom: 8.0), // Espaço pro painel não colar
+              child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   Padding(
+                  Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
@@ -730,10 +749,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                         CalendarHeader(
                           focusedDay: _focusedDay,
                           onTodayButtonTap: handleTodayTap,
-                          onLeftArrowTap: () => _onPageChanged(
-                              DateTime(_focusedDay.year, _focusedDay.month - 1)),
-                          onRightArrowTap: () => _onPageChanged(
-                              DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                          onLeftArrowTap: () => _onPageChanged(DateTime(
+                              _focusedDay.year, _focusedDay.month - 1)),
+                          onRightArrowTap: () => _onPageChanged(DateTime(
+                              _focusedDay.year, _focusedDay.month + 1)),
                           isCompact: true,
                           onMonthYearTap: _showMonthYearPicker,
                         ),
@@ -753,7 +772,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ],
               ),
             ),
-            secondChild: const SizedBox(width: double.infinity, height: 0), // Estado colapsado
+            secondChild: const SizedBox(
+                width: double.infinity, height: 0), // Estado colapsado
             crossFadeState: _isCalendarExpanded
                 ? CrossFadeState.showFirst
                 : CrossFadeState.showSecond,
@@ -764,7 +784,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // 2. Painel de Detalhes (Ocupa o resto)
           Expanded(
             child: GestureDetector(
-              // Gesto na *área do cabeçalho* é tratado dentro do painel se necessário, 
+              // Gesto na *área do cabeçalho* é tratado dentro do painel se necessário,
               // mas podemos adicionar detecção global de swipe vertical
               onVerticalDragEnd: (details) {
                 // Swipe rápido para cima = fechar calendário
@@ -772,9 +792,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   _toggleCalendar();
                 }
                 // Swipe rápido para baixo = abrir calendário (se estiver no topo da lista)
-                // Isso é complexo pois conflita com scroll da lista. 
+                // Isso é complexo pois conflita com scroll da lista.
                 // Melhor deixar apenas o botão por enquanto ou swipe apenas no header
-                else if (details.primaryVelocity! > 500 && !_isCalendarExpanded) {
+                else if (details.primaryVelocity! > 500 &&
+                    !_isCalendarExpanded) {
                   _toggleCalendar();
                 }
               },
@@ -818,10 +839,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Expanded(
           flex: 2,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.only(
+                left: 24.0, top: 8.0, right: 24.0, bottom: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Page Title (Desktop)
+                const Text(
+                  'Agenda',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
                 CalendarHeader(
                   focusedDay: _focusedDay,
                   onTodayButtonTap: handleTodayTap,
@@ -830,7 +863,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   onRightArrowTap: () => _onPageChanged(
                       DateTime(_focusedDay.year, _focusedDay.month + 1)),
                   isDesktop: true,
-                  onMonthYearTap: _showMonthYearPicker, // Abre seletor de mês/ano
+                  onMonthYearTap:
+                      _showMonthYearPicker, // Abre seletor de mês/ano
                 ),
                 const SizedBox(height: 16),
                 LayoutBuilder(

@@ -476,13 +476,14 @@ class NumerologyEngine {
     final expressao = _calcularNumeroExpressao();
     final motivacao = _calcularNumeroMotivacao();
     final impressao = _calcularNumeroImpressao();
-    final missao = reduceNumber(destino + expressao, mestre: true); // Agora reduzido corretamente
+    final missao = reduceNumber(destino + expressao,
+        mestre: true); // Agora reduzido corretamente
     final talentoOculto = _calcularTalentoOculto(motivacao, expressao);
     final dataNasc = _parseDate(dataNascimento);
     final psiquico = dataNasc != null ? _calcularNumeroPsiquico(dataNasc) : 0;
-    
+
     final harmoniaConjugal = _calcularHarmoniaConjugal(destino, expressao);
-    
+
     return NumerologyResult(
       idade: _calcularIdade(),
       numeros: {
@@ -497,19 +498,21 @@ class NumerologyEngine {
       },
       estruturas: {
         'ciclosDeVida': _calcularCiclosDeVida(destino),
-        'desafios': dataNasc != null ? _calcularDesafios(dataNasc, destino) : {},
-        'momentosDecisivos': dataNasc != null ? _calcularMomentosDecisivos(dataNasc, destino) : {},
+        'desafios':
+            dataNasc != null ? _calcularDesafios(dataNasc, destino) : {},
+        'momentosDecisivos': dataNasc != null
+            ? _calcularMomentosDecisivos(dataNasc, destino)
+            : {},
       },
       listas: {
         'licoesCarmicas': _calcularLicoesCarmicas(),
-        'debitosCarmicos': _calcularDebitosCarmicos(destino, motivacao, expressao),
+        'debitosCarmicos':
+            _calcularDebitosCarmicos(destino, motivacao, expressao),
         'tendenciasOcultas': _calcularTendenciasOcultas(),
         'diasFavoraveis': calcularDiasFavoraveis(), // Expondo para N8n
       },
     );
   }
-
-
 
   final String nomeCompleto;
   final String dataNascimento;
@@ -537,7 +540,8 @@ class NumerologyEngine {
     return n;
   }
 
-  int _reduzirNumero(int n, {bool mestre = false}) => reduceNumber(n, mestre: mestre);
+  int _reduzirNumero(int n, {bool mestre = false}) =>
+      reduceNumber(n, mestre: mestre);
 
   int _calcularValor(String letra) {
     // Implementação simples anterior não suportava diacríticos aumentados; mantemos ajuste mestre.
@@ -1007,7 +1011,8 @@ class NumerologyEngine {
       estruturas: {
         'ciclosDeVida': ciclosDeVida,
         'cicloDeVidaAtual': cicloDeVidaAtual,
-        'harmoniaConjugal': _getHarmoniaConjugalData(harmoniaConjugal), // Full Map structure for dashboard
+        'harmoniaConjugal': _getHarmoniaConjugalData(
+            harmoniaConjugal), // Full Map structure for dashboard
         'desafios': desafios,
         'desafioAtual': desafioAtual,
         'momentosDecisivos': momentosDecisivos,
@@ -1033,8 +1038,9 @@ class NumerologyEngine {
     final anoParaCalculo =
         date.isBefore(aniversarioNoAno) ? date.year - 1 : date.year;
 
-    final anoPessoal =
-        _reduzirNumero(dataNasc.day + dataNasc.month + anoParaCalculo, mestre: true);
+    final anoPessoal = _reduzirNumero(
+        dataNasc.day + dataNasc.month + anoParaCalculo,
+        mestre: true);
     final mesPessoal = _reduzirNumero(anoPessoal + date.month, mestre: true);
     final diaPessoal = _reduzirNumero(
         mesPessoal + _reduzirNumero(date.day, mestre: true),
@@ -1045,31 +1051,77 @@ class NumerologyEngine {
 
   /// Static helper for single-off calculations without instantiating the engine
   static int calculatePersonalDay(DateTime date, String birthDate) {
-    // We create a temporary instance or just duplicate logic. 
-    // Since _reduzirNumero is an instance method (which is weird, should be static), 
+    // We create a temporary instance or just duplicate logic.
+    // Since _reduzirNumero is an instance method (which is weird, should be static),
     // we'll instantiate a temporary engine.
-    final engine = NumerologyEngine(nomeCompleto: '', dataNascimento: birthDate);
+    final engine =
+        NumerologyEngine(nomeCompleto: '', dataNascimento: birthDate);
     return engine.calculatePersonalDayForDate(date);
   }
 
   // === SINCRO MATCH LOGIC (COMPATIBILIDADE) ===
-
 
   // Date compatibility logic moved to HarmonyService
 
   /// Helper to get harmonia conjugal data for dashboard display
   static Map<String, dynamic> _getHarmoniaConjugalData(int harmoniaNum) {
     const tabelaHarmonia = {
-      1: {'vibra': [9], 'atrai': [4, 8], 'oposto': [6, 7], 'passivo': [2, 3, 5]},
-      2: {'vibra': [8], 'atrai': [7, 9], 'oposto': [5], 'passivo': [1, 3, 4, 6]},
-      3: {'vibra': [7], 'atrai': [5, 6, 9], 'oposto': [4, 8], 'passivo': [1, 2]},
-      4: {'vibra': [6], 'atrai': [1, 8], 'oposto': [3, 5], 'passivo': [2, 7, 9]},
-      5: {'vibra': [5], 'atrai': [3, 9], 'oposto': [2, 4, 6], 'passivo': [1, 7, 8]},
-      6: {'vibra': [4], 'atrai': [3, 7, 9], 'oposto': [1, 5, 8], 'passivo': [2]},
-      7: {'vibra': [3], 'atrai': [2, 6], 'oposto': [1, 9], 'passivo': [4, 5, 8]},
-      8: {'vibra': [2], 'atrai': [1, 4], 'oposto': [3, 6], 'passivo': [5, 7, 9]},
-      9: {'vibra': [1], 'atrai': [2, 3, 5, 6], 'oposto': [7], 'passivo': [4, 8]},
+      1: {
+        'vibra': [9],
+        'atrai': [4, 8],
+        'oposto': [6, 7],
+        'passivo': [2, 3, 5]
+      },
+      2: {
+        'vibra': [8],
+        'atrai': [7, 9],
+        'oposto': [5],
+        'passivo': [1, 3, 4, 6]
+      },
+      3: {
+        'vibra': [7],
+        'atrai': [5, 6, 9],
+        'oposto': [4, 8],
+        'passivo': [1, 2]
+      },
+      4: {
+        'vibra': [6],
+        'atrai': [1, 8],
+        'oposto': [3, 5],
+        'passivo': [2, 7, 9]
+      },
+      5: {
+        'vibra': [5],
+        'atrai': [3, 9],
+        'oposto': [2, 4, 6],
+        'passivo': [1, 7, 8]
+      },
+      6: {
+        'vibra': [4],
+        'atrai': [3, 7, 9],
+        'oposto': [1, 5, 8],
+        'passivo': [2]
+      },
+      7: {
+        'vibra': [3],
+        'atrai': [2, 6],
+        'oposto': [1, 9],
+        'passivo': [4, 5, 8]
+      },
+      8: {
+        'vibra': [2],
+        'atrai': [1, 4],
+        'oposto': [3, 6],
+        'passivo': [5, 7, 9]
+      },
+      9: {
+        'vibra': [1],
+        'atrai': [2, 3, 5, 6],
+        'oposto': [7],
+        'passivo': [4, 8]
+      },
     };
-    return tabelaHarmonia[harmoniaNum] ?? {'vibra': [], 'atrai': [], 'oposto': [], 'passivo': []};
+    return tabelaHarmonia[harmoniaNum] ??
+        {'vibra': [], 'atrai': [], 'oposto': [], 'passivo': []};
   }
 }

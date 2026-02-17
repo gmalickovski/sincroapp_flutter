@@ -29,7 +29,7 @@ class ThankYouScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 32),
-              
+
               // Título
               const Text(
                 'Pagamento Confirmado!',
@@ -41,7 +41,7 @@ class ThankYouScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              
+
               // Mensagem Motivacional
               const Text(
                 'Sua jornada de autoconhecimento acaba de ganhar um novo impulso.\nO universo conspira a seu favor quando você decide evoluir.',
@@ -53,13 +53,13 @@ class ThankYouScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 48),
-              
+
               // Botão de Ação
               SizedBox(
                 width: 300,
                 child: ElevatedButton(
                   onPressed: () {
-                    // Boas práticas: Limpar a stack de navegação para evitar 
+                    // Boas práticas: Limpar a stack de navegação para evitar
                     // que o usuário volte para a tela de pagamento/checkout
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       AppRoutes.dashboard,

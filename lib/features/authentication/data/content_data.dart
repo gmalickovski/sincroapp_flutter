@@ -2104,9 +2104,6 @@ class ContentData {
     ),
   };
 
-
-
-
   /// Textos completos de Harmonia Conjugal por número (1–9)
   static const Map<int, String> textosHarmoniaConjugal = {
     1: 'No amor, a pessoa de número 1 é intensa, leal e tende a assumir a liderança na relação. Precisa de um(a) parceiro(a) que admire sua força, mas que também tenha sua própria individualidade, para que não haja uma dinâmica de dominação. Gosta de novidades e detesta a rotina, por isso busca sempre inovar e manter a chama da paixão acesa através de novas experiências.\n\nA independência é crucial, e precisa de seu próprio espaço para se sentir completo(a). A barreira no relacionamento pode surgir do excesso de egocentrismo ou da dificuldade em ceder. Para que a relação floresça, precisa aprender a compartilhar o comando e a ouvir as necessidades do outro com a mesma atenção que dá às suas.',

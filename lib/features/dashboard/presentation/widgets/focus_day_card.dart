@@ -229,7 +229,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
 
   Widget _buildFooter(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween, // Botões nas extremidades
+      mainAxisAlignment:
+          MainAxisAlignment.spaceBetween, // Botões nas extremidades
       children: [
         // Botão Ver Tudo (Esquerda) - Estilo Pílula
         Material(

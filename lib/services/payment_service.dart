@@ -19,7 +19,8 @@ class PaymentService {
   /// Inicializa o Stripe (deve ser chamado no main ou splash)
   static Future<void> initialize() async {
     // TODO: Substituir pela sua Publishable Key do Stripe
-    Stripe.publishableKey = 'pk_test_51SYoC3PxUnpVpxqmeShfUQCAev2DIsGD2X4JMJLJHGMF6nXXzIoN3orUh9ptYZgQTV6nAOHpOVv9k5a9IpFV0xUh0007i5ifDi'; 
+    Stripe.publishableKey =
+        'pk_test_51SYoC3PxUnpVpxqmeShfUQCAev2DIsGD2X4JMJLJHGMF6nXXzIoN3orUh9ptYZgQTV6nAOHpOVv9k5a9IpFV0xUh0007i5ifDi';
     if (!kIsWeb) {
       await Stripe.instance.applySettings();
     }
@@ -27,13 +28,15 @@ class PaymentService {
 
   /// Retorna o Link de Pagamento baseado no plano e ciclo
   String? getPaymentLink(SubscriptionPlan plan, BillingCycle cycle) {
-    if (plan == SubscriptionPlan.plus) { // Desperta
-      return cycle == BillingCycle.monthly 
-          ? StripeConstants.linkDespertaMonthly 
+    if (plan == SubscriptionPlan.plus) {
+      // Desperta
+      return cycle == BillingCycle.monthly
+          ? StripeConstants.linkDespertaMonthly
           : StripeConstants.linkDespertaAnnual;
-    } else if (plan == SubscriptionPlan.premium) { // Sinergia
-      return cycle == BillingCycle.monthly 
-          ? StripeConstants.linkSinergiaMonthly 
+    } else if (plan == SubscriptionPlan.premium) {
+      // Sinergia
+      return cycle == BillingCycle.monthly
+          ? StripeConstants.linkSinergiaMonthly
           : StripeConstants.linkSinergiaAnnual;
     }
     return null;
@@ -50,9 +53,10 @@ class PaymentService {
       final user = Supabase.instance.client.auth.currentUser;
       if (user == null) throw 'Usuário não autenticado';
 
-      const returnUrl = 'https://sincroapp.com.br'; 
+      const returnUrl = 'https://sincroapp.com.br';
       // Use local server or production URL
-      const String baseUrl = kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
+      const String baseUrl =
+          kIsWeb ? 'http://localhost:3000' : 'http://10.0.2.2:3000';
       final url = Uri.parse('$baseUrl/api/stripe/portal-session');
 
       debugPrint('SincroApp: Solicitando portal: $url');
@@ -70,12 +74,12 @@ class PaymentService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final portalUrl = data['url'] as String;
-        
+
         // Abre a URL no navegador
         final uri = Uri.parse(portalUrl);
         if (await canLaunchUrl(uri)) {
           await launchUrl(
-            uri, 
+            uri,
             mode: LaunchMode.externalApplication,
             webOnlyWindowName: '_self',
           );
@@ -84,9 +88,8 @@ class PaymentService {
         }
         debugPrint('Portal URL: $portalUrl');
       } else {
-         throw 'Erro ao abrir portal (${response.statusCode}): ${response.body}';
+        throw 'Erro ao abrir portal (${response.statusCode}): ${response.body}';
       }
-
     } catch (e) {
       debugPrint('Erro ao abrir portal: $e');
       rethrow;
@@ -94,7 +97,8 @@ class PaymentService {
   }
 
   /// Abre o Link de Pagamento no navegador
-  Future<void> launchPaymentLink(SubscriptionPlan plan, BillingCycle cycle, String userId) async {
+  Future<void> launchPaymentLink(
+      SubscriptionPlan plan, BillingCycle cycle, String userId) async {
     final url = getPaymentLink(plan, cycle);
     if (url != null) {
       // Adiciona client_reference_id para identificar o usuário no webhook
@@ -105,7 +109,7 @@ class PaymentService {
       final uri = Uri.parse(finalUrl);
       if (await canLaunchUrl(uri)) {
         await launchUrl(
-          uri, 
+          uri,
           mode: LaunchMode.externalApplication,
           webOnlyWindowName: '_self',
         );

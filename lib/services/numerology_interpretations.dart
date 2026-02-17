@@ -1,5 +1,5 @@
 /// Interpretações numerológicas completas para enriquecer o contexto da IA
-/// 
+///
 /// Este arquivo contém significados, palavras-chave, desafios e características
 /// de cada número na Numerologia Cabalística.
 library;
@@ -39,90 +39,177 @@ class NumerologyInterpretations {
   static const Map<int, Map<String, dynamic>> _interpretations = {
     1: {
       'significado': 'Liderança, independência e pioneirismo',
-      'palavrasChave': ['líder', 'pioneiro', 'independente', 'inovador', 'corajoso'],
+      'palavrasChave': [
+        'líder',
+        'pioneiro',
+        'independente',
+        'inovador',
+        'corajoso'
+      ],
       'desafio': 'Evitar egoísmo e autoritarismo',
       'positivo': ['Iniciativa', 'Coragem', 'Originalidade', 'Determinação'],
       'negativo': ['Egoísmo', 'Teimosia', 'Arrogância', 'Impaciência'],
       'vocacao': ['Empreendedor', 'Líder', 'Inventor', 'Diretor'],
       'relacionamento': 'Precisa de espaço e autonomia, pode ser dominador',
     },
-
     2: {
       'significado': 'Cooperação, diplomacia e sensibilidade',
-      'palavrasChave': ['diplomata', 'cooperativo', 'sensível', 'pacificador', 'parceiro'],
+      'palavrasChave': [
+        'diplomata',
+        'cooperativo',
+        'sensível',
+        'pacificador',
+        'parceiro'
+      ],
       'desafio': 'Evitar dependência emocional e indecisão',
       'positivo': ['Empatia', 'Paciência', 'Tato', 'Colaboração'],
       'negativo': ['Dependência', 'Timidez', 'Indecisão', 'Passividade'],
       'vocacao': ['Mediador', 'Conselheiro', 'Diplomata', 'Assistente'],
       'relacionamento': 'Busca harmonia e parceria, pode ser muito dependente',
     },
-
     3: {
       'significado': 'Criatividade, comunicação e expressão',
-      'palavrasChave': ['criativo', 'comunicativo', 'expressivo', 'otimista', 'social'],
+      'palavrasChave': [
+        'criativo',
+        'comunicativo',
+        'expressivo',
+        'otimista',
+        'social'
+      ],
       'desafio': 'Evitar dispersão e superficialidade',
-      'positivo': ['Criatividade', 'Otimismo', 'Sociabilidade', 'Talento artístico'],
+      'positivo': [
+        'Criatividade',
+        'Otimismo',
+        'Sociabilidade',
+        'Talento artístico'
+      ],
       'negativo': ['Dispersão', 'Superficialidade', 'Fofoca', 'Exagero'],
       'vocacao': ['Artista', 'Comunicador', 'Escritor', 'Entertainer'],
       'relacionamento': 'Alegre e sociável, precisa de variedade e estímulo',
     },
-
     4: {
       'significado': 'Estabilidade, organização e trabalho árduo',
-      'palavrasChave': ['organizado', 'prático', 'disciplinado', 'confiável', 'trabalhador'],
+      'palavrasChave': [
+        'organizado',
+        'prático',
+        'disciplinado',
+        'confiável',
+        'trabalhador'
+      ],
       'desafio': 'Evitar rigidez e excesso de controle',
-      'positivo': ['Disciplina', 'Confiabilidade', 'Praticidade', 'Perseverança'],
+      'positivo': [
+        'Disciplina',
+        'Confiabilidade',
+        'Praticidade',
+        'Perseverança'
+      ],
       'negativo': ['Rigidez', 'Teimosia', 'Limitação', 'Pessimismo'],
       'vocacao': ['Administrador', 'Engenheiro', 'Contador', 'Construtor'],
       'relacionamento': 'Leal e confiável, pode ser rígido e controlador',
     },
-
     5: {
       'significado': 'Liberdade, mudança e experiências',
-      'palavrasChave': ['livre', 'aventureiro', 'versátil', 'curioso', 'adaptável'],
+      'palavrasChave': [
+        'livre',
+        'aventureiro',
+        'versátil',
+        'curioso',
+        'adaptável'
+      ],
       'desafio': 'Evitar instabilidade e irresponsabilidade',
-      'positivo': ['Versatilidade', 'Adaptabilidade', 'Curiosidade', 'Liberdade'],
-      'negativo': ['Instabilidade', 'Irresponsabilidade', 'Inquietação', 'Excesso'],
+      'positivo': [
+        'Versatilidade',
+        'Adaptabilidade',
+        'Curiosidade',
+        'Liberdade'
+      ],
+      'negativo': [
+        'Instabilidade',
+        'Irresponsabilidade',
+        'Inquietação',
+        'Excesso'
+      ],
       'vocacao': ['Viajante', 'Vendedor', 'Promotor', 'Jornalista'],
-      'relacionamento': 'Precisa de liberdade, pode ter dificuldade com compromisso',
+      'relacionamento':
+          'Precisa de liberdade, pode ter dificuldade com compromisso',
     },
-
     6: {
       'significado': 'Responsabilidade, família e harmonia',
-      'palavrasChave': ['responsável', 'amoroso', 'protetor', 'harmonioso', 'conselheiro'],
+      'palavrasChave': [
+        'responsável',
+        'amoroso',
+        'protetor',
+        'harmonioso',
+        'conselheiro'
+      ],
       'desafio': 'Evitar sacrifício excessivo e interferência',
       'positivo': ['Responsabilidade', 'Amor', 'Proteção', 'Harmonia'],
-      'negativo': ['Sacrifício excessivo', 'Interferência', 'Preocupação', 'Possessividade'],
+      'negativo': [
+        'Sacrifício excessivo',
+        'Interferência',
+        'Preocupação',
+        'Possessividade'
+      ],
       'vocacao': ['Conselheiro', 'Professor', 'Enfermeiro', 'Designer'],
       'relacionamento': 'Dedicado e protetor, pode ser possessivo',
     },
-
     7: {
       'significado': 'Sabedoria, introspecção e espiritualidade',
-      'palavrasChave': ['sábio', 'analítico', 'espiritual', 'introspectivo', 'perfeccionista'],
+      'palavrasChave': [
+        'sábio',
+        'analítico',
+        'espiritual',
+        'introspectivo',
+        'perfeccionista'
+      ],
       'desafio': 'Evitar isolamento e frieza emocional',
       'positivo': ['Sabedoria', 'Análise', 'Espiritualidade', 'Intuição'],
       'negativo': ['Isolamento', 'Frieza', 'Ceticismo', 'Distanciamento'],
       'vocacao': ['Pesquisador', 'Filósofo', 'Cientista', 'Terapeuta'],
       'relacionamento': 'Precisa de espaço e profundidade, pode ser distante',
     },
-
     8: {
       'significado': 'Poder, conquista material e ambição',
-      'palavrasChave': ['poderoso', 'ambicioso', 'executivo', 'realizador', 'próspero'],
+      'palavrasChave': [
+        'poderoso',
+        'ambicioso',
+        'executivo',
+        'realizador',
+        'próspero'
+      ],
       'desafio': 'Evitar materialismo e abuso de poder',
-      'positivo': ['Poder', 'Realização', 'Prosperidade', 'Liderança executiva'],
+      'positivo': [
+        'Poder',
+        'Realização',
+        'Prosperidade',
+        'Liderança executiva'
+      ],
       'negativo': ['Materialismo', 'Abuso de poder', 'Workaholism', 'Frieza'],
       'vocacao': ['Executivo', 'Empresário', 'Banqueiro', 'Político'],
       'relacionamento': 'Busca status e poder, pode ser dominador',
     },
-
     9: {
       'significado': 'Humanitarismo, compaixão e finalização',
-      'palavrasChave': ['humanitário', 'compassivo', 'idealista', 'generoso', 'sábio'],
+      'palavrasChave': [
+        'humanitário',
+        'compassivo',
+        'idealista',
+        'generoso',
+        'sábio'
+      ],
       'desafio': 'Evitar dispersão emocional e idealismo excessivo',
-      'positivo': ['Compaixão', 'Generosidade', 'Idealismo', 'Sabedoria universal'],
-      'negativo': ['Dispersão', 'Idealismo excessivo', 'Mártir', 'Impraticidade'],
+      'positivo': [
+        'Compaixão',
+        'Generosidade',
+        'Idealismo',
+        'Sabedoria universal'
+      ],
+      'negativo': [
+        'Dispersão',
+        'Idealismo excessivo',
+        'Mártir',
+        'Impraticidade'
+      ],
       'vocacao': ['Filantropo', 'Artista', 'Conselheiro', 'Líder espiritual'],
       'relacionamento': 'Amoroso e generoso, pode ser emocionalmente disperso',
     },
@@ -376,7 +463,8 @@ class NumerologyInterpretations {
       'oqueMoveVoce': 'O desejo de nutrir e proteger',
     },
     7: {
-      'desejosProfundos': 'Compreender os mistérios da vida e encontrar verdade',
+      'desejosProfundos':
+          'Compreender os mistérios da vida e encontrar verdade',
       'oqueBusca': 'Sabedoria, autoconhecimento e conexão espiritual',
       'necessidadesEmocionais': 'Ter tempo sozinho para refletir',
       'oqueMoveVoce': 'O desejo de compreensão profunda e evolução',

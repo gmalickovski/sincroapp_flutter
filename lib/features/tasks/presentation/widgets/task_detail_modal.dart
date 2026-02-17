@@ -10,7 +10,6 @@ import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dar
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
@@ -18,8 +17,6 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/contact_picker_modal.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_duplicate_modal.dart';
-import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 
 class TaskDetailModal extends StatefulWidget {
   final TaskModel task;
@@ -76,7 +73,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   @override
   void didUpdateWidget(TaskDetailModal oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.task.id != oldWidget.task.id || widget.isNew != oldWidget.isNew) {
+    if (widget.task.id != oldWidget.task.id ||
+        widget.isNew != oldWidget.isNew) {
       _initializeState();
     }
   }
@@ -103,18 +101,19 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     // Calcula offset inicial do lembrete
     if (widget.task.reminderAt != null && widget.task.dueDate != null) {
-        DateTime base = widget.task.dueDate!.toLocal();
-        
-        if (widget.task.reminderTime != null) {
-             base = DateTime(base.year, base.month, base.day, widget.task.reminderTime!.hour, widget.task.reminderTime!.minute);
-        } else {
-             base = DateTime(base.year, base.month, base.day);
-        }
-        
-        _reminderOffset = base.difference(widget.task.reminderAt!.toLocal());
-        if (_reminderOffset!.isNegative) _reminderOffset = null; // Safety
+      DateTime base = widget.task.dueDate!.toLocal();
+
+      if (widget.task.reminderTime != null) {
+        base = DateTime(base.year, base.month, base.day,
+            widget.task.reminderTime!.hour, widget.task.reminderTime!.minute);
+      } else {
+        base = DateTime(base.year, base.month, base.day);
+      }
+
+      _reminderOffset = base.difference(widget.task.reminderAt!.toLocal());
+      if (_reminderOffset!.isNegative) _reminderOffset = null; // Safety
     } else {
-        _reminderOffset = null;
+      _reminderOffset = null;
     }
 
     _recurrenceRule = RecurrenceRule(
@@ -137,7 +136,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     // Listeners are added here, but check if controller was just replaced
     // Since we created a new controller above, we need to add the listener again.
-    // NOTE: If this is called from didUpdateWidget, the old controller is garbage collected eventually? 
+    // NOTE: If this is called from didUpdateWidget, the old controller is garbage collected eventually?
     // Ideally we should dispose the old one if we are replacing it, OR reuse it.
     // For simplicity here (since new task = complete refresh), replacing is safer for state sync.
     _textController.addListener(_checkForChanges);
@@ -145,13 +144,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (widget.task.journeyId != null && widget.task.journeyId!.isNotEmpty) {
       _loadGoalDetails(widget.task.journeyId!);
     } else {
-       _selectedGoal = null; // Clear if new task has no goal
+      _selectedGoal = null; // Clear if new task has no goal
     }
     _updateVibrationInfo(_personalDay);
-    
+
     // Reset change flags
     _hasChanges = false;
-    // But if it's 'isNew', maybe we don't want to reset if we were drafting? 
+    // But if it's 'isNew', maybe we don't want to reset if we were drafting?
     // The requirement is that switching tasks (selection) updates the view.
     // So complete reset is correct.
   }
@@ -235,7 +234,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         !_compareDateTimes(_selectedDateTime, _originalDateTime);
     bool recurrenceChanged = _recurrenceRule != _originalRecurrenceRule;
     bool reminderChanged = _reminderOffset != _originalReminderOffset;
-    bool sharedWithChanged = !_listEquality.equals(_currentSharedWith..sort(), _originalSharedWith..sort()); // NOVO
+    bool sharedWithChanged = !_listEquality.equals(
+        _currentSharedWith..sort(), _originalSharedWith..sort()); // NOVO
 
     bool changes = textChanged ||
         goalChanged ||
@@ -290,8 +290,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     // Calcula reminderAt para a nova tarefa
     DateTime? reminderAt;
     if (finalDueDate != null && _reminderOffset != null) {
-        // finalDueDate já é UTC e contém a hora completa se definida
-        reminderAt = finalDueDate.subtract(_reminderOffset!); 
+      // finalDueDate já é UTC e contém a hora completa se definida
+      reminderAt = finalDueDate.subtract(_reminderOffset!);
     }
 
     final duplicatedTask = TaskModel(
@@ -332,11 +332,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
     } catch (e) {
       if (mounted) {
-         setState(() => _isLoading = false);
-         messenger.showSnackBar(
-           SnackBar(
-               content: Text('Erro ao duplicar: $e'), backgroundColor: Colors.red),
-         );
+        setState(() => _isLoading = false);
+        messenger.showSnackBar(
+          SnackBar(
+              content: Text('Erro ao duplicar: $e'),
+              backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -350,14 +351,17 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
         title: const Text('Confirmar Exclusão',
-            style: TextStyle(fontFamily: 'Poppins',color: AppColors.primaryText)),
+            style:
+                TextStyle(fontFamily: 'Poppins', color: AppColors.primaryText)),
         content: const Text('Tem certeza que deseja excluir esta tarefa?',
-            style: TextStyle(fontFamily: 'Poppins',color: AppColors.secondaryText)),
+            style: TextStyle(
+                fontFamily: 'Poppins', color: AppColors.secondaryText)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancelar',
-                  style: TextStyle(fontFamily: 'Poppins',color: AppColors.secondaryText))),
+                  style: TextStyle(
+                      fontFamily: 'Poppins', color: AppColors.secondaryText))),
           TextButton(
               style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
               onPressed: () => Navigator.pop(ctx, true),
@@ -381,7 +385,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       if (mounted) {
         messenger.showSnackBar(
           const SnackBar(
-              content: Text('Tarefa excluída.'), backgroundColor: Colors.orange),
+              content: Text('Tarefa excluída.'),
+              backgroundColor: Colors.orange),
         );
         _handleClose(); // Close after success
       }
@@ -390,7 +395,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         setState(() => _isLoading = false);
         messenger.showSnackBar(
           SnackBar(
-              content: Text('Erro ao excluir: $e'), backgroundColor: Colors.red),
+              content: Text('Erro ao excluir: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }
@@ -426,9 +432,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     DateTime? reminderAt;
     if (finalDueDateUtc != null && _reminderOffset != null) {
-        DateTime base = _selectedDateTime!.toLocal(); // Usa selecionada com hora (se houver)
-        // Se selectedDateTime não tiver hora mas reminderTime tiver... espera, selectedDateTime CONTÉM a hora se definida
-        reminderAt = base.subtract(_reminderOffset!).toUtc();
+      DateTime base =
+          _selectedDateTime!.toLocal(); // Usa selecionada com hora (se houver)
+      // Se selectedDateTime não tiver hora mas reminderTime tiver... espera, selectedDateTime CONTÉM a hora se definida
+      reminderAt = base.subtract(_reminderOffset!).toUtc();
     }
 
     final Map<String, dynamic> updates = {
@@ -461,7 +468,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         // --- LOGICA DE CRIAÇÃO ---
         final newTask = widget.task.copyWith(
           text: newText,
-          dueDate: finalDueDateUtc, // copyWith handles Object? so we pass directly
+          dueDate:
+              finalDueDateUtc, // copyWith handles Object? so we pass directly
           tags: _currentTags,
           journeyId: _selectedGoal?.id,
           journeyTitle: _selectedGoal?.title,
@@ -472,25 +480,27 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           sharedWith: _currentSharedWith,
           reminderAt: reminderAt,
         );
-        
+
         await _supabaseService.addTask(widget.userData.uid, newTask);
-        
+
         // Se houver meta vinculada, atualizar progresso
         if (_selectedGoal?.id != null) {
-             await _supabaseService.updateGoalProgress(widget.userData.uid, _selectedGoal!.id);
+          await _supabaseService.updateGoalProgress(
+              widget.userData.uid, _selectedGoal!.id);
         }
 
         if (_selectedGoal?.id != null) {
-             await _supabaseService.updateGoalProgress(widget.userData.uid, _selectedGoal!.id);
+          await _supabaseService.updateGoalProgress(
+              widget.userData.uid, _selectedGoal!.id);
         }
 
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(content: Text('Tarefa criada.'), backgroundColor: Colors.green),
-           );
-           _handleClose(); // Close after success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Tarefa criada.'), backgroundColor: Colors.green),
+          );
+          _handleClose(); // Close after success
         }
-
       } else {
         // --- LOGICA DE ATUALIZAÇÃO (existente) ---
         await _supabaseService.updateTaskFields(
@@ -509,20 +519,21 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         }
 
         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             const SnackBar(
-               content: Text('Tarefa atualizada.'), backgroundColor: Colors.green),
-           );
-           _handleClose(); // Close after success
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+                content: Text('Tarefa atualizada.'),
+                backgroundColor: Colors.green),
+          );
+          _handleClose(); // Close after success
         }
       }
     } catch (e) {
       if (mounted) {
-         setState(() => _isLoading = false); // Re-enable UI on error
-         messenger.showSnackBar(
-           SnackBar(
-               content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
-         );
+        setState(() => _isLoading = false); // Re-enable UI on error
+        messenger.showSnackBar(
+          SnackBar(
+              content: Text('Erro ao salvar: $e'), backgroundColor: Colors.red),
+        );
       }
     }
   }
@@ -541,10 +552,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       backgroundColor: Colors.transparent,
       builder: (modalContext) {
         // Verifica se é "meia-noite" (00:00) para tratar como "Dia Inteiro" (sem horário definido)
-        final bool isMidnight = _selectedDateTime != null && 
-            _selectedDateTime!.hour == 0 && 
+        final bool isMidnight = _selectedDateTime != null &&
+            _selectedDateTime!.hour == 0 &&
             _selectedDateTime!.minute == 0;
-            
+
         return ScheduleTaskSheet(
           initialDate: initialPickerDate,
           initialRecurrence: _recurrenceRule,
@@ -552,7 +563,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           initialTime: (_selectedDateTime != null && !isMidnight)
               ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
               : null,
-          initialReminderOffset: _reminderOffset, 
+          initialReminderOffset: _reminderOffset,
           userData: widget.userData,
           goalDeadline: _selectedGoal?.targetDate,
         );
@@ -626,8 +637,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-
-
   void _removeTag(String tagToRemove) {
     if (mounted) {
       setState(() {
@@ -657,7 +666,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (result is Goal) {
       setState(() {
         _selectedGoal = result;
-        _currentSharedWith = []; // Limpa contatos ao selecionar meta (Exclusividade)
+        _currentSharedWith =
+            []; // Limpa contatos ao selecionar meta (Exclusividade)
         _checkForChanges();
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
@@ -672,20 +682,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       builder: (context) => CreateGoalDialog(userData: widget.userData),
     );
     if (result == true && mounted) {
-       // Refresh or handle new goal
-       // Simplification: logic to reload goals usually happens via stream in GoalSelectionModal
+      // Refresh or handle new goal
+      // Simplification: logic to reload goals usually happens via stream in GoalSelectionModal
     }
   }
 
   void _rescheduleTask(DateTime date) {
     if (widget.onReschedule != null) {
       widget.onReschedule!(date);
-      // Opcional: Fechar o modal se for dia diferente? 
+      // Opcional: Fechar o modal se for dia diferente?
       // Por enquanto mantemos aberto para feedback visual ou fechamos se o pai julgar necessário.
     }
   }
-
-
 
   void _confirmDelete() {
     showDialog(
@@ -702,7 +710,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               },
             ),
             TextButton(
-              child: const Text('Excluir', style: TextStyle(fontFamily: 'Poppins',color: Colors.red)),
+              child: const Text('Excluir',
+                  style: TextStyle(fontFamily: 'Poppins', color: Colors.red)),
               onPressed: () {
                 Navigator.of(context).pop();
                 _deleteTask();
@@ -714,8 +723,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-
-
   Widget _buildBottomActions() {
     // Se não houver alterações (e não for nova tarefa), mostra botão "Fechar" ocupando toda a largura
     if (!_hasChanges && !widget.isNew) {
@@ -726,14 +733,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           child: OutlinedButton(
             onPressed: _handleClose,
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: Colors.white, width: 1), // Borda branca
+              side: const BorderSide(
+                  color: Colors.white, width: 1), // Borda branca
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20)),
               padding: const EdgeInsets.symmetric(vertical: 12),
               backgroundColor: Colors.transparent,
             ),
             child: const Text('Fechar',
-                style: TextStyle(fontFamily: 'Poppins',color: Colors.white, fontSize: 16)),
+                style: TextStyle(
+                    fontFamily: 'Poppins', color: Colors.white, fontSize: 16)),
           ),
         ),
       );
@@ -741,21 +750,26 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     // Se houver alterações ou for nova tarefa, mostra "Cancelar" e "Salvar"
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 16), // Alinhado com o padding do corpo (24)
+      padding: const EdgeInsets.fromLTRB(
+          24, 0, 24, 16), // Alinhado com o padding do corpo (24)
       child: Row(
         children: [
           Expanded(
             child: OutlinedButton(
               onPressed: _handleClose,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.white, width: 1), // Borda branca
+                side: const BorderSide(
+                    color: Colors.white, width: 1), // Borda branca
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20)),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 backgroundColor: Colors.transparent,
               ),
               child: const Text('Cancelar',
-                  style: TextStyle(fontFamily: 'Poppins',color: Colors.white, fontSize: 16)),
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      color: Colors.white,
+                      fontSize: 16)),
             ),
           ),
           const SizedBox(width: 12),
@@ -775,7 +789,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       child: CircularProgressIndicator(
                           color: Colors.white, strokeWidth: 2))
                   : Text(widget.isNew ? 'Criar Tarefa' : 'Salvar Alterações',
-                      style: const TextStyle(fontFamily: 'Poppins',fontSize: 16)),
+                      style:
+                          const TextStyle(fontFamily: 'Poppins', fontSize: 16)),
             ),
           ),
         ],
@@ -800,7 +815,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           const SizedBox(width: 8),
           Text(
             text,
-            style: TextStyle(fontFamily: 'Poppins',
+            style: TextStyle(
+                fontFamily: 'Poppins',
                 color: isDestructive ? Colors.red : AppColors.primaryText),
           ),
         ],
@@ -835,131 +851,135 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       },
       behavior: HitTestBehavior.opaque,
       child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: TextFormField(
-                    onChanged: (_) => setState(() {}),
-                    controller: _textController,
-                    autofillHints: const [], 
-                    style: const TextStyle(fontFamily: 'Poppins',
-                        color: AppColors.primaryText,
-                        fontSize: 18,
-                        height: 1.4),
-                    decoration: const InputDecoration(
-                      hintText: 'Descrição da tarefa...',
-                      hintStyle: TextStyle(fontFamily: 'Poppins',color: AppColors.secondaryText),
-                      border: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(vertical: 4.0),
-                      filled: false,
-                      fillColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                    ),
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
+        padding: const EdgeInsets.fromLTRB(24.0, 16.0, 24.0, 24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: TextFormField(
+                onChanged: (_) => setState(() {}),
+                controller: _textController,
+                autofillHints: const [],
+                style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    color: AppColors.primaryText,
+                    fontSize: 18,
+                    height: 1.4),
+                decoration: InputDecoration(
+                  hintText: 'Digite aqui sua tarefa...',
+                  hintStyle: TextStyle(
+                      fontFamily: 'Poppins',
+                      color: AppColors.secondaryText.withOpacity(0.5)),
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 4.0),
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
                 ),
-                const Divider(color: AppColors.border, height: 24),
-                _buildDetailRow(
-                  icon: Icons.calendar_month_outlined,
-                  iconColor: (_selectedDateTime != null || _recurrenceRule.type != RecurrenceType.none)
-                      ? Colors.amber
-                      : AppColors.secondaryText,
-                  valueWidget:
-                      _buildDateTimeRecurrenceSummaryWidget(),
-                  onTap: _selectDateAndTimeRecurrence,
-                  valueColor: (_selectedDateTime != null ||
-                          _recurrenceRule.type != RecurrenceType.none)
-                      ? AppColors.primaryText
-                      : AppColors.secondaryText,
-                  trailingAction: (_selectedDateTime != null ||
-                          _recurrenceRule.type != RecurrenceType.none)
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              size: 20, color: AppColors.secondaryText),
-                          tooltip: 'Remover agendamento',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            if (mounted) {
-                              setState(() {
-                                _selectedDateTime = null;
-                                _recurrenceRule = RecurrenceRule();
-                                _reminderOffset = null;
-                                _personalDay = _calculatePersonalDayForDate(
-                                    DateTime.now());
-                                _updateVibrationInfo(_personalDay);
-                                _checkForChanges();
-                              });
-                            }
-                          },
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 8),
-                _buildDetailRow(
-                  icon: Icons.flag_outlined,
-                  iconColor: _selectedGoal != null ? Colors.cyan : AppColors.secondaryText,
-                  valueWidget: _isLoadingGoal
-                      ? const Align(
-                          alignment: Alignment.centerLeft,
-                          child: CustomLoadingSpinner(size: 20))
-                      : null,
-                  value: _isLoadingGoal
-                      ? null
-                      : (_selectedGoal?.title ?? 'Adicionar à jornada'),
-                  onTap: _selectGoal,
-                  valueColor: _selectedGoal != null
-                      ? AppColors.primaryText
-                      : AppColors.secondaryText,
-                  trailingAction: _selectedGoal != null
-                      ? IconButton(
-                          icon: const Icon(Icons.close_rounded,
-                              size: 20, color: AppColors.secondaryText),
-                          tooltip: 'Desvincular meta',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            if (mounted) {
-                              setState(() {
-                                _selectedGoal = null;
-                                _checkForChanges();
-                              });
-                            }
-                          },
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 8),
-                
-                 // NOVO: Seção de Contatos/Compartilhamento
-                _buildSharedWithSection(),
-
-                const Divider(color: AppColors.border, height: 32),
-                _buildTagsSection(),
-                if (_personalDay > 0 && _dayInfo != null) ...[
-                  const Divider(color: AppColors.border, height: 32),
-                  _buildPersonalDaySection(),
-                ]
-              ],
+                maxLines: null,
+                keyboardType: TextInputType.multiline,
+                textCapitalization: TextCapitalization.sentences,
+              ),
             ),
-          ),
-      );
+            const Divider(color: AppColors.border, height: 24),
+            _buildDetailRow(
+              icon: Icons.calendar_month_outlined,
+              iconColor: (_selectedDateTime != null ||
+                      _recurrenceRule.type != RecurrenceType.none)
+                  ? Colors.amber
+                  : AppColors.secondaryText,
+              valueWidget: _buildDateTimeRecurrenceSummaryWidget(),
+              onTap: _selectDateAndTimeRecurrence,
+              valueColor: (_selectedDateTime != null ||
+                      _recurrenceRule.type != RecurrenceType.none)
+                  ? AppColors.primaryText
+                  : AppColors.secondaryText,
+              trailingAction: (_selectedDateTime != null ||
+                      _recurrenceRule.type != RecurrenceType.none)
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded,
+                          size: 20, color: AppColors.secondaryText),
+                      tooltip: 'Remover agendamento',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        if (mounted) {
+                          setState(() {
+                            _selectedDateTime = null;
+                            _recurrenceRule = RecurrenceRule();
+                            _reminderOffset = null;
+                            _personalDay =
+                                _calculatePersonalDayForDate(DateTime.now());
+                            _updateVibrationInfo(_personalDay);
+                            _checkForChanges();
+                          });
+                        }
+                      },
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 8),
+            _buildDetailRow(
+              icon: Icons.flag_outlined,
+              iconColor:
+                  _selectedGoal != null ? Colors.cyan : AppColors.secondaryText,
+              valueWidget: _isLoadingGoal
+                  ? const Align(
+                      alignment: Alignment.centerLeft,
+                      child: CustomLoadingSpinner(size: 20))
+                  : null,
+              value: _isLoadingGoal
+                  ? null
+                  : (_selectedGoal?.title ?? 'Adicionar à jornada'),
+              onTap: _selectGoal,
+              valueColor: _selectedGoal != null
+                  ? AppColors.primaryText
+                  : AppColors.secondaryText,
+              trailingAction: _selectedGoal != null
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded,
+                          size: 20, color: AppColors.secondaryText),
+                      tooltip: 'Desvincular meta',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () {
+                        if (mounted) {
+                          setState(() {
+                            _selectedGoal = null;
+                            _checkForChanges();
+                          });
+                        }
+                      },
+                    )
+                  : null,
+            ),
+            const SizedBox(height: 8),
+
+            // NOVO: Seção de Contatos/Compartilhamento
+            _buildSharedWithSection(),
+
+            const Divider(color: AppColors.border, height: 32),
+            _buildTagsSection(),
+            if (_personalDay > 0 && _dayInfo != null) ...[
+              const Divider(color: AppColors.border, height: 32),
+              _buildPersonalDaySection(),
+            ]
+          ],
+        ),
+      ),
+    );
 
     final screenWidth = MediaQuery.of(context).size.width;
     final isMobile = screenWidth < 600;
     // Se tiver onClose, assumimos que é embedded (Desktop Right Pane)
-    final isEmbedded = widget.onClose != null; 
+    final isEmbedded = widget.onClose != null;
 
     if (isMobile) {
       return Dialog(
@@ -972,35 +992,35 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               child: SafeArea(child: _buildAppBar(isMobile: true))),
           body: contentBody,
           bottomNavigationBar: SafeArea(
-              child: _buildBottomActions(), // Reuse bottom actions
+            child: _buildBottomActions(), // Reuse bottom actions
           ),
         ),
       );
     }
-    
+
     // Desktop Embedded View (Novo Layout)
     if (isEmbedded) {
-       return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24.0),
-            // (Solicitação: Borda destacada para tarefas atrasadas)
-            border: (widget.task.isOverdue && !widget.task.completed)
-                ? Border.all(color: const Color(0xFFEF5350), width: 1.0)
-                : null,
+      return Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24.0),
+          // (Solicitação: Borda destacada para tarefas atrasadas)
+          border: (widget.task.isOverdue && !widget.task.completed)
+              ? Border.all(color: const Color(0xFFEF5350), width: 1.0)
+              : null,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24.0),
+          child: Scaffold(
+            backgroundColor: AppColors.cardBackground,
+            appBar: PreferredSize(
+              preferredSize: const Size.fromHeight(kToolbarHeight),
+              child: _buildAppBar(isMobile: false),
+            ),
+            body: contentBody,
+            bottomNavigationBar: _buildBottomActions(),
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(24.0),
-            child: Scaffold(
-                backgroundColor: AppColors.cardBackground,
-                appBar: PreferredSize(
-                   preferredSize: const Size.fromHeight(kToolbarHeight),
-                   child: _buildAppBar(isMobile: false),
-                ),
-                body: contentBody,
-                bottomNavigationBar: _buildBottomActions(),
-              ),
-          ),
-       );
+        ),
+      );
     }
 
     // Desktop Dialog View (Legado/Fallback)
@@ -1033,11 +1053,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 Flexible(child: contentBody),
                 // Botões de ação em baixo para Dialog também?
                 Padding(
-                   padding: const EdgeInsets.only(bottom: 16.0), // Padding extra
-                   child: _buildBottomActions(),
-                ), 
+                  padding: const EdgeInsets.only(bottom: 16.0), // Padding extra
+                  child: _buildBottomActions(),
+                ),
               ],
-
             ),
           ),
         ),
@@ -1050,80 +1069,88 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       backgroundColor: Colors.transparent,
       elevation: 0,
       titleSpacing: 0, // Remove default spacing to control padding manually
-      title: Padding(
-        padding: const EdgeInsets.only(left: 24.0), // Match body padding
-        child: Text(
-            widget.isNew
-                ? 'Adicione sua tarefa abaixo'
-                : 'Edite sua tarefa abaixo',
-            style: const TextStyle(fontFamily: 'Poppins',
-                color: AppColors.secondaryText,
-                fontSize: 16,
-                fontWeight: FontWeight.normal)),
-      ),
+      title: widget.isNew
+          ? null // Remove title for new tasks - placeholder in input is sufficient
+          : const Padding(
+              padding: EdgeInsets.only(left: 24.0), // Match body padding
+              child: Text('Edite sua tarefa abaixo',
+                  style: TextStyle(
+                      fontFamily: 'Poppins',
+                      color: AppColors.secondaryText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.normal)),
+            ),
       centerTitle: false,
       automaticallyImplyLeading: false,
       leading: null,
       actions: [
         if (!widget.isNew)
           Padding(
-            padding: const EdgeInsets.only(right: 16.0), // Match body padding (ish)
-            child: PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded,
-                  color: AppColors.secondaryText, size: 24),
-              color: AppColors.cardBackground,
-              elevation: 4,
-              offset: const Offset(0, 40),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16.0),
-                  side: const BorderSide(color: AppColors.border, width: 0.5)),
-              tooltip: "Mais opções",
-              onSelected: (value) {
-                if (value == 'duplicate') {
-                  _duplicateTask();
-                } else if (value == 'delete') {
-                  _confirmDelete();
-                } else if (value == 'today') {
-                  _rescheduleTask(DateTime.now());
-                } else if (value == 'tomorrow') {
-                  _rescheduleTask(DateTime.now().add(const Duration(days: 1)));
-                }
-              },
-              itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-                if (widget.onReschedule != null) ...[
-                  if (widget.task.isOverdue)
-                    PopupMenuItem(
-                      value: 'today',
-                      child: Row(children: [
-                        Icon(Icons.today, color: AppColors.primary, size: 20),
-                        SizedBox(width: 8),
-                        Text('Enviar para Hoje',
-                            style: TextStyle(fontFamily: 'Poppins',color: AppColors.primary))
-                      ]),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: 'tomorrow',
-                      child: Row(children: [
-                        Icon(Icons.event_available,
-                            color: AppColors.secondaryText, size: 20),
-                        SizedBox(width: 8),
-                        Text('Mover para Amanhã')
-                      ]),
-                    ),
+            padding:
+                const EdgeInsets.only(right: 16.0), // Match body padding (ish)
+            child: Theme(
+              data: Theme.of(context).copyWith(
+                popupMenuTheme: PopupMenuThemeData(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: AppColors.border, width: 1)),
+                  color: AppColors.cardBackground,
+                  elevation: 8,
+                ),
+              ),
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert_rounded,
+                    color: AppColors.secondaryText, size: 24),
+                tooltip: "Mais opções",
+                onSelected: (value) {
+                  if (value == 'duplicate') {
+                    _duplicateTask();
+                  } else if (value == 'delete') {
+                    _confirmDelete();
+                  } else if (value == 'today') {
+                    _rescheduleTask(DateTime.now());
+                  } else if (value == 'tomorrow') {
+                    _rescheduleTask(DateTime.now().add(const Duration(days: 1)));
+                  }
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                  if (widget.onReschedule != null) ...[
+                    if (widget.task.isOverdue)
+                      const PopupMenuItem(
+                        value: 'today',
+                        child: Row(children: [
+                          Icon(Icons.today, color: AppColors.primary, size: 20),
+                          SizedBox(width: 8),
+                          Text('Enviar para Hoje',
+                              style: TextStyle(
+                                  fontFamily: 'Poppins',
+                                  color: AppColors.primary))
+                        ]),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'tomorrow',
+                        child: Row(children: [
+                          Icon(Icons.event_available,
+                              color: AppColors.secondaryText, size: 20),
+                          SizedBox(width: 8),
+                          Text('Mover para Amanhã')
+                        ]),
+                      ),
+                    const PopupMenuDivider(height: 1),
+                  ],
+                  _buildPopupMenuItem(
+                      icon: Icons.copy_outlined,
+                      text: 'Duplicar Tarefa',
+                      value: 'duplicate'),
                   const PopupMenuDivider(height: 1),
+                  _buildPopupMenuItem(
+                      icon: Icons.delete_outline_rounded,
+                      text: 'Excluir Tarefa',
+                      value: 'delete',
+                      isDestructive: true),
                 ],
-                _buildPopupMenuItem(
-                    icon: Icons.copy_outlined,
-                    text: 'Duplicar Tarefa',
-                    value: 'duplicate'),
-                const PopupMenuDivider(height: 1),
-                _buildPopupMenuItem(
-                    icon: Icons.delete_outline_rounded,
-                    text: 'Excluir Tarefa',
-                    value: 'delete',
-                    isDestructive: true),
-              ],
+              ),
             ),
           ),
       ],
@@ -1140,7 +1167,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         Flexible(
           child: Text(
             text,
-            style: TextStyle(fontFamily: 'Poppins',color: textColor, fontSize: 15),
+            style: TextStyle(
+                fontFamily: 'Poppins', color: textColor, fontSize: 15),
             overflow: TextOverflow.ellipsis,
           ),
         ),
@@ -1168,31 +1196,34 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   String _getShortRecurrenceText(RecurrenceRule rule) {
     switch (rule.type) {
-      case RecurrenceType.daily: return 'Diariamente';
+      case RecurrenceType.daily:
+        return 'Diariamente';
       case RecurrenceType.weekly:
         if (rule.daysOfWeek.length == 7) return 'Diariamente';
         return 'Semanalmente';
-      case RecurrenceType.monthly: return 'Mensalmente';
-      case RecurrenceType.none: return '';
+      case RecurrenceType.monthly:
+        return 'Mensalmente';
+      case RecurrenceType.none:
+        return '';
     }
   }
 
   String _getReminderText(Duration offset) {
-      if (offset.inMinutes == 0) return "No horário";
-      if (offset.inMinutes < 60) return "${offset.inMinutes} min antes";
-      if (offset.inHours < 24) return "${offset.inHours}h antes";
-      return "${offset.inDays} dias antes";
+    if (offset.inMinutes == 0) return "No horário";
+    if (offset.inMinutes < 60) return "${offset.inMinutes} min antes";
+    if (offset.inHours < 24) return "${offset.inHours}h antes";
+    return "${offset.inDays} dias antes";
   }
 
   Widget _buildDateTimeRecurrenceSummaryWidget() {
     final bool hasDateTime = _selectedDateTime != null;
     final bool hasRecurrence = _recurrenceRule.type != RecurrenceType.none;
     final bool hasReminder = _reminderOffset != null;
-    
+
     final Color color = (hasDateTime || hasRecurrence || hasReminder)
         ? AppColors.primaryText
         : AppColors.secondaryText;
-    
+
     // COR: Laranja/Amber se tiver data
     final Color iconColor = (hasDateTime || hasRecurrence || hasReminder)
         ? Colors.amber
@@ -1201,7 +1232,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (!hasDateTime && !hasRecurrence) {
       return Text(
         "Adicionar data",
-        style: TextStyle(fontFamily: 'Poppins',color: color, fontSize: 15),
+        style: TextStyle(fontFamily: 'Poppins', color: color, fontSize: 15),
       );
     }
 
@@ -1232,14 +1263,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         iconColor,
       ));
     }
-    
+
     if (hasReminder) {
-        children.add(_buildIconText(
-            Icons.notifications_active_outlined,
-            _getReminderText(_reminderOffset!),
-            AppColors.primary, 
-            AppColors.primary,
-        ));
+      children.add(_buildIconText(
+        Icons.notifications_active_outlined,
+        _getReminderText(_reminderOffset!),
+        AppColors.primary,
+        AppColors.primary,
+      ));
     }
 
     return Wrap(
@@ -1270,7 +1301,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           child: valueWidget ??
               Text(
                 value!,
-                style: TextStyle(fontFamily: 'Poppins',color: valueColor, fontSize: 15),
+                style: TextStyle(
+                    fontFamily: 'Poppins', color: valueColor, fontSize: 15),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
@@ -1279,7 +1311,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         if (trailingAction != null)
           trailingAction
         else if (onTap != null)
-          Icon(
+          const Icon(
             Icons.chevron_right_rounded,
             color: AppColors.secondaryText,
             size: 24,
@@ -1310,17 +1342,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   Widget _buildTagsSection() {
     // COR: Roxo para tags se tiver tags
-    final Color tagIconColor = _currentTags.isNotEmpty ? Colors.purpleAccent : AppColors.secondaryText;
-    
+    final Color tagIconColor =
+        _currentTags.isNotEmpty ? Colors.purpleAccent : AppColors.secondaryText;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           Padding(
-            padding: const EdgeInsets.only(top: 8.0, right: 16.0), // Ajuste ALINHAMENTO (antes top: 4.0)
-            child: Icon(Icons.label_outline,
-                color: tagIconColor, size: 20),
+          Padding(
+            padding: const EdgeInsets.only(
+                top: 8.0, right: 16.0), // Ajuste ALINHAMENTO (antes top: 4.0)
+            child: Icon(Icons.label_outline, color: tagIconColor, size: 20),
           ),
           Expanded(
             child: Column(
@@ -1336,7 +1369,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       children: _currentTags
                           .map((tag) => InputChip(
                                 label: Text(tag),
-                                labelStyle: const TextStyle(fontFamily: 'Poppins',
+                                labelStyle: const TextStyle(
+                                    fontFamily: 'Poppins',
                                     color: Colors.purpleAccent,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500),
@@ -1365,13 +1399,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     focusNode: _tagFocusNode,
                     autofillHints: const [], // Prevent browser password save prompt
                     textAlignVertical: TextAlignVertical.top,
-                    style: const TextStyle(fontFamily: 'Poppins',
-                        color: AppColors.secondaryText, fontSize: 14),
+                    style: const TextStyle(
+                        fontFamily: 'Poppins',
+                        color: AppColors.secondaryText,
+                        fontSize: 14),
                     decoration: InputDecoration(
                       hintText: _currentTags.length < 5
                           ? 'Adicionar tag...'
                           : 'Limite de tags atingido',
-                      hintStyle: TextStyle(fontFamily: 'Poppins',
+                      hintStyle: TextStyle(
+                          fontFamily: 'Poppins',
                           color: AppColors.tertiaryText.withValues(alpha: 0.7)),
                       border: InputBorder.none,
                       enabledBorder: InputBorder.none,
@@ -1440,7 +1477,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-
   bool _isLoadingShared = false;
 
   // ... (inside State class)
@@ -1451,7 +1487,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     try {
       final contacts = await _supabaseService.getContacts(widget.userData.uid);
-      
+
       if (!mounted) return;
       setState(() => _isLoadingShared = false);
 
@@ -1470,7 +1506,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 _checkForChanges();
               });
             },
-            onDateChanged: (newDate) {}, 
+            onDateChanged: (newDate) {},
           );
         },
       );
@@ -1479,7 +1515,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         setState(() => _isLoadingShared = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Erro ao carregar contatos.'), 
+              content: Text('Erro ao carregar contatos.'),
               backgroundColor: Colors.red),
         );
       }
@@ -1491,59 +1527,72 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   Widget _buildSharedWithSection() {
     return _buildDetailRow(
       icon: Icons.people_outline_rounded,
-      iconColor: _currentSharedWith.isNotEmpty ? Colors.lightBlueAccent : AppColors.secondaryText,
+      iconColor: _currentSharedWith.isNotEmpty
+          ? Colors.lightBlueAccent
+          : AppColors.secondaryText,
       valueWidget: _isLoadingShared
           ? const Align(
               alignment: Alignment.centerLeft,
               child: SizedBox(
-                  width: 20, 
-                  height: 20, 
-                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondaryText)
-              ),
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.secondaryText)),
             )
           : (_currentSharedWith.isEmpty
-              ? const Text('Adicionar pessoas', style: TextStyle(color: AppColors.secondaryText, fontSize: 15))
+              ? const Text('Adicionar pessoas',
+                  style:
+                      TextStyle(color: AppColors.secondaryText, fontSize: 15))
               : Wrap(
                   spacing: 8.0,
                   runSpacing: 4.0,
                   children: _currentSharedWith.map((username) {
                     return Chip(
                       avatar: CircleAvatar(
-                          backgroundColor: AppColors.primary,
-                          radius: 10,
-                          child: Text(username[0].toUpperCase(), style: const TextStyle(fontSize: 10, color: Colors.white)),
+                        backgroundColor: AppColors.primary,
+                        radius: 10,
+                        child: Text(username[0].toUpperCase(),
+                            style: const TextStyle(
+                                fontSize: 10, color: Colors.white)),
                       ),
                       label: Text(username),
                       labelStyle: const TextStyle(fontSize: 12),
                       backgroundColor: AppColors.cardBackground,
-                      side: BorderSide(color: AppColors.border),
+                      side: const BorderSide(color: AppColors.border),
                       visualDensity: VisualDensity.compact,
                       onDeleted: () {
-                          setState(() {
-                              _currentSharedWith.remove(username);
-                              _checkForChanges();
-                          });
+                        setState(() {
+                          _currentSharedWith.remove(username);
+                          _checkForChanges();
+                        });
                       },
                     );
                   }).toList(),
                 )),
-      onTap: (_selectedGoal != null || _isLoadingShared) ? null : _openContactPicker, 
-      valueColor: _selectedGoal != null 
-          ? AppColors.tertiaryText 
-          : (_currentSharedWith.isNotEmpty ? AppColors.primaryText : AppColors.secondaryText),
-      
-      trailingAction: _selectedGoal != null 
-          ? null 
-          : (_isLoadingShared 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.secondaryText))
+      onTap: (_selectedGoal != null || _isLoadingShared)
+          ? null
+          : _openContactPicker,
+      valueColor: _selectedGoal != null
+          ? AppColors.tertiaryText
+          : (_currentSharedWith.isNotEmpty
+              ? AppColors.primaryText
+              : AppColors.secondaryText),
+      trailingAction: _selectedGoal != null
+          ? null
+          : (_isLoadingShared
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: AppColors.secondaryText))
               : (_currentSharedWith.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.add_circle_outline_rounded, size: 20, color: AppColors.secondaryText),
+                      icon: const Icon(Icons.add_circle_outline_rounded,
+                          size: 20, color: AppColors.secondaryText),
                       onPressed: _openContactPicker,
                       tooltip: 'Gerenciar pessoas',
-                  )
+                    )
                   : null)),
     );
   }
 }
-

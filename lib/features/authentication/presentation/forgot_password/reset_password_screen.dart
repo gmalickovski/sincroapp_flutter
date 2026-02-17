@@ -50,7 +50,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       // The user should be authenticated via the recovery link (Magic Link) session.
       // We explicitly update the user's password.
       final user = Supabase.instance.client.auth.currentUser;
-      
+
       if (user == null) {
         throw 'Usuário não autenticado. Tente solicitar a redefinição novamente.';
       }
@@ -68,12 +68,12 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (mounted) {
         String message = 'Erro ao redefinir senha.';
         // if (e is FirebaseFunctionsException) ... removed
-        
+
         // Supabase specific error handling or generic
         if (e is AuthException) {
-           message = e.message;
+          message = e.message;
         } else if (e is String) {
-           message = e;
+          message = e;
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -115,7 +115,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.login),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed(AppRoutes.login),
                 child: const Text('Ir para Login'),
               ),
             ],
@@ -130,7 +131,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         title: const Text('Redefinir Senha'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        automaticallyImplyLeading: false, // Não permite voltar se veio do link direto
+        automaticallyImplyLeading:
+            false, // Não permite voltar se veio do link direto
       ),
       body: Center(
         child: ConstrainedBox(
@@ -168,13 +170,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             decoration: InputDecoration(
               labelText: 'Nova Senha',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.lock_outline,
+                  color: AppColors.secondaryText),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   color: AppColors.secondaryText,
                 ),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -203,13 +209,17 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
             decoration: InputDecoration(
               labelText: 'Confirmar Senha',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.lock_outline,
+                  color: AppColors.secondaryText),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscureConfirm
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   color: AppColors.secondaryText,
                 ),
-                onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
+                onPressed: () =>
+                    setState(() => _obscureConfirm = !_obscureConfirm),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -241,7 +251,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 ? const CustomLoadingSpinner(size: 24)
                 : const Text(
                     'Redefinir Senha',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   ),
           ),
         ],
@@ -272,7 +285,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: () => Navigator.of(context).pushReplacementNamed(AppRoutes.login),
+          onPressed: () =>
+              Navigator.of(context).pushReplacementNamed(AppRoutes.login),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             backgroundColor: AppColors.primary,

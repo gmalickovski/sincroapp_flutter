@@ -21,11 +21,13 @@ class AppColors {
   static const Color goalTaskMarker = Color(0xFFEC4899); // pink-500
   static const Color journalMarker = Color(0xFF14B8A6); // teal-500
   static const Color success = Color(0xFF10B981); // green-500
-  
+
   // Cores para modais de IA
-  static const Color harmonyPink = Color(0xFFEC4899); // pink-500 (Harmonia Conjugal)
-  static const Color professionCyan = Color(0xFF06B6D4); // cyan-500 (Aptidões Profissionais)
-  
+  static const Color harmonyPink =
+      Color(0xFFEC4899); // pink-500 (Harmonia Conjugal)
+  static const Color professionCyan =
+      Color(0xFF06B6D4); // cyan-500 (Aptidões Profissionais)
+
   // Cor para sistema de compartilhamento/contatos
   static const Color contact = Color(0xFF64B5F6); // light-blue-400 (azul claro)
 }

@@ -92,16 +92,16 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  _buildHeader(),
-                  const SizedBox(height: 12),
-                  widget.goals.isEmpty
-                      ? _buildEmptyState()
-                      : _buildCarousel(context),
-                  const SizedBox(height: 12),
-                  _buildFooter(context),
-                ],
+                    _buildHeader(),
+                    const SizedBox(height: 12),
+                    widget.goals.isEmpty
+                        ? _buildEmptyState()
+                        : _buildCarousel(context),
+                    const SizedBox(height: 12),
+                    _buildFooter(context),
+                  ],
+                ),
               ),
-            ),
               // Controles de navegação (somente Desktop e quando há mais de 1 meta)
               if (!widget.isEditMode && isDesktop && widget.goals.length > 1)
                 Positioned.fill(
@@ -201,19 +201,19 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-           Icon(Icons.flag_outlined, color: AppColors.primary, size: 20),
-           SizedBox(width: 8),
-           Flexible(
-             child: Text(
-               'Metas',
-               style: TextStyle(
-                 color: AppColors.primaryText,
-                 fontSize: 18,
-                 fontWeight: FontWeight.bold,
-               ),
-               overflow: TextOverflow.ellipsis,
-             ),
-           ),
+          Icon(Icons.flag_outlined, color: AppColors.primary, size: 20),
+          SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              'Metas',
+              style: TextStyle(
+                color: AppColors.primaryText,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -317,7 +317,8 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
 
   Widget _buildFooter(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween, // Botões nas extremidades
+      mainAxisAlignment:
+          MainAxisAlignment.spaceBetween, // Botões nas extremidades
       children: [
         // Botão Ver Tudo (Esquerda) - Estilo Pílula
         Material(
@@ -391,14 +392,17 @@ class _GoalItemWidgetState extends State<GoalItemWidget> {
   @override
   void initState() {
     super.initState();
-    _tasksStream = SupabaseService().getTasksForGoalStream(widget.userId, widget.goal.id);
+    _tasksStream =
+        SupabaseService().getTasksForGoalStream(widget.userId, widget.goal.id);
   }
 
   @override
   void didUpdateWidget(covariant GoalItemWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.goal.id != oldWidget.goal.id || widget.userId != oldWidget.userId) {
-      _tasksStream = SupabaseService().getTasksForGoalStream(widget.userId, widget.goal.id);
+    if (widget.goal.id != oldWidget.goal.id ||
+        widget.userId != oldWidget.userId) {
+      _tasksStream = SupabaseService()
+          .getTasksForGoalStream(widget.userId, widget.goal.id);
     }
   }
 
@@ -406,7 +410,7 @@ class _GoalItemWidgetState extends State<GoalItemWidget> {
   Widget build(BuildContext context) {
     // Debug: Verificar data alvo recebida do modelo
     // debugPrint('GoalsProgressCard: Meta "${widget.goal.title}" - targetDate: ${widget.goal.targetDate}');
-    
+
     // Calcula progresso em tempo real a partir das tasks da meta
     return StreamBuilder<List<TaskModel>>(
       stream: _tasksStream,
@@ -457,7 +461,9 @@ class _GoalItemWidgetState extends State<GoalItemWidget> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  widget.goal.description.isEmpty ? 'Sem descrição' : widget.goal.description,
+                  widget.goal.description.isEmpty
+                      ? 'Sem descrição'
+                      : widget.goal.description,
                   style: TextStyle(
                     color: widget.goal.description.isEmpty
                         ? AppColors.tertiaryText.withValues(alpha: 0.5)
@@ -475,7 +481,6 @@ class _GoalItemWidgetState extends State<GoalItemWidget> {
       },
     );
   }
-
 }
 
 // ===================== WIDGETS DE APOIO =====================

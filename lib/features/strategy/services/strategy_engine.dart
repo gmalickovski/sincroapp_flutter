@@ -15,7 +15,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "The One Thing",
-          reason: "Dia de novos inícios e liderança. A energia está alta para começar, mas dispersão pode ser fatal.",
+          reason:
+              "Dia de novos inícios e liderança. A energia está alta para começar, mas dispersão pode ser fatal.",
           tips: [
             "Escolha APENAS UMA grande meta para hoje.",
             "Evite multitarefa. Comece o que é mais importante.",
@@ -26,7 +27,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Gestão Emocional / Pomodoro Suave",
-          reason: "Dia de parcerias e paciência. As coisas podem andar mais devagar. Não force a barra.",
+          reason:
+              "Dia de parcerias e paciência. As coisas podem andar mais devagar. Não force a barra.",
           tips: [
             "Trabalhe em colaboração, não isolado.",
             "Use a intuição para decidir o timing das ações.",
@@ -37,7 +39,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.grounding,
           methodologyName: "GTD (Getting Things Done)",
-          reason: "Dia de criatividade e comunicação. Sua mente estará cheia de ideias, o que pode gerar ansiedade.",
+          reason:
+              "Dia de criatividade e comunicação. Sua mente estará cheia de ideias, o que pode gerar ansiedade.",
           tips: [
             "Tire tudo da cabeça: anote cada ideia imediatamente.",
             "Faça listas antes de agir.",
@@ -48,7 +51,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "Deep Work (Trabalho Focado)",
-          reason: "Dia de trabalho duro, ordem e construção. A energia pede disciplina e rotina.",
+          reason:
+              "Dia de trabalho duro, ordem e construção. A energia pede disciplina e rotina.",
           tips: [
             "Organize seu espaço físico antes de começar.",
             "Siga um cronograma rígido hoje.",
@@ -59,7 +63,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.grounding,
           methodologyName: "Gestão de Imprevistos",
-          reason: "Dia de mudanças e liberdade. O inesperado vai acontecer. Rigidez vai te quebrar.",
+          reason:
+              "Dia de mudanças e liberdade. O inesperado vai acontecer. Rigidez vai te quebrar.",
           tips: [
             "Deixe espaços vazios na agenda para imprevistos.",
             "Seja flexível. Se o plano mudar, adapte-se rápido.",
@@ -70,7 +75,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Harmonia & Responsabilidade",
-          reason: "Dia voltado para família, casa e responsabilidades. O foco está nas pessoas, não nas tarefas.",
+          reason:
+              "Dia voltado para família, casa e responsabilidades. O foco está nas pessoas, não nas tarefas.",
           tips: [
             "Resolva pendências domésticas ou familiares primeiro.",
             "Trabalhe em um ambiente harmonioso e bonito.",
@@ -81,7 +87,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.rescue,
           methodologyName: "Mini Habits (Mini Hábitos)",
-          reason: "Dia de introspecção e análise. A energia física pode estar baixa. Não se cobre produtividade excessiva.",
+          reason:
+              "Dia de introspecção e análise. A energia física pode estar baixa. Não se cobre produtividade excessiva.",
           tips: [
             "Faça o mínimo essencial. Metas ridículas (ex: 'ler 1 página').",
             "Tire tempo para ficar sozinho e pensar.",
@@ -92,7 +99,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.focus,
           methodologyName: "Execução de Alto Impacto",
-          reason: "Dia de poder e resultados materiais. É hora de colher o que plantou e focar no lucro/sucesso.",
+          reason:
+              "Dia de poder e resultados materiais. É hora de colher o que plantou e focar no lucro/sucesso.",
           tips: [
             "Foque nas tarefas que trazem retorno financeiro ou visibilidade.",
             "Comporte-se como um executivo: delegue o que puder.",
@@ -103,7 +111,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.flow,
           methodologyName: "Limpeza & Conclusão",
-          reason: "Dia de encerramentos. Não comece nada novo. Termine o que está pendente e limpe o terreno.",
+          reason:
+              "Dia de encerramentos. Não comece nada novo. Termine o que está pendente e limpe o terreno.",
           tips: [
             "Faça uma faxina (física ou digital).",
             "Termine tarefas pendentes há tempos.",
@@ -115,7 +124,8 @@ class StrategyEngine {
         return const StrategyRecommendation(
           mode: StrategyMode.rescue,
           methodologyName: "Gestão de Energia (Mestre)",
-          reason: "Dia Mestre. Alta voltagem espiritual e nervosa. Grande potencial, mas risco de burnout.",
+          reason:
+              "Dia Mestre. Alta voltagem espiritual e nervosa. Grande potencial, mas risco de burnout.",
           tips: [
             "Mantenha os pés no chão. Respire fundo.",
             "Use sua intuição para guiar grandes visões.",
@@ -159,11 +169,12 @@ class StrategyEngine {
       );
     }
 
-  // 3. Circuit Breaker: Check daily API call limit
+    // 3. Circuit Breaker: Check daily API call limit
     final apiCallCount = await _getApiCallCount(user.uid);
     // 🚀 RESTRICTION: Limit to 1 call per day to control costs/tokens
     if (apiCallCount >= 1) {
-      debugPrint("⚠️ Circuit Breaker: Daily limit reached for Strategy N8N (1/day). Returning base/cached.");
+      debugPrint(
+          "⚠️ Circuit Breaker: Daily limit reached for Strategy N8N (1/day). Returning base/cached.");
       return StrategyRecommendation(
         mode: base.mode,
         reason: base.reason,
@@ -178,12 +189,14 @@ class StrategyEngine {
       // Increment counter BEFORE calling to prevent race conditions
       await _incrementApiCallCount(user.uid);
 
-      final tasksCompact = tasks.map((t) => {
-          'title': t.text,
-          'dueDate': t.dueDate?.toIso8601String().split('T').first,
-          'hasTime': t.reminderTime != null,
-          'isGoal': t.journeyId != null,
-        }).toList();
+      final tasksCompact = tasks
+          .map((t) => {
+                'title': t.text,
+                'dueDate': t.dueDate?.toIso8601String().split('T').first,
+                'hasTime': t.reminderTime != null,
+                'isGoal': t.journeyId != null,
+              })
+          .toList();
 
       final suggestions = await StrategyN8NService.fetchStrategyRecommendation(
         user: user,
@@ -221,7 +234,8 @@ class StrategyEngine {
     return "strategy_cache_${userId}_$dateStr";
   }
 
-  static Future<List<String>?> _getCachedStrategy(String userId, int personalDay) async {
+  static Future<List<String>?> _getCachedStrategy(
+      String userId, int personalDay) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = _getCacheKey(userId);
@@ -232,7 +246,8 @@ class StrategyEngine {
     }
   }
 
-  static Future<void> _cacheStrategy(String userId, int personalDay, List<String> suggestions) async {
+  static Future<void> _cacheStrategy(
+      String userId, int personalDay, List<String> suggestions) async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final key = _getCacheKey(userId);

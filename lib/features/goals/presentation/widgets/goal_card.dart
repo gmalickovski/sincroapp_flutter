@@ -82,7 +82,8 @@ class _GoalCardState extends State<GoalCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // 1. Slim Header Image (Edge-to-Edge)
-                    if (widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty)
+                    if (widget.goal.imageUrl != null &&
+                        widget.goal.imageUrl!.isNotEmpty)
                       SizedBox(
                         height: 60, // Slim header
                         width: double.infinity,
@@ -94,11 +95,12 @@ class _GoalCardState extends State<GoalCard> {
                           child: Image.network(
                             widget.goal.imageUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (ctx, _, __) => Container(color: AppColors.cardBackground),
+                            errorBuilder: (ctx, _, __) =>
+                                Container(color: AppColors.cardBackground),
                           ),
                         ),
                       ),
-    
+
                     // 2. Content with Padding
                     Padding(
                       padding: const EdgeInsets.all(20.0),
@@ -114,11 +116,13 @@ class _GoalCardState extends State<GoalCard> {
                               : widget.goal.subTasks.length;
                           final int done = tasks.isNotEmpty
                               ? tasks.where((t) => t.completed).length
-                              : widget.goal.subTasks.where((t) => t.isCompleted).length;
+                              : widget.goal.subTasks
+                                  .where((t) => t.isCompleted)
+                                  .length;
                           final double percent = total > 0
                               ? (done / total).clamp(0.0, 1.0)
                               : (widget.goal.progress / 100).clamp(0.0, 1.0);
-    
+
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
@@ -152,12 +156,13 @@ class _GoalCardState extends State<GoalCard> {
                                   ],
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 24),
-    
+
                               // Footer: Date + Percent + Progress Bar
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   if (widget.goal.targetDate != null)
                                     _buildDateBadge(widget.goal.targetDate!)
@@ -178,7 +183,8 @@ class _GoalCardState extends State<GoalCard> {
                                 borderRadius: BorderRadius.circular(4),
                                 child: LinearProgressIndicator(
                                   value: percent,
-                                  backgroundColor: AppColors.border.withValues(alpha: 0.3),
+                                  backgroundColor:
+                                      AppColors.border.withValues(alpha: 0.3),
                                   color: AppColors.primary,
                                   minHeight: 6,
                                 ),
@@ -190,7 +196,7 @@ class _GoalCardState extends State<GoalCard> {
                     ),
                   ],
                 ),
-                
+
                 // Menu Button (Absolute Top Right)
                 if (widget.onDelete != null || widget.onEdit != null)
                   Positioned(
@@ -216,8 +222,7 @@ class _GoalCardState extends State<GoalCard> {
                                     color: Colors.white, size: 18),
                                 SizedBox(width: 8),
                                 Text('Editar',
-                                    style:
-                                        TextStyle(color: Colors.white)),
+                                    style: TextStyle(color: Colors.white)),
                               ],
                             ),
                           ));
@@ -231,8 +236,7 @@ class _GoalCardState extends State<GoalCard> {
                                     color: Colors.redAccent, size: 18),
                                 SizedBox(width: 8),
                                 Text('Excluir',
-                                    style:
-                                        TextStyle(color: Colors.white)),
+                                    style: TextStyle(color: Colors.white)),
                               ],
                             ),
                           ));
@@ -259,8 +263,18 @@ class _GoalCardState extends State<GoalCard> {
 
   Widget _buildDateBadge(DateTime date) {
     final months = [
-      'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'
+      'Jan',
+      'Fev',
+      'Mar',
+      'Abr',
+      'Mai',
+      'Jun',
+      'Jul',
+      'Ago',
+      'Set',
+      'Out',
+      'Nov',
+      'Dez'
     ];
     final formattedDate =
         '${date.day.toString().padLeft(2, '0')} ${months[date.month - 1]} ${date.year}';
@@ -275,7 +289,8 @@ class _GoalCardState extends State<GoalCard> {
         mainAxisSize: MainAxisSize.min,
         children: [
           const Icon(Icons.flag, // Using flag like screenshot
-              color: Color(0xFF8B5CF6), size: 16), // Use a nice purple
+              color: Color(0xFF8B5CF6),
+              size: 16), // Use a nice purple
           const SizedBox(width: 8),
           Text(
             formattedDate,

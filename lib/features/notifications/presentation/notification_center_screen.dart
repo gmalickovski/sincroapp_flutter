@@ -5,7 +5,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:intl/intl.dart';
-import 'package:sincro_app_flutter/features/notifications/presentation/widgets/compatibility_suggestion_modal.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/notification_detail_modal.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/update_detail_modal.dart'; // NOVO import
 import 'package:package_info_plus/package_info_plus.dart'; // NOVO
@@ -19,15 +18,16 @@ class NotificationCenterScreen extends StatefulWidget {
   const NotificationCenterScreen({super.key, required this.userId});
 
   @override
-  State<NotificationCenterScreen> createState() => _NotificationCenterScreenState();
+  State<NotificationCenterScreen> createState() =>
+      _NotificationCenterScreenState();
 }
 
 class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   final SupabaseService _supabaseService = SupabaseService();
-  
+
   // State
   String _selectedFilter = 'all'; // all, invites, tasks, system
-  Set<String> _selectedIds = {};
+  final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
 
   // Update State
@@ -48,12 +48,13 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       final localVersion = packageInfo.version;
 
       // 2. Get Remote Version
-      final baseUrl = dotenv.env['API_BASE_URL'] ?? 'http://localhost:3000'; // Fallback for dev
+      final baseUrl = dotenv.env['API_BASE_URL'] ??
+          'http://localhost:3000'; // Fallback for dev
       // Adjust for Android Emulator if needed
       final apiUrl = Uri.parse('$baseUrl/api/version');
-      
+
       final response = await http.get(apiUrl);
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final remoteVersion = data['version'] as String;
@@ -61,13 +62,13 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
         // Simple semantic version comparison logic
         if (_isNewerVersion(localVersion, remoteVersion)) {
-           if (mounted) {
-             setState(() {
-               _updateAvailable = true;
-               _remoteVersion = remoteVersion;
-               _changelog = notes;
-             });
-           }
+          if (mounted) {
+            setState(() {
+              _updateAvailable = true;
+              _remoteVersion = remoteVersion;
+              _changelog = notes;
+            });
+          }
         }
       }
     } catch (e) {
@@ -79,7 +80,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     try {
       List<int> lParts = local.split('.').map(int.parse).toList();
       List<int> rParts = remote.split('.').map(int.parse).toList();
-      
+
       for (int i = 0; i < 3; i++) {
         int l = i < lParts.length ? lParts[i] : 0;
         int r = i < rParts.length ? rParts[i] : 0;
@@ -88,7 +89,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       }
       return false;
     } catch (e) {
-      return false; 
+      return false;
     }
   }
 
@@ -148,7 +149,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width >= 720;
-    
+
     final content = Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -167,38 +168,45 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   if (snapshot.hasError) {
                     // Ignorar erros de conexão temporários (resume do app)
                     final errorMsg = snapshot.error.toString();
-                    if (errorMsg.contains('RealtimeSubscribeException') || 
-                        errorMsg.contains('WebSocket') || 
+                    if (errorMsg.contains('RealtimeSubscribeException') ||
+                        errorMsg.contains('WebSocket') ||
                         errorMsg.contains('Channel')) {
-                       // Se tiver dados anteriores, mantém. Se não, mostra "Conectando..."
-                       if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                          // Mantém o fluxo normal, talvez mostrar um SnackBar aviso?
-                          // Por enquanto, apenas logar e não quebrar a UI
-                          debugPrint('⚠️ [NotificationCenter] Erro de conexão silencioso: $errorMsg');
-                       } else {
-                          return Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.wifi_off_rounded, size: 48, color: AppColors.tertiaryText),
-                                const SizedBox(height: 16),
-                                const Text('Tentando reconectar...', style: TextStyle(color: AppColors.secondaryText)),
-                                TextButton(
-                                  onPressed: () => setState(() {}), 
-                                  child: const Text('Tentar agora', style: TextStyle(color: AppColors.primary))
-                                ),
-                              ],
-                            ),
-                          );
-                       }
+                      // Se tiver dados anteriores, mantém. Se não, mostra "Conectando..."
+                      if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                        // Mantém o fluxo normal, talvez mostrar um SnackBar aviso?
+                        // Por enquanto, apenas logar e não quebrar a UI
+                        debugPrint(
+                            '⚠️ [NotificationCenter] Erro de conexão silencioso: $errorMsg');
+                      } else {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.wifi_off_rounded,
+                                  size: 48, color: AppColors.tertiaryText),
+                              const SizedBox(height: 16),
+                              const Text('Tentando reconectar...',
+                                  style: TextStyle(
+                                      color: AppColors.secondaryText)),
+                              TextButton(
+                                  onPressed: () => setState(() {}),
+                                  child: const Text('Tentar agora',
+                                      style:
+                                          TextStyle(color: AppColors.primary))),
+                            ],
+                          ),
+                        );
+                      }
                     } else {
-                       return Center(child: Text('Erro: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
+                      return Center(
+                          child: Text('Erro: ${snapshot.error}',
+                              style: const TextStyle(color: Colors.red)));
                     }
                   }
-                  
+
                   final allNotifications = snapshot.data ?? [];
                   final filtered = _filterNotifications(allNotifications);
-                  
+
                   if (filtered.isEmpty) {
                     return _buildEmptyState();
                   }
@@ -209,14 +217,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final notif = filtered[index];
-                      
+
                       // Auto-marcar como lida se for notificação simples (sem ação de aceite)
                       if (!notif.isRead && _isSimpleNotification(notif.type)) {
-                         WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) { 
-                               _supabaseService.markNotificationAsRead(notif.id);
-                            }
-                         });
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            _supabaseService.markNotificationAsRead(notif.id);
+                          }
+                        });
                       }
 
                       return _NotificationTile(
@@ -231,7 +239,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                           }
                         },
                         onLongPress: () => _toggleSelectionMode(notif.id),
-                        onDelete: () => _deleteNotification(notif.id), // New callback
+                        onDelete: () =>
+                            _deleteNotification(notif.id), // New callback
                       );
                     },
                   );
@@ -245,37 +254,39 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     );
 
     if (isDesktop) {
-       return Dialog(
-         backgroundColor: AppColors.cardBackground,
-         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-         child: SizedBox(
-           width: 500,
-           height: 700,
-           child: ClipRRect(
-             borderRadius: BorderRadius.circular(16),
-             child: content,
-           ),
-         ),
-       );
+      return Dialog(
+        backgroundColor: AppColors.cardBackground,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: SizedBox(
+          width: 500,
+          height: 700,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: content,
+          ),
+        ),
+      );
     }
-    
+
     return content;
   }
 
   Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16.0),
-      color: _isSelectionMode ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+      color: _isSelectionMode
+          ? AppColors.primary.withOpacity(0.1)
+          : Colors.transparent,
       child: Row(
         children: [
           if (_isSelectionMode)
-             IconButton(
-               icon: const Icon(Icons.close, color: Colors.white),
-               onPressed: () => setState(() {
-                 _isSelectionMode = false;
-                 _selectedIds.clear();
-               }),
-             )
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => setState(() {
+                _isSelectionMode = false;
+                _selectedIds.clear();
+              }),
+            )
           else
             IconButton(
               icon: const Icon(Icons.close, color: AppColors.tertiaryText),
@@ -283,13 +294,17 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             ),
           const SizedBox(width: 8),
           Text(
-            _isSelectionMode ? '${_selectedIds.length} selecionadas' : 'Notificações',
-            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+            _isSelectionMode
+                ? '${_selectedIds.length} selecionadas'
+                : 'Notificações',
+            style: const TextStyle(
+                color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           if (!_isSelectionMode)
             IconButton(
-              icon: const Icon(Icons.checklist_rounded, color: AppColors.secondaryText),
+              icon: const Icon(Icons.checklist_rounded,
+                  color: AppColors.secondaryText),
               tooltip: 'Selecionar',
               onPressed: () => _toggleSelectionMode(null),
             )
@@ -303,7 +318,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   _selectedIds.clear();
                 });
               },
-              child: const Text('Cancelar', style: TextStyle(color: Colors.white70)),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: Colors.white70)),
             ),
         ],
       ),
@@ -366,12 +382,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         children: [
           TextButton.icon(
             icon: const Icon(Icons.mark_email_read, color: Colors.white),
-            label: const Text('Marcar Lida', style: TextStyle(color: Colors.white)),
+            label: const Text('Marcar Lida',
+                style: TextStyle(color: Colors.white)),
             onPressed: _selectedIds.isEmpty ? null : _markSelectedAsRead,
           ),
           TextButton.icon(
             icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            label: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+            label: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
             onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
           ),
         ],
@@ -384,7 +402,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.notifications_off_outlined, size: 64, color: AppColors.tertiaryText.withOpacity(0.5)),
+          Icon(Icons.notifications_off_outlined,
+              size: 64, color: AppColors.tertiaryText.withOpacity(0.5)),
           const SizedBox(height: 16),
           const Text(
             'Nenhuma notificação encontrada',
@@ -395,42 +414,44 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     );
   }
 
-  List<NotificationModel> _filterNotifications(List<NotificationModel> notifications) {
+  List<NotificationModel> _filterNotifications(
+      List<NotificationModel> notifications) {
     if (_selectedFilter == 'all') return notifications;
-    
+
     return notifications.where((n) {
       if (_selectedFilter == 'invites') {
-        return n.type == NotificationType.contactRequest || 
-               n.type == NotificationType.taskInvite || 
-               n.type == NotificationType.sincroAlert;
+        return n.type == NotificationType.contactRequest ||
+            n.type == NotificationType.taskInvite ||
+            n.type == NotificationType.sincroAlert;
       }
       if (_selectedFilter == 'tasks') {
-        return n.type == NotificationType.taskUpdate || 
-               n.type == NotificationType.reminder;
+        return n.type == NotificationType.taskUpdate ||
+            n.type == NotificationType.reminder;
       }
       if (_selectedFilter == 'system') {
-        return n.type == NotificationType.system || 
-               n.type == NotificationType.mention ||
-               n.type == NotificationType.share ||
-               n.type == NotificationType.contactAccepted; // Confirmações
+        return n.type == NotificationType.system ||
+            n.type == NotificationType.mention ||
+            n.type == NotificationType.share ||
+            n.type == NotificationType.contactAccepted; // Confirmações
       }
       return true;
     }).toList();
   }
 
-  void _handleNotificationTap(BuildContext context, NotificationModel notification) {
+  void _handleNotificationTap(
+      BuildContext context, NotificationModel notification) {
     if (!notification.isRead) {
       _supabaseService.markNotificationAsRead(notification.id);
     }
-    
+
     // Notificações informativas (não clicáveis) - apenas marcar como lida
     if (notification.type == NotificationType.contactAccepted ||
         notification.type == NotificationType.system) {
       return; // Não abrir modal
     }
-    
+
     // Notificações com ação
-    if (notification.type == NotificationType.contactRequest || 
+    if (notification.type == NotificationType.contactRequest ||
         notification.type == NotificationType.taskInvite ||
         notification.type == NotificationType.taskUpdate ||
         notification.type == NotificationType.sincroAlert) {
@@ -438,18 +459,19 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         context: context,
         isScrollControlled: true,
         backgroundColor: Colors.transparent,
-        builder: (context) => NotificationDetailModal(notification: notification),
+        builder: (context) =>
+            NotificationDetailModal(notification: notification),
       );
     }
   }
 
   bool _isSimpleNotification(NotificationType type) {
     return type == NotificationType.system ||
-           type == NotificationType.mention ||
-           type == NotificationType.share ||
-           type == NotificationType.contactAccepted ||
-           type == NotificationType.reminder || 
-           type == NotificationType.taskUpdate;
+        type == NotificationType.mention ||
+        type == NotificationType.share ||
+        type == NotificationType.contactAccepted ||
+        type == NotificationType.reminder ||
+        type == NotificationType.taskUpdate;
   }
 
   Widget _buildUpdateBanner() {
@@ -476,11 +498,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           borderRadius: BorderRadius.circular(16),
           onTap: () {
             if (_remoteVersion != null && _changelog != null) {
-              UpdateDetailModal.show(
-                context, 
-                version: _remoteVersion!, 
-                changelog: _changelog!
-              );
+              UpdateDetailModal.show(context,
+                  version: _remoteVersion!, changelog: _changelog!);
             }
           },
           child: Padding(
@@ -493,7 +512,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     color: Colors.white.withOpacity(0.2),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.system_update, color: Colors.white, size: 24),
+                  child: const Icon(Icons.system_update,
+                      color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -519,7 +539,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+                const Icon(Icons.arrow_forward_ios_rounded,
+                    color: Colors.white, size: 16),
               ],
             ),
           ),
@@ -549,30 +570,32 @@ class _NotificationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = _getThemeForType(notification.type);
-    
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected 
+          color: isSelected
               ? AppColors.primary.withOpacity(0.15)
-              : (notification.isRead 
-                  ? AppColors.cardBackground.withOpacity(0.3) 
+              : (notification.isRead
+                  ? AppColors.cardBackground.withOpacity(0.3)
                   : AppColors.cardBackground),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-             color: isSelected ? AppColors.primary : Colors.transparent,
-             width: 1.5,
+            color: isSelected ? AppColors.primary : Colors.transparent,
+            width: 1.5,
           ),
-          boxShadow: notification.isRead || isSelected ? [] : [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.2),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ],
+          boxShadow: notification.isRead || isSelected
+              ? []
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  )
+                ],
         ),
         child: Stack(
           children: [
@@ -586,8 +609,12 @@ class _NotificationTile extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(right: 12, top: 2),
                       child: Icon(
-                        isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-                        color: isSelected ? AppColors.primary : AppColors.tertiaryText,
+                        isSelected
+                            ? Icons.check_circle
+                            : Icons.radio_button_unchecked,
+                        color: isSelected
+                            ? AppColors.primary
+                            : AppColors.tertiaryText,
                         size: 24,
                       ),
                     )
@@ -600,9 +627,7 @@ class _NotificationTile extends StatelessWidget {
                       ),
                       child: Icon(theme.icon, color: theme.color, size: 24),
                     ),
-                    
                   const SizedBox(width: 16),
-                  
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -611,12 +636,15 @@ class _NotificationTile extends StatelessWidget {
                           children: [
                             Expanded(
                               child: Padding(
-                                padding: const EdgeInsets.only(right: 24), // Space for delete icon
+                                padding: const EdgeInsets.only(
+                                    right: 24), // Space for delete icon
                                 child: Text(
                                   notification.title,
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.bold,
+                                    fontWeight: notification.isRead
+                                        ? FontWeight.w500
+                                        : FontWeight.bold,
                                     fontSize: 16,
                                   ),
                                 ),
@@ -624,7 +652,8 @@ class _NotificationTile extends StatelessWidget {
                             ),
                             if (!notification.isRead)
                               Container(
-                                margin: const EdgeInsets.only(left: 8, right: 24),
+                                margin:
+                                    const EdgeInsets.only(left: 8, right: 24),
                                 width: 8,
                                 height: 8,
                                 decoration: const BoxDecoration(
@@ -636,14 +665,16 @@ class _NotificationTile extends StatelessWidget {
                         ),
                         const SizedBox(height: 6),
                         RichText(
-                          text: _buildHighlightedNotificationText(notification.body),
+                          text: _buildHighlightedNotificationText(
+                              notification.body),
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           _formatTime(notification.createdAt),
-                          style: const TextStyle(color: AppColors.tertiaryText, fontSize: 12),
+                          style: const TextStyle(
+                              color: AppColors.tertiaryText, fontSize: 12),
                         ),
                       ],
                     ),
@@ -651,19 +682,21 @@ class _NotificationTile extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             // Delete button at top-right
             if (!isSelectionMode)
               Positioned(
                 top: 4,
                 right: 4,
                 child: IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 20, color: AppColors.tertiaryText),
+                  icon: const Icon(Icons.delete_outline_rounded,
+                      size: 20, color: AppColors.tertiaryText),
                   tooltip: 'Excluir',
                   splashRadius: 20,
                   onPressed: onDelete,
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  constraints:
+                      const BoxConstraints(minWidth: 32, minHeight: 32),
                 ),
               ),
           ],
@@ -675,13 +708,13 @@ class _NotificationTile extends StatelessWidget {
   String _formatTime(DateTime time) {
     final now = DateTime.now();
     final diff = now.difference(time);
-    
+
     if (diff.inMinutes < 60) return '${diff.inMinutes}m atrás';
     if (diff.inHours < 24) return '${diff.inHours}h atrás';
     if (diff.inDays < 7) return '${diff.inDays}d atrás';
     return DateFormat('dd/MM').format(time);
   }
-  
+
   _NotificationTheme _getThemeForType(NotificationType type) {
     switch (type) {
       case NotificationType.contactRequest:
@@ -691,9 +724,11 @@ class _NotificationTile extends StatelessWidget {
       case NotificationType.taskInvite:
         return _NotificationTheme(Icons.event_available_rounded, Colors.orange);
       case NotificationType.taskUpdate:
-        return _NotificationTheme(Icons.edit_calendar_rounded, Colors.blueAccent);
+        return _NotificationTheme(
+            Icons.edit_calendar_rounded, Colors.blueAccent);
       case NotificationType.mention:
-        return _NotificationTheme(Icons.alternate_email_rounded, AppColors.contact);
+        return _NotificationTheme(
+            Icons.alternate_email_rounded, AppColors.contact);
       case NotificationType.share:
         return _NotificationTheme(Icons.share_rounded, Colors.purpleAccent);
       case NotificationType.sincroAlert:
@@ -709,7 +744,7 @@ class _NotificationTile extends StatelessWidget {
   /// Helper para criar TextSpan com destaque de @menções em azul e datas em âmbar
   TextSpan _buildHighlightedNotificationText(String text) {
     const baseStyle = TextStyle(
-      color: AppColors.secondaryText, 
+      color: AppColors.secondaryText,
       fontSize: 14,
       height: 1.5, // Fix tight spacing
     );
@@ -731,16 +766,16 @@ class _NotificationTile extends StatelessWidget {
       r'(@[\w.]+)|(\d{1,2}/\d{1,2}(?:/\d{2,4})?)|(\d{1,2}\s+de\s+\w+)',
       caseSensitive: false,
     );
-    
+
     final matches = combinedRegex.allMatches(text);
-    
+
     if (matches.isEmpty) {
       return TextSpan(text: text, style: baseStyle);
     }
-    
+
     final spans = <TextSpan>[];
     int lastEnd = 0;
-    
+
     for (final match in matches) {
       // Texto antes do match
       if (match.start > lastEnd) {
@@ -749,19 +784,19 @@ class _NotificationTile extends StatelessWidget {
           style: baseStyle,
         ));
       }
-      
+
       // Determinar qual grupo foi matched
       final matchedText = match.group(0)!;
       final isMention = match.group(1) != null;
-      
+
       spans.add(TextSpan(
         text: matchedText,
         style: isMention ? mentionStyle : dateStyle,
       ));
-      
+
       lastEnd = match.end;
     }
-    
+
     // Texto após o último match
     if (lastEnd < text.length) {
       spans.add(TextSpan(
@@ -769,7 +804,7 @@ class _NotificationTile extends StatelessWidget {
         style: baseStyle,
       ));
     }
-    
+
     return TextSpan(children: spans);
   }
 }

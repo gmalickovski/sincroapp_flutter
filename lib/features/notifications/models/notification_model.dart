@@ -8,8 +8,8 @@ enum NotificationType {
   reminder,
   contactRequest, // Solicitação de amizade/contato
   contactAccepted, // Confirmação de aceitação (não-clicável)
-  taskInvite,     // Convite para tarefa
-  taskUpdate,     // Atualização em tarefa compartilhada
+  taskInvite, // Convite para tarefa
+  taskUpdate, // Atualização em tarefa compartilhada
 }
 
 class NotificationModel {
@@ -47,8 +47,8 @@ class NotificationModel {
       relatedItemId: data['related_item_id'],
       relatedItemType: data['related_item_type'],
       isRead: data['is_read'] ?? false,
-      createdAt: data['created_at'] != null 
-          ? DateTime.parse(data['created_at']).toLocal() 
+      createdAt: data['created_at'] != null
+          ? DateTime.parse(data['created_at']).toLocal()
           : DateTime.now(),
       metadata: data['metadata'] ?? {},
     );
@@ -67,35 +67,50 @@ class NotificationModel {
       'metadata': metadata,
     };
   }
-  
+
   // Helper para conversão de string para enum
   static NotificationType _parseType(String? value) {
     if (value == null) return NotificationType.system;
-    
+
     // Mapeamento para os valores do ENUM do banco (snake_case)
     switch (value) {
-      case 'mention': return NotificationType.mention;
-      case 'share': return NotificationType.share;
-      case 'sincro_alert': return NotificationType.sincroAlert;
-      case 'reminder': return NotificationType.reminder;
-      case 'contact_request': return NotificationType.contactRequest;
-      case 'contact_accepted': return NotificationType.contactAccepted;
-      case 'task_invite': return NotificationType.taskInvite;
-      case 'task_update': return NotificationType.taskUpdate;
-      case 'system': 
-      default: return NotificationType.system;
+      case 'mention':
+        return NotificationType.mention;
+      case 'share':
+        return NotificationType.share;
+      case 'sincro_alert':
+        return NotificationType.sincroAlert;
+      case 'reminder':
+        return NotificationType.reminder;
+      case 'contact_request':
+        return NotificationType.contactRequest;
+      case 'contact_accepted':
+        return NotificationType.contactAccepted;
+      case 'task_invite':
+        return NotificationType.taskInvite;
+      case 'task_update':
+        return NotificationType.taskUpdate;
+      case 'system':
+      default:
+        return NotificationType.system;
     }
   }
 
   // Helper para converter enum para snake_case (para salvar no banco)
   static String typeToString(NotificationType type) {
     switch (type) {
-      case NotificationType.sincroAlert: return 'sincro_alert';
-      case NotificationType.contactRequest: return 'contact_request';
-      case NotificationType.contactAccepted: return 'contact_accepted';
-      case NotificationType.taskInvite: return 'task_invite';
-      case NotificationType.taskUpdate: return 'task_update';
-      default: return type.name;
+      case NotificationType.sincroAlert:
+        return 'sincro_alert';
+      case NotificationType.contactRequest:
+        return 'contact_request';
+      case NotificationType.contactAccepted:
+        return 'contact_accepted';
+      case NotificationType.taskInvite:
+        return 'task_invite';
+      case NotificationType.taskUpdate:
+        return 'task_update';
+      default:
+        return type.name;
     }
   }
 }

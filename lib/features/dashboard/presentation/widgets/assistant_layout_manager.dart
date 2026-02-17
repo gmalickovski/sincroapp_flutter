@@ -10,7 +10,8 @@ class AssistantLayoutManager extends StatefulWidget {
   final bool isAiSidebarOpen;
   final VoidCallback onToggleAiSidebar; // For Desktop
   final bool isMobile; // To explicitly control mode if needed
-  final FabOpacityController? opacityController; // Optional controller for opacity linkage
+  final FabOpacityController?
+      opacityController; // Optional controller for opacity linkage
 
   const AssistantLayoutManager({
     super.key,
@@ -65,7 +66,7 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
   }
 
   bool _isScrolling = false; // Track vertical scroll for transparency
-  
+
   Widget _buildMobileLayout() {
     return Stack(
       children: [
@@ -92,11 +93,12 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
               AnimatedBuilder(
                 animation: _pageController,
                 builder: (context, child) {
-                   // Calculate progress even if controller isn't attached yet (fallback 0)
-                   double progress = 0.0;
-                   if (_pageController.hasClients && _pageController.position.haveDimensions) {
-                      progress = _pageController.page ?? 0.0;
-                   }
+                  // Calculate progress even if controller isn't attached yet (fallback 0)
+                  double progress = 0.0;
+                  if (_pageController.hasClients &&
+                      _pageController.position.haveDimensions) {
+                    progress = _pageController.page ?? 0.0;
+                  }
                   return Transform.scale(
                     scale: 1.0 - (progress * 0.1), // Scales down to 0.9
                     child: ClipRRect(
@@ -111,73 +113,69 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
             ],
           ),
         ),
-        
+
         // Interactive Handle Animation
         AnimatedBuilder(
           animation: _pageController,
           builder: (context, child) {
-             double progress = 0.0;
-             if (_pageController.hasClients && _pageController.position.haveDimensions) {
-                progress = _pageController.page ?? 0.0;
-             }
-             
-             // If fully open (1.0), hide handle
-             if (progress > 0.9) return const SizedBox.shrink();
+            double progress = 0.0;
+            if (_pageController.hasClients &&
+                _pageController.position.haveDimensions) {
+              progress = _pageController.page ?? 0.0;
+            }
 
-              // Peeking Handle (Fixed to Right Edge)
-              // Only show when closed or partially open
-              if (progress > 0.1) return const SizedBox.shrink();
+            // If fully open (1.0), hide handle
+            if (progress > 0.9) return const SizedBox.shrink();
 
-              Widget handle = AgentPeekingHandle(
-                opacity: widget.opacityController != null 
-                    ? 1.0 // If using controller, handle internal opacity via wrapper
-                    : (_isScrolling ? 0.05 : 1.0), 
+            // Peeking Handle (Fixed to Right Edge)
+            // Only show when closed or partially open
+            if (progress > 0.1) return const SizedBox.shrink();
+
+            Widget handle = AgentPeekingHandle(
+              opacity: widget.opacityController != null
+                  ? 1.0 // If using controller, handle internal opacity via wrapper
+                  : (_isScrolling ? 0.05 : 1.0),
+            );
+
+            if (widget.opacityController != null) {
+              handle = TransparentFabWrapper(
+                controller: widget.opacityController!,
+                child: handle,
               );
-              
-              if (widget.opacityController != null) {
-                handle = TransparentFabWrapper(
-                  controller: widget.opacityController!,
-                  child: handle,
-                );
-              }
+            }
 
-              return Positioned(
-                right: 0, 
-                // Adjust vertical position
-                top: MediaQuery.of(context).size.height * 0.4, 
-                  child: GestureDetector(
-                    onTap: () {
-                      _pageController.animateToPage(
-                        1, 
-                        duration: const Duration(milliseconds: 400), 
-                        curve: Curves.easeInOutCubicEmphasized
-                      );
-                    },
-                    onHorizontalDragUpdate: (details) {
-                       _pageController.position.jumpTo(_pageController.offset - details.delta.dx);
-                    },
-                    onHorizontalDragEnd: (details) {
-                       final velocity = details.primaryVelocity ?? 0;
-                       
-                       // Snap Logic
-                       // If moving Left fast (< -300) OR passed 30% of screen width, open.
-                       if (velocity < -300 || _pageController.page! > 0.3) {
-                          _pageController.animateToPage(
-                            1, 
-                            duration: const Duration(milliseconds: 300), 
-                            curve: Curves.easeOut
-                          );
-                       } else {
-                          _pageController.animateToPage(
-                            0, 
-                            duration: const Duration(milliseconds: 300), 
-                            curve: Curves.easeOut
-                          );
-                       }
-                    },
-                    child: handle,
-                  ),
-              );
+            return Positioned(
+              right: 0,
+              // Adjust vertical position
+              top: MediaQuery.of(context).size.height * 0.4,
+              child: GestureDetector(
+                onTap: () {
+                  _pageController.animateToPage(1,
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOutCubicEmphasized);
+                },
+                onHorizontalDragUpdate: (details) {
+                  _pageController.position
+                      .jumpTo(_pageController.offset - details.delta.dx);
+                },
+                onHorizontalDragEnd: (details) {
+                  final velocity = details.primaryVelocity ?? 0;
+
+                  // Snap Logic
+                  // If moving Left fast (< -300) OR passed 30% of screen width, open.
+                  if (velocity < -300 || _pageController.page! > 0.3) {
+                    _pageController.animateToPage(1,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut);
+                  } else {
+                    _pageController.animateToPage(0,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeOut);
+                  }
+                },
+                child: handle,
+              ),
+            );
           },
         ),
       ],
@@ -191,12 +189,13 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
         Expanded(
           child: widget.child,
         ),
-        
+
         // Vertical Divider (Desktop Only)
         if (widget.isAiSidebarOpen)
           Container(
             width: 1,
-            color: AppColors.border.withValues(alpha: 0.2), // Subtle solid divider
+            color:
+                AppColors.border.withValues(alpha: 0.2), // Subtle solid divider
           ),
 
         // Sidebar (Animated Width)
@@ -204,22 +203,24 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOutCubicEmphasized,
           width: widget.isAiSidebarOpen ? 450 : 0, // 450px width for sidebar
-          child: ClipRect( // Clips content when width is 0
-             child: OverflowBox(
-               minWidth: 450,
-               maxWidth: 450,
-               alignment: Alignment.centerLeft,
-               child: Container(
-                 decoration: const BoxDecoration(
-                   color: Colors.transparent, // Fix: Make sidebar background transparent
-                   borderRadius: BorderRadius.only(
-                     topLeft: Radius.circular(24),
-                     bottomLeft: Radius.circular(24),
-                   ),
-                 ),
-                 child: widget.assistant,
-               ),
-             ),
+          child: ClipRect(
+            // Clips content when width is 0
+            child: OverflowBox(
+              minWidth: 450,
+              maxWidth: 450,
+              alignment: Alignment.centerLeft,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors
+                      .transparent, // Fix: Make sidebar background transparent
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(24),
+                    bottomLeft: Radius.circular(24),
+                  ),
+                ),
+                child: widget.assistant,
+              ),
+            ),
           ),
         ),
       ],

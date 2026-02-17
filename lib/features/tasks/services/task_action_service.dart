@@ -22,7 +22,7 @@ class TaskActionService {
     try {
       final now = DateTime.now().toLocal();
       final today = DateTime(now.year, now.month, now.day);
-      
+
       DateTime targetDate;
       String message;
 
@@ -32,7 +32,8 @@ class TaskActionService {
         message = 'Agendada para amanhã! 📅';
       } else {
         final taskDateLocal = task.dueDate!.toLocal();
-        final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+        final taskDateOnly = DateTime(
+            taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
 
         if (taskDateOnly.isBefore(today)) {
           // Cenário 3: Atrasada -> Vai para Hoje
@@ -53,7 +54,8 @@ class TaskActionService {
           dataNascimento: userData.dataNasc,
         );
         // O cálculo do dia pessoal exige data em UTC (meia-noite)
-        final targetDateUtc = DateTime.utc(targetDate.year, targetDate.month, targetDate.day);
+        final targetDateUtc =
+            DateTime.utc(targetDate.year, targetDate.month, targetDate.day);
         try {
           final day = engine.calculatePersonalDayForDate(targetDateUtc);
           if (day > 0) newPersonalDay = day;
@@ -68,7 +70,7 @@ class TaskActionService {
         // Isso evita que a data volte um dia ao ser convertida de volta para local em fusos negativos (ex: Brasil)
         'dueDate': targetDate.toUtc(),
       };
-      
+
       // Atualiza o personalDay se foi calculado (ou remove se não conseguiu)
       if (newPersonalDay != null) {
         updates['personalDay'] = newPersonalDay;
@@ -108,7 +110,9 @@ class TaskActionService {
       return null;
     }
   }
-  List<TaskModel> calculateFocusTasks(List<TaskModel> allTasks, int? userPersonalDay) {
+
+  List<TaskModel> calculateFocusTasks(
+      List<TaskModel> allTasks, int? userPersonalDay) {
     final nowLocal = DateTime.now().toLocal();
     final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
 
@@ -121,7 +125,8 @@ class TaskActionService {
 
       final DateTime taskDate = task.dueDate ?? task.createdAt;
       final taskDateLocal = taskDate.toLocal();
-      final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+      final taskDateOnly =
+          DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
 
       // Date must match local today
       if (!taskDateOnly.isAtSameMomentAs(todayLocal)) {
@@ -134,10 +139,10 @@ class TaskActionService {
       }
 
       // Use saved value if available, otherwise compute would be needed but here we assume existing or ignore?
-      // Original logic: 
+      // Original logic:
       // final int taskPersonal = task.personalDay ?? _calculatePersonalDay(taskDateOnly) ?? -1;
       // return taskPersonal == todayPersonal;
-      
+
       // Since we don't have _calculatePersonalDay helper here easily without NumerologyEngine instance with user data...
       // But wait, task.personalDay IS stored.
       // If task.personalDay is null, we might miss it.
@@ -147,7 +152,7 @@ class TaskActionService {
       // If -1 (missing), do we show it? Original logic tried to calculate it on the fly.
       // If we can't calculate, maybe we should show it if date matches?
       // Let's stick to strict match if possible.
-      
+
       return taskPersonal == userPersonalDay;
     }).toList();
   }

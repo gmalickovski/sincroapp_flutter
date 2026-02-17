@@ -49,7 +49,8 @@ class _ContactManagementModalState extends State<ContactManagementModal>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Remover Contato?', style: TextStyle(color: Colors.white)),
+        title: const Text('Remover Contato?',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Deseja remover ${contact.displayName} dos seus contatos?',
           style: const TextStyle(color: AppColors.secondaryText),
@@ -85,7 +86,7 @@ class _ContactManagementModalState extends State<ContactManagementModal>
   Future<void> _toggleBlockContact(ContactModel contact) async {
     final isBlocked = contact.status == 'blocked';
     final action = isBlocked ? 'desbloquear' : 'bloquear';
-    
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -123,98 +124,102 @@ class _ContactManagementModalState extends State<ContactManagementModal>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(content: Text('Erro ao $action contato.')),
+          SnackBar(content: Text('Erro ao $action contato.')),
         );
       }
     }
   }
 
   @override
-
-
   Widget build(BuildContext context) {
-    final activeContacts = _contacts.where((c) => c.status == 'active').toList();
-    final blockedContacts = _contacts.where((c) => c.status == 'blocked').toList();
+    final activeContacts =
+        _contacts.where((c) => c.status == 'active').toList();
+    final blockedContacts =
+        _contacts.where((c) => c.status == 'blocked').toList();
 
     return Dialog(
-       backgroundColor: AppColors.cardBackground,
-       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
-       child: Container(
-         width: 400, // Fixed width for desktop/consistent look
-         constraints: BoxConstraints(
-           maxHeight: MediaQuery.of(context).size.height * 0.8,
-           maxWidth: 500,
-         ),
-         padding: const EdgeInsets.all(24.0),
-         child: Column(
-           mainAxisSize: MainAxisSize.min,
-           crossAxisAlignment: CrossAxisAlignment.stretch,
-           children: [
-             // Header Clean
-             Row(
-               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-               children: [
-                 Text(
-                   'Meus Contatos', // Changed title as requested "Meus Contatos" instead of "Gerenciar"
-                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                     color: Colors.white,
-                     fontWeight: FontWeight.bold,
-                   ),
-                 ),
-                 IconButton(
-                   icon: const Icon(Icons.close, color: AppColors.secondaryText),
-                   onPressed: () => Navigator.of(context).pop(),
-                 ),
-               ],
-             ),
-             
-             const SizedBox(height: 24),
+      backgroundColor: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24.0)),
+      child: Container(
+        width: 400, // Fixed width for desktop/consistent look
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+          maxWidth: 500,
+        ),
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header Clean
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Meus Contatos', // Changed title as requested "Meus Contatos" instead of "Gerenciar"
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ],
+            ),
 
-             // Tabs (Pill Style)
-             Container(
-               decoration: BoxDecoration(
-                 color: AppColors.background,
-                 borderRadius: BorderRadius.circular(100), // Pill shape container
-               ),
-               padding: const EdgeInsets.all(4),
-               child: TabBar(
-                 controller: _tabController,
-                 indicator: BoxDecoration(
-                   color: AppColors.primary,
-                   borderRadius: BorderRadius.circular(100), // Pill shape indicator
-                 ),
-                 indicatorSize: TabBarIndicatorSize.tab,
-                 dividerColor: Colors.transparent,
-                 labelColor: Colors.white,
-                 unselectedLabelColor: AppColors.secondaryText,
-                 tabs: [
-                   Tab(text: 'Ativos (${activeContacts.length})'),
-                   Tab(text: 'Bloqueados (${blockedContacts.length})'),
-                 ],
-               ),
-             ),
+            const SizedBox(height: 24),
 
-             const SizedBox(height: 16),
+            // Tabs (Pill Style)
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.background,
+                borderRadius:
+                    BorderRadius.circular(100), // Pill shape container
+              ),
+              padding: const EdgeInsets.all(4),
+              child: TabBar(
+                controller: _tabController,
+                indicator: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius:
+                      BorderRadius.circular(100), // Pill shape indicator
+                ),
+                indicatorSize: TabBarIndicatorSize.tab,
+                dividerColor: Colors.transparent,
+                labelColor: Colors.white,
+                unselectedLabelColor: AppColors.secondaryText,
+                tabs: [
+                  Tab(text: 'Ativos (${activeContacts.length})'),
+                  Tab(text: 'Bloqueados (${blockedContacts.length})'),
+                ],
+              ),
+            ),
 
-             // Content
-             Expanded( // Changed from Flexible to Expanded for better list handling
-               child: _isLoading
-                   ? const Center(child: CircularProgressIndicator())
-                   : TabBarView(
-                       controller: _tabController,
-                       children: [
-                         _buildContactList(activeContacts, isBlockedList: false),
-                         _buildContactList(blockedContacts, isBlockedList: true),
-                       ],
-                     ),
-             ),
-           ],
-         ),
-       ),
+            const SizedBox(height: 16),
+
+            // Content
+            Expanded(
+              // Changed from Flexible to Expanded for better list handling
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildContactList(activeContacts, isBlockedList: false),
+                        _buildContactList(blockedContacts, isBlockedList: true),
+                      ],
+                    ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildContactList(List<ContactModel> contacts, {required bool isBlockedList}) {
+  Widget _buildContactList(List<ContactModel> contacts,
+      {required bool isBlockedList}) {
     if (contacts.isEmpty) {
       return Center(
         child: Column(

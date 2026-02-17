@@ -219,7 +219,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Nome',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.person_outline,
+                  color: AppColors.secondaryText),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.border),
@@ -237,7 +238,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Sobrenome',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.person_outline, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.person_outline,
+                  color: AppColors.secondaryText),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.border),
@@ -250,7 +252,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           const SizedBox(height: 16),
           DropdownButtonFormField<String>(
-            value: _selectedGender,
+            initialValue: _selectedGender,
             decoration: InputDecoration(
               labelText: 'Gênero (Opcional)',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
@@ -264,7 +266,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 borderSide: const BorderSide(color: AppColors.primary),
               ),
             ),
-            dropdownColor: AppColors.cardBackground, 
+            dropdownColor: AppColors.cardBackground,
             style: const TextStyle(color: Colors.white),
             items: ['Masculino', 'Feminino', 'Outro'].map((String value) {
               return DropdownMenuItem<String>(
@@ -286,7 +288,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Email',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.email_outlined,
+                  color: AppColors.secondaryText),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.border),
@@ -305,13 +308,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
             decoration: InputDecoration(
               labelText: 'Senha',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.lock_outline, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.lock_outline,
+                  color: AppColors.secondaryText),
               suffixIcon: IconButton(
                 icon: Icon(
                     _showPassword ? Icons.visibility_off : Icons.visibility,
                     color: AppColors.tertiaryText),
-                onPressed: () =>
-                    setState(() => _showPassword = !_showPassword),
+                onPressed: () => setState(() => _showPassword = !_showPassword),
               ),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -343,8 +346,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Text.rich(
                   TextSpan(
                     text: 'Eu li e concordo com os ',
-                    style: TextStyle(
-                        fontSize: 12, color: AppColors.tertiaryText),
+                    style:
+                        TextStyle(fontSize: 12, color: AppColors.tertiaryText),
                     children: [
                       TextSpan(
                           text: 'Termos de Serviço',

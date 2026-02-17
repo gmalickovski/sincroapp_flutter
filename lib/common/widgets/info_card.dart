@@ -1,5 +1,4 @@
 // lib/common/widgets/info_card.dart
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -320,11 +319,10 @@ class _InfoCardState extends State<InfoCard> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.icon != null)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: widget.color?.withValues(alpha: 0.1) ??
+                    color: widget.color.withValues(alpha: 0.1) ??
                         AppColors.primaryAccent.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -334,7 +332,7 @@ class _InfoCardState extends State<InfoCard> {
                     size: 24,
                   ),
                 ),
-                if (widget.icon != null) const SizedBox(width: 16),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,7 +367,7 @@ class _InfoCardState extends State<InfoCard> {
             ),
           ),
         ),
-        
+
         // Tags e Botão na parte inferior
         Padding(
           padding: const EdgeInsets.all(20),
@@ -381,27 +379,37 @@ class _InfoCardState extends State<InfoCard> {
                   spacing: 8.0,
                   runSpacing: 8.0,
                   children: widget.info.tags.map((tag) {
-                     final isPeriodTag = RegExp(r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos').hasMatch(tag);
-                     return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 5.0),
+                    final isPeriodTag = RegExp(
+                            r'\d{4}\s+a\s+\d{4}|\d{4}\s+a\s+XXXX|nascimento até|até \d+|a partir de \d+|\d+ a \d+ anos')
+                        .hasMatch(tag);
+                    return Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10.0, vertical: 5.0),
                       decoration: BoxDecoration(
-                          color: AppColors.primaryAccent.withValues(alpha: 0.15),
+                          color:
+                              AppColors.primaryAccent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(20.0),
-                          border: Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3))),
+                          border: Border.all(
+                              color: AppColors.primaryAccent
+                                  .withValues(alpha: 0.3))),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (isPeriodTag) ...[
-                            const Icon(Icons.access_time, size: 14, color: Color(0xffe9d5ff)),
+                            const Icon(Icons.access_time,
+                                size: 14, color: Color(0xffe9d5ff)),
                             const SizedBox(width: 4),
                           ],
-                          Text(tag, style: const TextStyle(color: Color(0xffe9d5ff), fontSize: 12, fontWeight: FontWeight.w600)),
+                          Text(tag,
+                              style: const TextStyle(
+                                  color: Color(0xffe9d5ff),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     );
                   }).toList(),
                 ),
-                
               if (widget.bottomAction != null) ...[
                 const SizedBox(height: 16),
                 widget.bottomAction!,

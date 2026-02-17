@@ -3,7 +3,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 
 class SelectUserModal extends StatefulWidget {
   const SelectUserModal({super.key});
@@ -16,12 +15,12 @@ class _SelectUserModalState extends State<SelectUserModal> {
   final TextEditingController _searchController = TextEditingController();
   final SupabaseService _supabaseService = SupabaseService();
   final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
-  
+
   // All contacts (loaded initially)
   List<UserModel> _allContacts = [];
   // Filtered results to display
   List<UserModel> _displayedUsers = [];
-  
+
   bool _isLoading = true;
   String? _successMessage;
 
@@ -57,14 +56,14 @@ class _SelectUserModalState extends State<SelectUserModal> {
     final localMatches = _allContacts.where((u) {
       final q = query.toLowerCase();
       return (u.username?.toLowerCase().contains(q) == true) ||
-             (u.primeiroNome.toLowerCase().contains(q)) ||
-             (u.sobrenome.toLowerCase().contains(q));
+          (u.primeiroNome.toLowerCase().contains(q)) ||
+          (u.sobrenome.toLowerCase().contains(q));
     }).toList();
 
     setState(() {
       _displayedUsers = localMatches;
     });
-    
+
     // 2. If query is long enough, perform global search (Optional, if we want to find NEW people)
     // For now, based on user request "show contacts I already filter", local filtering is priority.
     // If we want global search mixed in, we'd need to debouce.
@@ -81,13 +80,14 @@ class _SelectUserModalState extends State<SelectUserModal> {
     if (query.isEmpty) return;
 
     setState(() => _isLoading = true);
-    
+
     try {
       final globalResults = await _supabaseService.searchUsersByUsername(query);
       // Remove self and duplicates (keep existing contact objects if possible or just use new ones)
       // Actually simple list replacement is fine.
       setState(() {
-        _displayedUsers = globalResults.where((u) => u.uid != _currentUserId).toList();
+        _displayedUsers =
+            globalResults.where((u) => u.uid != _currentUserId).toList();
       });
     } finally {
       setState(() => _isLoading = false);
@@ -112,7 +112,8 @@ class _SelectUserModalState extends State<SelectUserModal> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.85, // Max height limit
+          maxHeight:
+              MediaQuery.of(context).size.height * 0.85, // Max height limit
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min, // Wrap content height
@@ -122,22 +123,26 @@ class _SelectUserModalState extends State<SelectUserModal> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
-                   IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.tertiaryText),
+                  IconButton(
+                    icon:
+                        const Icon(Icons.close, color: AppColors.tertiaryText),
                     onPressed: () => Navigator.pop(context),
                   ),
                   const Expanded(
                     child: Text(
                       'Selecionar Pessoa',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
                     ),
                   ),
                   const SizedBox(width: 48),
                 ],
               ),
             ),
-            
+
             // Search Bar
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -147,7 +152,8 @@ class _SelectUserModalState extends State<SelectUserModal> {
                 decoration: InputDecoration(
                   hintText: 'Buscar por @username ou nome...',
                   hintStyle: const TextStyle(color: AppColors.secondaryText),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                  prefixIcon:
+                      const Icon(Icons.search, color: AppColors.primary),
                   filled: true,
                   fillColor: AppColors.background,
                   border: OutlineInputBorder(
@@ -157,7 +163,8 @@ class _SelectUserModalState extends State<SelectUserModal> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                 ),
                 onChanged: _onSearchChanged, // Real-time filtering
-                onSubmitted: (_) => _performGlobalSearch(), // Explicit global search
+                onSubmitted: (_) =>
+                    _performGlobalSearch(), // Explicit global search
               ),
             ),
 
@@ -165,16 +172,19 @@ class _SelectUserModalState extends State<SelectUserModal> {
             // Use Flexible/Expanded to allow list to take space up to MaxHeight
             Flexible(
               child: _isLoading
-                  ? const Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator())
+                  ? const Padding(
+                      padding: EdgeInsets.all(32.0),
+                      child: CircularProgressIndicator())
                   : _displayedUsers.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.all(32.0),
                           child: Text(
-                             _searchController.text.isEmpty 
-                               ? 'Você ainda não tem contatos adicionados.' 
-                               : 'Nenhum contato encontrado. Pressione Enter para buscar em todos usuários.',
-                             style: const TextStyle(color: AppColors.secondaryText),
-                             textAlign: TextAlign.center,
+                            _searchController.text.isEmpty
+                                ? 'Você ainda não tem contatos adicionados.'
+                                : 'Nenhum contato encontrado. Pressione Enter para buscar em todos usuários.',
+                            style:
+                                const TextStyle(color: AppColors.secondaryText),
+                            textAlign: TextAlign.center,
                           ),
                         )
                       : ListView.builder(
@@ -184,23 +194,36 @@ class _SelectUserModalState extends State<SelectUserModal> {
                           itemBuilder: (context, index) {
                             final user = _displayedUsers[index];
                             return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  vertical: 4, horizontal: 8),
                               leading: CircleAvatar(
-                                 backgroundColor: AppColors.primary.withOpacity(0.2),
-                                 child: Text(
-                                   user.username?[0].toUpperCase() ?? user.primeiroNome[0].toUpperCase(),
-                                   style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-                                 ),
+                                backgroundColor:
+                                    AppColors.primary.withOpacity(0.2),
+                                child: Text(
+                                  user.username?[0].toUpperCase() ??
+                                      user.primeiroNome[0].toUpperCase(),
+                                  style: const TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.bold),
+                                ),
                               ),
                               title: Text(
-                                user.nomeAnalise.isNotEmpty ? user.nomeAnalise : '${user.primeiroNome} ${user.sobrenome}'.trim(),
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                user.nomeAnalise.isNotEmpty
+                                    ? user.nomeAnalise
+                                    : '${user.primeiroNome} ${user.sobrenome}'
+                                        .trim(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
                               ),
                               subtitle: Text(
                                 '@${user.username ?? "user"}',
-                                style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                                style: const TextStyle(
+                                    color: AppColors.secondaryText,
+                                    fontSize: 12),
                               ),
-                              trailing: const Icon(Icons.chevron_right, color: Colors.white24),
+                              trailing: const Icon(Icons.chevron_right,
+                                  color: Colors.white24),
                               onTap: () => _selectUser(user), // Select on tap
                             );
                           },

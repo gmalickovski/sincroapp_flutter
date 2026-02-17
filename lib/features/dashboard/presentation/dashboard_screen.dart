@@ -17,7 +17,7 @@ import 'package:sincro_app_flutter/features/goals/presentation/create_goal_scree
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
-import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 // FirestoreService REMOVIDO
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -48,7 +48,6 @@ import 'package:sincro_app_flutter/features/harmony/presentation/widgets/profess
 import 'package:sincro_app_flutter/services/check_update_service.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart'; // NEW IMPORT
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_star_icon.dart'; // IMPORT AGENT ICON
-
 
 // Comportamento de scroll (inalterado)
 class MyCustomScrollBehavior extends MaterialScrollBehavior {
@@ -93,7 +92,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   StrategyRecommendation? _strategyRecommendation; // State for AI strategy
   String _searchQuery = ''; // Search state replacement
   String? _initialTaskFilter; // Filtro inicial para tarefas (via deep link)
-  bool _pendingFavorableDayModal = false; // Flag para abrir modal de dias favoráveis após carregar dados
+  bool _pendingFavorableDayModal =
+      false; // Flag para abrir modal de dias favoráveis após carregar dados
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -123,28 +123,28 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (args is Map) {
       final view = args['view'];
       final filter = args['filter'];
-      
+
       if (view == 'tasks') {
         // Muda para a aba de tarefas
         // Usa addPostFrameCallback para evitar erro de setState durante build/layout
         WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              setState(() {
-                _sidebarIndex = 3; 
-                _initialTaskFilter = filter;
-              });
-            }
+          if (mounted) {
+            setState(() {
+              _sidebarIndex = 3;
+              _initialTaskFilter = filter;
+            });
+          }
         });
       } else if (view == 'favorable_days') {
-         // Marca para abrir o modal assim que os dados carregarem (ou agora se já estiverem)
-         _pendingFavorableDayModal = true;
-         // Tenta abrir imediatamente se possível
-         WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _numerologyData != null && !_isLoading) {
-               _showFavorableDaysModal();
-               _pendingFavorableDayModal = false;
-            }
-         });
+        // Marca para abrir o modal assim que os dados carregarem (ou agora se já estiverem)
+        _pendingFavorableDayModal = true;
+        // Tenta abrir imediatamente se possível
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _numerologyData != null && !_isLoading) {
+            _showFavorableDaysModal();
+            _pendingFavorableDayModal = false;
+          }
+        });
       }
     }
   }
@@ -214,27 +214,26 @@ class _DashboardScreenState extends State<DashboardScreen>
       }
       _initializeTasksStream(currentUser.id);
       _initializeGoalsStream(currentUser.id);
-      
+
       // Load AI Strategy
-      _loadStrategy(); 
+      _loadStrategy();
 
       // Check for App Updates (Release Notes)
       CheckUpdateService().checkForUpdates();
-      
+
       // NOTIFICATIONS INIT
       if (!kIsWeb) {
-        NotificationService.instance.listenToRealtimeNotifications(currentUser.id);
+        NotificationService.instance
+            .listenToRealtimeNotifications(currentUser.id);
         if (userData != null && userData.dataNasc.isNotEmpty) {
-           NotificationService.instance.initializeDailyIncentives(
-              currentUser.id, 
-              userData.dataNasc
-           );
+          NotificationService.instance
+              .initializeDailyIncentives(currentUser.id, userData.dataNasc);
         }
-        
+
         // Tenta abrir modal pendente (deep link)
         if (_pendingFavorableDayModal && mounted) {
-           _showFavorableDaysModal();
-           _pendingFavorableDayModal = false;
+          _showFavorableDaysModal();
+          _pendingFavorableDayModal = false;
         }
       }
     } catch (e, stackTrace) {
@@ -262,15 +261,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           setState(() {
             _currentTodayTasks = tasks;
-            
+
             // Sincroniza notificações com os dados mais recentes
-            if (_userData != null && _userData!.dataNasc.isNotEmpty && !kIsWeb) {
-               NotificationService.instance.syncDailyNotifications(
+            if (_userData != null &&
+                _userData!.dataNasc.isNotEmpty &&
+                !kIsWeb) {
+              NotificationService.instance.syncDailyNotifications(
                   userId: _userData!.uid,
                   userName: _userData!.nomeAnalise,
                   birthDate: _userData!.dataNasc,
-                  todayTasks: tasks
-               );
+                  todayTasks: tasks);
             }
 
             if (_isLoading) {
@@ -292,7 +292,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           // Suprime o SnackBar intrusivo para erros de stream (ex: timeout, network glitch)
           // Apenas loga no console e mantém os dados antigos se existirem.
           debugPrint("Erro silencioso no stream de tarefas: $error");
-          
+
           /* 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -545,12 +545,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_userData == null || _numerologyData == null) return;
 
     final personalDay = _numerologyData!.numeros['diaPessoal'] ?? 1;
-    
+
     // First, set base recommendation immediately to avoid lag
     if (_strategyRecommendation == null) {
-        setState(() {
-            _strategyRecommendation = StrategyEngine.getRecommendation(personalDay);
-        });
+      setState(() {
+        _strategyRecommendation = StrategyEngine.getRecommendation(personalDay);
+      });
     }
 
     // Then fetch AI suggestions
@@ -560,7 +560,7 @@ class _DashboardScreenState extends State<DashboardScreen>
         tasks: _currentTodayTasks,
         user: _userData!,
       );
-      
+
       if (mounted) {
         setState(() {
           _strategyRecommendation = strategy;
@@ -620,14 +620,16 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
       });
     } else {
-      Navigator.of(context).push(MaterialPageRoute(
+      Navigator.of(context)
+          .push(MaterialPageRoute(
         builder: (context) => CreateGoalScreen(
           userData: _userData!,
         ),
         fullscreenDialog: true,
-      )).then((_) {
-         // Ao voltar, recarrega
-         if (mounted) _reloadDataNonStream();
+      ))
+          .then((_) {
+        // Ao voltar, recarrega
+        if (mounted) _reloadDataNonStream();
       });
     }
   }
@@ -636,18 +638,18 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_userData == null) return;
     Navigator.of(context)
         .push(
-          MaterialPageRoute(
-            builder: (context) =>
-                GoalDetailScreen(initialGoal: goal, userData: _userData!),
-            settings: RouteSettings(
-              name: '/goal-detail',
-              arguments: {
-                'goalId': goal.id,
-                'goalTitle': goal.title,
-              },
-            ),
-          ),
-        )
+      MaterialPageRoute(
+        builder: (context) =>
+            GoalDetailScreen(initialGoal: goal, userData: _userData!),
+        settings: RouteSettings(
+          name: '/goal-detail',
+          arguments: {
+            'goalId': goal.id,
+            'goalTitle': goal.title,
+          },
+        ),
+      ),
+    )
         .then((_) {
       if (mounted) _reloadDataNonStream();
     });
@@ -662,7 +664,6 @@ class _DashboardScreenState extends State<DashboardScreen>
     final Set<String> hidden = _userData?.dashboardHiddenCards.toSet() ?? {};
 
     final Map<String, Widget> allCardsMap = {
-
       if (_numerologyData != null)
         'sincroflow': StrategyCard(
           key: const ValueKey('sincroflow'),
@@ -1049,42 +1050,53 @@ class _DashboardScreenState extends State<DashboardScreen>
               dragHandle: _isEditMode
                   ? _buildDragHandle('aptidoesProfissionais')
                   : null,
-              bottomAction: _isEditMode ? null : (
-                // AI Analysis button - Only for Sinergia (premium) plan
-                _userData?.subscription?.plan == SubscriptionPlan.premium
-                  ? SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          if (MediaQuery.of(context).size.width > 600) {
-                            showDialog(
-                              context: context,
-                              builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
-                            );
-                          } else {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => ProfessionalAptitudeModal(currentUser: _userData!),
-                                fullscreenDialog: true,
+              bottomAction: _isEditMode
+                  ? null
+                  : (
+                      // AI Analysis button - Only for Sinergia (premium) plan
+                      _userData?.subscription.plan == SubscriptionPlan.premium
+                          ? SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (MediaQuery.of(context).size.width > 600) {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) =>
+                                          ProfessionalAptitudeModal(
+                                              currentUser: _userData!),
+                                    );
+                                  } else {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            ProfessionalAptitudeModal(
+                                                currentUser: _userData!),
+                                        fullscreenDialog: true,
+                                      ),
+                                    );
+                                  }
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.cyan.shade400,
+                                  foregroundColor: Colors.white,
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  shape: const StadiumBorder(),
+                                  elevation: 0,
+                                ),
+                                child: const Text('Analisar Profissão com IA',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold)),
                               ),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.cyan.shade400,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: const StadiumBorder(),
-                          elevation: 0,
-                        ),
-                        child: const Text('Analisar Profissão com IA', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    )
-                  : null // No AI button for free and plus plans
-              ),
+                            )
+                          : null // No AI button for free and plus plans
+                  ),
               onTap: () => _showNumerologyDetail(
                     title: "Aptidões Profissionais",
-                    number: (_numerologyData!.numeros['aptidoesProfissionais'] ?? 0).toString(),
+                    number:
+                        (_numerologyData!.numeros['aptidoesProfissionais'] ?? 0)
+                            .toString(),
                     content: _getAptidoesProfissionaisContent(
                         _numerologyData!.numeros['aptidoesProfissionais'] ?? 0),
                     color: Colors.cyan.shade300,
@@ -1267,34 +1279,39 @@ class _DashboardScreenState extends State<DashboardScreen>
               isEditMode: _isEditMode,
               dragHandle:
                   _isEditMode ? _buildDragHandle('harmoniaConjugal') : null,
-              bottomAction: _isEditMode ? null : SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (MediaQuery.of(context).size.width > 600) {
-                      showDialog(
-                        context: context,
-                        builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
-                      );
-                    } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => LoveCompatibilityModal(currentUser: _userData!),
-                          fullscreenDialog: true,
+              bottomAction: _isEditMode
+                  ? null
+                  : SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          if (MediaQuery.of(context).size.width > 600) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => LoveCompatibilityModal(
+                                  currentUser: _userData!),
+                            );
+                          } else {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => LoveCompatibilityModal(
+                                    currentUser: _userData!),
+                                fullscreenDialog: true,
+                              ),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.pink.shade400,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: const StadiumBorder(),
+                          elevation: 0,
                         ),
-                      );
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.pink.shade400,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const StadiumBorder(),
-                    elevation: 0,
-                  ),
-                  child: const Text('Fazer teste de compatibilidade', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ),
+                        child: const Text('Fazer teste de compatibilidade',
+                            style: TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                    ),
               onTap: () => _showNumerologyDetail(
                     title: "Harmonia Conjugal",
                     number:
@@ -1323,32 +1340,35 @@ class _DashboardScreenState extends State<DashboardScreen>
                     title: "Dias Favoráveis do Mês",
                     content: _buildDiasFavoraveisCompleteContent(),
                     color: Colors.greenAccent.shade200,
-            icon: Icons.event_available,
+                    icon: Icons.event_available,
                     categoryIntro:
                         "Os Dias Favoráveis são datas do mês em que a vibração do seu Dia Pessoal entra em ressonância com números-chave do seu mapa (as Destino, Expressão, Motivação, Impressão e Missão). Nessas datas, decisões e iniciativas tendem a fluir com mais naturalidade.",
                   )),
         },
       }
     };
-    
+
     // Priority Logic: Ensure Sincro Flow is first if not explicitly ordered
     // Create a mutable copy of the order
-    final List<String> cardOrder = List<String>.from(_userData!.dashboardCardOrder);
-    
+    final List<String> cardOrder =
+        List<String>.from(_userData!.dashboardCardOrder);
+
     // Check if Sincro Flow (or its legacy names) is present. If not, PREPEND it.
     // We want it to be the default first item for users who haven't moved it completely?
     // User requirement: "Sincro Flow sempre como padrão deve ser sempre o primeiro ... mas poderá ser reposicionando"
     // If we assume empty list means "Default", we handle empty list.
     // If not in list, we prepend.
-    
-    bool hasSincro = cardOrder.contains('sincroflow') || cardOrder.contains('strategyCard') || cardOrder.contains('bussola');
+
+    bool hasSincro = cardOrder.contains('sincroflow') ||
+        cardOrder.contains('strategyCard') ||
+        cardOrder.contains('bussola');
     if (!hasSincro) {
-       cardOrder.insert(0, 'sincroflow'); 
+      cardOrder.insert(0, 'sincroflow');
     }
-    
+
     final List<Widget> orderedCards = [];
     Set<String> addedKeys = {};
-    
+
     // Helper to filter
     bool matchesSearch(String key) {
       if (_searchQuery.isEmpty) return true;
@@ -1366,58 +1386,80 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (allCardsMap.containsKey(effectiveId) &&
           !addedKeys.contains(effectiveId) &&
           !hidden.contains(effectiveId)) {
-            
         // Apply Search Filter
         if (matchesSearch(effectiveId)) {
-           orderedCards.add(allCardsMap[effectiveId]!);
+          orderedCards.add(allCardsMap[effectiveId]!);
         }
         addedKeys.add(effectiveId);
       }
     }
-    
+
     // Add remaining cards (that might be new features not in user's saved order)
     allCardsMap.forEach((key, value) {
       if (!addedKeys.contains(key) && !hidden.contains(key)) {
-         if (matchesSearch(key)) {
-            orderedCards.add(value);
-         }
+        if (matchesSearch(key)) {
+          orderedCards.add(value);
+        }
       }
     });
 
     // Código de força 'strategyCard' removido para respeitar a ordem do usuário.
     _cards = orderedCards;
   }
-  
+
   String _getCardTitle(String key) {
     switch (key) {
-      case 'sincroflow': return 'Sincro Flow';
-      case 'goalsProgress': return 'Metas';
-      case 'focusDay': return 'Foco do Dia';
-      case 'vibracaoDia': return 'Dia Pessoal';
-      case 'vibracaoMes': return 'Mês Pessoal';
-      case 'vibracaoAno': return 'Ano Pessoal';
-      case 'cicloVida': return 'Ciclo de Vida';
-      case 'numeroDestino': return 'Número de Destino';
-      case 'numeroExpressao': return 'Número de Expressão';
-      case 'numeroMotivacao': return 'Número da Motivação';
-      case 'numeroImpressao': return 'Número de Impressão';
-      case 'missaoVida': return 'Missão de Vida';
-      case 'talentoOculto': return 'Talento Oculto';
-      case 'respostaSubconsciente': return 'Resposta Subconsciente';
-      case 'diaNatalicio': return 'Dia Natalício';
-      case 'numeroPsiquico': return 'Número Psíquico';
-      case 'aptidoesProfissionais': return 'Aptidões Profissionais';
-      case 'desafios': return 'Desafios';
-      case 'momentosDecisivos': return 'Momento Decisivo';
-      case 'licoesCarmicas': return 'Lições Kármicas';
-      case 'debitosCarmicos': return 'Débitos Kármicos';
-      case 'tendenciasOcultas': return 'Tendências Ocultas';
-      case 'harmoniaConjugal': return 'Harmonia Conjugal';
-      case 'diasFavoraveis': return 'Dias Favoráveis';
-      default: return '';
+      case 'sincroflow':
+        return 'Sincro Flow';
+      case 'goalsProgress':
+        return 'Metas';
+      case 'focusDay':
+        return 'Foco do Dia';
+      case 'vibracaoDia':
+        return 'Dia Pessoal';
+      case 'vibracaoMes':
+        return 'Mês Pessoal';
+      case 'vibracaoAno':
+        return 'Ano Pessoal';
+      case 'cicloVida':
+        return 'Ciclo de Vida';
+      case 'numeroDestino':
+        return 'Número de Destino';
+      case 'numeroExpressao':
+        return 'Número de Expressão';
+      case 'numeroMotivacao':
+        return 'Número da Motivação';
+      case 'numeroImpressao':
+        return 'Número de Impressão';
+      case 'missaoVida':
+        return 'Missão de Vida';
+      case 'talentoOculto':
+        return 'Talento Oculto';
+      case 'respostaSubconsciente':
+        return 'Resposta Subconsciente';
+      case 'diaNatalicio':
+        return 'Dia Natalício';
+      case 'numeroPsiquico':
+        return 'Número Psíquico';
+      case 'aptidoesProfissionais':
+        return 'Aptidões Profissionais';
+      case 'desafios':
+        return 'Desafios';
+      case 'momentosDecisivos':
+        return 'Momento Decisivo';
+      case 'licoesCarmicas':
+        return 'Lições Kármicas';
+      case 'debitosCarmicos':
+        return 'Débitos Kármicos';
+      case 'tendenciasOcultas':
+        return 'Tendências Ocultas';
+      case 'harmoniaConjugal':
+        return 'Harmonia Conjugal';
+      case 'diasFavoraveis':
+        return 'Dias Favoráveis';
+      default:
+        return '';
     }
-
-
   }
 
   Widget _buildDragHandle(String cardKey) {
@@ -1454,8 +1496,6 @@ class _DashboardScreenState extends State<DashboardScreen>
             descricaoCompleta: '',
             inspiracao: '');
   }
-
-
 
   // Novos getters para os cards adicionais
   VibrationContent _getDestinoContent(int number) {
@@ -2155,9 +2195,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     final intervaloAtual = momentoAtual?['periodoIdade'] ?? '';
 
     final conteudoMomento = _getMomentoDecisivoContent(regente);
-    final descricaoCurta = '${conteudoMomento.descricaoCurta.isNotEmpty
-            ? conteudoMomento.descricaoCurta
-            : 'Momento $regente'}\n\n$intervaloAtual';
+    final descricaoCurta =
+        '${conteudoMomento.descricaoCurta.isNotEmpty ? conteudoMomento.descricaoCurta : 'Momento $regente'}\n\n$intervaloAtual';
 
     // Modal: todos os momentos decisivos com subtítulos destacados
     final buffer = StringBuffer();
@@ -2261,7 +2300,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             : const Center(child: CustomLoadingSpinner()), // Aba 2
         _userData != null
             ? FocoDoDiaScreen(
-                userData: _userData!, 
+                userData: _userData!,
                 initialFilter: _initialTaskFilter, // Passa o filtro inicial
               )
             : const Center(child: CustomLoadingSpinner()), // Aba 3
@@ -2282,7 +2321,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       barrierColor: Colors.black54,
       builder: (modalContext) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
         child: ReorderDashboardModal(
           userId: _userData!.uid,
           initialOrder: List<String>.from(_userData!.dashboardCardOrder),
@@ -2327,12 +2367,18 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   String _getPageName(int index) {
     switch (index) {
-      case 0: return 'Dashboard';
-      case 1: return 'Calendar';
-      case 2: return 'Journal';
-      case 3: return 'Tarefas';
-      case 4: return 'Metas';
-      default: return 'Dashboard';
+      case 0:
+        return 'Dashboard';
+      case 1:
+        return 'Calendar';
+      case 2:
+        return 'Journal';
+      case 3:
+        return 'Tarefas';
+      case 4:
+        return 'Metas';
+      default:
+        return 'Dashboard';
     }
   }
 
@@ -2349,12 +2395,11 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   Widget _buildDesktopLayout() {
-
-
     return AssistantLayoutManager(
       isMobile: false,
       isAiSidebarOpen: _isAiSidebarOpen,
-      onToggleAiSidebar: () => setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
+      onToggleAiSidebar: () =>
+          setState(() => _isAiSidebarOpen = !_isAiSidebarOpen),
       assistant: _userData != null
           ? AssistantPanel(
               userData: _userData!,
@@ -2372,44 +2417,49 @@ class _DashboardScreenState extends State<DashboardScreen>
                 menuAnimationController: _menuAnimationController,
                 isEditMode: _isEditMode,
                 showSearch: _sidebarIndex == 0,
-                assistantIcon: !_isAiSidebarOpen 
-                  ? Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: SizedBox(
-                        width: 40,
-                        height: 40,
-                        child: Material(
-                          color: Colors.transparent,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            onTap: () => setState(() => _isAiSidebarOpen = true),
-                            customBorder: const CircleBorder(),
-                            hoverColor: AppColors.primary.withValues(alpha: 0.1),
-                            splashColor: AppColors.primary.withValues(alpha: 0.2),
-                            child: Center(
-                              child: AgentStarIcon( 
-                                size: 28, // Matches other icons better (24-34 range)
-                                isStatic: true,
-                                isHollow: false,
-                                isWhiteFilled: true, 
+                assistantIcon: !_isAiSidebarOpen
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: SizedBox(
+                          width: 40,
+                          height: 40,
+                          child: Material(
+                            color: Colors.transparent,
+                            shape: const CircleBorder(),
+                            child: InkWell(
+                              onTap: () =>
+                                  setState(() => _isAiSidebarOpen = true),
+                              customBorder: const CircleBorder(),
+                              hoverColor:
+                                  AppColors.primary.withValues(alpha: 0.1),
+                              splashColor:
+                                  AppColors.primary.withValues(alpha: 0.2),
+                              child: const Center(
+                                child: AgentStarIcon(
+                                  size:
+                                      28, // Matches other icons better (24-34 range)
+                                  isStatic: true,
+                                  isHollow: false,
+                                  isWhiteFilled: true,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                    )
-                  : null,
+                      )
+                    : null,
                 actions: [
                   if (_isEditMode) // Removed isDesktop since we are in _buildDesktopLayout
-                     IconButton(
-                        icon: const Icon(Icons.check, color: AppColors.primary),
-                        onPressed: () => setState(() => _isEditMode = false),
-                     ),
+                    IconButton(
+                      icon: const Icon(Icons.check, color: AppColors.primary),
+                      onPressed: () => setState(() => _isEditMode = false),
+                    ),
                   const SizedBox(width: 8),
                 ],
-                onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
-                    ? _openReorderModal
-                    : null,
+                onEditPressed:
+                    (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
+                        ? _openReorderModal
+                        : null,
                 onSearchChanged: (query) {
                   setState(() {
                     _searchQuery = query;
@@ -2436,16 +2486,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                           userData: _userData!,
                           isMobile: false,
                           onDestinationSelected: _navigateToPage),
-                     Expanded(
-                       child: _buildCurrentPage(),
-                     ),
+                    Expanded(
+                      child: _buildCurrentPage(),
+                    ),
                   ],
                 ),
               ),
             ],
           ),
           // FAB positioned inside the dashboard area
-
         ],
       ),
     );
@@ -2454,97 +2503,103 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildMobileLayout() {
     const double sidebarWidth = 280;
     return ScreenInteractionListener(
-      controller: _fabOpacityController,
-      child: AssistantLayoutManager(
-        isMobile: true,
-        isAiSidebarOpen: false, 
-        onToggleAiSidebar: () {}, 
-        opacityController: _fabOpacityController, // Pass controller
-        assistant: _userData != null
-            ? AssistantPanel(
-                userData: _userData!,
-                numerologyData: _numerologyData,
-                activeContext: _getPageName(_sidebarIndex),
-                isFullScreen: true,
-                onClose: () {}, // Swipe handles close usually
-              )
-            : const SizedBox.shrink(),
-      child: Stack(
-        children: [
-          Column(
+        controller: _fabOpacityController,
+        child: AssistantLayoutManager(
+          isMobile: true,
+          isAiSidebarOpen: false,
+          onToggleAiSidebar: () {},
+          opacityController: _fabOpacityController, // Pass controller
+          assistant: _userData != null
+              ? AssistantPanel(
+                  userData: _userData!,
+                  numerologyData: _numerologyData,
+                  activeContext: _getPageName(_sidebarIndex),
+                  isFullScreen: true,
+                  onClose: () {}, // Swipe handles close usually
+                )
+              : const SizedBox.shrink(),
+          child: Stack(
             children: [
-               CustomAppBar(
-                userData: _userData,
-                menuAnimationController: _menuAnimationController,
-                isEditMode: _isEditMode,
-                showSearch: _sidebarIndex == 0, // Only show search on Dashboard tab
-                onEditPressed: (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
-                    ? _openReorderModal
-                    : null,
-                onSearchChanged: (query) {
-                  setState(() {
-                    _searchQuery = query;
-                    _buildCardList();
-                  });
-                },
-                onMenuPressed: () {
-                  setState(() {
-                    _isMobileDrawerOpen = !_isMobileDrawerOpen;
-                    _isMobileDrawerOpen
-                        ? _menuAnimationController.forward()
-                        : _menuAnimationController.reverse();
-                  });
-                },
+              Column(
+                children: [
+                  CustomAppBar(
+                    userData: _userData,
+                    menuAnimationController: _menuAnimationController,
+                    isEditMode: _isEditMode,
+                    showSearch:
+                        _sidebarIndex == 0, // Only show search on Dashboard tab
+                    onEditPressed: (_sidebarIndex == 0 &&
+                            !_isLoading &&
+                            !_isUpdatingLayout)
+                        ? _openReorderModal
+                        : null,
+                    onSearchChanged: (query) {
+                      setState(() {
+                        _searchQuery = query;
+                        _buildCardList();
+                      });
+                    },
+                    onMenuPressed: () {
+                      setState(() {
+                        _isMobileDrawerOpen = !_isMobileDrawerOpen;
+                        _isMobileDrawerOpen
+                            ? _menuAnimationController.forward()
+                            : _menuAnimationController.reverse();
+                      });
+                    },
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        if (_isMobileDrawerOpen) {
+                          setState(() {
+                            _isMobileDrawerOpen = false;
+                            _menuAnimationController.reverse();
+                          });
+                        }
+                      },
+                      onLongPress: (_sidebarIndex != 0 ||
+                              _isLoading ||
+                              _isUpdatingLayout)
+                          ? null
+                          : _openReorderModal,
+                      child: _buildCurrentPage(),
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    if (_isMobileDrawerOpen) {
+              if (_isMobileDrawerOpen)
+                GestureDetector(
+                    onTap: () {
                       setState(() {
                         _isMobileDrawerOpen = false;
                         _menuAnimationController.reverse();
                       });
-                    }
-                  },
-                  onLongPress: (_sidebarIndex != 0 || _isLoading || _isUpdatingLayout)
-                      ? null
-                      : _openReorderModal,
-                  child: _buildCurrentPage(),
-                ),
+                    },
+                    child:
+                        Container(color: Colors.black.withValues(alpha: 0.5))),
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                top: 0,
+                bottom: 0,
+                left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
+                width: sidebarWidth,
+                child: _userData != null
+                    ? DashboardSidebar(
+                        isExpanded: true,
+                        selectedIndex: _sidebarIndex,
+                        userData: _userData!,
+                        isMobile: true, // NOVO
+                        onDestinationSelected: (index) {
+                          _navigateToPage(index);
+                        },
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
-          if (_isMobileDrawerOpen)
-            GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _isMobileDrawerOpen = false;
-                    _menuAnimationController.reverse();
-                  });
-                },
-                child: Container(color: Colors.black.withValues(alpha: 0.5))),
-          AnimatedPositioned(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            top: 0,
-            bottom: 0,
-            left: _isMobileDrawerOpen ? 0 : -sidebarWidth,
-            width: sidebarWidth,
-            child: _userData != null
-                ? DashboardSidebar(
-                    isExpanded: true,
-                    selectedIndex: _sidebarIndex,
-                    userData: _userData!,
-                    isMobile: true, // NOVO
-                    onDestinationSelected: (index) {
-                      _navigateToPage(index);
-                    },
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
-      ),
-    ));
+        ));
   }
 
   Widget _buildDashboardContent({required bool isDesktop}) {
@@ -2577,7 +2632,8 @@ class _DashboardScreenState extends State<DashboardScreen>
       const double spacing = 24.0;
       final sidebarWidth = _isDesktopSidebarExpanded ? 250.0 : 80.0;
       final aiSidebarWidth = _isAiSidebarOpen ? 450.0 : 0.0;
-      final availableWidth = screenWidth - sidebarWidth - aiSidebarWidth - (spacing * 2);
+      final availableWidth =
+          screenWidth - sidebarWidth - aiSidebarWidth - (spacing * 2);
       int crossAxisCount = 1;
       if (availableWidth > 1300) {
         crossAxisCount = 3;
@@ -2615,7 +2671,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       icon: Icons.calendar_today_rounded,
     );
   }
-
 } // Fim da classe _DashboardScreenState
 
 // Classes auxiliares para o conteúdo de numerologia

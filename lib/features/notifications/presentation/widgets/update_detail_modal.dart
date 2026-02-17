@@ -6,14 +6,15 @@ import '../../../../../common/constants/app_colors.dart';
 class UpdateDetailModal extends StatelessWidget {
   final String version;
   final String changelog;
-  
+
   const UpdateDetailModal({
-    super.key, 
-    required this.version, 
+    super.key,
+    required this.version,
     required this.changelog,
   });
 
-  static Future<void> show(BuildContext context, {
+  static Future<void> show(
+    BuildContext context, {
     required String version,
     required String changelog,
   }) async {
@@ -21,7 +22,8 @@ class UpdateDetailModal extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => UpdateDetailModal(version: version, changelog: changelog),
+      builder: (context) =>
+          UpdateDetailModal(version: version, changelog: changelog),
     );
   }
 
@@ -50,7 +52,7 @@ class UpdateDetailModal extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Header
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
@@ -62,7 +64,8 @@ class UpdateDetailModal extends StatelessWidget {
                     color: AppColors.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: const Icon(Icons.rocket_launch_rounded, color: AppColors.primary, size: 28),
+                  child: const Icon(Icons.rocket_launch_rounded,
+                      color: AppColors.primary, size: 28),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -95,9 +98,9 @@ class UpdateDetailModal extends StatelessWidget {
               ],
             ),
           ),
-          
+
           const Divider(height: 1, color: AppColors.border),
-          
+
           // Content
           Expanded(
             child: SingleChildScrollView(
@@ -125,10 +128,20 @@ class UpdateDetailModal extends StatelessWidget {
                     child: MarkdownBody(
                       data: changelog,
                       styleSheet: MarkdownStyleSheet(
-                        p: const TextStyle(color: AppColors.secondaryText, fontSize: 14),
-                        h1: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-                        h2: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                        h3: const TextStyle(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.bold),
+                        p: const TextStyle(
+                            color: AppColors.secondaryText, fontSize: 14),
+                        h1: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold),
+                        h2: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                        h3: const TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
                         listBullet: const TextStyle(color: AppColors.primary),
                         code: TextStyle(
                           backgroundColor: Colors.black.withOpacity(0.3),
@@ -147,7 +160,7 @@ class UpdateDetailModal extends StatelessWidget {
               ),
             ),
           ),
-          
+
           // Footer
           Container(
             padding: const EdgeInsets.all(24),
@@ -163,13 +176,15 @@ class UpdateDetailModal extends StatelessWidget {
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: AppColors.border),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('Fechar', style: TextStyle(color: AppColors.secondaryText)),
+                    child: const Text('Fechar',
+                        style: TextStyle(color: AppColors.secondaryText)),
                   ),
                 ),
                 // Only on web/desktop we usually prompt refresh, on mobile update is manual store/install
-                // But user context is tricky (mobile debug vs web). 
+                // But user context is tricky (mobile debug vs web).
                 // We'll add a generic action if relevant, or just Close.
               ],
             ),
@@ -187,11 +202,11 @@ class UpdateDetailModal extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: Colors.blue.withOpacity(0.3)),
       ),
-      child: Row(
+      child: const Row(
         children: [
-          const Icon(Icons.info_outline, color: Colors.blue, size: 20),
-          const SizedBox(width: 12),
-          const Expanded(
+          Icon(Icons.info_outline, color: Colors.blue, size: 20),
+          SizedBox(width: 12),
+          Expanded(
             child: Text(
               'Para atualizar, se estiver no celular via cabo, faça um "git pull" e rode novamente. Se for Web, recarregue a página.',
               style: TextStyle(color: Colors.blue, fontSize: 12),

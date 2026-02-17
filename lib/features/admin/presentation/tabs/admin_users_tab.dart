@@ -50,7 +50,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
       // Usando SupabaseService agora
       final users = await _supabaseService.getAllUsers();
       final usage = await _supabaseService.getUserTokenUsageMap();
-      
+
       setState(() {
         _allUsers = users;
         _userUsage = usage;
@@ -173,7 +173,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                       style: const TextStyle(color: AppColors.primaryText),
                       decoration: InputDecoration(
                         hintText: 'Buscar por nome ou email...',
-                        hintStyle: const TextStyle(color: AppColors.secondaryText),
+                        hintStyle:
+                            const TextStyle(color: AppColors.secondaryText),
                         prefixIcon:
                             const Icon(Icons.search, color: AppColors.primary),
                         filled: true,
@@ -182,7 +183,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16, horizontal: 20),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(Icons.clear,
@@ -212,7 +214,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                     const SizedBox(width: 8),
                     _buildFilterChip('Desperta', 'plus', Icons.star_border),
                     const SizedBox(width: 8),
-                    _buildFilterChip('Sinergia', 'premium', Icons.diamond_outlined),
+                    _buildFilterChip(
+                        'Sinergia', 'premium', Icons.diamond_outlined),
                   ],
                 ),
               ),
@@ -230,7 +233,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.search_off,
-                              size: 64, color: AppColors.secondaryText.withOpacity(0.5)),
+                              size: 64,
+                              color: AppColors.secondaryText.withOpacity(0.5)),
                           const SizedBox(height: 16),
                           const Text(
                             'Nenhum usuário encontrado',
@@ -245,7 +249,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                   : RefreshIndicator(
                       onRefresh: _loadUsers,
                       child: ListView.separated(
-                        padding: EdgeInsets.symmetric(horizontal: isDesktop ? 24 : 16, vertical: 8),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 24 : 16, vertical: 8),
                         itemCount: _filteredUsers.length,
                         separatorBuilder: (context, index) =>
                             const SizedBox(height: 12),
@@ -307,20 +312,18 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppColors.border.withOpacity(0.5),
-          width: 1,
-        ),
-        boxShadow: [
-           BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4)
-           )
-        ]
-      ),
+          color: AppColors.cardBackground,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: AppColors.border.withOpacity(0.5),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ]),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -330,7 +333,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
             children: [
               // Main Content
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 40, 16), // Right padding for menu button
+                padding: const EdgeInsets.fromLTRB(
+                    16, 16, 40, 16), // Right padding for menu button
                 child: Row(
                   children: [
                     // Avatar Area using unified UserAvatar
@@ -351,7 +355,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                       ),
                     ),
                     const SizedBox(width: 16),
-                    
+
                     // Info Area
                     Expanded(
                       child: Column(
@@ -361,9 +365,10 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                             children: [
                               Expanded(
                                 child: Text(
-                                  (user.primeiroNome.isEmpty && user.sobrenome.isEmpty) 
-                                     ? 'Usuário Sem Nome' 
-                                     : '${user.primeiroNome} ${user.sobrenome}',
+                                  (user.primeiroNome.isEmpty &&
+                                          user.sobrenome.isEmpty)
+                                      ? 'Usuário Sem Nome'
+                                      : '${user.primeiroNome} ${user.sobrenome}',
                                   style: const TextStyle(
                                     color: AppColors.primaryText,
                                     fontWeight: FontWeight.bold,
@@ -374,15 +379,20 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                                 ),
                               ),
                               if (user.isAdmin)
-                                 Container(
-                                    margin: const EdgeInsets.only(left: 8),
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text('ADMIN', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.bold)),
-                                 )
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text('ADMIN',
+                                      style: TextStyle(
+                                          color: Colors.amber,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold)),
+                                )
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -400,19 +410,21 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                             spacing: 8.0,
                             runSpacing: 8.0,
                             children: [
-                              _buildMiniBadge(
-                                user.planDisplayName, 
-                                planColor, 
-                                isActive: isActiveSubscription
-                              ),
+                              _buildMiniBadge(user.planDisplayName, planColor,
+                                  isActive: isActiveSubscription),
                               if (user.subscription.systemPlan != null)
-                                 _buildMiniBadge('Sistema (Manual)', Colors.amber.shade700, isActive: true),
-                              
-                               if (!isActiveSubscription)
-                                 _buildMiniBadge('Expirado', Colors.red, isActive: true),
-                               
-                               if (_userUsage.containsKey(user.uid) && _userUsage[user.uid]! > 0)
-                                  _buildMiniBadge('${NumberFormat.compact().format(_userUsage[user.uid])} Tokens', Colors.purple, isActive: true),
+                                _buildMiniBadge(
+                                    'Sistema (Manual)', Colors.amber.shade700,
+                                    isActive: true),
+                              if (!isActiveSubscription)
+                                _buildMiniBadge('Expirado', Colors.red,
+                                    isActive: true),
+                              if (_userUsage.containsKey(user.uid) &&
+                                  _userUsage[user.uid]! > 0)
+                                _buildMiniBadge(
+                                    '${NumberFormat.compact().format(_userUsage[user.uid])} Tokens',
+                                    Colors.purple,
+                                    isActive: true),
                             ],
                           )
                         ],
@@ -421,13 +433,14 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                   ],
                 ),
               ),
-              
+
               // Positioned Action Menu at top-right
               Positioned(
                 top: 4,
                 right: 4,
                 child: PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText, size: 20),
+                  icon: const Icon(Icons.more_vert,
+                      color: AppColors.secondaryText, size: 20),
                   padding: EdgeInsets.zero,
                   color: AppColors.cardBackground,
                   onSelected: (value) {
@@ -444,7 +457,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                         children: [
                           Icon(Icons.edit, color: AppColors.primary, size: 20),
                           SizedBox(width: 12),
-                          Text('Editar Dados', style: TextStyle(color: AppColors.primaryText)),
+                          Text('Editar Dados',
+                              style: TextStyle(color: AppColors.primaryText)),
                         ],
                       ),
                     ),
@@ -452,9 +466,11 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete, color: Colors.red.shade400, size: 20),
+                          Icon(Icons.delete,
+                              color: Colors.red.shade400, size: 20),
                           const SizedBox(width: 12),
-                          const Text('Excluir Usuário', style: TextStyle(color: AppColors.primaryText)),
+                          const Text('Excluir Usuário',
+                              style: TextStyle(color: AppColors.primaryText)),
                         ],
                       ),
                     ),

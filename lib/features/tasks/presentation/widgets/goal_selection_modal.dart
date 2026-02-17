@@ -197,7 +197,8 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
               children: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 24),
+                  icon: const Icon(Icons.close,
+                      color: AppColors.secondaryText, size: 24),
                   tooltip: 'Cancelar',
                 ),
                 const Expanded(

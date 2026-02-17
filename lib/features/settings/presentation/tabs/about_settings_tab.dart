@@ -68,8 +68,10 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
                   child: Image.asset(
                     'assets/images/icon_app2.png',
                     fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.apps, size: 50, color: AppColors.primary),
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.apps,
+                        size: 50,
+                        color: AppColors.primary),
                   ),
                 ),
               ),
@@ -187,7 +189,8 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
           subtitle,
           style: const TextStyle(color: AppColors.tertiaryText, fontSize: 13),
         ),
-        trailing: const Icon(Icons.chevron_right, color: AppColors.tertiaryText),
+        trailing:
+            const Icon(Icons.chevron_right, color: AppColors.tertiaryText),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),

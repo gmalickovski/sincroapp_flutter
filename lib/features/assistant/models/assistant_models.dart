@@ -1,6 +1,12 @@
 // ignore_for_file: constant_identifier_names
 
-enum AssistantActionType { schedule, create_goal, create_task, analyze_harmony, analyze_compatibility }
+enum AssistantActionType {
+  schedule,
+  create_goal,
+  create_task,
+  analyze_harmony,
+  analyze_compatibility
+}
 
 class AssistantAction {
   final AssistantActionType type;
@@ -70,7 +76,9 @@ class AssistantAction {
     if (typeStr == 'create_goal') t = AssistantActionType.create_goal;
     if (typeStr == 'create_task') t = AssistantActionType.create_task;
     if (typeStr == 'analyze_harmony') t = AssistantActionType.analyze_harmony;
-    if (typeStr == 'analyze_compatibility') t = AssistantActionType.analyze_compatibility;
+    if (typeStr == 'analyze_compatibility') {
+      t = AssistantActionType.analyze_compatibility;
+    }
     DateTime? parseDate(dynamic v) {
       if (v == null) return null;
       final s = v.toString();
@@ -82,8 +90,9 @@ class AssistantAction {
     // Support both "date" and "targetDate" keys, AND nested payload date (default for N8n)
     final payload = json['payload'] as Map<String, dynamic>?;
     final payloadDate = payload != null ? parseDate(payload['date']) : null;
-    
-    final parsedDate = parseDate(json['date']) ?? parseDate(json['targetDate']) ?? payloadDate;
+
+    final parsedDate =
+        parseDate(json['date']) ?? parseDate(json['targetDate']) ?? payloadDate;
 
     // Capture extra data
     final extraData = Map<String, dynamic>.from(json);
@@ -91,16 +100,16 @@ class AssistantAction {
     // Parse suggestions
     List<DateTime> suggestions = [];
     if (json['suggestedDates'] is List) {
-       suggestions = (json['suggestedDates'] as List)
-           .map((e) => parseDate(e))
-           .whereType<DateTime>() // Filter nulls
-           .toList();
+      suggestions = (json['suggestedDates'] as List)
+          .map((e) => parseDate(e))
+          .whereType<DateTime>() // Filter nulls
+          .toList();
     } else if (payload != null && payload['suggestedDates'] is List) {
-       // Also look for suggestedDates in payload
-       suggestions = (payload['suggestedDates'] as List)
-           .map((e) => parseDate(e))
-           .whereType<DateTime>() // Filter nulls
-           .toList();
+      // Also look for suggestedDates in payload
+      suggestions = (payload['suggestedDates'] as List)
+          .map((e) => parseDate(e))
+          .whereType<DateTime>() // Filter nulls
+          .toList();
     }
 
     return AssistantAction(
@@ -118,7 +127,8 @@ class AssistantAction {
           ? List<String>.from(json['subtasks'].map((e) => e.toString()))
           : const <String>[],
       suggestedDates: suggestions,
-      needsUserInput: json['needsUserInput'] == true, // Parse needsUserInput flag
+      needsUserInput:
+          json['needsUserInput'] == true, // Parse needsUserInput flag
       data: extraData,
     );
   }
@@ -143,9 +153,13 @@ class AssistantAction {
 class AssistantAnswer {
   final String answer;
   final List<AssistantAction> actions;
-  final List<Map<String, dynamic>> embeddedTasks; // NOVO: Lista de tarefas para renderizar
+  final List<Map<String, dynamic>>
+      embeddedTasks; // NOVO: Lista de tarefas para renderizar
 
-  AssistantAnswer({required this.answer, required this.actions, this.embeddedTasks = const []});
+  AssistantAnswer(
+      {required this.answer,
+      required this.actions,
+      this.embeddedTasks = const []});
 
   factory AssistantAnswer.fromJson(Map<String, dynamic> json) {
     final answer = (json['answer'] ?? '').toString();
@@ -155,17 +169,17 @@ class AssistantAnswer {
         if (item is Map) actions.add(AssistantAction.fromJson(Map.from(item)));
       }
     }
-    
+
     // NOVO: Parsear tasks[] - buscar no nível raiz OU dentro de actions[].tasks
     final embeddedTasks = <Map<String, dynamic>>[];
-    
+
     // 1. Tentar buscar no nível raiz primeiro
     if (json['tasks'] is List) {
       for (final item in (json['tasks'] as List)) {
         if (item is Map) embeddedTasks.add(Map<String, dynamic>.from(item));
       }
     }
-    
+
     // 2. Se não encontrou, buscar dentro de actions[].tasks (formato N8n atual)
     if (embeddedTasks.isEmpty && json['actions'] is List) {
       for (final action in (json['actions'] as List)) {
@@ -176,8 +190,9 @@ class AssistantAnswer {
         }
       }
     }
-    
-    return AssistantAnswer(answer: answer, actions: actions, embeddedTasks: embeddedTasks);
+
+    return AssistantAnswer(
+        answer: answer, actions: actions, embeddedTasks: embeddedTasks);
   }
 }
 
@@ -187,7 +202,8 @@ class AssistantMessage {
   final String content;
   final DateTime time;
   final List<AssistantAction> actions; // Ações sugeridas pelo assistente
-  final List<Map<String, dynamic>> embeddedTasks; // NOVO: Lista de tarefas para renderizar visualmente
+  final List<Map<String, dynamic>>
+      embeddedTasks; // NOVO: Lista de tarefas para renderizar visualmente
 
   AssistantMessage({
     String? id,
@@ -200,7 +216,8 @@ class AssistantMessage {
 
   bool get isUser => role == 'user';
   DateTime get timestamp => time; // Alias for compatibility if needed
-  bool get hasTasks => embeddedTasks.isNotEmpty; // NOVO: Helper para verificar se tem tasks
+  bool get hasTasks =>
+      embeddedTasks.isNotEmpty; // NOVO: Helper para verificar se tem tasks
 
   AssistantMessage copyWith({
     String? id,

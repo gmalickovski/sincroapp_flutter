@@ -102,14 +102,12 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SettingsSectionTitle(title: 'Dados da Análise'),
-          
           Container(
             padding: const EdgeInsets.only(bottom: 24),
             child: const Text(
                 'Informações usadas para os cálculos numerológicos.',
                 style: TextStyle(color: AppColors.secondaryText)),
           ),
-
           Form(
             key: _formKey,
             child: Column(
@@ -121,7 +119,8 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
                   decoration: InputDecoration(
                     labelText: 'Nome Completo (para análise)',
                     labelStyle: const TextStyle(color: AppColors.secondaryText),
-                    prefixIcon: const Icon(Icons.badge_outlined, color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.badge_outlined,
+                        color: AppColors.secondaryText),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.border),
@@ -142,7 +141,8 @@ class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
                   decoration: InputDecoration(
                     labelText: 'Data de Nascimento',
                     labelStyle: const TextStyle(color: AppColors.secondaryText),
-                    prefixIcon: const Icon(Icons.calendar_month_outlined, color: AppColors.secondaryText),
+                    prefixIcon: const Icon(Icons.calendar_month_outlined,
+                        color: AppColors.secondaryText),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: AppColors.border),

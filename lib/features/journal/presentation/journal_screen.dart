@@ -11,8 +11,6 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'journal_editor_screen.dart';
 
-import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
-import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'widgets/journal_entry_card.dart';
 import 'widgets/journal_filter_panel.dart';
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
@@ -39,9 +37,27 @@ class _JournalScreenState extends State<JournalScreen> {
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
+  // Cached stream to avoid recreating on every build
+  late Stream<List<JournalEntry>> _entriesStream;
+
   bool get _isFilterActive =>
       _dateFilter != null || _vibrationFilter != null || _moodFilter != null;
-  
+
+  @override
+  void initState() {
+    super.initState();
+    _rebuildStream();
+  }
+
+  void _rebuildStream() {
+    _entriesStream = _supabaseService.getJournalEntriesStream(
+      widget.userData.uid,
+      date: _dateFilter,
+      mood: _moodFilter,
+      vibration: _vibrationFilter,
+    );
+  }
+
   @override
   void dispose() {
     _fabOpacityController.dispose();
@@ -74,6 +90,7 @@ class _JournalScreenState extends State<JournalScreen> {
             _dateFilter = date;
             _vibrationFilter = vibration;
             _moodFilter = mood;
+            _rebuildStream();
           });
           Navigator.pop(context);
         },
@@ -83,6 +100,7 @@ class _JournalScreenState extends State<JournalScreen> {
             _dateFilter = null;
             _vibrationFilter = null;
             _moodFilter = null;
+            _rebuildStream();
           });
         },
         userData: widget.userData,
@@ -119,6 +137,10 @@ class _JournalScreenState extends State<JournalScreen> {
         await _supabaseService.deleteJournalEntry(
             widget.userData.uid, entry.id);
         if (mounted) {
+          // Force stream refresh to update UI immediately
+          setState(() {
+            _rebuildStream();
+          });
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Anotação excluída com sucesso.'),
@@ -139,6 +161,8 @@ class _JournalScreenState extends State<JournalScreen> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
@@ -148,164 +172,165 @@ class _JournalScreenState extends State<JournalScreen> {
       backgroundColor: AppColors.background,
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                  isDesktop ? 40 : 16, 8, isDesktop ? 40 : 16, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text("Diário de Bordo",
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: isDesktop ? 32 : 28,
-                          fontWeight: FontWeight.bold)),
-                  IconButton(
-                    key: _filterButtonKey,
-                    onPressed: _openFilterUI,
-                    icon: Icon(
-                      Icons.filter_alt_outlined,
-                      color: _isFilterActive ? AppColors.primary : AppColors.secondaryText,
-                    ),
-                    tooltip: 'Filtros',
-                    style: IconButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(
-                            color: _isFilterActive
-                                ? AppColors.primary
-                                : AppColors.border),
-                      ),
-                    ),
-                  )
-                ],
-              ),
-            ),
-            if (_isFilterActive)
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: ActionChip(
-                  avatar: const Icon(Icons.clear, size: 16, color: Colors.white),
-                  label: const Text('Limpar todos os filtros'),
-                  labelStyle: const TextStyle(color: Colors.white),
-                  backgroundColor: AppColors.primary.withValues(alpha: 0.5),
-                  onPressed: () {
-                    setState(() {
-                      _dateFilter = null;
-                      _vibrationFilter = null;
-                      _moodFilter = null;
-                    });
+                padding: EdgeInsets.fromLTRB(
+                    isDesktop ? 24 : 16, 8, isDesktop ? 24 : 16, 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Diário de Bordo",
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isDesktop ? 32 : 28,
+                            fontWeight: FontWeight.bold)),
+                    IconButton(
+                      key: _filterButtonKey,
+                      onPressed: _openFilterUI,
+                      icon: Icon(
+                        Icons.filter_alt_outlined,
+                        color: _isFilterActive
+                            ? AppColors.primary
+                            : AppColors.secondaryText,
+                      ),
+                      tooltip: 'Filtros',
+                      style: IconButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                              color: _isFilterActive
+                                  ? AppColors.primary
+                                  : AppColors.border),
+                        ),
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              if (_isFilterActive)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: ActionChip(
+                    avatar:
+                        const Icon(Icons.clear, size: 16, color: Colors.white),
+                    label: const Text('Limpar todos os filtros'),
+                    labelStyle: const TextStyle(color: Colors.white),
+                    backgroundColor: AppColors.primary.withValues(alpha: 0.5),
+                    onPressed: () {
+                      setState(() {
+                        _dateFilter = null;
+                        _vibrationFilter = null;
+                        _moodFilter = null;
+                        _rebuildStream();
+                      });
+                    },
+                  ),
+                ),
+              Expanded(
+                child: StreamBuilder<List<JournalEntry>>(
+                  stream: _entriesStream,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CustomLoadingSpinner());
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                          child: Text("Erro ao carregar anotações.",
+                              style: TextStyle(color: Colors.red.shade300)));
+                    }
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Center(
+                        child: Text(
+                          _isFilterActive
+                              ? "Nenhuma anotação encontrada para estes filtros."
+                              : "Nenhuma anotação encontrada.\nClique no '+' para criar a primeira.",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              color: AppColors.secondaryText, fontSize: 16),
+                        ),
+                      );
+                    }
+
+                    final entries = snapshot.data!;
+
+                    if (isDesktop) {
+                      return MasonryGridView.count(
+                        padding: const EdgeInsets.symmetric(horizontal: 40.0)
+                            .copyWith(bottom: 100),
+                        crossAxisCount: 2,
+                        mainAxisSpacing: 16,
+                        crossAxisSpacing: 16,
+                        itemCount: entries.length,
+                        itemBuilder: (context, index) {
+                          return JournalEntryCard(
+                            entry: entries[index],
+                            userData: widget.userData,
+                            onDelete: () => _handleDelete(entries[index]),
+                          );
+                        },
+                      );
+                    } else {
+                      final groupedEntries = groupBy<JournalEntry, String>(
+                        entries,
+                        (entry) =>
+                            DateFormat.yMMMM('pt_BR').format(entry.createdAt),
+                      );
+                      final List<Widget> listItems = [];
+                      groupedEntries.forEach((monthYear, entriesInMonth) {
+                        listItems.add(
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 4.0, vertical: 16),
+                            child: Text(
+                              toBeginningOfSentenceCase(monthYear)!,
+                              style: const TextStyle(
+                                  color: AppColors.primary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        );
+                        listItems.addAll(
+                          entriesInMonth
+                              .map((entry) => Padding(
+                                    padding:
+                                        const EdgeInsets.only(bottom: 16.0),
+                                    child: JournalEntryCard(
+                                      entry: entry,
+                                      userData: widget.userData,
+                                      onDelete: () => _handleDelete(entry),
+                                    ),
+                                  ))
+                              .toList(),
+                        );
+                      });
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0)
+                            .copyWith(bottom: 100),
+                        itemCount: listItems.length,
+                        itemBuilder: (context, index) => listItems[index],
+                      );
+                    }
                   },
                 ),
               ),
-            Expanded(
-              child: StreamBuilder<List<JournalEntry>>(
-                stream: _supabaseService.getJournalEntriesStream(
-                  widget.userData.uid,
-                  date: _dateFilter,
-                  mood: _moodFilter,
-                  vibration: _vibrationFilter,
-                ),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CustomLoadingSpinner());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(
-                        child: Text("Erro ao carregar anotações.",
-                            style: TextStyle(color: Colors.red.shade300)));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(
-                      child: Text(
-                        _isFilterActive
-                            ? "Nenhuma anotação encontrada para estes filtros."
-                            : "Nenhuma anotação encontrada.\nClique no '+' para criar a primeira.",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            color: AppColors.secondaryText, fontSize: 16),
-                      ),
-                    );
-                  }
-
-                  final entries = snapshot.data!;
-
-                  if (isDesktop) {
-                    return MasonryGridView.count(
-                      padding: const EdgeInsets.symmetric(horizontal: 40.0)
-                          .copyWith(bottom: 100),
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      itemCount: entries.length,
-                      itemBuilder: (context, index) {
-                        return JournalEntryCard(
-                          entry: entries[index],
-                          onEdit: () => _openJournalEditor(entry: entries[index]),
-                          onDelete: () => _handleDelete(entries[index]),
-                        );
-                      },
-                    );
-                  } else {
-                    final groupedEntries = groupBy<JournalEntry, String>(
-                      entries,
-                      (entry) =>
-                          DateFormat.yMMMM('pt_BR').format(entry.createdAt),
-                    );
-                    final List<Widget> listItems = [];
-                    groupedEntries.forEach((monthYear, entriesInMonth) {
-                      listItems.add(
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 4.0, vertical: 16),
-                          child: Text(
-                            toBeginningOfSentenceCase(monthYear)!,
-                            style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                      );
-                      listItems.addAll(
-                        entriesInMonth
-                            .map((entry) => Padding(
-                                  padding: const EdgeInsets.only(bottom: 16.0),
-                                  child: JournalEntryCard(
-                                    entry: entry,
-                                    onEdit: () =>
-                                        _openJournalEditor(entry: entry),
-                                    onDelete: () => _handleDelete(entry),
-                                  ),
-                                ))
-                            .toList(),
-                      );
-                    });
-                    return ListView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0)
-                          .copyWith(bottom: 100),
-                      itemCount: listItems.length,
-                      itemBuilder: (context, index) => listItems[index],
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
-                  child: FloatingActionButton(
-                onPressed: () => _openJournalEditor(),
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                elevation: 4,
-                shape: const CircleBorder(),
-                child: const Icon(Icons.add),
-              ),
+        child: FloatingActionButton(
+          onPressed: () => _openJournalEditor(),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          elevation: 4,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add),
+        ),
       ),
     );
   }

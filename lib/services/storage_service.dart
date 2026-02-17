@@ -16,24 +16,26 @@ class StorageService {
   }) async {
     try {
       // Create a unique filename
-      final String fileExtension = fileName.contains('.') ? fileName.split('.').last : 'jpg';
+      final String fileExtension =
+          fileName.contains('.') ? fileName.split('.').last : 'jpg';
       final String uniqueName = '${_uuid.v4()}.$fileExtension';
-      
+
       // Define path: users/{userId}/goals/{uniqueName}
       final String path = 'users/$userId/goals/$uniqueName';
 
       // Upload to Supabase
       await _supabase.storage.from(_bucketName).uploadBinary(
-        path,
-        fileBytes,
-        fileOptions: FileOptions(
-          contentType: 'image/$fileExtension',
-          upsert: true,
-        ),
-      );
+            path,
+            fileBytes,
+            fileOptions: FileOptions(
+              contentType: 'image/$fileExtension',
+              upsert: true,
+            ),
+          );
 
       // Get Public URL
-      final String publicUrl = _supabase.storage.from(_bucketName).getPublicUrl(path);
+      final String publicUrl =
+          _supabase.storage.from(_bucketName).getPublicUrl(path);
       return publicUrl;
     } catch (e) {
       throw Exception('Failed to upload image to Supabase: $e');
@@ -45,20 +47,21 @@ class StorageService {
   Future<void> deleteImage(String imageUrl) async {
     try {
       // Extract path from URL roughly (after /object/public/images/)
-      // This generic parsing is tricky, so ideally we store path. 
+      // This generic parsing is tricky, so ideally we store path.
       // But for now, we try to parse standard Supabase URLs.
       final Uri uri = Uri.parse(imageUrl);
-      final segments = uri.pathSegments; 
+      final segments = uri.pathSegments;
       // Ex: /storage/v1/object/public/images/users/...
       // We need 'users/...' part if bucket is images.
-      
+
       if (segments.contains('public')) {
         final publicIndex = segments.indexOf('public');
         if (publicIndex + 1 < segments.length) {
-            // buffer bucket name
-            final pathSegments = segments.sublist(publicIndex + 2); // skip bucket name
-            final path = pathSegments.join('/');
-            await _supabase.storage.from(_bucketName).remove([path]);
+          // buffer bucket name
+          final pathSegments =
+              segments.sublist(publicIndex + 2); // skip bucket name
+          final path = pathSegments.join('/');
+          await _supabase.storage.from(_bucketName).remove([path]);
         }
       }
     } catch (e) {

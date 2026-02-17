@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:flutter/services.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -16,28 +14,31 @@ class CheckUpdateService {
       // 1. Get Current App Version
       final packageInfo = await PackageInfo.fromPlatform();
       String currentVersion = packageInfo.version; // e.g. "1.2.13"
-      
+
       // Fallback for web if package_info fails or returns empty in some envs
       if (currentVersion.isEmpty) {
-         currentVersion = '1.0.0';
+        currentVersion = '1.0.0';
       }
 
       // 2. Check local preferences (already notified?)
       final prefs = await SharedPreferences.getInstance();
-      final String? lastNotifiedVersion = prefs.getString(_lastNotifiedVersionKey);
+      final String? lastNotifiedVersion =
+          prefs.getString(_lastNotifiedVersionKey);
 
       if (lastNotifiedVersion == currentVersion) {
-        debugPrint('System Update: Already notified for version $currentVersion');
+        debugPrint(
+            'System Update: Already notified for version $currentVersion');
         return;
       }
 
       // 3. Fetch Release Notes (Supabase Only)
       Map<String, dynamic>? notes;
-      
+
       notes = await _supabaseService.getAppVersionDetails(currentVersion);
 
       if (notes == null) {
-        debugPrint('System Update: No release notes found for version $currentVersion');
+        debugPrint(
+            'System Update: No release notes found for version $currentVersion');
         return;
       }
 
@@ -46,12 +47,17 @@ class CheckUpdateService {
       if (user == null) return;
 
       // 5. Create Notification
-      final String title = notes['title'] ?? notes['label'] ?? 'Nova Atualização Disponível!';
-      final String description = notes['description'] ?? 'Melhorias e correções no App.';
+      final String title =
+          notes['title'] ?? notes['label'] ?? 'Nova Atualização Disponível!';
+      final String description =
+          notes['description'] ?? 'Melhorias e correções no App.';
       final List<dynamic> details = notes['details'] ?? [];
-      final String date = notes['date'] ?? notes['release_date'] ?? DateTime.now().toIso8601String();
+      final String date = notes['date'] ??
+          notes['release_date'] ??
+          DateTime.now().toIso8601String();
 
-      debugPrint('System Update: Creating notification for version $currentVersion...');
+      debugPrint(
+          'System Update: Creating notification for version $currentVersion...');
 
       await _supabaseService.sendNotification(
         toUserId: user.id,
@@ -70,8 +76,7 @@ class CheckUpdateService {
 
       // 6. Update local preferences
       await prefs.setString(_lastNotifiedVersionKey, currentVersion);
-       debugPrint('System Update: Notification created successfully.');
-
+      debugPrint('System Update: Notification created successfully.');
     } catch (e) {
       debugPrint('Error checking for updates: $e');
     }

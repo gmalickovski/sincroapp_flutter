@@ -4,7 +4,8 @@ class StrategyRecommendation {
   final StrategyMode mode;
   final String reason;
   final List<String> tips;
-  final String methodologyName; // e.g., "GTD (Getting Things Done)", "The One Thing"
+  final String
+      methodologyName; // e.g., "GTD (Getting Things Done)", "The One Thing"
 
   const StrategyRecommendation({
     required this.mode,

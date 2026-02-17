@@ -10,11 +10,11 @@ class AuthRepository {
 
   // Stream para o AuthCheck. Mapeia AuthState para User?
   Stream<User?> get authStateChanges {
-     return _auth.onAuthStateChange.map((state) {
-        return state.session?.user;
-     });
+    return _auth.onAuthStateChange.map((state) {
+      return state.session?.user;
+    });
   }
-  
+
   User? get currentUser => _auth.currentUser;
 
   // Método para a LoginScreen
@@ -50,9 +50,9 @@ class AuthRepository {
         data: {
           'full_name': displayName.trim(),
           if (gender != null) 'gender': gender, // NOVO
-        }, 
+        },
       );
-      
+
       // Notificar N8N MOVED: Now handled in UserDetailsScreen after analysis data
       // if (response.user != null) {
       //   _notifySignup(...)

@@ -36,7 +36,7 @@ class AppRouter {
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
     // Handle routes with query parameters (like /reset-password?token=...)
     final uri = Uri.parse(settings.name ?? '');
-    
+
     if (uri.path == AppRoutes.resetPassword) {
       final token = uri.queryParameters['token'];
       return MaterialPageRoute(
@@ -57,8 +57,7 @@ class AppRouter {
         // Suporta também Map com chave 'user' para flexibilidade
         if (args is Map && args['user'] is User) {
           return MaterialPageRoute(
-            builder: (_) =>
-                UserDetailsScreen(user: args['user'] as User),
+            builder: (_) => UserDetailsScreen(user: args['user'] as User),
             settings: settings,
           );
         }

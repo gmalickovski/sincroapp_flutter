@@ -119,7 +119,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
           userId: widget.userData.uid,
           createdAt: widget.goalToEdit!.createdAt,
           subTasks: widget.goalToEdit!.subTasks,
-          imageUrl: widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
+          imageUrl:
+              widget.goalToEdit!.imageUrl, // Mantém imagem existente se houver
           category: widget.goalToEdit!.category,
         ));
       } else {
@@ -225,13 +226,14 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                    icon:
+                        const Icon(Icons.close, color: AppColors.secondaryText),
                     onPressed: () => Navigator.of(context).pop(false),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
-              
+
               // 2. Scrollable Content (Flexible)
               Flexible(
                 child: SingleChildScrollView(
@@ -243,7 +245,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                         TextFormField(
                           controller: _titleController,
                           autofillHints: const [], // Prevent browser password save prompt
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
                           decoration: _buildInputDecoration(
                             labelText: 'Título da Jornada *',
                             hintText: 'Ex: Conquistar a Vaga de Desenvolvedor',
@@ -261,11 +264,12 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         TextFormField(
                           controller: _descriptionController,
                           autofillHints: const [], // Prevent browser password save prompt
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
                           maxLines: 5,
                           minLines: 3,
                           maxLength: 500,
@@ -273,7 +277,9 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                             labelText: 'Descrição',
                             hintText:
                                 'O que você quer alcançar com essa jornada? Quais são seus objetivos?',
-                          ).copyWith(alignLabelWithHint: true), // Fixed: Top-Left Alignment
+                          ).copyWith(
+                              alignLabelWithHint:
+                                  true), // Fixed: Top-Left Alignment
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
                               return 'Por favor, insira uma descrição.';
@@ -285,7 +291,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                           },
                         ),
                         const SizedBox(height: 16),
-                        
+
                         // Clean Date Picker for Desktop
                         GestureDetector(
                           onTap: _pickDate,
@@ -301,7 +307,8 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                             ),
                             child: Text(
                               _targetDate != null
-                                  ? DateFormat('dd/MM/yyyy').format(_targetDate!)
+                                  ? DateFormat('dd/MM/yyyy')
+                                      .format(_targetDate!)
                                   : 'Selecione a data de conclusão',
                               style: TextStyle(
                                 color: _targetDate != null
@@ -319,7 +326,7 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
               ),
 
               const SizedBox(height: 32),
-              
+
               // 3. Button (Fixed at bottom)
               SizedBox(
                 width: double.infinity,
@@ -333,19 +340,20 @@ class _CreateGoalDialogState extends State<CreateGoalDialog> {
                     elevation: 0,
                   ),
                   child: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(
-                        widget.goalToEdit != null
-                            ? "Atualizar Jornada"
-                            : "Salvar Jornada",
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16),
-                      ),
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text(
+                          widget.goalToEdit != null
+                              ? "Atualizar Jornada"
+                              : "Salvar Jornada",
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
+                        ),
                 ),
               )
             ],

@@ -24,7 +24,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     });
 
     try {
-      await AuthRepository().sendPasswordResetEmail(email: _emailController.text.trim());
+      await AuthRepository()
+          .sendPasswordResetEmail(email: _emailController.text.trim());
 
       if (mounted) {
         setState(() {
@@ -105,7 +106,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             decoration: InputDecoration(
               labelText: 'E-mail',
               labelStyle: const TextStyle(color: AppColors.secondaryText),
-              prefixIcon: const Icon(Icons.email_outlined, color: AppColors.secondaryText),
+              prefixIcon: const Icon(Icons.email_outlined,
+                  color: AppColors.secondaryText),
               enabledBorder: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: const BorderSide(color: AppColors.border),
@@ -136,7 +138,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ? const CustomLoadingSpinner(size: 24)
                 : const Text(
                     'Enviar Instruções',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   ),
           ),
         ],

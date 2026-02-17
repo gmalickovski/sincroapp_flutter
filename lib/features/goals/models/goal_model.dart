@@ -99,7 +99,6 @@ class Goal extends Equatable {
 
   // Constrói uma instância de Goal a partir de um Map
   factory Goal.fromMap(Map<String, dynamic> data) {
-    
     DateTime? parseDate(dynamic dateValue) {
       if (dateValue == null) return null;
       if (dateValue is String) {
@@ -112,14 +111,15 @@ class Goal extends Equatable {
     final subTasksRaw = data['sub_tasks'] ?? data['subTasks'];
     if (subTasksRaw is List) {
       try {
-        List<dynamic> subTasksData = subTasksRaw as List<dynamic>;
+        List<dynamic> subTasksData = subTasksRaw;
         loadedSubTasks = subTasksData.map((taskData) {
           final taskMap = taskData as Map<String, dynamic>;
           // Usando um ID temporário se não vier
-          return SubTask.fromMap(taskMap, DateTime.now().millisecondsSinceEpoch.toString()); 
+          return SubTask.fromMap(
+              taskMap, DateTime.now().millisecondsSinceEpoch.toString());
         }).toList();
       } catch (e) {
-        loadedSubTasks = []; 
+        loadedSubTasks = [];
       }
     }
 
@@ -129,7 +129,8 @@ class Goal extends Equatable {
       description: data['description'] ?? '',
       targetDate: parseDate(data['target_date'] ?? data['targetDate']),
       progress: (data['progress'] ?? 0).toInt(),
-      createdAt: parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
+      createdAt:
+          parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
       userId: data['user_id'] ?? data['userId'] ?? '',
       category: data['category'] as String?,
       subTasks: loadedSubTasks,
@@ -149,7 +150,7 @@ class Goal extends Equatable {
       'title': title,
       'description': description,
       'target_date': targetDate?.toIso8601String(),
-      'progress': currentProgress, 
+      'progress': currentProgress,
       'created_at': createdAt.toIso8601String(),
       'user_id': userId,
       'category': category,

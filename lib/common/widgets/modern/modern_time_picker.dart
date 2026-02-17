@@ -34,7 +34,8 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
     _selectedHour = widget.initialTime.hour;
     _selectedMinute = widget.initialTime.minute;
     _hourController = FixedExtentScrollController(initialItem: _selectedHour);
-    _minuteController = FixedExtentScrollController(initialItem: _selectedMinute);
+    _minuteController =
+        FixedExtentScrollController(initialItem: _selectedMinute);
 
     _syncInputControllers();
   }
@@ -45,7 +46,8 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
   }
 
   void _updateTime() {
-    widget.onTimeChanged(TimeOfDay(hour: _selectedHour, minute: _selectedMinute));
+    widget
+        .onTimeChanged(TimeOfDay(hour: _selectedHour, minute: _selectedMinute));
   }
 
   @override
@@ -66,27 +68,27 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
       children: [
         // 1. Digital Clock Display & Mode Switcher
         _buildDigitalClock(),
-        
+
         const SizedBox(height: 24),
 
         // 2. Picker Area (Wheel or Input based on internal state, but here we keep wheel for visual picking)
-        // The user want "Input Mode" visible. 
+        // The user want "Input Mode" visible.
         // Actually the best UX here is: Big Clock IS the display. Below we show the Wheel.
         // Tapping the clock switches which wheel (Hour or Minute) is highlighted/active (if we want to go super fancy)
         // OR we just keep the two independent wheels as before but make the clock bigger.
-        // The request says "deixar o campo de digitação visivel conforme o exemplo". 
+        // The request says "deixar o campo de digitação visivel conforme o exemplo".
         // The example shows a huge "21 : 37" and a dial below.
         // So I will show the Big Clock. Tapping it can optionally open a keyboard, but let's stick to the wheels below for now as it matches the "modern" look user seemed to like earlier, just refining the header.
         // WAIT, if the user says "campo de digitação visivel", maybe they want the KEYBOARD input?
         // "deixar o campo de digitação visivel conforme o exemplo da imagem 3". Image 3 shows a big "21 : 37" and a CLOCK FACE (Dial).
         // My `ModernTimePicker` uses Wheels. I should stick to Wheels but make the Header BIG and INTERACTIVE.
         // And maybe provide a button to switch to keyboard if needed, but the Big Text is key.
-        
+
         SizedBox(
           height: 200,
-          child: _isInputMode 
-            ? _buildInputManual() // Only if user explicitly toggles to keyboard
-            : _buildWheelMode(),
+          child: _isInputMode
+              ? _buildInputManual() // Only if user explicitly toggles to keyboard
+              : _buildWheelMode(),
         ),
       ],
     );
@@ -105,29 +107,28 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
           child: Text(
             ":",
             style: TextStyle(
-              fontSize: 56, 
-              height: 1,
-              fontWeight: FontWeight.bold, 
-              color: AppColors.primaryText
-            ),
+                fontSize: 56,
+                height: 1,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryText),
           ),
         ),
         _buildTimeDigit(minuteStr, false),
-        
+
         // Optional: Keyboard Toggle nearby if needed, but let's keep it clean
         // Maybe a small icon to the side? The previous one had it.
         const SizedBox(width: 16),
         IconButton(
-           onPressed: () {
-             setState(() {
-               _isInputMode = !_isInputMode;
-             });
-           },
-           icon: Icon(
-             _isInputMode ? Icons.access_time_filled_rounded : Icons.keyboard,
-             color: AppColors.primary,
-             size: 28,
-           ),
+          onPressed: () {
+            setState(() {
+              _isInputMode = !_isInputMode;
+            });
+          },
+          icon: Icon(
+            _isInputMode ? Icons.access_time_filled_rounded : Icons.keyboard,
+            color: AppColors.primary,
+            size: 28,
+          ),
         ),
       ],
     );
@@ -137,49 +138,51 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
     // If we were implementing "Tap to set mode", we would track _activeComponent (Hour/Minute)
     // For this implementation with Wheels, both are available simultaneously, so no "active" state needed really.
     // However, if we enter InputMode, we might want to highlight.
-    
+
     return GestureDetector(
-       onTap: () {
-         // If we are in wheel mode, maybe scroll to it? Or just do nothing?
-         // If in input mode, focus the right field.
-         if (!_isInputMode) {
-            setState(() => _isInputMode = true);
-         }
-       },
-       child: Container(
-         padding: const EdgeInsets.all(12),
-         decoration: BoxDecoration(
-           color: _isInputMode ? AppColors.cardBackground : Colors.transparent, // Highlight if editable
-           borderRadius: BorderRadius.circular(16),
-           border: _isInputMode ? Border.all(color: AppColors.primary) : null,
-         ),
-         child: Text(
-           value,
-           style: const TextStyle(
-             fontSize: 56,
-             height: 1,
-             fontWeight: FontWeight.bold,
-             color: AppColors.primary, // Always primary for the "Big Clock" feel
-           ),
-         ),
-       ),
+      onTap: () {
+        // If we are in wheel mode, maybe scroll to it? Or just do nothing?
+        // If in input mode, focus the right field.
+        if (!_isInputMode) {
+          setState(() => _isInputMode = true);
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: _isInputMode
+              ? AppColors.cardBackground
+              : Colors.transparent, // Highlight if editable
+          borderRadius: BorderRadius.circular(16),
+          border: _isInputMode ? Border.all(color: AppColors.primary) : null,
+        ),
+        child: Text(
+          value,
+          style: const TextStyle(
+            fontSize: 56,
+            height: 1,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primary, // Always primary for the "Big Clock" feel
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildInputManual() {
-     // A simpler input mode since the big clock is the display. 
-     // Actually, if _isInputMode is true, the Big Clock IS the input?
-     // Let's reuse the logic but make it nicer.
-     // In _buildDigitalClock, I used Text. If Mode is Input, maybe I should use TextFields THERE?
-     // No, let's keep it simple. If Input Mode is ON, we show the previous "Input Mode" UI (TextFields) INSTEAD of the Big Clock?
-     // Or below it?
-     
-     // Let's align with the user request "image 3". Image 3 shows Big Clock AND Dial.
-     // Since I have Wheels, I will show Big Clock AND Wheels.
-     // And a button to switch to "Keyboard Input" which replaces Wheels with TextFields?
-     
-     // Let's use the EXISTING _buildInputMode as the "Manual" view.
-     return _buildInputModeUI();
+    // A simpler input mode since the big clock is the display.
+    // Actually, if _isInputMode is true, the Big Clock IS the input?
+    // Let's reuse the logic but make it nicer.
+    // In _buildDigitalClock, I used Text. If Mode is Input, maybe I should use TextFields THERE?
+    // No, let's keep it simple. If Input Mode is ON, we show the previous "Input Mode" UI (TextFields) INSTEAD of the Big Clock?
+    // Or below it?
+
+    // Let's align with the user request "image 3". Image 3 shows Big Clock AND Dial.
+    // Since I have Wheels, I will show Big Clock AND Wheels.
+    // And a button to switch to "Keyboard Input" which replaces Wheels with TextFields?
+
+    // Let's use the EXISTING _buildInputMode as the "Manual" view.
+    return _buildInputModeUI();
   }
 
   Widget _buildInputModeUI() {
@@ -187,23 +190,27 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildTextField(_hourInputController, _hourFocus, (val) {
-           final h = int.tryParse(val);
-           if (h != null && h >= 0 && h < 24) {
-             setState(() => _selectedHour = h);
-             _updateTime();
-             if (val.length == 2) _minuteFocus.requestFocus();
-           }
+          final h = int.tryParse(val);
+          if (h != null && h >= 0 && h < 24) {
+            setState(() => _selectedHour = h);
+            _updateTime();
+            if (val.length == 2) _minuteFocus.requestFocus();
+          }
         }),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 12.0),
-          child: Text(":", style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.primaryText)),
+          child: Text(":",
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.primaryText)),
         ),
         _buildTextField(_minuteInputController, _minuteFocus, (val) {
-           final m = int.tryParse(val);
-           if (m != null && m >= 0 && m < 60) {
-             setState(() => _selectedMinute = m);
-             _updateTime();
-           }
+          final m = int.tryParse(val);
+          if (m != null && m >= 0 && m < 60) {
+            setState(() => _selectedMinute = m);
+            _updateTime();
+          }
         }),
       ],
     );
@@ -261,16 +268,20 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
         childDelegate: ListWheelChildBuilderDelegate(
           childCount: itemCount,
           builder: (context, index) {
-             // In the wheel, we highlight the selected item
-            final isSelectedState = (itemCount == 24 ? _selectedHour : _selectedMinute) == index;
-            
+            // In the wheel, we highlight the selected item
+            final isSelectedState =
+                (itemCount == 24 ? _selectedHour : _selectedMinute) == index;
+
             return Center(
               child: Text(
                 index.toString().padLeft(2, '0'),
                 style: TextStyle(
                   fontSize: isSelectedState ? 28 : 22,
-                  color: isSelectedState ? AppColors.primary : AppColors.tertiaryText,
-                  fontWeight: isSelectedState ? FontWeight.bold : FontWeight.w500,
+                  color: isSelectedState
+                      ? AppColors.primary
+                      : AppColors.tertiaryText,
+                  fontWeight:
+                      isSelectedState ? FontWeight.bold : FontWeight.w500,
                 ),
               ),
             );
@@ -279,9 +290,10 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
       ),
     );
   }
-  
+
   // Reusing the TextField builder from previous code, integrated here
-  Widget _buildTextField(TextEditingController controller, FocusNode focus, ValueChanged<String> onChanged) {
+  Widget _buildTextField(TextEditingController controller, FocusNode focus,
+      ValueChanged<String> onChanged) {
     // ... (Same as before)
     final bool isFocused = focus.hasFocus;
     return Container(
@@ -292,12 +304,17 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isFocused ? AppColors.primary : AppColors.border, 
+          color: isFocused ? AppColors.primary : AppColors.border,
           width: isFocused ? 2.0 : 1.0,
         ),
-        boxShadow: isFocused ? [
-          BoxShadow(color: AppColors.primary.withOpacity(0.3), blurRadius: 8, spreadRadius: 1)
-        ] : [],
+        boxShadow: isFocused
+            ? [
+                BoxShadow(
+                    color: AppColors.primary.withOpacity(0.3),
+                    blurRadius: 8,
+                    spreadRadius: 1)
+              ]
+            : [],
       ),
       child: TextField(
         controller: controller,
@@ -305,12 +322,14 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
         autofillHints: const [], // Prevent browser password save prompt
         textAlign: TextAlign.center,
         keyboardType: TextInputType.number,
-        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(2)
+        ],
         style: const TextStyle(
-          fontSize: 36, 
-          fontWeight: FontWeight.bold, 
-          color: AppColors.primaryText
-        ),
+            fontSize: 36,
+            fontWeight: FontWeight.bold,
+            color: AppColors.primaryText),
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: "00",

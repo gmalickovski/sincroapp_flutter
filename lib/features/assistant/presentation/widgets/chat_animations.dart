@@ -39,16 +39,17 @@ class _MessageEntryAnimationState extends State<MessageEntryAnimation>
     _controller = AnimationController(vsync: this, duration: widget.duration);
 
     _opacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: const Interval(0.2, 1.0, curve: Curves.easeOut)),
+      CurvedAnimation(
+          parent: _controller,
+          curve: const Interval(0.2, 1.0, curve: Curves.easeOut)),
     );
 
     _offset = Tween<Offset>(
-      begin: Offset(widget.isUser ? 0.2 : -0.2, 0.5), 
-      end: Offset.zero
-    ).animate(
+            begin: Offset(widget.isUser ? 0.2 : -0.2, 0.5), end: Offset.zero)
+        .animate(
       CurvedAnimation(parent: _controller, curve: widget.curve),
     );
-    
+
     _size = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
 
     if (!widget.animate) {
@@ -88,8 +89,9 @@ class _MessageEntryAnimationState extends State<MessageEntryAnimation>
 class AnimatedMessageBubble extends StatelessWidget {
   final Widget child;
   final Duration delay;
-  
-  const AnimatedMessageBubble({super.key, required this.child, this.delay = Duration.zero});
+
+  const AnimatedMessageBubble(
+      {super.key, required this.child, this.delay = Duration.zero});
 
   @override
   Widget build(BuildContext context) {
@@ -101,12 +103,13 @@ class AnimatedMessageBubble extends StatelessWidget {
 class ChatBubbleAnimation extends StatelessWidget {
   final Widget child;
   final bool isUser;
-  
-  const ChatBubbleAnimation({super.key, required this.child, required this.isUser});
+
+  const ChatBubbleAnimation(
+      {super.key, required this.child, required this.isUser});
 
   @override
   Widget build(BuildContext context) {
-    return MessageEntryAnimation(child: child, isUser: isUser);
+    return MessageEntryAnimation(isUser: isUser, child: child);
   }
 }
 
@@ -213,7 +216,7 @@ class _TypingIndicatorState extends State<TypingIndicator>
               final delay = index * 0.2;
               final value = _controller.value;
               final sineValue = math.sin((value * 2 * math.pi) - delay);
-              
+
               // Only jump up (positive sine part), clamp negative to 0 for a "bounce" feel
               // or just use full sine wave. Let's use a smooth wave.
               final offset = sineValue * (widget.dotSize * 0.6);
@@ -221,11 +224,13 @@ class _TypingIndicatorState extends State<TypingIndicator>
               return Transform.translate(
                 offset: Offset(0, offset),
                 child: Container(
-                  margin: EdgeInsets.symmetric(horizontal: widget.dotSize * 0.2),
+                  margin:
+                      EdgeInsets.symmetric(horizontal: widget.dotSize * 0.2),
                   width: widget.dotSize,
                   height: widget.dotSize,
                   decoration: BoxDecoration(
-                    color: widget.color.withOpacity(0.6 + (sineValue.abs() * 0.4)), // Pulse opacity too
+                    color: widget.color.withOpacity(
+                        0.6 + (sineValue.abs() * 0.4)), // Pulse opacity too
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -263,7 +268,7 @@ class _MorphingMessageBubbleState extends State<MorphingMessageBubble>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
-    
+
     // Animate from a smaller size (simulating typing bubble) to full size
     // Note: AnimatedSize is easier for this specific "morph" effect
     _controller.forward();

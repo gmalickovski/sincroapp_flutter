@@ -23,6 +23,7 @@ class TaskModel {
 
   final String? recurrenceId; // ID para agrupar tarefas recorrentes geradas
   final String? goalId; // ID da meta vinculada (Marco)
+  final String? sourceJournalId; // ID da anotação de origem (Journal Entry)
 
   // --- INÍCIO DA MUDANÇA (Solicitação 2): Campo 'completedAt' adicionado ---
   final DateTime? completedAt;
@@ -30,7 +31,6 @@ class TaskModel {
   final DateTime? reminderAt; // Precise reminder timestamp
   final String? taskType; // 'appointment' or 'task'
   final int? durationMinutes; // Duração em minutos
-
 
   TaskModel({
     required this.id,
@@ -50,6 +50,7 @@ class TaskModel {
     this.reminderTime,
     this.recurrenceId,
     this.goalId,
+    this.sourceJournalId,
     this.completedAt,
     this.reminderAt,
     this.taskType,
@@ -57,12 +58,12 @@ class TaskModel {
   });
 
   bool get isAppointment {
-      // Se taskType estiver definido no banco, confia nele.
-      if (taskType != null) return taskType == 'appointment';
-      
-      // Fallback para lógica baseada em tempo (compatibilidade com dados antigos)
-      return reminderTime != null || 
-             (dueDate != null && (dueDate!.hour != 0 || dueDate!.minute != 0));
+    // Se taskType estiver definido no banco, confia nele.
+    if (taskType != null) return taskType == 'appointment';
+
+    // Fallback para lógica baseada em tempo (compatibilidade com dados antigos)
+    return reminderTime != null ||
+        (dueDate != null && (dueDate!.hour != 0 || dueDate!.minute != 0));
   }
 
   TaskModel copyWith({
@@ -83,6 +84,7 @@ class TaskModel {
     Object? reminderTime = const _Undefined(),
     Object? recurrenceId = const _Undefined(),
     Object? goalId = const _Undefined(),
+    Object? sourceJournalId = const _Undefined(),
     Object? completedAt = const _Undefined(),
     Object? reminderAt = const _Undefined(),
     Object? taskType = const _Undefined(),
@@ -116,12 +118,18 @@ class TaskModel {
           ? this.recurrenceId
           : recurrenceId as String?,
       goalId: goalId is _Undefined ? this.goalId : goalId as String?,
+      sourceJournalId: sourceJournalId is _Undefined
+          ? this.sourceJournalId
+          : sourceJournalId as String?,
       completedAt: completedAt is _Undefined
           ? this.completedAt
           : completedAt as DateTime?,
-      reminderAt: reminderAt is _Undefined ? this.reminderAt : reminderAt as DateTime?,
+      reminderAt:
+          reminderAt is _Undefined ? this.reminderAt : reminderAt as DateTime?,
       taskType: taskType is _Undefined ? this.taskType : taskType as String?,
-      durationMinutes: durationMinutes is _Undefined ? this.durationMinutes : durationMinutes as int?,
+      durationMinutes: durationMinutes is _Undefined
+          ? this.durationMinutes
+          : durationMinutes as int?,
     );
   }
 
@@ -140,31 +148,35 @@ class TaskModel {
         orElse: () => RecurrenceType.none,
       );
     }
-    
+
     int recInterval = 1;
-    final rIntervalVal = data['recurrence_interval'] ?? data['recurrenceInterval'];
+    final rIntervalVal =
+        data['recurrence_interval'] ?? data['recurrenceInterval'];
     if (rIntervalVal != null) {
       recInterval = rIntervalVal is int ? rIntervalVal : 1;
     }
 
     List<int> recDays = [];
-    final rDaysVal = data['recurrence_days_of_week'] ?? data['recurrenceDaysOfWeek'];
+    final rDaysVal =
+        data['recurrence_days_of_week'] ?? data['recurrenceDaysOfWeek'];
     if (rDaysVal != null && rDaysVal is List) {
       recDays = List<int>.from(rDaysVal);
     }
 
     TimeOfDay? reminder;
     if (data['reminder_hour'] != null && data['reminder_minute'] != null) {
-       reminder = TimeOfDay(hour: data['reminder_hour'], minute: data['reminder_minute']);
+      reminder = TimeOfDay(
+          hour: data['reminder_hour'], minute: data['reminder_minute']);
     } else if (data['reminderHour'] != null && data['reminderMinute'] != null) {
-       reminder = TimeOfDay(hour: data['reminderHour'], minute: data['reminderMinute']);
+      reminder =
+          TimeOfDay(hour: data['reminderHour'], minute: data['reminderMinute']);
     } else {
       DateTime? due = _parseDate(data['due_date'] ?? data['dueDate']);
       if (due != null) {
-          final localDue = due.toLocal();
-          if (localDue.hour != 0 || localDue.minute != 0) {
-              reminder = TimeOfDay.fromDateTime(localDue);
-          }
+        final localDue = due.toLocal();
+        if (localDue.hour != 0 || localDue.minute != 0) {
+          reminder = TimeOfDay.fromDateTime(localDue);
+        }
       }
     }
 
@@ -172,20 +184,24 @@ class TaskModel {
       id: data['id'] ?? data['id'] ?? '',
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
-      createdAt: _parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
+      createdAt:
+          _parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
       dueDate: _parseDate(data['due_date'] ?? data['dueDate']),
       tags: List<String>.from(data['tags'] ?? []),
-      sharedWith: List<String>.from(data['shared_with'] ?? data['sharedWith'] ?? []),
+      sharedWith:
+          List<String>.from(data['shared_with'] ?? data['sharedWith'] ?? []),
       journeyId: data['journey_id'] ?? data['journeyId'],
       journeyTitle: data['journey_title'] ?? data['journeyTitle'],
       personalDay: data['personal_day'] ?? data['personalDay'],
       recurrenceType: recType,
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
-      recurrenceEndDate: _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate']),
+      recurrenceEndDate:
+          _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate']),
       reminderTime: reminder,
       recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
       goalId: data['goal_id'] ?? data['goalId'],
+      sourceJournalId: data['source_journal_id'] ?? data['sourceJournalId'],
       completedAt: _parseDate(data['completed_at'] ?? data['completedAt']),
       reminderAt: _parseDate(data['reminder_at']),
       taskType: data['task_type'] ?? data['taskType'],
@@ -215,6 +231,7 @@ class TaskModel {
       'recurrence_end_date': recurrenceEndDate?.toIso8601String(),
       'recurrence_id': recurrenceId,
       'goal_id': goalId,
+      'source_journal_id': sourceJournalId,
       'completed_at': completedAt?.toIso8601String(),
       'reminder_at': reminderAt?.toIso8601String(),
       'task_type': taskType,
@@ -238,11 +255,12 @@ class TaskModel {
       }
       return localDue.isBefore(now);
     }
-    
+
     // Senão, compara apenas data (tarefa de dia inteiro)
     final today = DateTime(now.year, now.month, now.day);
-    final localDueDateOnly = DateTime(localDue.year, localDue.month, localDue.day);
-    
+    final localDueDateOnly =
+        DateTime(localDue.year, localDue.month, localDue.day);
+
     return localDueDateOnly.isBefore(today);
   }
 }
@@ -251,4 +269,3 @@ class TaskModel {
 class _Undefined {
   const _Undefined();
 }
-

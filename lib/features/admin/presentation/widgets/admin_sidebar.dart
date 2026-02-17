@@ -17,10 +17,10 @@ class AdminSidebar extends StatefulWidget {
 }
 
 class _AdminSidebarState extends State<AdminSidebar> {
-  // Admin sidebar is always expanded on desktop for now, matching the requested image 
+  // Admin sidebar is always expanded on desktop for now, matching the requested image
   // where it looks like a permanent sidebar. Or we can make it collapsible if desired.
   // The images show a wide sidebar.
-  final bool _isExpanded = true; 
+  final bool _isExpanded = true;
 
   @override
   Widget build(BuildContext context) {
@@ -30,9 +30,7 @@ class _AdminSidebarState extends State<AdminSidebar> {
         color: const Color(0xff111827), // Dark background matching Dashboard
         border: Border(
           right: BorderSide(
-            color: AppColors.border.withValues(alpha: 0.5), 
-            width: 1
-          ),
+              color: AppColors.border.withValues(alpha: 0.5), width: 1),
         ),
       ),
       child: Column(
@@ -49,7 +47,8 @@ class _AdminSidebarState extends State<AdminSidebar> {
                     color: AppColors.primary, // Solid primary color for logo bg
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 24),
+                  child: const Icon(Icons.admin_panel_settings,
+                      color: Colors.white, size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Text(
@@ -64,7 +63,7 @@ class _AdminSidebarState extends State<AdminSidebar> {
             ),
           ),
           const SizedBox(height: 48),
-          
+
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -87,7 +86,7 @@ class _AdminSidebarState extends State<AdminSidebar> {
               ],
             ),
           ),
-          
+
           // Bottom Actions
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 24),
@@ -95,7 +94,7 @@ class _AdminSidebarState extends State<AdminSidebar> {
               children: [
                 const Divider(color: Color(0x804B5563), height: 1),
                 const SizedBox(height: 16),
-                
+
                 // Back to App Button
                 _buildNavItem(
                   icon: Icons.arrow_back,
@@ -104,12 +103,13 @@ class _AdminSidebarState extends State<AdminSidebar> {
                   isSelected: false,
                   onTap: () {
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                      MaterialPageRoute(
+                          builder: (context) => const DashboardScreen()),
                     );
                   },
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Logout Button
                 _buildNavItem(
                   icon: Icons.logout,
@@ -178,7 +178,8 @@ class _SidebarItemState extends State<_SidebarItem> {
     Color? hoverTextColor = Colors.white;
 
     if (widget.isLogout) {
-      textColor = _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
+      textColor =
+          _isHovered ? const Color(0xfff87171) : const Color(0xfffca5a5);
       iconColor = textColor;
       hoverBgColor = const Color(0xff1f2937); // Standard hover background
     } else if (widget.isSelected) {
@@ -209,7 +210,8 @@ class _SidebarItemState extends State<_SidebarItem> {
           ),
           child: Row(
             children: [
-              Icon(widget.icon, size: 20, color: _isHovered ? hoverTextColor : iconColor),
+              Icon(widget.icon,
+                  size: 20, color: _isHovered ? hoverTextColor : iconColor),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(

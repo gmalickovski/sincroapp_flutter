@@ -1,14 +1,13 @@
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart'; // NOVO import
 
 class ContactListItem extends StatelessWidget {
   final ContactModel contact;
   final bool isSelected;
-  final bool showSelectionIndicator; // If true, shows check/circle. If false, shows actions.
+  final bool
+      showSelectionIndicator; // If true, shows check/circle. If false, shows actions.
   final VoidCallback? onTap;
   final VoidCallback? onBlock;
   final VoidCallback? onDelete;
@@ -70,10 +69,11 @@ class ContactListItem extends StatelessWidget {
                       // Username (Highlighted)
                       Text(
                         '@${contact.username}',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: AppColors.primaryText,
-                              fontWeight: FontWeight.bold, // Highlighted
-                            ),
+                        style:
+                            Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: AppColors.primaryText,
+                                  fontWeight: FontWeight.bold, // Highlighted
+                                ),
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
@@ -111,18 +111,19 @@ class ContactListItem extends StatelessWidget {
     // Separate logic to extract first/last name for avatar if displayName is full name
     String firstName = '';
     String lastName = '';
-    
+
     if (contact.displayName.isNotEmpty) {
-       final parts = contact.displayName.split(' ');
-       firstName = parts.isNotEmpty ? parts.first : '';
-       lastName = parts.length > 1 ? parts.last : '';
+      final parts = contact.displayName.split(' ');
+      firstName = parts.isNotEmpty ? parts.first : '';
+      lastName = parts.length > 1 ? parts.last : '';
     }
 
     return UserAvatar(
       photoUrl: contact.photoUrl,
       firstName: firstName,
       lastName: lastName,
-      radius: 20, // 48px size -> 24 radius, but layout had 48px box. 24 is closer to 48px diam.
+      radius:
+          20, // 48px size -> 24 radius, but layout had 48px box. 24 is closer to 48px diam.
     );
   }
 
@@ -152,9 +153,7 @@ class ContactListItem extends StatelessWidget {
           IconButton(
             onPressed: onBlock,
             icon: Icon(
-              contact.status == 'blocked'
-                  ? Icons.block
-                  : Icons.block_outlined,
+              contact.status == 'blocked' ? Icons.block : Icons.block_outlined,
               color: contact.status == 'blocked'
                   ? Colors.redAccent
                   : AppColors.secondaryText,
@@ -170,13 +169,14 @@ class ContactListItem extends StatelessWidget {
           const SizedBox(width: 8),
           IconButton(
             onPressed: onDelete,
-            icon: const Icon(Icons.delete_outline, color: AppColors.secondaryText),
-             tooltip: 'Remover Contato',
+            icon: const Icon(Icons.delete_outline,
+                color: AppColors.secondaryText),
+            tooltip: 'Remover Contato',
             splashRadius: 20,
             constraints: const BoxConstraints(),
             padding: const EdgeInsets.all(8),
             style: IconButton.styleFrom(
-               hoverColor: Colors.redAccent.withValues(alpha: 0.1),
+              hoverColor: Colors.redAccent.withValues(alpha: 0.1),
             ),
           ),
         ],

@@ -1,4 +1,3 @@
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -25,12 +24,13 @@ class _AddContactDialogState extends State<AddContactDialog> {
   final TextEditingController _searchController = TextEditingController();
   final SupabaseService _supabaseService = SupabaseService();
   final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
-  
+
   List<UserModel> _searchResults = [];
   bool _isLoading = false;
   String? _successMessage;
   Timer? _debounce;
-  final Set<String> _pendingRequests = {}; // Track locally sent requests in this session
+  final Set<String> _pendingRequests =
+      {}; // Track locally sent requests in this session
 
   @override
   void dispose() {
@@ -41,7 +41,7 @@ class _AddContactDialogState extends State<AddContactDialog> {
 
   void _onSearchChanged(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     _debounce = Timer(const Duration(milliseconds: 500), () {
       _search(query);
     });
@@ -63,10 +63,12 @@ class _AddContactDialogState extends State<AddContactDialog> {
     });
 
     try {
-      final results = await _supabaseService.searchUsersByUsername(trimmedQuery);
+      final results =
+          await _supabaseService.searchUsersByUsername(trimmedQuery);
       if (mounted) {
         setState(() {
-          _searchResults = results.where((u) => u.uid != _currentUserId).toList();
+          _searchResults =
+              results.where((u) => u.uid != _currentUserId).toList();
         });
       }
     } finally {
@@ -79,16 +81,20 @@ class _AddContactDialogState extends State<AddContactDialog> {
   void _addContact(UserModel user) async {
     try {
       await _supabaseService.addContact(_currentUserId, user.uid);
-      
+
       final senderData = await _supabaseService.getUserData(_currentUserId);
       final senderName = senderData?.username ?? 'Alguém';
-      
+
       await _supabaseService.sendNotification(
         toUserId: user.uid,
         type: NotificationType.contactRequest,
         title: '📩 Pedido de Sincronia',
         body: '@$senderName quer sincronizar com você!',
-        metadata: {'type': 'contact_request', 'from_uid': _currentUserId, 'from_name': senderName},
+        metadata: {
+          'type': 'contact_request',
+          'from_uid': _currentUserId,
+          'from_name': senderName
+        },
       );
 
       if (mounted) {
@@ -97,11 +103,10 @@ class _AddContactDialogState extends State<AddContactDialog> {
           _pendingRequests.add(user.uid);
         });
       }
-      
+
       Future.delayed(const Duration(seconds: 3), () {
         if (mounted) setState(() => _successMessage = null);
       });
-
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,7 +121,8 @@ class _AddContactDialogState extends State<AddContactDialog> {
     // Bottom Sheet design matching TagSelectionModal/GoalSelectionModal
     return Container(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.85, // Updated to 0.85 based on user preference or standard
+        maxHeight: MediaQuery.of(context).size.height *
+            0.85, // Updated to 0.85 based on user preference or standard
       ),
       padding: EdgeInsets.fromLTRB(
           16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
@@ -136,11 +142,12 @@ class _AddContactDialogState extends State<AddContactDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
             child: Row(
               children: [
-                 IconButton(
-                    icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 24),
-                    onPressed: () => Navigator.pop(context),
-                    tooltip: 'Fechar',
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.close,
+                      color: AppColors.secondaryText, size: 24),
+                  onPressed: () => Navigator.pop(context),
+                  tooltip: 'Fechar',
+                ),
                 Expanded(
                   child: Text(
                     'Adicionar Contato',
@@ -157,14 +164,14 @@ class _AddContactDialogState extends State<AddContactDialog> {
               ],
             ),
           ),
-          
+
           Flexible(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                    const SizedBox(height: 16),
-                  
+                  const SizedBox(height: 16),
+
                   // Search Input
                   TextField(
                     controller: _searchController,
@@ -172,8 +179,10 @@ class _AddContactDialogState extends State<AddContactDialog> {
                     onChanged: _onSearchChanged,
                     decoration: InputDecoration(
                       hintText: 'Buscar por @username...',
-                      hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
-                      prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+                      hintStyle:
+                          Theme.of(context).inputDecorationTheme.hintStyle,
+                      prefixIcon:
+                          const Icon(Icons.search, color: AppColors.primary),
                       filled: true,
                       fillColor: AppColors.background,
                       border: OutlineInputBorder(
@@ -186,105 +195,119 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                        borderSide: const BorderSide(
+                            color: AppColors.primary, width: 2),
                       ),
                     ),
-                    autofillHints: const [], 
+                    autofillHints: const [],
                     enableSuggestions: false,
                     autocorrect: false,
                     keyboardType: TextInputType.text,
                     textInputAction: TextInputAction.search,
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Success Feedback
                   if (_successMessage != null)
                     Container(
-                       margin: const EdgeInsets.only(bottom: 16),
-                       padding: const EdgeInsets.all(12),
-                       decoration: BoxDecoration(
-                         color: Colors.green.withValues(alpha: 0.15),
-                         borderRadius: BorderRadius.circular(8),
-                         border: Border.all(color: Colors.green.withOpacity(0.5)),
-                       ),
-                       child: Row(
-                         children: [
-                           const Icon(Icons.check_circle, color: Colors.green, size: 20),
-                           const SizedBox(width: 8),
-                           Expanded(
-                             child: Text(
-                               _successMessage!,
-                               style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w500),
-                             ),
-                           ),
-                         ],
-                       ),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border:
+                            Border.all(color: Colors.green.withOpacity(0.5)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.check_circle,
+                              color: Colors.green, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _successMessage!,
+                              style: const TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
 
                   // Results List or Status
                   if (_isLoading)
-                     const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 32.0),
-                        child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
-                     )
-                  else if (_searchResults.isEmpty) 
-                     Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 32.0),
-                        child: Center(
-                          child: Text(
-                            _searchController.text.isEmpty 
-                                ? 'Digite o nome de usuário para buscar.\nO convite será enviado após sua confirmação.'
-                                : 'Nenhum usuário encontrado com esse nome.',
-                            style: const TextStyle(color: AppColors.secondaryText),
-                            textAlign: TextAlign.center,
-                          ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 32.0),
+                      child: Center(
+                          child: CircularProgressIndicator(
+                              color: AppColors.primary)),
+                    )
+                  else if (_searchResults.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 32.0),
+                      child: Center(
+                        child: Text(
+                          _searchController.text.isEmpty
+                              ? 'Digite o nome de usuário para buscar.\nO convite será enviado após sua confirmação.'
+                              : 'Nenhum usuário encontrado com esse nome.',
+                          style:
+                              const TextStyle(color: AppColors.secondaryText),
+                          textAlign: TextAlign.center,
                         ),
-                     )
+                      ),
+                    )
                   else
-                       ListView.separated(
-                         shrinkWrap: true,
-                         physics: const NeverScrollableScrollPhysics(),
-                         itemCount: _searchResults.length,
-                         separatorBuilder: (context, index) => const SizedBox(height: 8),
-                         itemBuilder: (context, index) {
-                           final user = _searchResults[index];
-                           final contactCandidate = ContactModel.fromUserModel(user);
-                           
-                           // Check if already a contact or request pending
-                           final isAlreadyContact = widget.existingContactIds.contains(user.uid);
-                           final isPending = _pendingRequests.contains(user.uid);
-                           final showCheck = isAlreadyContact || isPending;
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _searchResults.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) {
+                        final user = _searchResults[index];
+                        final contactCandidate =
+                            ContactModel.fromUserModel(user);
 
-                           return ContactListItem(
-                              contact: contactCandidate,
-                              onTap: () {}, 
-                              customTrailing: showCheck 
-                                ? Container(
-                                    height: 36,
-                                    width: 36,
-                                    alignment: Alignment.centerRight, 
-                                    child: const Icon(
-                                      Icons.check, 
-                                      color: AppColors.tertiaryText,
-                                      size: 24,
-                                    ),
-                                  )
-                                : SizedBox(
-                                    height: 40, 
-                                    width: 40,
-                                    child: IconButton(
-                                      onPressed: () => _addContact(user),
-                                      style: IconButton.styleFrom(
-                                        backgroundColor: AppColors.primary,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                      ),
-                                      icon: const Icon(Icons.add, color: Colors.white, size: 24),
-                                    ),
+                        // Check if already a contact or request pending
+                        final isAlreadyContact =
+                            widget.existingContactIds.contains(user.uid);
+                        final isPending = _pendingRequests.contains(user.uid);
+                        final showCheck = isAlreadyContact || isPending;
+
+                        return ContactListItem(
+                          contact: contactCandidate,
+                          onTap: () {},
+                          customTrailing: showCheck
+                              ? Container(
+                                  height: 36,
+                                  width: 36,
+                                  alignment: Alignment.centerRight,
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: AppColors.tertiaryText,
+                                    size: 24,
                                   ),
-                           );
-                         },
-                       ),
+                                )
+                              : SizedBox(
+                                  height: 40,
+                                  width: 40,
+                                  child: IconButton(
+                                    onPressed: () => _addContact(user),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                    ),
+                                    icon: const Icon(Icons.add,
+                                        color: Colors.white, size: 24),
+                                  ),
+                                ),
+                        );
+                      },
+                    ),
                 ],
               ),
             ),

@@ -1,4 +1,4 @@
-﻿// lib/common/widgets/custom_date_picker_modal.dart
+// lib/common/widgets/custom_date_picker_modal.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
@@ -20,8 +20,6 @@ class _DateWithVibration {
   final int personalDay;
   _DateWithVibration(this.date, this.personalDay);
 }
-
-
 
 class CustomDatePickerModal extends StatefulWidget {
   final DateTime initialDate; // Data inicial para focar/selecionar
@@ -204,7 +202,8 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         _selectedTime!.hour,
         _selectedTime!.minute,
       );
-      final reminderDateTime = dateTimeWithTime.subtract(_selectedReminderOffset!);
+      final reminderDateTime =
+          dateTimeWithTime.subtract(_selectedReminderOffset!);
       finalReminderTime = TimeOfDay.fromDateTime(reminderDateTime);
     }
 
@@ -287,7 +286,7 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     }
   }
 
-  // Recurrence Picker removed as CustomRecurrencePickerModal was deleted. 
+  // Recurrence Picker removed as CustomRecurrencePickerModal was deleted.
   // Use ScheduleTaskSheet for recurrence.
   /*
   Future<void> _showRecurrencePicker() async {
@@ -610,7 +609,8 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
         // Define a altura fixa do scroller
         height: 100,
         child: ListView.builder(
-          controller: _scrollController, // Controlador para scroll program├ítico
+          controller:
+              _scrollController, // Controlador para scroll program├ítico
           scrollDirection: Axis.horizontal, // Scroll horizontal
           padding: const EdgeInsets.symmetric(
               horizontal: 16.0), // Espa├ºamento nas laterais
@@ -1005,8 +1005,6 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
     );
   }
 
-
-
   // --- Lembretes Widget ---
 
   Widget _buildReminderSection(BuildContext context) {
@@ -1018,10 +1016,10 @@ class _CustomDatePickerModalState extends State<CustomDatePickerModal> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-           // Separador antes dos lembretes
+          // Separador antes dos lembretes
           const Divider(color: AppColors.border, height: 1),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             "Lembrete",
             style: TextStyle(
               color: AppColors.primaryText,

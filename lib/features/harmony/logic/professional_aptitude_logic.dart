@@ -16,7 +16,7 @@ class ProfessionalAptitudeData {
 
 class ProfessionalAptitudeLogic {
   /// Calculates the professional aptitude profile for a given user.
-  /// 
+  ///
   /// This leverages the core [NumerologyEngine] to get the base calculations,
   /// then extracts the specific logic needed for the professional features.
   static ProfessionalAptitudeData calculateForUser(UserModel user) {
@@ -25,13 +25,13 @@ class ProfessionalAptitudeLogic {
       nomeCompleto: user.nomeAnalise,
       dataNascimento: user.dataNasc,
     );
-    
+
     // 2. Get the raw result
     final result = engine.calculateProfile();
-    
+
     // 3. Extract the key metric for this feature (Expression Number)
     final int expression = result.numeros['expressao'] ?? 0;
-    
+
     // 4. Retrieve the associated static content
     final content = ContentData.textosAptidoesProfissionais[expression];
 

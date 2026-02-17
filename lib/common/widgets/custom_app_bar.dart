@@ -81,8 +81,8 @@ class _CustomAppBarState extends State<CustomAppBar> {
       // Delay clearing text until animation finishes to avoid visual snap
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && !_isSearchOpen) {
-           _searchController.clear();
-           widget.onSearchChanged?.call('');
+          _searchController.clear();
+          widget.onSearchChanged?.call('');
         }
       });
     }
@@ -129,13 +129,15 @@ class _CustomAppBarState extends State<CustomAppBar> {
         tooltip: 'Menu',
       ),
       // Hide title on mobile when search is open to avoid push/shrink effect
-      title: (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
+      title:
+          (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
       centerTitle: true,
       actions: [
         // Unified Search (same behavior for mobile and desktop)
         if (widget.showSearch) // Check visibility
           Padding(
-            padding: const EdgeInsets.only(right: 8.0), // Spacing from next element
+            padding:
+                const EdgeInsets.only(right: 8.0), // Spacing from next element
             child: _buildUnifiedSearch(context, isDesktop: isDesktop),
           ),
 
@@ -154,26 +156,25 @@ class _CustomAppBarState extends State<CustomAppBar> {
 
         // Assistant Icon (Hollow Star) - Positioned BEFORE Avatar or custom actions
         if (widget.assistantIcon != null)
-           Padding(
-             padding: const EdgeInsets.only(right: 12.0), // Spacing from Avatar
-             child: widget.assistantIcon!,
-           ),
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0), // Spacing from Avatar
+            child: widget.assistantIcon!,
+          ),
 
-        if (widget.userData != null && isDesktop) // Mostra avatar apenas no desktop
+        if (widget.userData != null &&
+            isDesktop) // Mostra avatar apenas no desktop
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-              child: GestureDetector(
-                onTap: () => _navigateToSettings(context),
-                child: UserAvatar(
-                  photoUrl: widget.userData!.photoUrl,
-                  firstName: widget.userData!.primeiroNome,
-                  lastName: widget.userData!.sobrenome,
-                  radius: 18,
-                ),
+            child: GestureDetector(
+              onTap: () => _navigateToSettings(context),
+              child: UserAvatar(
+                photoUrl: widget.userData!.photoUrl,
+                firstName: widget.userData!.primeiroNome,
+                lastName: widget.userData!.sobrenome,
+                radius: 18,
               ),
             ),
-
-
+          ),
 
         if (widget.actions != null) ...widget.actions!, // Insert custom actions
 
@@ -193,26 +194,26 @@ class _CustomAppBarState extends State<CustomAppBar> {
     final screenWidth = MediaQuery.of(context).size.width;
     // Desktop: 35% of screen. Mobile: ~70% of screen (leaving space for menu and avatar)
     final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth * 0.70;
-    
+
     // Determine Border Color or Transparent if closed
     Color borderColor = Colors.transparent;
     Color bgColor = Colors.transparent;
-    
+
     if (isOpen) {
-       bgColor = AppColors.cardBackground.withValues(alpha: 0.5);
-       if (_searchFocusNode.hasFocus) {
+      bgColor = AppColors.cardBackground.withValues(alpha: 0.5);
+      if (_searchFocusNode.hasFocus) {
         borderColor = AppColors.primary;
-       } else if (_isSearchHovered) {
+      } else if (_isSearchHovered) {
         borderColor = AppColors.secondaryText;
-       } else {
+      } else {
         borderColor = AppColors.border;
-       }
+      }
     }
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
-      width: isOpen ? targetWidth : 48.0, 
+      width: isOpen ? targetWidth : 48.0,
       height: 42,
       decoration: BoxDecoration(
         color: bgColor,
@@ -234,11 +235,12 @@ class _CustomAppBarState extends State<CustomAppBar> {
                   focusNode: _searchFocusNode,
                   autofillHints: const [], // Prevent browser password save prompt
                   style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textAlignVertical: TextAlignVertical.center, // Center vertically
+                  textAlignVertical:
+                      TextAlignVertical.center, // Center vertically
                   decoration: const InputDecoration(
                     hintText: 'Pesquisar...',
-                    hintStyle: TextStyle(
-                        color: AppColors.tertiaryText, fontSize: 14),
+                    hintStyle:
+                        TextStyle(color: AppColors.tertiaryText, fontSize: 14),
                     border: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     enabledBorder: InputBorder.none,
@@ -246,7 +248,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
                     disabledBorder: InputBorder.none,
                     isDense: true,
                     filled: false,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Symmetric vertical padding for centering
+                    contentPadding: EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical:
+                            12), // Symmetric vertical padding for centering
                   ),
                   onChanged: widget.onSearchChanged,
                   onTapOutside: (event) {
@@ -264,9 +269,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
             child: SizedBox(
               width: 48,
               height: 48,
-              child: isOpen 
-                ? _buildCloseButton()
-                : _buildSearchButton(),
+              child: isOpen ? _buildCloseButton() : _buildSearchButton(),
             ),
           ),
         ],
@@ -315,7 +318,8 @@ class _CustomAppBarState extends State<CustomAppBar> {
           color: Colors.transparent,
           child: Icon(
             Icons.close,
-            color: _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
+            color:
+                _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
             size: 20,
           ),
         ),
@@ -323,4 +327,3 @@ class _CustomAppBarState extends State<CustomAppBar> {
     );
   }
 }
-

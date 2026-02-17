@@ -7,7 +7,6 @@ import 'package:sincro_app_flutter/models/contact_model.dart'; // NOVO
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
-import 'package:postgrest/postgrest.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
@@ -17,7 +16,6 @@ import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 import 'package:uuid/uuid.dart';
-
 
 class SupabaseService {
   final SupabaseClient _supabase = Supabase.instance.client;
@@ -47,13 +45,16 @@ class SupabaseService {
         'dashboard_hidden_cards': user.dashboardHiddenCards,
         // Serializa Subscription para JSONB ou colunas separadas
         // Aqui assumindo JSONB na coluna 'subscription_data'
-        'subscription_data': user.subscription.toFirestore(), 
+        'subscription_data': user.subscription.toFirestore(),
         'updated_at': DateTime.now().toIso8601String(),
       };
 
       // Upsert: Insere se não existir, atualiza se existir (baseado na PK user_id)
-      await _supabase.schema('sincroapp').from('users').upsert(userData, onConflict: 'uid');
-      
+      await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .upsert(userData, onConflict: 'uid');
+
       // debugPrint('✅ [SupabaseService] Dados do usuário salvos com sucesso.');
     } catch (e) {
       // debugPrint('❌ [SupabaseService] Erro ao salvar dados do usuário: $e');
@@ -77,27 +78,32 @@ class SupabaseService {
       }
 
       final data = response;
-      
+
       // Converte de volta para UserModel
       // Nota: Precisamos ajustar o UserModel.fromMap se os nomes das colunas mudaram
       // OU mapear manualmente aqui. Vou mapear manualmente para manter compatibilidade.
-      
+
       return UserModel(
         uid: data['uid'],
         email: data['email'] ?? '',
         photoUrl: data['photo_url'],
-        username: data['username'], // NOVO: pode ser null se usuário ainda não criou
-        primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '', // Fallback para compatibility
+        username:
+            data['username'], // NOVO: pode ser null se usuário ainda não criou
+        primeiroNome: data['primeiro_nome'] ??
+            data['first_name'] ??
+            '', // Fallback para compatibility
         sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
         plano: 'essencial', // Default legacy plan name
         nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
         dataNasc: data['birth_date'] ?? '',
         gender: data['gender'], // NOVO
         isAdmin: data['is_admin'] ?? false,
-        dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
-        dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
-        subscription: data['subscription_data'] != null 
-            ? SubscriptionModel.fromFirestore(data['subscription_data']) 
+        dashboardCardOrder: List<String>.from(
+            data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+        dashboardHiddenCards:
+            List<String>.from(data['dashboard_hidden_cards'] ?? []),
+        subscription: data['subscription_data'] != null
+            ? SubscriptionModel.fromFirestore(data['subscription_data'])
             : SubscriptionModel.free(),
       );
     } catch (e) {
@@ -113,19 +119,38 @@ class SupabaseService {
       final mappedData = <String, dynamic>{};
       data.forEach((key, value) {
         switch (key) {
-          case 'username': mappedData['username'] = value; break; // NOVO: Username
-          case 'primeiroNome': mappedData['first_name'] = value; break;
-          case 'sobrenome': mappedData['last_name'] = value; break;
-          case 'nomeAnalise': mappedData['analysis_name'] = value; break;
-          case 'dataNasc': mappedData['birth_date'] = value; break;
-          case 'gender': mappedData['gender'] = value; break; // NOVO
-          case 'dashboardCardOrder': mappedData['dashboard_card_order'] = value; break;
-          case 'dashboardHiddenCards': mappedData['dashboard_hidden_cards'] = value; break;
-          case 'subscription': mappedData['subscription_data'] = value; break; // Se vier o mapa
-          default: mappedData[key] = value; // Fallback
+          case 'username':
+            mappedData['username'] = value;
+            break; // NOVO: Username
+          case 'primeiroNome':
+            mappedData['first_name'] = value;
+            break;
+          case 'sobrenome':
+            mappedData['last_name'] = value;
+            break;
+          case 'nomeAnalise':
+            mappedData['analysis_name'] = value;
+            break;
+          case 'dataNasc':
+            mappedData['birth_date'] = value;
+            break;
+          case 'gender':
+            mappedData['gender'] = value;
+            break; // NOVO
+          case 'dashboardCardOrder':
+            mappedData['dashboard_card_order'] = value;
+            break;
+          case 'dashboardHiddenCards':
+            mappedData['dashboard_hidden_cards'] = value;
+            break;
+          case 'subscription':
+            mappedData['subscription_data'] = value;
+            break; // Se vier o mapa
+          default:
+            mappedData[key] = value; // Fallback
         }
       });
-      
+
       mappedData['updated_at'] = DateTime.now().toIso8601String();
 
       final response = await _supabase
@@ -134,9 +159,10 @@ class SupabaseService {
           .update(mappedData)
           .eq('uid', uid)
           .select();
-      
+
       if (response.isEmpty) {
-        throw Exception('Nenhum registro atualizado. Verifique se o UID está correto ou se você tem permissão (RLS).');
+        throw Exception(
+            'Nenhum registro atualizado. Verifique se o UID está correto ou se você tem permissão (RLS).');
       }
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao atualizar usuário: $e');
@@ -147,19 +173,19 @@ class SupabaseService {
   // --- USERNAME METHODS ---
 
   /// Verifica se um username está disponível (não está em uso)
-  /// 
+  ///
   /// Retorna true se disponível, false se já existe
   Future<bool> isUsernameAvailable(String username) async {
     try {
       final sanitized = username.toLowerCase().trim();
-      
+
       final response = await _supabase
           .schema('sincroapp')
           .from('users')
           .select('username')
           .eq('username', sanitized)
           .maybeSingle();
-      
+
       return response == null; // null = disponível, != null = já existe
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao verificar username: $e');
@@ -168,21 +194,21 @@ class SupabaseService {
   }
 
   /// Busca usuário por username
-  /// 
+  ///
   /// Retorna UserModel se encontrado, null se não existir
   Future<UserModel?> getUserByUsername(String username) async {
     try {
       final sanitized = username.toLowerCase().trim();
-      
+
       final response = await _supabase
           .schema('sincroapp')
           .from('users')
           .select()
           .eq('username', sanitized)
           .maybeSingle();
-      
+
       if (response == null) return null;
-      
+
       // Reutilizar a mesma lógica de mapeamento do getUserData
       final data = response;
       return UserModel(
@@ -197,10 +223,12 @@ class SupabaseService {
         dataNasc: data['birth_date'] ?? '',
         gender: data['gender'], // NOVO
         isAdmin: data['is_admin'] ?? false,
-        dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
-        dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
-        subscription: data['subscription_data'] != null 
-            ? SubscriptionModel.fromFirestore(data['subscription_data']) 
+        dashboardCardOrder: List<String>.from(
+            data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+        dashboardHiddenCards:
+            List<String>.from(data['dashboard_hidden_cards'] ?? []),
+        subscription: data['subscription_data'] != null
+            ? SubscriptionModel.fromFirestore(data['subscription_data'])
             : SubscriptionModel.free(),
       );
     } catch (e) {
@@ -210,16 +238,17 @@ class SupabaseService {
   }
 
   /// Busca usuários por username (autocomplete)
-  /// 
+  ///
   /// Retorna lista de UserModel que correspondem à busca
   /// - query: termo de busca (parcial OK)
   /// - limit: número máximo de resultados (padrão: 10)
-  Future<List<UserModel>> searchUsersByUsername(String query, {int limit = 10}) async {
+  Future<List<UserModel>> searchUsersByUsername(String query,
+      {int limit = 10}) async {
     try {
       if (query.isEmpty) return [];
-      
+
       final sanitized = query.toLowerCase().trim();
-      
+
       // Busca usando ILIKE para match parcial (case-insensitive)
       final response = await _supabase
           .schema('sincroapp')
@@ -227,9 +256,9 @@ class SupabaseService {
           .select()
           .ilike('username', '%$sanitized%')
           .limit(limit);
-      
+
       final List<dynamic> data = response;
-      
+
       return data.map((item) {
         return UserModel(
           uid: item['uid'],
@@ -243,15 +272,18 @@ class SupabaseService {
           dataNasc: item['birth_date'] ?? '',
           gender: item['gender'], // NOVO
           isAdmin: item['is_admin'] ?? false,
-          dashboardCardOrder: List<String>.from(item['dashboard_card_order'] ?? UserModel.defaultCardOrder),
-          dashboardHiddenCards: List<String>.from(item['dashboard_hidden_cards'] ?? []),
-          subscription: item['subscription_data'] != null 
-              ? SubscriptionModel.fromFirestore(item['subscription_data']) 
+          dashboardCardOrder: List<String>.from(
+              item['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+          dashboardHiddenCards:
+              List<String>.from(item['dashboard_hidden_cards'] ?? []),
+          subscription: item['subscription_data'] != null
+              ? SubscriptionModel.fromFirestore(item['subscription_data'])
               : SubscriptionModel.free(),
         );
       }).toList();
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao buscar usuários por username: $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao buscar usuários por username: $e');
       return [];
     }
   }
@@ -265,11 +297,12 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .eq('user_id', uid)
         .order('created_at', ascending: false)
-        .map((data) => data.map((json) => NotificationModel.fromFirestore(json)).toList());
+        .map((data) =>
+            data.map((json) => NotificationModel.fromFirestore(json)).toList());
   }
-  
+
   Stream<int> getUnreadNotificationsCountStream(String uid) {
-     return _supabase
+    return _supabase
         .schema('sincroapp')
         .from('notifications')
         .stream(primaryKey: ['id'])
@@ -282,13 +315,13 @@ class SupabaseService {
       await _supabase
           .schema('sincroapp')
           .from('notifications')
-          .update({'is_read': true})
-          .eq('id', notificationId);
+          .update({'is_read': true}).eq('id', notificationId);
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao marcar notificação como lida: $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao marcar notificação como lida: $e');
     }
   }
-  
+
   Future<void> markAllNotificationsAsRead(String uid) async {
     try {
       await _supabase
@@ -307,7 +340,11 @@ class SupabaseService {
     try {
       // Format: (id1,id2,id3) for IN operator
       final idsString = '(${ids.join(',')})';
-      await _supabase.schema('sincroapp').from('notifications').delete().filter('id', 'in', idsString);
+      await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .delete()
+          .filter('id', 'in', idsString);
       debugPrint('✅ [SupabaseService] ${ids.length} notificações deletadas');
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao deletar notificações: $e');
@@ -322,11 +359,12 @@ class SupabaseService {
       await _supabase
           .schema('sincroapp')
           .from('notifications')
-          .update({'is_read': true})
-          .filter('id', 'in', idsString);
-      debugPrint('✅ [SupabaseService] ${ids.length} notificações marcadas como lidas');
+          .update({'is_read': true}).filter('id', 'in', idsString);
+      debugPrint(
+          '✅ [SupabaseService] ${ids.length} notificações marcadas como lidas');
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao marcar notificações como lidas: $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao marcar notificações como lidas: $e');
       rethrow;
     }
   }
@@ -355,10 +393,13 @@ class SupabaseService {
         'created_at': DateTime.now().toIso8601String(),
         'metadata': metadata ?? {},
       };
-      
-      await _supabase.schema('sincroapp').from('notifications').insert(notifData);
+
+      await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .insert(notifData);
     } catch (e) {
-        debugPrint('❌ [SupabaseService] Erro ao enviar notificação: $e');
+      debugPrint('❌ [SupabaseService] Erro ao enviar notificação: $e');
     }
   }
 
@@ -370,7 +411,7 @@ class SupabaseService {
       final response = await _supabase
           .schema('sincroapp')
           .from('user_contacts')
-          .select('contact_user_id, status, users!contact_user_id(*)') 
+          .select('contact_user_id, status, users!contact_user_id(*)')
           .eq('user_id', uid)
           .eq('status', 'active')
           .order('created_at');
@@ -385,9 +426,11 @@ class SupabaseService {
             email: userData['email'] ?? '',
             photoUrl: userData['photo_url'],
             username: userData['username'],
-            primeiroNome: userData['primeiro_nome'] ?? userData['first_name'] ?? '',
+            primeiroNome:
+                userData['primeiro_nome'] ?? userData['first_name'] ?? '',
             sobrenome: userData['sobrenome'] ?? userData['last_name'] ?? '',
-            nomeAnalise: userData['nome_analise'] ?? userData['analysis_name'] ?? '',
+            nomeAnalise:
+                userData['nome_analise'] ?? userData['analysis_name'] ?? '',
             dataNasc: userData['birth_date'] ?? '',
             isAdmin: userData['is_admin'] ?? false,
             plano: 'essencial', // Default for contact view
@@ -410,7 +453,8 @@ class SupabaseService {
       final response = await _supabase
           .schema('sincroapp')
           .from('user_contacts')
-          .select('contact_user_id, status, users!contact_user_id(uid, username, first_name, last_name, email, photo_url)')
+          .select(
+              'contact_user_id, status, users!contact_user_id(uid, username, first_name, last_name, email, photo_url)')
           .eq('user_id', uid)
           .order('created_at');
 
@@ -419,20 +463,20 @@ class SupabaseService {
       return data.map((item) {
         final userData = item['users'] as Map<String, dynamic>;
         final status = item['status'] as String;
-        
+
         final firstName = (userData['first_name'] ?? '').toString().trim();
         final lastName = (userData['last_name'] ?? '').toString().trim();
-        
+
         // Logic fixed: Prevent duplication if firstName already contains lastName
         String displayName;
         if (firstName.isNotEmpty) {
-           if (firstName.toLowerCase().endsWith(lastName.toLowerCase())) {
-             displayName = firstName;
-           } else {
-             displayName = '$firstName $lastName'.trim();
-           }
+          if (firstName.toLowerCase().endsWith(lastName.toLowerCase())) {
+            displayName = firstName;
+          } else {
+            displayName = '$firstName $lastName'.trim();
+          }
         } else {
-           displayName = userData['email'] ?? '';
+          displayName = userData['email'] ?? '';
         }
 
         return ContactModel(
@@ -444,7 +488,8 @@ class SupabaseService {
         );
       }).toList();
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao buscar contatos (ContactModel): $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao buscar contatos (ContactModel): $e');
       return [];
     }
   }
@@ -458,7 +503,6 @@ class SupabaseService {
         'contact_user_id': contactUid,
         'status': 'pending', // Waiting for acceptance
       }, onConflict: 'user_id, contact_user_id');
-
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao adicionar contato: $e');
       rethrow;
@@ -467,8 +511,8 @@ class SupabaseService {
 
   /// Responde a uma solicitação de contato
   Future<void> respondToContactRequest({
-    required String uid, 
-    required String contactUid, 
+    required String uid,
+    required String contactUid,
     required bool accept,
   }) async {
     try {
@@ -478,7 +522,7 @@ class SupabaseService {
         'p_requester_uid': contactUid,
         'p_accept': accept,
       });
-      
+
       if (accept) {
         // Enviar notificação de confirmação para quem solicitou
         final responderData = await getUserData(uid);
@@ -492,7 +536,8 @@ class SupabaseService {
         );
         debugPrint('✅ [SupabaseService] Contato aceito: $uid <-> $contactUid');
       } else {
-        debugPrint('✅ [SupabaseService] Contato recusado: $uid <-> $contactUid');
+        debugPrint(
+            '✅ [SupabaseService] Contato recusado: $uid <-> $contactUid');
       }
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao responder contato: $e');
@@ -508,7 +553,7 @@ class SupabaseService {
           .from('user_contacts')
           .delete()
           .match({'user_id': uid, 'contact_user_id': contactUid});
-          
+
       // Opcional: remover o reverso também para consistência
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao remover contato: $e');
@@ -537,85 +582,120 @@ class SupabaseService {
       await _supabase
           .schema('sincroapp')
           .from('user_contacts')
-          .update({'status': 'active'})
-          .match({'user_id': uid, 'contact_user_id': contactUid});
+          .update({'status': 'active'}).match(
+              {'user_id': uid, 'contact_user_id': contactUid});
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao desbloquear contato: $e');
       rethrow;
     }
   }
-  
+
+  // --- TAGS ---
+
+  Future<List<String>> getTags(String uid) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select('tags')
+          .eq('user_id', uid);
+
+      final List<dynamic> data = response;
+      final Set<String> uniqueTags = {};
+
+      for (var item in data) {
+        if (item['tags'] != null) {
+          final List<dynamic> tags = item['tags'];
+          for (var tag in tags) {
+            uniqueTags.add(tag.toString());
+          }
+        }
+      }
+      return uniqueTags.toList()..sort();
+    } catch (e) {
+      debugPrint('Error fetching tags: $e');
+      return [];
+    }
+  }
+
   // --- COMPATIBILITY HELPER ---
-  
+
   /// Calcula score de compatibilidade e sugere datas
   Future<Map<String, dynamic>> checkCompatibility({
-    required List<String> contactIds, 
-    required DateTime date,
     required String currentUserId,
+    required List<String> contactIds,
+    required DateTime date,
   }) async {
-    if (contactIds.isEmpty) return {'score': 1.0, 'status': 'good'};
-    
-    // Pegar data nasc do owner
-    final ownerData = await _supabase.schema('sincroapp').from('users').select('birth_date').eq('uid', currentUserId).maybeSingle();
-    
+    final ownerData = await _supabase
+        .schema('sincroapp')
+        .from('users')
+        .select('birth_date')
+        .eq('uid', currentUserId)
+        .maybeSingle();
+
     if (ownerData == null || ownerData['birth_date'] == null) {
-       return {'score': 1.0, 'status': 'unknown_owner_birth'};
+      return {'score': 1.0, 'status': 'unknown_owner_birth'};
     }
     final ownerBirth = DateFormat('dd/MM/yyyy').parse(ownerData['birth_date']);
-    
+
     // Pegar datas nasc dos contatos
-     final contactsResponse = await _supabase.schema('sincroapp').from('users').select('uid, birth_date').inFilter('uid', contactIds);
-     final List<dynamic> contactsData = contactsResponse;
-     
-     if (contactsData.isEmpty) return {'score': 1.0, 'status': 'good'};
-    
+    final contactsResponse = await _supabase
+        .schema('sincroapp')
+        .from('users')
+        .select('uid, birth_date')
+        .inFilter('uid', contactIds);
+    final List<dynamic> contactsData = contactsResponse;
+
+    if (contactsData.isEmpty) return {'score': 1.0, 'status': 'good'};
+
     double totalScore = 0;
     int count = 0;
-    
+
     for (var c in contactsData) {
-       if (c['birth_date'] == null) continue;
-       final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
-       final score = _harmonyService.calculateCompatibilityScore(
-          date: date,
-          birthDateA: ownerBirth,
-          birthDateB: cBirth,
-       );
-       totalScore += score;
-       count++;
+      if (c['birth_date'] == null) continue;
+      final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
+      final score = _harmonyService.calculateCompatibilityScore(
+        date: date,
+        birthDateA: ownerBirth,
+        birthDateB: cBirth,
+      );
+      totalScore += score;
+      count++;
     }
-    
+
     final avgScore = count > 0 ? totalScore / count : 1.0;
-    
+
     // Se score ruim (< 0.6), buscar 3 próximas datas boas
     List<DateTime> suggestions = [];
     if (avgScore < 0.6) {
-       DateTime candidate = date.add(const Duration(days: 1));
-       int found = 0;
-       int attempts = 0;
-       while (found < 3 && attempts < 30) {
-           double candTotal = 0;
-           int candCount = 0;
-           for (var c in contactsData) {
-             if (c['birth_date'] == null) continue;
-             final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
-             final score = _harmonyService.calculateCompatibilityScore(
-                date: candidate,
-                birthDateA: ownerBirth,
-                birthDateB: cBirth,
-             );
-             candTotal += score;
-             candCount++;
-          }
-          final candAvg = candCount > 0 ? candTotal / candCount : 0.0;
-          if (candAvg >= 0.75) { // Threshold de compatibilidade boa
-             suggestions.add(candidate);
-             found++;
-          }
-          candidate = candidate.add(const Duration(days: 1));
-          attempts++;
-       }
+      DateTime candidate = date.add(const Duration(days: 1));
+      int found = 0;
+      int attempts = 0;
+      while (found < 3 && attempts < 30) {
+        double candTotal = 0;
+        int candCount = 0;
+        for (var c in contactsData) {
+          if (c['birth_date'] == null) continue;
+          final cBirth = DateFormat('dd/MM/yyyy').parse(c['birth_date']);
+          final score = _harmonyService.calculateCompatibilityScore(
+            date: candidate,
+            birthDateA: ownerBirth,
+            birthDateB: cBirth,
+          );
+          candTotal += score;
+          candCount++;
+        }
+        final candAvg = candCount > 0 ? candTotal / candCount : 0.0;
+        if (candAvg >= 0.75) {
+          // Threshold de compatibilidade boa
+          suggestions.add(candidate);
+          found++;
+        }
+        candidate = candidate.add(const Duration(days: 1));
+        attempts++;
+      }
     }
-    
+
     return {
       'score': avgScore,
       'status': avgScore >= 0.6 ? 'good' : 'bad',
@@ -627,7 +707,24 @@ class SupabaseService {
 
   // --- TASKS ---
 
-  Future<void> addTask(String uid, TaskModel task) async {
+  Future<List<TaskModel>> getTasksBySourceJournalId(String journalId) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select()
+          .eq('source_journal_id', journalId);
+
+      final List<dynamic> data = response;
+      return data.map((item) => _mapTaskFromSupabase(item)).toList();
+    } catch (e) {
+      debugPrint(
+          '❌ [SupabaseService] Erro ao buscar tarefas por journalId: $e');
+      return [];
+    }
+  }
+
+  Future<TaskModel?> addTask(String uid, TaskModel task) async {
     try {
       final taskData = {
         'user_id': uid,
@@ -648,33 +745,44 @@ class SupabaseService {
         'recurrence_id': task.recurrenceId,
         'goal_id': task.goalId,
         'completed_at': task.completedAt?.toIso8601String(),
-        'shared_with': [
-          ...task.sharedWith, 
+        'shared_with': <String>{
+          ...task.sharedWith,
           ...UsernameValidator.extractMentionsFromText(task.text)
-        ].toSet().toList(), // NOVO: Parse mentions + explicit shared
-        'task_type': (task.reminderTime != null || 
-                     (task.dueDate != null && (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
-                     ? 'appointment' 
-                     : 'task',
+        }.toList(), // NOVO: Parse mentions + explicit shared
+        'task_type': (task.reminderTime != null ||
+                (task.dueDate != null &&
+                    (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
+            ? 'appointment'
+            : 'task',
         'duration_minutes': task.durationMinutes,
+        'source_journal_id': task.sourceJournalId, // Added source_journal_id
       };
-      
-      final response = await _supabase.schema('sincroapp').from('tasks').insert(taskData).select().single();
+
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .insert(taskData)
+          .select()
+          .single();
       final newTaskId = response['id']; // Get the generated ID
+      final createdTask = _mapTaskFromSupabase(response); // Map back to model
 
       // --- SINCRO MATCH LOGIC (INTERNAL) ---
-      final newSharedUsers = [
-          ...task.sharedWith, 
-          ...UsernameValidator.extractMentionsFromText(task.text)
-      ].toSet().toList();
-      
+      final newSharedUsers = <String>{
+        ...task.sharedWith,
+        ...UsernameValidator.extractMentionsFromText(task.text)
+      }.toList();
+
       if (newSharedUsers.isNotEmpty && task.dueDate != null) {
-        _handleSincroMatchLogic(uid, newTaskId, task.text, task.dueDate!, newSharedUsers);
+        _handleSincroMatchLogic(
+            uid, newTaskId, task.text, task.dueDate!, newSharedUsers);
       }
       // -------------------------------------
+
+      return createdTask;
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao adicionar tarefa: $e');
-      rethrow;
+      return null;
     }
   }
 
@@ -696,6 +804,23 @@ class SupabaseService {
     }
   }
 
+  Future<TaskModel?> getTaskById(String taskId) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select()
+          .eq('id', taskId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return _mapTaskFromSupabase(response);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar tarefa por ID: $e');
+      return null;
+    }
+  }
+
   Stream<List<TaskModel>> getTasksStream(String uid) {
     // Client-side filtering as fallback for stream errors
     return _supabase
@@ -704,17 +829,51 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .order('created_at', ascending: false)
         .map((data) {
-           return data
-               .where((item) => item['user_id'] == uid)
-               .map((item) => _mapTaskFromSupabase(item))
-               .toList();
+          return data
+              .where((item) => item['user_id'] == uid)
+              .map<TaskModel>((item) => _mapTaskFromSupabase(item))
+              .toList();
         });
+  }
+
+  /// Stream of tasks linked to a specific journal entry
+  Stream<List<TaskModel>> getTasksStreamByJournalId(String journalId) {
+    return _supabase
+        .schema('sincroapp')
+        .from('tasks')
+        .stream(primaryKey: ['id'])
+        .eq('source_journal_id', journalId)
+        .order('created_at', ascending: true)
+        .map((data) {
+          return data
+              .map<TaskModel>((item) => _mapTaskFromSupabase(item))
+              .toList();
+        });
+  }
+
+  Future<void> unlinkTaskFromJournal(String taskId) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .update({'source_journal_id': null})
+          .eq('id', taskId);
+      debugPrint('✅ [SupabaseService] Task $taskId unlinked from journal.');
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Error unlinking task: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateTask(String uid, TaskModel task) async {
     try {
       // 1. Fetch current task state to compare
-      final currentTaskRes = await _supabase.schema('sincroapp').from('tasks').select().eq('id', task.id).single();
+      final currentTaskRes = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select()
+          .eq('id', task.id)
+          .single();
       final currentTask = _mapTaskFromSupabase(currentTaskRes);
 
       final taskData = {
@@ -730,17 +889,19 @@ class SupabaseService {
         'reminder_at': task.reminderAt?.toIso8601String(),
         'personal_day': task.personalDay,
         'completed_at': task.completedAt?.toIso8601String(),
-        'shared_with': [
-          ...task.sharedWith, 
+        'shared_with': <String>{
+          ...task.sharedWith,
           ...UsernameValidator.extractMentionsFromText(task.text)
-        ].toSet().toList(),
-        'task_type': (task.reminderTime != null || 
-                     (task.dueDate != null && (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
-                     ? 'appointment' 
-                     : 'task',
+        }.toList(),
+        'task_type': (task.reminderTime != null ||
+                (task.dueDate != null &&
+                    (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
+            ? 'appointment'
+            : 'task',
         'duration_minutes': task.durationMinutes,
+        'source_journal_id': task.sourceJournalId, // Added source_journal_id
       };
-      
+
       await _supabase
           .schema('sincroapp')
           .from('tasks')
@@ -748,46 +909,59 @@ class SupabaseService {
           .eq('id', task.id);
 
       // --- SINCRO SHARE UPDATE LOGIC ---
-      final usersToNotify = [
-          ...task.sharedWith, 
-          ...UsernameValidator.extractMentionsFromText(task.text)
-      ].toSet().toList();
+      final usersToNotify = <String>{
+        ...task.sharedWith,
+        ...UsernameValidator.extractMentionsFromText(task.text)
+      }.toList();
 
       if (usersToNotify.isNotEmpty) {
-          // Check for diffs
-          final List<String> changes = [];
-          if (currentTask.text != task.text) changes.add('Título');
-          if (currentTask.dueDate != task.dueDate) changes.add('Data');
-          if (currentTask.reminderTime != task.reminderTime) changes.add('Horário do lembrete');
-          
-          if (changes.isNotEmpty) {
-             final ownerData = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', uid).single();
-             final ownerName = ownerData['username'] ?? 'Alguém';
-             
-             for (final username in usersToNotify) {
-                final userData = await _supabase.schema('sincroapp').from('users').select('uid').eq('username', username).maybeSingle();
-                if (userData == null) continue;
-                
-                final contactUid = userData['uid'];
-                if (contactUid == uid) continue;
+        // Check for diffs
+        final List<String> changes = [];
+        if (currentTask.text != task.text) changes.add('Título');
+        if (currentTask.dueDate != task.dueDate) changes.add('Data');
+        if (currentTask.reminderTime != task.reminderTime) {
+          changes.add('Horário do lembrete');
+        }
 
-                final sanitizedTitle = task.text.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+        if (changes.isNotEmpty) {
+          final ownerData = await _supabase
+              .schema('sincroapp')
+              .from('users')
+              .select('username')
+              .eq('uid', uid)
+              .single();
+          final ownerName = ownerData['username'] ?? 'Alguém';
 
-                await sendNotification(
-                  toUserId: contactUid,
-                  type: NotificationType.taskUpdate,
-                  title: '📝 Tarefa Atualizada',
-                  body: '@$ownerName alterou "$sanitizedTitle": ${changes.join(", ")}',
-                  relatedItemId: task.id,
-                  relatedItemType: 'task',
-                  metadata: {
-                    'changes': changes,
-                    'task_title': sanitizedTitle,
-                    'updated_by': ownerName,
-                  }
-                );
-             }
+          for (final username in usersToNotify) {
+            final userData = await _supabase
+                .schema('sincroapp')
+                .from('users')
+                .select('uid')
+                .eq('username', username)
+                .maybeSingle();
+            if (userData == null) continue;
+
+            final contactUid = userData['uid'];
+            if (contactUid == uid) continue;
+
+            final sanitizedTitle =
+                task.text.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+
+            await sendNotification(
+                toUserId: contactUid,
+                type: NotificationType.taskUpdate,
+                title: '📝 Tarefa Atualizada',
+                body:
+                    '@$ownerName alterou "$sanitizedTitle": ${changes.join(", ")}',
+                relatedItemId: task.id,
+                relatedItemType: 'task',
+                metadata: {
+                  'changes': changes,
+                  'task_title': sanitizedTitle,
+                  'updated_by': ownerName,
+                });
           }
+        }
       }
 
       // --- SINCRO MATCH LOGIC (For New Invites) ---
@@ -795,13 +969,13 @@ class SupabaseService {
       final oldShared = currentTask.sharedWith.toSet();
       final newShared = usersToNotify.toSet();
       final addedUsers = newShared.difference(oldShared);
-      
+
       if (addedUsers.isNotEmpty && task.dueDate != null) {
-         // Send invites (Sincro Alert) only to new people
-        _handleSincroMatchLogic(uid, task.id, task.text, task.dueDate!, addedUsers.toList());
+        // Send invites (Sincro Alert) only to new people
+        _handleSincroMatchLogic(
+            uid, task.id, task.text, task.dueDate!, addedUsers.toList());
       }
       // -------------------------------------
-
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao atualizar tarefa: $e');
       rethrow;
@@ -809,27 +983,39 @@ class SupabaseService {
   }
 
   /// Lógica Interna de Sincro Match (Substitui N8N para alertas)
-  Future<void> _handleSincroMatchLogic(String ownerId, String taskId, String taskTitle, DateTime dueDate, List<String> sharedUsernames) async {
+  Future<void> _handleSincroMatchLogic(String ownerId, String taskId,
+      String taskTitle, DateTime dueDate, List<String> sharedUsernames) async {
     try {
       // 1. Buscar dados do Owner (User A)
-      final ownerData = await _supabase.schema('sincroapp').from('users').select('uid, username, birth_date').eq('uid', ownerId).single();
+      final ownerData = await _supabase
+          .schema('sincroapp')
+          .from('users')
+          .select('uid, username, birth_date')
+          .eq('uid', ownerId)
+          .single();
       final ownerBirthStr = ownerData['birth_date'];
 
       if (ownerBirthStr == null) return; // Se não tem data nasc, não calcula
-      
+
       final ownerBirth = DateFormat('dd/MM/yyyy').parse(ownerBirthStr);
 
       // 2. Para cada usuário compartilhado (User B)
       for (final username in sharedUsernames) {
         // Busca User B pelo username
-        final userData = await _supabase.schema('sincroapp').from('users').select('uid, username, birth_date').eq('username', username).maybeSingle();
-        
+        final userData = await _supabase
+            .schema('sincroapp')
+            .from('users')
+            .select('uid, username, birth_date')
+            .eq('username', username)
+            .maybeSingle();
+
         if (userData == null || userData['birth_date'] == null) continue;
 
         final contactId = userData['uid'];
         if (contactId == ownerId) continue; // Não comparar consigo mesmo
 
-        final contactBirth = DateFormat('dd/MM/yyyy').parse(userData['birth_date']);
+        final contactBirth =
+            DateFormat('dd/MM/yyyy').parse(userData['birth_date']);
 
         // 3. Calcular Compatibilidade
         final score = _harmonyService.calculateCompatibilityScore(
@@ -840,32 +1026,36 @@ class SupabaseService {
 
         // 4. Se for compatibilidade baixa/média, criar notificação Sincro Alert
         // AGORA: Sempre envia para permitir o fluxo de "Aceitar/Recusar"
-        if (score < 0.9 || true) { // <--- Sempre enviar para testar o fluxo
-           
-           final sanitizedTitle = taskTitle.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+        if (score < 0.9 || true) {
+          // <--- Sempre enviar para testar o fluxo
 
-           await sendNotification(
-             toUserId: contactId, // Avisar o destinatário (User B)
-             type: NotificationType.taskInvite,
-             title: '📅 Convite de Agendamento',
-             body: '@${ownerData['username']} te convidou para: "$sanitizedTitle" em ${DateFormat('dd/MM').format(dueDate)}.',
-             metadata: {
-               'sender_username': ownerData['username'],  // Para destaque azul no modal
-               'task_text': sanitizedTitle,                // Texto da tarefa
-               'target_date': dueDate.toIso8601String(),
-               'compatibility_score': score,
-               'task_id': taskId,      // Needed for response
-               'owner_id': ownerId,    // Needed for response
-               'userA_birth': ownerBirth.toIso8601String(),
-               'userB_birth': contactBirth.toIso8601String(),
-             }
-           );
+          final sanitizedTitle =
+              taskTitle.replaceAll(RegExp(r'@[\w.]+'), '').trim();
+
+          await sendNotification(
+              toUserId: contactId, // Avisar o destinatário (User B)
+              type: NotificationType.taskInvite,
+              title: '📅 Convite de Agendamento',
+              body:
+                  '@${ownerData['username']} te convidou para: "$sanitizedTitle" em ${DateFormat('dd/MM').format(dueDate)}.',
+              metadata: {
+                'sender_username':
+                    ownerData['username'], // Para destaque azul no modal
+                'task_text': sanitizedTitle, // Texto da tarefa
+                'target_date': dueDate.toIso8601String(),
+                'compatibility_score': score,
+                'task_id': taskId, // Needed for response
+                'owner_id': ownerId, // Needed for response
+                'userA_birth': ownerBirth.toIso8601String(),
+                'userB_birth': contactBirth.toIso8601String(),
+              });
         }
       }
     } catch (e) {
       // debugPrint('⚠️ [SincroMatch] Erro ao processar compatibilidade: $e');
     }
   }
+
   /// Responde a um convite de tarefa (Aceitar/Recusar)
   /// Responde a um convite de tarefa (Aceitar/Recusar)
   Future<void> respondToInvitation({
@@ -885,143 +1075,173 @@ class SupabaseService {
       // 1. Notificar o dono da tarefa
       if (accepted) {
         await sendNotification(
-          toUserId: ownerId,
-          type: NotificationType.contactAccepted, // Reutilizando para confirmações positivas
-          title: '✅ Convite Aceito!',
-          body: '@$responderName aceitou participar da sua tarefa.',
-          relatedItemId: taskId,
-          metadata: {
-            'action': 'accepted',
-            'responder_name': responderName,
-          }
-        );
-        
-        
+            toUserId: ownerId,
+            type: NotificationType
+                .contactAccepted, // Reutilizando para confirmações positivas
+            title: '✅ Convite Aceito!',
+            body: '@$responderName aceitou participar da sua tarefa.',
+            relatedItemId: taskId,
+            metadata: {
+              'action': 'accepted',
+              'responder_name': responderName,
+            });
+
         // 2. CRITICAL: Criar uma cópia da tarefa para o usuário que aceitou
         // debugPrint('🔍 [SupabaseService] Tentando buscar tarefa $taskId...');
-        
-        
+
         // Tentar buscar tarefa original (pode falhar por RLS)
         Map<String, dynamic>? taskResponse;
         try {
-          taskResponse = await _supabase.schema('sincroapp').from('tasks')
+          taskResponse = await _supabase
+              .schema('sincroapp')
+              .from('tasks')
               .select()
               .eq('id', taskId)
               .maybeSingle();
         } catch (e) {
           // debugPrint('⚠️ [SupabaseService] Erro ao buscar tarefa (RLS?): $e');
         }
-        
+
         // 3. Calcular o dia pessoal do USUÁRIO QUE ACEITA (não do dono)
         int? personalDay;
         DateTime? dueDate;
-        
+
         final dateStr = taskResponse?['due_date'] ?? targetDate;
         if (dateStr != null) {
-          dueDate = DateTime.tryParse(dateStr is String ? dateStr : dateStr.toString());
+          dueDate = DateTime.tryParse(
+              dateStr is String ? dateStr : dateStr.toString());
         }
-        
+
         if (dueDate != null) {
           // Buscar data de nascimento do usuário que está aceitando
           try {
-            final responderData = await _supabase.schema('sincroapp').from('users')
+            final responderData = await _supabase
+                .schema('sincroapp')
+                .from('users')
                 .select('birth_date')
                 .eq('uid', responderUid)
                 .maybeSingle();
-            
+
             if (responderData != null && responderData['birth_date'] != null) {
               final birthDateStr = responderData['birth_date'] as String;
-              personalDay = NumerologyEngine.calculatePersonalDay(dueDate, birthDateStr);
+              personalDay =
+                  NumerologyEngine.calculatePersonalDay(dueDate, birthDateStr);
               // debugPrint('✅ [SupabaseService] Dia pessoal calculado: $personalDay');
             }
           } catch (e) {
             // debugPrint('⚠️ [SupabaseService] Erro ao calcular dia pessoal: $e');
           }
         }
-        
+
         // 4. Preparar texto da tarefa com @mention do sender
-        String finalText = taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada';
+        String finalText =
+            taskResponse?['text'] ?? taskText ?? 'Tarefa compartilhada';
         final sender = senderUsername ?? '';
         if (sender.isNotEmpty && !finalText.contains('@$sender')) {
           // Adicionar @sender no final se ainda não estiver presente
           finalText = '$finalText @$sender';
         }
-        
+
         // 5. Criar nova tarefa para o usuário que aceitou
-        final String newTaskId = Uuid().v4();
-        
+        final String newTaskId = const Uuid().v4();
+
         final Map<String, dynamic> newTaskData = {
           'id': newTaskId,
-          'user_id': responderUid, // Nova tarefa pertence ao usuário que aceitou
+          'user_id':
+              responderUid, // Nova tarefa pertence ao usuário que aceitou
           'text': finalText,
           'due_date': taskResponse?['due_date'] ?? targetDate,
           'tags': taskResponse?['tags'] ?? [],
           'shared_with': [],
           'created_at': DateTime.now().toUtc().toIso8601String(),
         };
-        
+
         // Adicionar personalDay se calculado
         if (personalDay != null && personalDay > 0) {
           newTaskData['personal_day'] = personalDay;
         }
-        
+
         // Adicionar campos opcionais apenas se existirem
         if (taskResponse != null) {
-          if (taskResponse['reminder_time'] != null) newTaskData['reminder_time'] = taskResponse['reminder_time'];
-          if (taskResponse['recurrence_type'] != null) newTaskData['recurrence_type'] = taskResponse['recurrence_type'];
-          if (taskResponse['recurrence_days_of_week'] != null) newTaskData['recurrence_days_of_week'] = taskResponse['recurrence_days_of_week'];
-          if (taskResponse['recurrence_end_date'] != null) newTaskData['recurrence_end_date'] = taskResponse['recurrence_end_date'];
-          if (taskResponse['journey_id'] != null) newTaskData['journey_id'] = taskResponse['journey_id'];
+          if (taskResponse['reminder_time'] != null) {
+            newTaskData['reminder_time'] = taskResponse['reminder_time'];
+          }
+          if (taskResponse['recurrence_type'] != null) {
+            newTaskData['recurrence_type'] = taskResponse['recurrence_type'];
+          }
+          if (taskResponse['recurrence_days_of_week'] != null) {
+            newTaskData['recurrence_days_of_week'] =
+                taskResponse['recurrence_days_of_week'];
+          }
+          if (taskResponse['recurrence_end_date'] != null) {
+            newTaskData['recurrence_end_date'] =
+                taskResponse['recurrence_end_date'];
+          }
+          if (taskResponse['journey_id'] != null) {
+            newTaskData['journey_id'] = taskResponse['journey_id'];
+          }
         }
-        
+
         try {
           await _supabase.schema('sincroapp').from('tasks').insert(newTaskData);
           // debugPrint('✅ [SupabaseService] Tarefa $newTaskId criada para usuário $responderUid com personalDay=$personalDay');
         } catch (insertError) {
           // debugPrint('❌ [SupabaseService] Erro ao inserir tarefa: $insertError');
         }
-        
       } else {
         await sendNotification(
-          toUserId: ownerId,
-          type: NotificationType.system,
-          title: '❌ Convite Recusado',
-          body: '@$responderName não poderá participar da tarefa.',
-          relatedItemId: taskId,
-          metadata: {
-            'action': 'declined',
-            'responder_name': responderName,
-          }
-        );
-        
+            toUserId: ownerId,
+            type: NotificationType.system,
+            title: '❌ Convite Recusado',
+            body: '@$responderName não poderá participar da tarefa.',
+            relatedItemId: taskId,
+            metadata: {
+              'action': 'declined',
+              'responder_name': responderName,
+            });
+
         // Se recusou, remover da lista shared_with
-        final taskResponse = await _supabase.schema('sincroapp').from('tasks').select('shared_with, text').eq('id', taskId).single();
+        final taskResponse = await _supabase
+            .schema('sincroapp')
+            .from('tasks')
+            .select('shared_with, text')
+            .eq('id', taskId)
+            .single();
         final List<dynamic> currentShared = taskResponse['shared_with'] ?? [];
-        
-        // Tentamos remover pelo username 
-        final userResponse = await _supabase.schema('sincroapp').from('users').select('username').eq('uid', responderUid).single();
+
+        // Tentamos remover pelo username
+        final userResponse = await _supabase
+            .schema('sincroapp')
+            .from('users')
+            .select('username')
+            .eq('uid', responderUid)
+            .single();
         final String username = userResponse['username'];
 
         if (currentShared.contains(username)) {
           final newShared = List<String>.from(currentShared)..remove(username);
-          await _supabase.schema('sincroapp').from('tasks').update({'shared_with': newShared}).eq('id', taskId);
+          await _supabase
+              .schema('sincroapp')
+              .from('tasks')
+              .update({'shared_with': newShared}).eq('id', taskId);
         }
       }
-      
+
       // Atualizar metadata da notificação para marcar como respondida
       if (notificationId != null) {
         final newMeta = Map<String, dynamic>.from(currentMetadata ?? {});
         newMeta['action_taken'] = true;
-        
+
         try {
-          await _supabase.schema('sincroapp').from('notifications')
-              .update({'metadata': newMeta, 'is_read': true}) // Também marca como lida
+          await _supabase.schema('sincroapp').from('notifications').update({
+            'metadata': newMeta,
+            'is_read': true
+          }) // Também marca como lida
               .eq('id', notificationId);
         } catch (e) {
           // debugPrint('⚠️ [SupabaseService] Erro ao atualizar status da notificação: $e');
         }
       }
-
     } catch (e) {
       // debugPrint('❌ [SupabaseService] Erro ao responder convite: $e');
     }
@@ -1039,51 +1259,82 @@ class SupabaseService {
       rethrow;
     }
   }
-  
-  Future<void> updateTaskFields(String uid, String taskId, Map<String, dynamic> updates) async {
+
+  Future<void> updateTaskFields(
+      String uid, String taskId, Map<String, dynamic> updates) async {
     try {
-       // Map fields from camelCase (Flutter) to snake_case (Supabase)
-       final mappedUpdates = <String, dynamic>{};
-       updates.forEach((key, value) {
-         if (value is DateTime) value = value.toIso8601String();
-         
-         switch (key) {
-           case 'dueDate': mappedUpdates['due_date'] = value; break;
-           case 'createdAt': mappedUpdates['created_at'] = value; break;
-           case 'completedAt': mappedUpdates['completed_at'] = value; break;
-           case 'journeyId': mappedUpdates['journey_id'] = value; break;
-           case 'journeyTitle': mappedUpdates['journey_title'] = value; break;
-           case 'recurrenceType': mappedUpdates['recurrence_type'] = value.toString(); break;
-           case 'recurrenceDaysOfWeek': mappedUpdates['recurrence_days_of_week'] = value; break;
-           case 'recurrenceEndDate': mappedUpdates['recurrence_end_date'] = value; break;
-           case 'reminderAt': mappedUpdates['reminder_at'] = value; break;
-           case 'personalDay': mappedUpdates['personal_day'] = value; break;
-           default: mappedUpdates[key] = value; 
-         }
-       });
-       
-       await _supabase.schema('sincroapp').from('tasks').update(mappedUpdates).eq('id', taskId);
+      // Map fields from camelCase (Flutter) to snake_case (Supabase)
+      final mappedUpdates = <String, dynamic>{};
+      updates.forEach((key, value) {
+        if (value is DateTime) value = value.toIso8601String();
+
+        switch (key) {
+          case 'dueDate':
+            mappedUpdates['due_date'] = value;
+            break;
+          case 'createdAt':
+            mappedUpdates['created_at'] = value;
+            break;
+          case 'completedAt':
+            mappedUpdates['completed_at'] = value;
+            break;
+          case 'journeyId':
+            mappedUpdates['journey_id'] = value;
+            break;
+          case 'journeyTitle':
+            mappedUpdates['journey_title'] = value;
+            break;
+          case 'recurrenceType':
+            mappedUpdates['recurrence_type'] = value.toString();
+            break;
+          case 'recurrenceDaysOfWeek':
+            mappedUpdates['recurrence_days_of_week'] = value;
+            break;
+          case 'recurrenceEndDate':
+            mappedUpdates['recurrence_end_date'] = value;
+            break;
+          case 'reminderAt':
+            mappedUpdates['reminder_at'] = value;
+            break;
+          case 'personalDay':
+            mappedUpdates['personal_day'] = value;
+            break;
+          default:
+            mappedUpdates[key] = value;
+        }
+      });
+
+      await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .update(mappedUpdates)
+          .eq('id', taskId);
     } catch (e) {
-       debugPrint('❌ [SupabaseService] Erro ao atualizar campos da tarefa: $e');
-       rethrow;
+      debugPrint('❌ [SupabaseService] Erro ao atualizar campos da tarefa: $e');
+      rethrow;
     }
   }
 
-  Future<void> updateTaskCompletion(String uid, String taskId, {required bool completed}) async {
+  Future<void> updateTaskCompletion(String uid, String taskId,
+      {required bool completed}) async {
     await updateTaskFields(uid, taskId, {
       'completed': completed,
       'completedAt': completed ? DateTime.now() : null,
     });
   }
-  
+
   // Batch delete logic (optional but useful)
   Future<void> deleteTasks(String uid, List<String> taskIds) async {
-      if (taskIds.isEmpty) return;
-      try {
-        await _supabase.schema('sincroapp').from('tasks').delete().filter('id', 'in', taskIds);
-      } catch (e) {
-        debugPrint('❌ [SupabaseService] Erro ao deletar tarefas em lote: $e');
-      }
+    if (taskIds.isEmpty) return;
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .delete()
+          .filter('id', 'in', taskIds);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao deletar tarefas em lote: $e');
+    }
   }
 
   // Removido getTasksForGoalStream duplicado e implementado getGoalsStream e getGoalById
@@ -1094,7 +1345,7 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .order('created_at', ascending: false)
         .map((data) {
-           return data
+          return data
               .where((item) => item['user_id'] == uid)
               .map((item) => _mapGoalFromSupabase(item))
               .toList();
@@ -1127,7 +1378,7 @@ class SupabaseService {
     try {
       // Parse original (pode vir com fuso Z)
       final parsed = DateTime.parse(dateString);
-      
+
       // Se a string original tinha "T", tentamos pegar a data antes dele para garantir o dia.
       // Mas o DateTime.parse já ajusta para UTC se tiver Z.
       // O problema é q queremos o ANO-MES-DIA literal da string ou ajustado?
@@ -1135,15 +1386,15 @@ class SupabaseService {
       // Se salvamos 03/01, vai ser 03/01 00:00 UTC.
       // Ao ler aqui (Brasil -3), DateTime.parse("...Z").toLocal() vira 02/01 21:00.
       // O widget de calendário vê 02/01.
-      
+
       // O que queremos: Se o banco diz 03/01 (UTC), queremos 03/01 (Local).
       // Então pegamos os componentes do UTC e criamos um Local.
-      
+
       // Se o parse resultar em UTC (isUtc=true), usamos seus componentes para criar um Local.
       if (parsed.isUtc) {
-         return DateTime(parsed.year, parsed.month, parsed.day);
+        return DateTime(parsed.year, parsed.month, parsed.day);
       } else {
-         return DateTime(parsed.year, parsed.month, parsed.day);
+        return DateTime(parsed.year, parsed.month, parsed.day);
       }
     } catch (e) {
       return null;
@@ -1160,8 +1411,12 @@ class SupabaseService {
       progress: (data['progress'] as num?)?.toDouble().toInt() ?? 0,
       category: data['category'] ?? '',
       imageUrl: data['image_url'],
-      subTasks: (data['sub_tasks'] as List?)?.map((e) => SubTask.fromMap(e as Map<String,dynamic>,'')).toList() ?? [],
-      createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(), // CreatedAt pode manter o horário real
+      subTasks: (data['sub_tasks'] as List?)
+              ?.map((e) => SubTask.fromMap(e as Map<String, dynamic>, ''))
+              .toList() ??
+          [],
+      createdAt: DateTime.tryParse(data['created_at'] ?? '') ??
+          DateTime.now(), // CreatedAt pode manter o horário real
     );
   }
 
@@ -1177,7 +1432,8 @@ class SupabaseService {
 
     TimeOfDay? reminder;
     if (data['reminder_hour'] != null && data['reminder_minute'] != null) {
-      reminder = TimeOfDay(hour: data['reminder_hour'], minute: data['reminder_minute']);
+      reminder = TimeOfDay(
+          hour: data['reminder_hour'], minute: data['reminder_minute']);
     }
 
     return TaskModel(
@@ -1192,14 +1448,20 @@ class SupabaseService {
       journeyTitle: data['journey_title'],
       personalDay: data['personal_day'],
       recurrenceType: recType,
-      recurrenceDaysOfWeek: List<int>.from(data['recurrence_days_of_week'] ?? []),
+      recurrenceDaysOfWeek:
+          List<int>.from(data['recurrence_days_of_week'] ?? []),
       recurrenceEndDate: _parseDateAsLocal(data['recurrence_end_date']), // FIX
       reminderTime: reminder,
-      reminderAt: data['reminder_at'] != null ? DateTime.tryParse(data['reminder_at']) : null,
+      reminderAt: data['reminder_at'] != null
+          ? DateTime.tryParse(data['reminder_at'])
+          : null,
       recurrenceId: data['recurrence_id'],
       goalId: data['goal_id'],
-      completedAt: data['completed_at'] != null ? DateTime.tryParse(data['completed_at']) : null,
+      completedAt: data['completed_at'] != null
+          ? DateTime.tryParse(data['completed_at'])
+          : null,
       durationMinutes: data['duration_minutes'],
+      sourceJournalId: data['source_journal_id'], // Map source_journal_id
     );
   }
 
@@ -1215,10 +1477,12 @@ class SupabaseService {
         'progress': goal.progress,
         'category': goal.category,
         'image_url': goal.imageUrl,
-        'sub_tasks': goal.subTasks.map((t) => t.toMap()).toList(), // Serializa lista de SubTasks
+        'sub_tasks': goal.subTasks
+            .map((t) => t.toMap())
+            .toList(), // Serializa lista de SubTasks
         'created_at': goal.createdAt.toIso8601String(),
       };
-      
+
       // Se o ID for vazio, deixa o banco gerar. Se vier preenchido, tenta usar.
       if (goal.id.isNotEmpty) {
         goalData['id'] = goal.id;
@@ -1256,7 +1520,7 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .order('created_at', ascending: false)
         .map((data) {
-           return data
+          return data
               .where((item) => item['user_id'] == uid)
               .map((item) => _mapGoalFromSupabase(item))
               .toList();
@@ -1270,10 +1534,10 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .order('created_at') // Optional
         .map((data) {
-           return data
-               .where((item) => item['user_id'] == uid && item['id'] == goalId)
-               .map((item) => _mapGoalFromSupabase(item))
-               .single;
+          return data
+              .where((item) => item['user_id'] == uid && item['id'] == goalId)
+              .map((item) => _mapGoalFromSupabase(item))
+              .single;
         });
   }
 
@@ -1301,26 +1565,32 @@ class SupabaseService {
 
   Future<void> deleteGoal(String uid, String goalId) async {
     try {
-      await _supabase.schema('sincroapp').from('goals').delete().eq('id', goalId);
+      await _supabase
+          .schema('sincroapp')
+          .from('goals')
+          .delete()
+          .eq('id', goalId);
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao deletar meta: $e');
       rethrow;
     }
   }
 
-  Future<String?> uploadGoalImage(String uid, String goalId, File imageFile) async {
+  Future<String?> uploadGoalImage(
+      String uid, String goalId, File imageFile) async {
     try {
       final fileExt = imageFile.path.split('.').last;
       final fileName = '${DateTime.now().toIso8601String()}_$goalId.$fileExt';
       final filePath = '$uid/$fileName';
 
       await _supabase.storage.from('goal_images').upload(
-        filePath,
-        imageFile,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+            filePath,
+            imageFile,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
-      final imageUrl = _supabase.storage.from('goal_images').getPublicUrl(filePath);
+      final imageUrl =
+          _supabase.storage.from('goal_images').getPublicUrl(filePath);
       return imageUrl;
     } catch (e) {
       debugPrint('❌ [SupabaseService] Erro ao fazer upload da imagem: $e');
@@ -1328,22 +1598,25 @@ class SupabaseService {
     }
   }
 
-  Future<String?> uploadGoalImageBytes(String uid, String goalId, Uint8List bytes, String fileName) async {
+  Future<String?> uploadGoalImageBytes(
+      String uid, String goalId, Uint8List bytes, String fileName) async {
     try {
       final fileExt = fileName.split('.').last;
       final uniqueName = '${DateTime.now().toIso8601String()}_$goalId.$fileExt';
       final filePath = '$uid/$uniqueName';
 
       await _supabase.storage.from('goal_images').uploadBinary(
-        filePath,
-        bytes,
-        fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
-      );
+            filePath,
+            bytes,
+            fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
+          );
 
-      final imageUrl = _supabase.storage.from('goal_images').getPublicUrl(filePath);
+      final imageUrl =
+          _supabase.storage.from('goal_images').getPublicUrl(filePath);
       return imageUrl;
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao fazer upload da imagem (bytes): $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao fazer upload da imagem (bytes): $e');
       return null;
     }
   }
@@ -1359,30 +1632,30 @@ class SupabaseService {
 
       final List<dynamic> tasks = response;
       int progress = 0;
-      
+
       if (tasks.isNotEmpty) {
         final totalTasks = tasks.length;
-        final completedTasks = tasks.where((t) => t['completed'] == true).length;
+        final completedTasks =
+            tasks.where((t) => t['completed'] == true).length;
         progress = (completedTasks / totalTasks * 100).round();
       }
 
       await _supabase
           .schema('sincroapp')
           .from('goals')
-          .update({'progress': progress})
-          .eq('id', goalId);
-          
+          .update({'progress': progress}).eq('id', goalId);
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao atualizar progresso da meta $goalId: $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao atualizar progresso da meta $goalId: $e');
     }
   }
 
-
   // --- JOURNAL ---
 
   // --- JOURNAL ---
 
-  Future<List<JournalEntry>> getJournalEntriesForMonth(String uid, DateTime month) async {
+  Future<List<JournalEntry>> getJournalEntriesForMonth(
+      String uid, DateTime month) async {
     try {
       final startOfMonth = DateTime(month.year, month.month, 1);
       final endOfMonth = DateTime(month.year, month.month + 1, 0); // Último dia
@@ -1404,6 +1677,20 @@ class SupabaseService {
     }
   }
 
+  /// Exclui uma anotação e suas dependências (cascade na DB)
+  Future<void> deleteJournalEntry(String uid, String entryId) async {
+    try {
+      await _supabase
+          .schema('sincroapp')
+          .from('journal_entries')
+          .delete()
+          .match({'id': entryId, 'user_id': uid});
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao excluir anotação: $e');
+      rethrow;
+    }
+  }
+
   Stream<List<JournalEntry>> getJournalEntriesStream(
     String uid, {
     DateTime? date,
@@ -1416,91 +1703,96 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .eq('user_id', uid)
         .order('entry_date', ascending: false);
-    
+
     return query.map((data) {
       var entries = data.map((item) => JournalEntry.fromMap(item)).toList();
-      
+
       // Client-side filtering
       if (date != null) {
-        entries = entries.where((e) => 
-          e.createdAt.year == date.year && 
-          e.createdAt.month == date.month && 
-          e.createdAt.day == date.day
-        ).toList();
+        entries = entries
+            .where((e) =>
+                e.createdAt.year == date.year &&
+                e.createdAt.month == date.month &&
+                e.createdAt.day == date.day)
+            .toList();
       }
-      
+
       if (mood != null) {
         entries = entries.where((e) => e.mood == mood).toList();
       }
-      
+
       if (vibration != null) {
         entries = entries.where((e) => e.personalDay == vibration).toList();
       }
-      
+
       return entries;
     });
   }
 
-  Future<void> addJournalEntry(String uid, Map<String, dynamic> data) async {
+  Future<JournalEntry?> addJournalEntry(
+      String uid, Map<String, dynamic> data) async {
     try {
       final Map<String, dynamic> entryData = {
         'user_id': uid,
         'content': data['content'],
         'mood': data['mood']?.toString(), // Enum/Int to String
-        'tags': data['tags'] ?? [], 
-        'entry_date': data['created_at'] is DateTime 
-             ? (data['created_at'] as DateTime).toIso8601String() 
-             : data['created_at'] ?? DateTime.now().toIso8601String(),
-        'personal_day': data['personal_day'] ?? data['personalDay'], 
+        'tags': data['tags'] ?? [],
+        'entry_date': data['created_at'] is DateTime
+            ? (data['created_at'] as DateTime).toIso8601String()
+            : data['created_at'] ?? DateTime.now().toIso8601String(),
+        'personal_day': data['personal_day'] ?? data['personalDay'],
         'updated_at': DateTime.now().toIso8601String(),
         'created_at': DateTime.now().toIso8601String(),
+        'title': data['title'],
       };
-      
+
       entryData.removeWhere((key, value) => value == null);
 
-      await _supabase.schema('sincroapp').from('journal_entries').insert(entryData);
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('journal_entries')
+          .insert(entryData)
+          .select()
+          .maybeSingle(); // insert().select().maybeSingle() returns the object directly
+
+      if (response != null) {
+        return JournalEntry.fromMap(response);
+      }
+      return null;
     } catch (e) {
-       debugPrint('❌ [SupabaseService] Erro ao adicionar diário: $e');
-       rethrow;
+      debugPrint('❌ [SupabaseService] Erro ao adicionar diário: $e');
+      return null;
     }
   }
 
-  Future<void> updateJournalEntry(String uid, String entryId, Map<String, dynamic> data) async {
-      try {
-         final mapped = <String, dynamic>{};
-         data.forEach((k, v) {
-            if (v is DateTime) v = v.toIso8601String();
-            
-            switch (k) {
-               case 'entryDate': mapped['entry_date'] = v; break;
-               case 'createdAt': mapped['created_at'] = v; break;
-               case 'updatedAt': mapped['updated_at'] = v; break;
-               case 'personalDay': mapped['personal_day'] = v; break;
-               case 'mood': mapped['mood'] = v?.toString(); break;
-               default: mapped[k] = v;
-            }
-         });
-         
-         if (!mapped.containsKey('updated_at')) {
-             mapped['updated_at'] = DateTime.now().toIso8601String();
-         }
+  Future<void> updateJournalEntry(
+      String uid, String entryId, Map<String, dynamic> data) async {
+    try {
+      final mapped = <String, dynamic>{};
+      if (data.containsKey('content')) mapped['content'] = data['content'];
+      if (data.containsKey('mood')) mapped['mood'] = data['mood']?.toString();
+      if (data.containsKey('tags')) mapped['tags'] = data['tags'];
+      if (data.containsKey('title')) mapped['title'] = data['title']; // Ensure title is mapped
+      
+      mapped['updated_at'] = DateTime.now().toIso8601String();
 
-         await _supabase.schema('sincroapp').from('journal_entries').update(mapped).eq('user_id', uid).eq('id', entryId);
-      } catch (e) {
-          debugPrint('❌ [SupabaseService] Erro ao atualizar diário: $e');
-          rethrow;
-      }
+      await _supabase
+          .schema('sincroapp')
+          .from('journal_entries')
+          .update(mapped)
+          .match({'id': entryId, 'user_id': uid});
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao atualizar diário: $e');
+      rethrow;
+    }
   }
+
 
   // --- JOURNAL ---
 
-  Future<void> deleteJournalEntry(String uid, String entryId) async {
-     await _supabase.schema('sincroapp').from('journal_entries').delete().eq('id', entryId);
-  }
+
 
   // --- USAGE LOGGING ---
-
-
 
   // --- USAGE LOGGING ---
 
@@ -1553,276 +1845,320 @@ class SupabaseService {
   /// Calcula estatísticas do Admin (Client-side aggregation para precisão com complexidade de planos)
   Future<Map<String, dynamic>> getAdminStats() async {
     try {
-       final users = await getAllUsers();
-       
-       int freeCount = 0;
-       int plusCount = 0;
-       int premiumCount = 0;
-       int activeCount = 0;
-       int expiredCount = 0;
-       
-       double grossMrr = 0.0;
-       
-       int totalAiUsed = 0;
-       
-       // Demographics
-       final Map<String, int> ageBuckets = {
-         '18-24': 0, '25-34': 0, '35-44': 0, '45-54': 0, '55+': 0, 'N/A': 0
-       };
-       final Map<String, int> sexDistribution = {
-         'Masculino': 0, 'Feminino': 0, 'Outro': 0, 'N/A': 0
-       };
-       
-       final now = DateTime.now();
+      final users = await getAllUsers();
 
-       for (final user in users) {
-          // 1. Plan & Financials logic
-          final plan = user.subscription.plan;
-          
-          if (user.subscription.isActive) {
-             activeCount++;
-             switch (plan) {
-               case SubscriptionPlan.free:
-                 freeCount++; 
-                 break;
-               case SubscriptionPlan.plus:
-                 plusCount++;
-                 grossMrr += 19.90;
-                 break;
-               case SubscriptionPlan.premium:
-                 premiumCount++;
-                 grossMrr += 39.90;
-                 break;
-             }
-          } else {
-             // Conta usuários expirados baseado no último plano conhecido ou fallback
-             switch (plan) {
-               case SubscriptionPlan.free: freeCount++; break;
-               case SubscriptionPlan.plus: plusCount++; break;
-               case SubscriptionPlan.premium: premiumCount++; break;
-             }
-             expiredCount++;
+      int freeCount = 0;
+      int plusCount = 0;
+      int premiumCount = 0;
+      int activeCount = 0;
+      int expiredCount = 0;
+
+      double grossMrr = 0.0;
+
+      int totalAiUsed = 0;
+
+      // Demographics
+      final Map<String, int> ageBuckets = {
+        '18-24': 0,
+        '25-34': 0,
+        '35-44': 0,
+        '45-54': 0,
+        '55+': 0,
+        'N/A': 0
+      };
+      final Map<String, int> sexDistribution = {
+        'Masculino': 0,
+        'Feminino': 0,
+        'Outro': 0,
+        'N/A': 0
+      };
+
+      final now = DateTime.now();
+
+      for (final user in users) {
+        // 1. Plan & Financials logic
+        final plan = user.subscription.plan;
+
+        if (user.subscription.isActive) {
+          activeCount++;
+          switch (plan) {
+            case SubscriptionPlan.free:
+              freeCount++;
+              break;
+            case SubscriptionPlan.plus:
+              plusCount++;
+              grossMrr += 19.90;
+              break;
+            case SubscriptionPlan.premium:
+              premiumCount++;
+              grossMrr += 39.90;
+              break;
           }
-          
-          // 2. AI Usage
-          totalAiUsed += user.subscription.aiSuggestionsUsed;
+        } else {
+          // Conta usuários expirados baseado no último plano conhecido ou fallback
+          switch (plan) {
+            case SubscriptionPlan.free:
+              freeCount++;
+              break;
+            case SubscriptionPlan.plus:
+              plusCount++;
+              break;
+            case SubscriptionPlan.premium:
+              premiumCount++;
+              break;
+          }
+          expiredCount++;
+        }
 
-          // 3. Demographics - Age
-          if (user.dataNasc.isNotEmpty) {
-             try {
-               // Formato esperado DD/MM/YYYY
-               final parts = user.dataNasc.split('/');
-               if (parts.length == 3) {
-                 final birthDate = DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
-                 final age = now.year - birthDate.year;
-                 
-                 if (age >= 18 && age <= 24) ageBuckets['18-24'] = (ageBuckets['18-24'] ?? 0) + 1;
-                 else if (age >= 25 && age <= 34) ageBuckets['25-34'] = (ageBuckets['25-34'] ?? 0) + 1;
-                 else if (age >= 35 && age <= 44) ageBuckets['35-44'] = (ageBuckets['35-44'] ?? 0) + 1;
-                 else if (age >= 45 && age <= 54) ageBuckets['45-54'] = (ageBuckets['45-54'] ?? 0) + 1;
-                 else if (age >= 55) ageBuckets['55+'] = (ageBuckets['55+'] ?? 0) + 1;
-                 else ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1; // Menor de 18 ou erro
-               } else {
-                 ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
-               }
-             } catch (e) {
-               ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
-             }
-          } else {
+        // 2. AI Usage
+        totalAiUsed += user.subscription.aiSuggestionsUsed;
+
+        // 3. Demographics - Age
+        if (user.dataNasc.isNotEmpty) {
+          try {
+            // Formato esperado DD/MM/YYYY
+            final parts = user.dataNasc.split('/');
+            if (parts.length == 3) {
+              final birthDate = DateTime(int.parse(parts[2]),
+                  int.parse(parts[1]), int.parse(parts[0]));
+              final age = now.year - birthDate.year;
+
+              if (age >= 18 && age <= 24) {
+                ageBuckets['18-24'] = (ageBuckets['18-24'] ?? 0) + 1;
+              } else if (age >= 25 && age <= 34)
+                ageBuckets['25-34'] = (ageBuckets['25-34'] ?? 0) + 1;
+              else if (age >= 35 && age <= 44)
+                ageBuckets['35-44'] = (ageBuckets['35-44'] ?? 0) + 1;
+              else if (age >= 45 && age <= 54)
+                ageBuckets['45-54'] = (ageBuckets['45-54'] ?? 0) + 1;
+              else if (age >= 55)
+                ageBuckets['55+'] = (ageBuckets['55+'] ?? 0) + 1;
+              else
+                ageBuckets['N/A'] =
+                    (ageBuckets['N/A'] ?? 0) + 1; // Menor de 18 ou erro
+            } else {
+              ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
+            }
+          } catch (e) {
             ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
           }
-
-          // 3. Demographics - Sex
-          // Supõe-se campo 'genre' ou similar no futuro, por enquanto usando lógica básica se existir ou N/A
-          // Se não houver campo sexo no UserModel, deixamos N/A ou Mock por enquanto para o User preencher
-          sexDistribution['N/A'] = (sexDistribution['N/A'] ?? 0) + 1;
-       }
-       
-        // 4. Calculate Total Token Usage & Cost (Approximation)
-        // Fetch all usage logs (warning: heavy query, should be RPC in prod)
-        int totalTokens = 0;
-        int totalRequests = 0;
-        
-        try {
-          // Buscando apenas a coluna tokens_total para reduzir tráfego
-          // Nota: RPC 'get_total_token_usage' seria ideal
-          final usageResponse = await _supabase.schema('sincroapp').from('usage_logs').select('tokens_total');
-          final List<dynamic> usageList = usageResponse;
-          
-          totalRequests = usageList.length;
-          totalTokens = usageList.fold<int>(0, (sum, item) => sum + (item['tokens_total'] as int? ?? 0));
-        } catch (e) {
-          debugPrint('⚠️ Erro ao buscar usage_logs: $e');
-          // Fallback to subscription stats
-          totalRequests = totalAiUsed; 
-        }
-
-        // Custo estimado: ~R$0.05 por requisição (Legacy) OU Baseado em Tokens
-        // GPT-4o-mini: ~$0.20 per 1M tokens (Blended)
-        double aiCost = 0.0;
-        if (totalTokens > 0) {
-            aiCost = (totalTokens / 1000000) * 0.20 * 6.0; // USD to BRL (~6.0)
         } else {
-            aiCost = totalAiUsed * 0.05; // Fallback Legacy
+          ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
         }
-        
-        final double netProfit = grossMrr - aiCost;
-        
-        return {
-          'totalUsers': users.length,
-          'freeUsers': freeCount,
-          'plusUsers': plusCount,
-          'premiumUsers': premiumCount,
-          'activeSubscriptions': activeCount,
-          'expiredSubscriptions': expiredCount,
-          
-          'estimatedMRR': grossMrr,
-          'totalAiUsed': totalRequests, // Total Requests (Real or Legacy)
-          'totalAiTokens': totalTokens, // New Metric
-          'totalAiCost': aiCost,
-          'netProfit': netProfit,
-          
-          'demographics': {
-             'age': ageBuckets,
-             'sex': sexDistribution,
-          },
-          
-          'lastUpdated': DateTime.now().toUtc(),
-        };
+
+        // 3. Demographics - Sex
+        // Supõe-se campo 'genre' ou similar no futuro, por enquanto usando lógica básica se existir ou N/A
+        // Se não houver campo sexo no UserModel, deixamos N/A ou Mock por enquanto para o User preencher
+        sexDistribution['N/A'] = (sexDistribution['N/A'] ?? 0) + 1;
+      }
+
+      // 4. Calculate Total Token Usage & Cost (Approximation)
+      // Fetch all usage logs (warning: heavy query, should be RPC in prod)
+      int totalTokens = 0;
+      int totalRequests = 0;
+
+      try {
+        // Buscando apenas a coluna tokens_total para reduzir tráfego
+        // Nota: RPC 'get_total_token_usage' seria ideal
+        final usageResponse = await _supabase
+            .schema('sincroapp')
+            .from('usage_logs')
+            .select('tokens_total');
+        final List<dynamic> usageList = usageResponse;
+
+        totalRequests = usageList.length;
+        totalTokens = usageList.fold<int>(
+            0, (sum, item) => sum + (item['tokens_total'] as int? ?? 0));
+      } catch (e) {
+        debugPrint('⚠️ Erro ao buscar usage_logs: $e');
+        // Fallback to subscription stats
+        totalRequests = totalAiUsed;
+      }
+
+      // Custo estimado: ~R$0.05 por requisição (Legacy) OU Baseado em Tokens
+      // GPT-4o-mini: ~$0.20 per 1M tokens (Blended)
+      double aiCost = 0.0;
+      if (totalTokens > 0) {
+        aiCost = (totalTokens / 1000000) * 0.20 * 6.0; // USD to BRL (~6.0)
+      } else {
+        aiCost = totalAiUsed * 0.05; // Fallback Legacy
+      }
+
+      final double netProfit = grossMrr - aiCost;
+
+      return {
+        'totalUsers': users.length,
+        'freeUsers': freeCount,
+        'plusUsers': plusCount,
+        'premiumUsers': premiumCount,
+        'activeSubscriptions': activeCount,
+        'expiredSubscriptions': expiredCount,
+
+        'estimatedMRR': grossMrr,
+        'totalAiUsed': totalRequests, // Total Requests (Real or Legacy)
+        'totalAiTokens': totalTokens, // New Metric
+        'totalAiCost': aiCost,
+        'netProfit': netProfit,
+
+        'demographics': {
+          'age': ageBuckets,
+          'sex': sexDistribution,
+        },
+
+        'lastUpdated': DateTime.now().toUtc(),
+      };
     } catch (e) {
-       debugPrint('❌ [SupabaseService] Erro ao calcular stats: $e');
-       return {
-          'totalUsers': 0, 'estimatedMRR': 0.0,
-       };
+      debugPrint('❌ [SupabaseService] Erro ao calcular stats: $e');
+      return {
+        'totalUsers': 0,
+        'estimatedMRR': 0.0,
+      };
     }
   }
 
   Future<Map<String, int>> getUserTokenUsageMap() async {
-     try {
-        final response = await _supabase.schema('sincroapp').from('usage_logs').select('user_id, tokens_total');
-        final Map<String, int> usageMap = {};
-        for (var item in response) {
-           final uid = item['user_id'] as String;
-           final tokens = item['tokens_total'] as int? ?? 0;
-           usageMap[uid] = (usageMap[uid] ?? 0) + tokens;
-        }
-        return usageMap;
-     } catch (e) {
-        debugPrint('Error fetching user token usage: $e');
-        return {};
-     }
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('usage_logs')
+          .select('user_id, tokens_total');
+      final Map<String, int> usageMap = {};
+      for (var item in response) {
+        final uid = item['user_id'] as String;
+        final tokens = item['tokens_total'] as int? ?? 0;
+        usageMap[uid] = (usageMap[uid] ?? 0) + tokens;
+      }
+      return usageMap;
+    } catch (e) {
+      debugPrint('Error fetching user token usage: $e');
+      return {};
+    }
   }
 
   /// Helper para mapear usuário vindo do Supabase
   UserModel _mapUserFromSupabase(Map<String, dynamic> data) {
-      return UserModel(
-        uid: data['uid'],
-        email: data['email'] ?? '',
-        photoUrl: data['photo_url'],
-        primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '',
-        sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
-        plano: 'essencial', // Legacy
-        nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
-        dataNasc: data['birth_date'] ?? '',
-        isAdmin: data['is_admin'] ?? false,
-        dashboardCardOrder: List<String>.from(data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
-        dashboardHiddenCards: List<String>.from(data['dashboard_hidden_cards'] ?? []),
-        subscription: data['subscription_data'] != null 
-            ? SubscriptionModel.fromFirestore(data['subscription_data']) 
-            : SubscriptionModel.free(),
-      );
+    return UserModel(
+      uid: data['uid'],
+      email: data['email'] ?? '',
+      photoUrl: data['photo_url'],
+      primeiroNome: data['primeiro_nome'] ?? data['first_name'] ?? '',
+      sobrenome: data['sobrenome'] ?? data['last_name'] ?? '',
+      plano: 'essencial', // Legacy
+      nomeAnalise: data['nome_analise'] ?? data['analysis_name'] ?? '',
+      dataNasc: data['birth_date'] ?? '',
+      isAdmin: data['is_admin'] ?? false,
+      dashboardCardOrder: List<String>.from(
+          data['dashboard_card_order'] ?? UserModel.defaultCardOrder),
+      dashboardHiddenCards:
+          List<String>.from(data['dashboard_hidden_cards'] ?? []),
+      subscription: data['subscription_data'] != null
+          ? SubscriptionModel.fromFirestore(data['subscription_data'])
+          : SubscriptionModel.free(),
+    );
   }
 
   /// Busca configurações do site (Manutenção/Senha)
   /// Usa a tabela `site_settings` (criei hipoteticamente ou usa fallback)
   Stream<Map<String, dynamic>> getSiteSettingsStream() {
-      return _supabase.schema('sincroapp').from('site_settings').stream(primaryKey: ['key']).map((event) {
-         // Converte lista de key-values para Map único
-         final Map<String, dynamic> settings = {};
-         for (var item in event) {
-            if (item['key'] == 'global_config') {
-               return item['value'] as Map<String, dynamic>;
-            }
-         }
-         return {
-            'status': 'active', 'bypassPassword': ''
-         };
-      }).handleError((e) {
-         // Fallback se tabela não existir
-         return {'status': 'active', 'bypassPassword': ''};
-      });
-  }
-  
-  // Versão Future se Stream falhar ou for complexo demais criar tabela agora
-  Future<Map<String, dynamic>> getSiteSettings() async {
-     try {
-       final response = await _supabase.schema('sincroapp').from('site_settings').select().eq('key', 'global_config').maybeSingle();
-       if (response != null && response['value'] != null) {
-          return response['value'];
-       }
-     } catch (e) {
-        // ignore
-     }
-     return {'status': 'active', 'bypassPassword': ''};
+    return _supabase
+        .schema('sincroapp')
+        .from('site_settings')
+        .stream(primaryKey: ['key']).map((event) {
+      // Converte lista de key-values para Map único
+      final Map<String, dynamic> settings = {};
+      for (var item in event) {
+        if (item['key'] == 'global_config') {
+          return item['value'] as Map<String, dynamic>;
+        }
+      }
+      return {'status': 'active', 'bypassPassword': ''};
+    }).handleError((e) {
+      // Fallback se tabela não existir
+      return {'status': 'active', 'bypassPassword': ''};
+    });
   }
 
-  Future<void> updateSiteSettings({required String status, required String bypassPassword}) async {
-     try {
-        final val = {
-           'status': status,
-           'bypassPassword': bypassPassword,
-        };
-        // Upsert row with key='global_config'
-        await _supabase.schema('sincroapp').from('site_settings').upsert({
-           'key': 'global_config',
-           'value': val,
-           'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'key');
-     } catch (e) {
-        debugPrint('❌ [SupabaseService] Erro ao atualizar site settings: $e');
-        rethrow;
-     }
+  // Versão Future se Stream falhar ou for complexo demais criar tabela agora
+  Future<Map<String, dynamic>> getSiteSettings() async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('site_settings')
+          .select()
+          .eq('key', 'global_config')
+          .maybeSingle();
+      if (response != null && response['value'] != null) {
+        return response['value'];
+      }
+    } catch (e) {
+      // ignore
+    }
+    return {'status': 'active', 'bypassPassword': ''};
+  }
+
+  Future<void> updateSiteSettings(
+      {required String status, required String bypassPassword}) async {
+    try {
+      final val = {
+        'status': status,
+        'bypassPassword': bypassPassword,
+      };
+      // Upsert row with key='global_config'
+      await _supabase.schema('sincroapp').from('site_settings').upsert({
+        'key': 'global_config',
+        'value': val,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'key');
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao atualizar site settings: $e');
+      rethrow;
+    }
   }
 
   // --- FINANCIAL SETTINGS (Admin) ---
 
   Stream<Map<String, dynamic>> getAdminFinancialSettingsStream() {
-      return _supabase.schema('sincroapp').from('site_settings').stream(primaryKey: ['key']).map((event) {
-         for (var item in event) {
-            if (item['key'] == 'financial_config') {
-               return item['value'] as Map<String, dynamic>;
-            }
-         }
-         return <String, dynamic>{}; // Retorna vazio se não existir
-      }).handleError((e) {
-         return <String, dynamic>{};
-      });
+    return _supabase
+        .schema('sincroapp')
+        .from('site_settings')
+        .stream(primaryKey: ['key']).map((event) {
+      for (var item in event) {
+        if (item['key'] == 'financial_config') {
+          return item['value'] as Map<String, dynamic>;
+        }
+      }
+      return <String, dynamic>{}; // Retorna vazio se não existir
+    }).handleError((e) {
+      return <String, dynamic>{};
+    });
   }
 
-  Future<void> updateAdminFinancialSettings(Map<String, dynamic> settings) async {
-     try {
-        await _supabase.schema('sincroapp').from('site_settings').upsert({
-           'key': 'financial_config',
-           'value': settings,
-           'updated_at': DateTime.now().toIso8601String(),
-        }, onConflict: 'key');
-     } catch (e) {
-        debugPrint('❌ [SupabaseService] Erro ao atualizar financial settings: $e');
-        rethrow;
-     }
+  Future<void> updateAdminFinancialSettings(
+      Map<String, dynamic> settings) async {
+    try {
+      await _supabase.schema('sincroapp').from('site_settings').upsert({
+        'key': 'financial_config',
+        'value': settings,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'key');
+    } catch (e) {
+      debugPrint(
+          '❌ [SupabaseService] Erro ao atualizar financial settings: $e');
+      rethrow;
+    }
   }
 
   Future<void> deleteUserData(String uid) async {
-     // Chama a function no Node Server (que vamos migrar para usar Supabase Admin)
-     // OU chama diretamente Supabase Edge Function se tivermos.
-     // Por enquanto, deletamos da tabela pública, e vamos assumir que o Admin limpará Auth manulamente ou via trigger.
-     
-     try {
-        await _supabase.schema('sincroapp').from('users').delete().eq('uid', uid);
-     } catch (e) {
-        debugPrint('❌ [SupabaseService] Erro ao deletar dados do usuário: $e');
-        rethrow;
-     }
+    // Chama a function no Node Server (que vamos migrar para usar Supabase Admin)
+    // OU chama diretamente Supabase Edge Function se tivermos.
+    // Por enquanto, deletamos da tabela pública, e vamos assumir que o Admin limpará Auth manulamente ou via trigger.
+
+    try {
+      await _supabase.schema('sincroapp').from('users').delete().eq('uid', uid);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao deletar dados do usuário: $e');
+      rethrow;
+    }
   }
 
   // --- ASSISTANT ---
@@ -1834,13 +2170,15 @@ class SupabaseService {
         'role': msg.role,
         'content': msg.content,
         // Serializar ações para JSON
-        'actions': msg.actions.map((a) => a.toJson()).toList(), 
+        'actions': msg.actions.map((a) => a.toJson()).toList(),
         'created_at': msg.time.toIso8601String(),
       });
     } catch (e) {
-      debugPrint('❌ [SupabaseService] Erro ao salvar mensagem do assistente: $e');
+      debugPrint(
+          '❌ [SupabaseService] Erro ao salvar mensagem do assistente: $e');
     }
   }
+
   Stream<List<TaskModel>> getTodayTasksStream(String uid) {
     return _supabase
         .schema('sincroapp')
@@ -1849,25 +2187,26 @@ class SupabaseService {
         .eq('user_id', uid)
         .order('created_at', ascending: false)
         .map((data) {
-          final tasks = data.map((item) => _mapTaskFromSupabase(item)).toList();
-          
+          final List<TaskModel> tasks = data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
+
           final now = DateTime.now(); // Local time
           final startOfDay = DateTime(now.year, now.month, now.day);
           final endOfDay = startOfDay.add(const Duration(days: 1));
-          
+
           return tasks.where((task) {
-             if (task.dueDate != null) {
-                // dueDate já é convertido para local no _mapTaskFromSupabase?
-                // Se _parseDateAsLocal retorna local, então 'd' já está ok.
-                // Mas para garantir, usamos .toLocal()
-                final d = task.dueDate!.toLocal();
-                return !d.isBefore(startOfDay) && d.isBefore(endOfDay);
-             }
-             
-             final c = task.createdAt.toLocal();
-             return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
+            if (task.dueDate != null) {
+              // dueDate já é convertido para local no _mapTaskFromSupabase?
+              // Se _parseDateAsLocal retorna local, então 'd' já está ok.
+              // Mas para garantir, usamos .toLocal()
+              final d = task.dueDate!.toLocal();
+              return !d.isBefore(startOfDay) && d.isBefore(endOfDay);
+            }
+
+            final c = task.createdAt.toLocal();
+            return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
           }).toList()
-            ..sort((a, b) => (a.dueDate ?? a.createdAt).compareTo(b.dueDate ?? b.createdAt));
+            ..sort((a, b) =>
+                (a.dueDate ?? a.createdAt).compareTo(b.dueDate ?? b.createdAt));
         });
   }
 
@@ -1878,27 +2217,28 @@ class SupabaseService {
         .stream(primaryKey: ['id'])
         .order('created_at')
         .map((data) => data
-            .where((item) => item['user_id'] == uid && item['journey_id'] == goalId)
-            .map((item) => _mapTaskFromSupabase(item))
+            .where((item) =>
+                item['user_id'] == uid && item['journey_id'] == goalId)
+            .map<TaskModel>((item) => _mapTaskFromSupabase(item))
             .toList());
   }
 
-  Stream<List<TaskModel>> getTasksStreamForRange(String uid, DateTime start, DateTime end) {
+  Stream<List<TaskModel>> getTasksStreamForRange(
+      String uid, DateTime start, DateTime end) {
     return _supabase
         .schema('sincroapp')
         .from('tasks')
         .stream(primaryKey: ['id'])
-        .order('created_at') 
+        .order('created_at')
         .map((data) {
-           return data
+          return data
               .where((item) => item['user_id'] == uid)
-              .map((item) => _mapTaskFromSupabase(item))
+              .map<TaskModel>((item) => _mapTaskFromSupabase(item))
               .where((task) {
-                  if (task.dueDate == null) return false;
-                  final d = task.dueDate!.toUtc();
-                  return !d.isBefore(start.toUtc()) && !d.isAfter(end.toUtc());
-              })
-              .toList();
+            if (task.dueDate == null) return false;
+            final d = task.dueDate!.toUtc();
+            return !d.isBefore(start.toUtc()) && !d.isAfter(end.toUtc());
+          }).toList();
         });
   }
 
@@ -1915,7 +2255,7 @@ class SupabaseService {
         .order('created_at', ascending: false);
 
     final List<dynamic> data = response;
-    final tasks = data.map((item) => _mapTaskFromSupabase(item)).toList();
+    final List<TaskModel> tasks = data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
 
     return tasks.where((task) {
       if (task.dueDate != null) {

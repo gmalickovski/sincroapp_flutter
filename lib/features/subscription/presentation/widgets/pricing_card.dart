@@ -28,7 +28,7 @@ class _PricingCardState extends State<PricingCard> {
   @override
   Widget build(BuildContext context) {
     final name = PlanLimits.getPlanName(widget.plan);
-    
+
     // Calcula preço baseado no ciclo
     double price;
     if (widget.billingCycle == BillingCycle.annual) {
@@ -37,31 +37,32 @@ class _PricingCardState extends State<PricingCard> {
     } else {
       price = PlanLimits.getPlanPrice(widget.plan);
     }
-    
+
     // Se for anual, mostra o equivalente mensal para comparação visual?
     // Ou mostra o total anual? Geralmente mostra o equivalente mensal em destaque
     // Mas para clareza, vamos mostrar o valor que será cobrado.
     // O usuário pediu "desconto no valor total de 20%".
     // Vamos mostrar o valor da parcela equivalente se for anual, ou o total?
     // Padrão de mercado: Mostrar "R$ X/mês" (cobrado anualmente R$ Y)
-    
+
     double displayPrice = price;
     String periodSuffix = '/mês';
     String? subtext;
 
-    if (widget.billingCycle == BillingCycle.annual && widget.plan != SubscriptionPlan.free) {
+    if (widget.billingCycle == BillingCycle.annual &&
+        widget.plan != SubscriptionPlan.free) {
       // Exibe o equivalente mensal
       displayPrice = price / 12;
       subtext = 'Cobrado anualmente (R\$ ${price.toStringAsFixed(2)})';
     }
 
     final features = _getFeatures(widget.plan);
-    
+
     // Cores baseadas no plano
     Color planColor;
     Color gradientStart;
     Color gradientEnd;
-    
+
     switch (widget.plan) {
       case SubscriptionPlan.free:
         planColor = Colors.grey;
@@ -85,14 +86,16 @@ class _PricingCardState extends State<PricingCard> {
       onExit: (_) => setState(() => _isHovered = false),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        transform: _isHovered 
+        transform: _isHovered
             ? Matrix4.diagonal3Values(1.02, 1.02, 1.0)
             : Matrix4.identity(),
         decoration: BoxDecoration(
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: widget.isCurrent || _isHovered ? planColor : AppColors.border.withValues(alpha: 0.5),
+            color: widget.isCurrent || _isHovered
+                ? planColor
+                : AppColors.border.withValues(alpha: 0.5),
             width: widget.isCurrent || _isHovered ? 2 : 1,
           ),
           boxShadow: [
@@ -132,7 +135,9 @@ class _PricingCardState extends State<PricingCard> {
                       Text(
                         name,
                         style: TextStyle(
-                          color: widget.isCurrent ? planColor : AppColors.primaryText,
+                          color: widget.isCurrent
+                              ? planColor
+                              : AppColors.primaryText,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -140,7 +145,7 @@ class _PricingCardState extends State<PricingCard> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Preço
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +155,9 @@ class _PricingCardState extends State<PricingCard> {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            widget.plan == SubscriptionPlan.free ? 'Grátis' : 'R\$ ${displayPrice.toStringAsFixed(2)}',
+                            widget.plan == SubscriptionPlan.free
+                                ? 'Grátis'
+                                : 'R\$ ${displayPrice.toStringAsFixed(2)}',
                             style: const TextStyle(
                               color: AppColors.primaryText,
                               fontSize: 32,
@@ -181,7 +188,7 @@ class _PricingCardState extends State<PricingCard> {
                     ],
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Botão de Ação
                   SizedBox(
                     width: double.infinity,
@@ -189,17 +196,19 @@ class _PricingCardState extends State<PricingCard> {
                     child: ElevatedButton(
                       onPressed: widget.isCurrent ? null : widget.onSelect,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.isCurrent 
-                            ? AppColors.cardBackground 
+                        backgroundColor: widget.isCurrent
+                            ? AppColors.cardBackground
                             : planColor,
-                        foregroundColor: widget.isCurrent 
-                            ? planColor 
-                            : (widget.plan == SubscriptionPlan.premium ? Colors.black : Colors.white),
+                        foregroundColor: widget.isCurrent
+                            ? planColor
+                            : (widget.plan == SubscriptionPlan.premium
+                                ? Colors.black
+                                : Colors.white),
                         elevation: widget.isCurrent ? 0 : 4,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
-                          side: widget.isCurrent 
-                              ? BorderSide(color: planColor) 
+                          side: widget.isCurrent
+                              ? BorderSide(color: planColor)
                               : BorderSide.none,
                         ),
                       ),
@@ -213,43 +222,44 @@ class _PricingCardState extends State<PricingCard> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Features
                   ...features.map((feature) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.check_circle,
-                          color: planColor,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            feature,
-                            style: const TextStyle(
-                              color: AppColors.secondaryText,
-                              fontSize: 14,
-                              height: 1.4,
+                        padding: const EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: planColor,
+                              size: 20,
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                feature,
+                                style: const TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 14,
+                                  height: 1.4,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  )),
+                      )),
                 ],
               ),
             ),
-            
+
             // Badge de Recomendado
             if (widget.isRecommended)
               Positioned(
                 top: -12,
                 right: 24,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                   decoration: BoxDecoration(
                     color: planColor,
                     borderRadius: BorderRadius.circular(20),
@@ -264,7 +274,9 @@ class _PricingCardState extends State<PricingCard> {
                   child: Text(
                     'RECOMENDADO',
                     style: TextStyle(
-                      color: widget.plan == SubscriptionPlan.premium ? Colors.black : Colors.white,
+                      color: widget.plan == SubscriptionPlan.premium
+                          ? Colors.black
+                          : Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1,

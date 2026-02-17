@@ -54,7 +54,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
     if (tagName.isEmpty) return;
 
     // Sanitiza a tag para o formato padrão (minúsculo, sem hífen)
-    final sanitizedTag = tagName.trim(); 
+    final sanitizedTag = tagName.trim();
     if (sanitizedTag.isEmpty) return;
 
     setState(() {
@@ -305,7 +305,8 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
               children: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close, color: AppColors.secondaryText, size: 24),
+                  icon: const Icon(Icons.close,
+                      color: AppColors.secondaryText, size: 24),
                   tooltip: 'Cancelar',
                 ),
                 Expanded(
@@ -319,7 +320,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
                     ),
                   ),
                 ),
-                 // Empty icon for balance
+                // Empty icon for balance
                 const SizedBox(width: 48),
               ],
             ),

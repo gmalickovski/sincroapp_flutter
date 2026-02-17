@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
@@ -22,7 +21,8 @@ class _GoalImageCardState extends State<GoalImageCard> {
 
   @override
   Widget build(BuildContext context) {
-    final hasImage = widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty;
+    final hasImage =
+        widget.goal.imageUrl != null && widget.goal.imageUrl!.isNotEmpty;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -35,18 +35,20 @@ class _GoalImageCardState extends State<GoalImageCard> {
             color: AppColors.cardBackground,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: _isHovering 
-                  ? AppColors.primary.withOpacity(0.5) 
+              color: _isHovering
+                  ? AppColors.primary.withOpacity(0.5)
                   : AppColors.border.withOpacity(0.3),
               width: _isHovering ? 1.5 : 1.0,
             ),
-            boxShadow: _isHovering ? [
-               BoxShadow(
-                color: AppColors.primary.withOpacity(0.15),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
-            ] : [],
+            boxShadow: _isHovering
+                ? [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.15),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
+                : [],
           ),
           child: hasImage ? _buildImageContent() : _buildPlaceholderContent(),
         ),
@@ -71,9 +73,14 @@ class _GoalImageCardState extends State<GoalImageCard> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.broken_image, color: AppColors.secondaryText, size: 32),
+                        const Icon(Icons.broken_image,
+                            color: AppColors.secondaryText, size: 32),
                         const SizedBox(height: 8),
-                        Text('Erro ao carregar', style: TextStyle(color: AppColors.secondaryText.withValues(alpha: 0.7), fontSize: 12)),
+                        Text('Erro ao carregar',
+                            style: TextStyle(
+                                color: AppColors.secondaryText
+                                    .withValues(alpha: 0.7),
+                                fontSize: 12)),
                       ],
                     ),
                   );
@@ -83,7 +90,8 @@ class _GoalImageCardState extends State<GoalImageCard> {
                   return Center(
                     child: CircularProgressIndicator(
                       value: loadingProgress.expectedTotalBytes != null
-                          ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                          ? loadingProgress.cumulativeBytesLoaded /
+                              loadingProgress.expectedTotalBytes!
                           : null,
                     ),
                   );
@@ -125,19 +133,21 @@ class _GoalImageCardState extends State<GoalImageCard> {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _isHovering 
-                    ? AppColors.primary.withOpacity(0.2) 
+                color: _isHovering
+                    ? AppColors.primary.withOpacity(0.2)
                     : AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.add_photo_alternate_outlined,
-                color: _isHovering ? AppColors.primary : AppColors.primary.withOpacity(0.8),
+                color: _isHovering
+                    ? AppColors.primary
+                    : AppColors.primary.withOpacity(0.8),
                 size: 32,
               ),
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Visualize o Sucesso ✨\nToque para adicionar uma imagem de capa',
               textAlign: TextAlign.center,
               style: TextStyle(

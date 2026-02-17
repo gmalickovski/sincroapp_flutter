@@ -1,10 +1,8 @@
-
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/contact_list_item.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_header.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/widgets/settings_section_title.dart';
-import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/features/contacts/presentation/add_contact_modal.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart'; // We use UserModel internally for richer data if needed, but list uses ContactModel
@@ -43,13 +41,14 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
   Future<void> _fetchContacts() async {
     setState(() => _isLoading = true);
     try {
-      // Fetching ContactModel list (which includes active & blocked usually depending on service implementation, 
+      // Fetching ContactModel list (which includes active & blocked usually depending on service implementation,
       // but getContacts returns all user_contacts entries usually or we might need to adjust logic).
       // The current service getContacts returns ALL contacts in the user_contacts table.
       final contacts = await _supabaseService.getContacts(widget.userData.uid);
-      
+
       // Sort alphabetically by displayName
-      contacts.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+      contacts.sort((a, b) =>
+          a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
 
       if (mounted) {
         setState(() {
@@ -95,11 +94,13 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
   Future<void> _toggleBlockContact(ContactModel contact) async {
     try {
       if (contact.status == 'blocked') {
-         await _supabaseService.unblockContact(widget.userData.uid, contact.userId);
-         _showFeedback('Contato desbloqueado.');
+        await _supabaseService.unblockContact(
+            widget.userData.uid, contact.userId);
+        _showFeedback('Contato desbloqueado.');
       } else {
-         await _supabaseService.blockContact(widget.userData.uid, contact.userId);
-         _showFeedback('Contato bloqueado.');
+        await _supabaseService.blockContact(
+            widget.userData.uid, contact.userId);
+        _showFeedback('Contato bloqueado.');
       }
       _fetchContacts(); // Refresh list to update status UI
     } catch (e) {
@@ -112,7 +113,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Excluir Contato?', style: TextStyle(color: Colors.white)),
+        title: const Text('Excluir Contato?',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Deseja remover @${contact.username} da sua lista? Você não receberá mais compartilhamentos desta pessoa.',
           style: const TextStyle(color: AppColors.secondaryText),
@@ -124,7 +126,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.redAccent)),
+            child: const Text('Excluir',
+                style: TextStyle(color: Colors.redAccent)),
           ),
         ],
       ),
@@ -132,7 +135,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
 
     if (confirmed == true) {
       try {
-        await _supabaseService.removeContact(widget.userData.uid, contact.userId);
+        await _supabaseService.removeContact(
+            widget.userData.uid, contact.userId);
         _showFeedback('Contato removido.');
         _fetchContacts();
       } catch (e) {
@@ -182,9 +186,11 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
                 decoration: InputDecoration(
                   hintText: 'Pesquisar contatos...',
                   hintStyle: Theme.of(context).inputDecorationTheme.hintStyle,
-                  prefixIcon: const Icon(Icons.search, color: AppColors.tertiaryText),
+                  prefixIcon:
+                      const Icon(Icons.search, color: AppColors.tertiaryText),
                   filled: true,
-                  fillColor: const Color(0xFF111827), // Darker background to match form inputs elsewhere
+                  fillColor: const Color(
+                      0xFF111827), // Darker background to match form inputs elsewhere
                   // Theme defines borders, but we can rely on defaults or slight overrides if needed
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 ),
@@ -195,7 +201,7 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
               ),
             ),
             const SizedBox(width: 12),
-            
+
             // Add Button (Floating Modal Trigger)
             Material(
               color: AppColors.primary,
@@ -207,7 +213,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
                   width: 50,
                   height: 50,
                   alignment: Alignment.center,
-                  child: const Icon(Icons.person_add_alt_1, color: Colors.white),
+                  child:
+                      const Icon(Icons.person_add_alt_1, color: Colors.white),
                 ),
               ),
             ),
@@ -228,7 +235,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
                         final contact = _filteredContacts[index];
                         return ContactListItem(
                           contact: contact,
-                          onTap: () {}, // No generic tap action defined in specs, keeps list interactive feel
+                          onTap:
+                              () {}, // No generic tap action defined in specs, keeps list interactive feel
                           onBlock: () => _toggleBlockContact(contact),
                           onDelete: () => _deleteContact(contact),
                         );
@@ -244,7 +252,8 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.people_outline, size: 60, color: AppColors.tertiaryText.withValues(alpha: 0.5)),
+          Icon(Icons.people_outline,
+              size: 60, color: AppColors.tertiaryText.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           const Text(
             'Nenhum contato encontrado',

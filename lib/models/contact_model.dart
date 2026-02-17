@@ -3,7 +3,7 @@
 import 'package:sincro_app_flutter/models/user_model.dart';
 
 /// Modelo simplificado de contato para compartilhamento
-/// 
+///
 /// Representa um usuário que pode ser adicionado como colaborador
 class ContactModel {
   final String userId;
@@ -24,16 +24,16 @@ class ContactModel {
   factory ContactModel.fromUserModel(UserModel user) {
     final firstName = user.primeiroNome.trim();
     final lastName = user.sobrenome.trim();
-    
+
     // Check if firstName already ends with lastName to avoid duplication
     // e.g. firstName="João Silva", lastName="Silva" -> fullName="João Silva"
     String fullName;
     if (firstName.toLowerCase().endsWith(lastName.toLowerCase())) {
-       fullName = firstName;
+      fullName = firstName;
     } else {
-       fullName = '$firstName $lastName'.trim();
+      fullName = '$firstName $lastName'.trim();
     }
-    
+
     return ContactModel(
       userId: user.uid,
       username: user.username ?? '',
@@ -45,14 +45,14 @@ class ContactModel {
   /// Iniciais do nome para avatar
   String get initials {
     if (displayName.isEmpty) return '?';
-    
+
     final parts = displayName.trim().split(' ');
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return displayName[0].toUpperCase();
   }
-  
+
   // Separation logic remains same...
 
   /// Para serialização (se necessário)

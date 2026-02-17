@@ -1,5 +1,4 @@
 // lib/common/widgets/multi_number_card.dart
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/authentication/data/content_data.dart';
@@ -51,36 +50,36 @@ class _MultiNumberCardState extends State<MultiNumberCard> {
         : AppColors.border.withValues(alpha: 0.7);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
-final cardContent = AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground.withValues(alpha: 0.95),
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(color: borderColor, width: borderWidth),
-            boxShadow: const [
-              BoxShadow(
-                color: Color(0x26000000),
-                blurRadius: 10,
-                offset: Offset(0, 5),
-              )
-            ],
+    final cardContent = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground.withValues(alpha: 0.95),
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: borderColor, width: borderWidth),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 10,
+            offset: Offset(0, 5),
+          )
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(20.0),
+            child: widget.isDesktopLayout
+                ? _buildDesktopLayout(displayTitle)
+                : _buildMobileLayout(displayTitle),
           ),
-          child: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: widget.isDesktopLayout
-                    ? _buildDesktopLayout(displayTitle)
-                    : _buildMobileLayout(displayTitle),
-              ),
-              if (widget.dragHandle != null)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: widget.dragHandle!,
-                ),
-            ],
-          ),
+          if (widget.dragHandle != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: widget.dragHandle!,
+            ),
+        ],
+      ),
     );
 
     return MouseRegion(
@@ -245,7 +244,8 @@ final cardContent = AnimatedContainer(
               color: widget.color,
               height: 1,
               shadows: [
-                Shadow(color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
+                Shadow(
+                    color: widget.color.withValues(alpha: 0.5), blurRadius: 15)
               ],
             ),
           ),

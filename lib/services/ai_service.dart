@@ -10,7 +10,6 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AIService {
-  
   // N8N Webhook URL placeholder - To be configured
   // static const String _n8nWebhookUrl = 'YOUR_N8N_WEBHOOK_URL';
 
@@ -40,13 +39,13 @@ class AIService {
       // TODO: Implement N8N or Supabase Edge Function call here
       // For now, we stub this to avoid compilation errors and indicate missing config.
       debugPrint('AI Prompt generated: $prompt');
-      
+
       // Simulate network delay
       await Future.delayed(const Duration(seconds: 2));
 
       // Mock response for testing/compilation
       // throw UnimplementedError("AI Service migration to N8N pending configuration.");
-      
+
       // OR Call N8N (Example implementation)
       /*
       final response = await http.post(
@@ -63,7 +62,6 @@ class AIService {
 
       throw Exception(
           "O serviço de IA está sendo migrado para N8N. Por favor, aguarde a configuração final.");
-
     } catch (e) {
       debugPrint("❌ AI Service failed: $e");
       rethrow;
@@ -77,8 +75,7 @@ class AIService {
     } catch (e) {
       debugPrint("❌ Erro ao decodificar JSON: $e");
       debugPrint("📄 Texto que causou o erro: $text");
-      throw const FormatException(
-          "JSON inválido recebido da IA."); 
+      throw const FormatException("JSON inválido recebido da IA.");
     }
   }
 }

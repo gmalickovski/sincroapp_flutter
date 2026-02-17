@@ -5,7 +5,7 @@ import 'package:markdown/markdown.dart' as md;
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/core/theme/ai_modal_theme.dart';
 import 'package:sincro_app_flutter/features/strategy/services/strategy_n8n_service.dart';
-import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart'; // Reuse MantraBuilder, MantraEmphasisBuilder
+// Reuse MantraBuilder, MantraEmphasisBuilder
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -19,7 +19,8 @@ class ProfessionalAptitudeModal extends StatefulWidget {
   const ProfessionalAptitudeModal({super.key, required this.currentUser});
 
   @override
-  State<ProfessionalAptitudeModal> createState() => _ProfessionalAptitudeModalState();
+  State<ProfessionalAptitudeModal> createState() =>
+      _ProfessionalAptitudeModalState();
 }
 
 class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
@@ -39,7 +40,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
   }
 
   void _calculateNumerology() {
-    if (widget.currentUser.nomeAnalise.isNotEmpty && widget.currentUser.dataNasc.isNotEmpty) {
+    if (widget.currentUser.nomeAnalise.isNotEmpty &&
+        widget.currentUser.dataNasc.isNotEmpty) {
       _userProfile = NumerologyEngine(
         nomeCompleto: widget.currentUser.nomeAnalise,
         dataNascimento: widget.currentUser.dataNasc,
@@ -57,7 +59,9 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
   Future<void> _analyzeProfession() async {
     if (_professionController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Por favor, digite uma profissão ou área de interesse.')),
+        const SnackBar(
+            content:
+                Text('Por favor, digite uma profissão ou área de interesse.')),
       );
       return;
     }
@@ -70,7 +74,9 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
 
     if (_userProfile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível calcular seu perfil numerológico.')),
+        const SnackBar(
+            content:
+                Text('Não foi possível calcular seu perfil numerológico.')),
       );
       return;
     }
@@ -109,7 +115,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
           children: [
             Icon(Icons.stars, color: Colors.cyan.shade300),
             const SizedBox(width: 12),
-            const Text('Recurso Premium', style: TextStyle(color: Colors.white)),
+            const Text('Recurso Premium',
+                style: TextStyle(color: Colors.white)),
           ],
         ),
         content: const Text(
@@ -119,7 +126,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Voltar', style: TextStyle(color: Colors.white54)),
+            child:
+                const Text('Voltar', style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
             onPressed: () {
@@ -157,7 +165,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
     if (isDesktop) {
       return Dialog(
         backgroundColor: AppColors.cardBackground,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 40.0, vertical: 24.0),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: ConstrainedBox(
           constraints: BoxConstraints(
@@ -195,7 +204,10 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
               Icon(Icons.work_outline, color: Colors.cyan.shade300, size: 24),
               const SizedBox(width: 8),
               const Text('Analisar Profissão',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold)),
             ],
           ),
           centerTitle: true,
@@ -233,16 +245,21 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.work_outline, size: 28, color: Colors.cyan.shade300),
+                    Icon(Icons.work_outline,
+                        size: 28, color: Colors.cyan.shade300),
                     const SizedBox(width: 12),
                     const Text('Analisar Profissão com IA',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white)),
+                        style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white)),
                   ],
                 ),
                 // Close button (right)
                 Positioned(
                   right: 0,
-                  child: AIModalTheme.closeButton(onPressed: () => Navigator.pop(context)),
+                  child: AIModalTheme.closeButton(
+                      onPressed: () => Navigator.pop(context)),
                 ),
               ],
             ),
@@ -253,9 +270,7 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
         ],
 
         // Body
-        _aiAnalysis != null
-            ? _buildResultView()
-            : _buildInputView(isDesktop),
+        _aiAnalysis != null ? _buildResultView() : _buildInputView(isDesktop),
       ],
     );
   }
@@ -266,7 +281,7 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: 16),
-        
+
         // Subtitle
         Container(
           padding: const EdgeInsets.all(16),
@@ -288,9 +303,9 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
             ],
           ),
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         // Input Field
         TextField(
           controller: _professionController,
@@ -312,21 +327,22 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
               borderSide: BorderSide(color: Colors.cyan.shade300, width: 2),
             ),
             prefixIcon: Icon(Icons.work_outline, color: Colors.cyan.shade300),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           ),
           onSubmitted: (_) => _analyzeProfession(),
         ),
-        
+
         const SizedBox(height: 24),
-        
+
         // Helper Text
         Text(
           '💡 Dica: Você pode digitar uma profissão específica (ex: "Arquiteto") ou uma área de atuação (ex: "Tecnologia", "Saúde").',
           style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
         ),
-        
+
         const SizedBox(height: 32),
-        
+
         // Analyze Button
         SizedBox(
           width: double.infinity,
@@ -336,20 +352,24 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
                 ? const SizedBox(
                     width: 18,
                     height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white))
                 : const Icon(Icons.psychology, size: 20),
-            label: Text(_isLoading ? 'Analisando...' : 'Analisar Compatibilidade',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            label: Text(
+                _isLoading ? 'Analisando...' : 'Analisar Compatibilidade',
+                style:
+                    const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.cyan.shade400,
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
               elevation: 0,
             ),
           ),
         ),
-        
+
         const SizedBox(height: 16),
       ],
     );
@@ -360,189 +380,220 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
     final score = _parseScoreFromAnalysis(_aiAnalysis!);
     final scoreColor = _getScoreColor(score);
     final scoreLabel = _getScoreLabel(score);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       mainAxisSize: MainAxisSize.min,
       children: [
-          // Header
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Colors.cyan.shade700, Colors.cyan.shade400],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
+        // Header
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.cyan.shade700, Colors.cyan.shade400],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Row(
-              children: [
-                const FaIcon(FontAwesomeIcons.robot, size: 24, color: Colors.white),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Análise do Sincro AI',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
-                      const SizedBox(height: 4),
-                      Text('Profissão: ${_professionController.text}',
-                          style: const TextStyle(color: Colors.white70, fontSize: 14)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            borderRadius: BorderRadius.circular(16),
           ),
-          
-          const SizedBox(height: 32),
-          
-          // Score Circle Section (MOVED TO TOP)
-          if (score > 0) ...[
-            // Score Title
-            Text(
-              'Score de Compatibilidade',
-              style: TextStyle(color: Colors.cyan.shade300, fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            
-            const SizedBox(height: 24),
-            
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                SizedBox(
-                  width: 160,
-                  height: 160,
-                  child: CircularProgressIndicator(
-                    value: score / 100,
-                    strokeWidth: 14,
-                    color: scoreColor,
-                    backgroundColor: Colors.white10,
-                    strokeCap: StrokeCap.round,
-                  ),
-                ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$score%',
-                      style: TextStyle(fontSize: 44, fontWeight: FontWeight.bold, color: scoreColor),
-                    ),
-                    const Text('Compatibilidade', style: TextStyle(color: Colors.white54, fontSize: 12)),
-                  ],
-                ),
-              ],
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Score Label
-            Text(
-              scoreLabel.toUpperCase(),
-              style: TextStyle(color: scoreColor, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-            ),
-            
-            const SizedBox(height: 32),
-            const Divider(color: Colors.white12),
-            const SizedBox(height: 24),
-          ],
-          
-          // AI Response Text
-          Align(
-            alignment: Alignment.centerLeft,
-            child: MarkdownBody(
-              data: _aiAnalysis!,
-              builders: {
-                'blockquote': ProfessionalMantraBuilder(),
-              },
-              styleSheet: MarkdownStyleSheet(
-                p: const TextStyle(color: Colors.white, height: 1.6, fontSize: 15),
-                h1: TextStyle(color: Colors.cyan.shade300, fontSize: 24, fontWeight: FontWeight.bold),
-                h2: TextStyle(color: Colors.cyan.shade300, fontSize: 22, fontWeight: FontWeight.bold),
-                h3: TextStyle(color: Colors.cyan.shade300, fontSize: 20, fontWeight: FontWeight.bold, height: 2),
-                listBullet: TextStyle(color: Colors.cyan.shade300),
-                blockSpacing: 20,
-                // Fix: Bold text color (Strong)
-                strong: const TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
-                // Reset blockquote decoration to let custom builder handle it
-                blockquote: const TextStyle(color: Colors.transparent),
-                blockquoteDecoration: const BoxDecoration(),
-                blockquotePadding: EdgeInsets.zero,
-              ),
-            ),
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Action Buttons
-          Row(
+          child: Row(
             children: [
+              const FaIcon(FontAwesomeIcons.robot,
+                  size: 24, color: Colors.white),
+              const SizedBox(width: 12),
               Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _resetAnalysis,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Nova Análise'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.cyan.shade300,
-                    side: BorderSide(color: Colors.cyan.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Análise do Sincro AI',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            fontSize: 18)),
+                    const SizedBox(height: 4),
+                    Text('Profissão: ${_professionController.text}',
+                        style: const TextStyle(
+                            color: Colors.white70, fontSize: 14)),
+                  ],
                 ),
               ),
             ],
           ),
-          
+        ),
+
+        const SizedBox(height: 32),
+
+        // Score Circle Section (MOVED TO TOP)
+        if (score > 0) ...[
+          // Score Title
+          Text(
+            'Score de Compatibilidade',
+            style: TextStyle(
+                color: Colors.cyan.shade300,
+                fontSize: 20,
+                fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 24),
+
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 160,
+                height: 160,
+                child: CircularProgressIndicator(
+                  value: score / 100,
+                  strokeWidth: 14,
+                  color: scoreColor,
+                  backgroundColor: Colors.white10,
+                  strokeCap: StrokeCap.round,
+                ),
+              ),
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '$score%',
+                    style: TextStyle(
+                        fontSize: 44,
+                        fontWeight: FontWeight.bold,
+                        color: scoreColor),
+                  ),
+                  const Text('Compatibilidade',
+                      style: TextStyle(color: Colors.white54, fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Score Label
+          Text(
+            scoreLabel.toUpperCase(),
+            style: TextStyle(
+                color: scoreColor,
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5),
+          ),
+
+          const SizedBox(height: 32),
+          const Divider(color: Colors.white12),
           const SizedBox(height: 24),
         ],
-      );
+
+        // AI Response Text
+        Align(
+          alignment: Alignment.centerLeft,
+          child: MarkdownBody(
+            data: _aiAnalysis!,
+            builders: {
+              'blockquote': ProfessionalMantraBuilder(),
+            },
+            styleSheet: MarkdownStyleSheet(
+              p: const TextStyle(
+                  color: Colors.white, height: 1.6, fontSize: 15),
+              h1: TextStyle(
+                  color: Colors.cyan.shade300,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold),
+              h2: TextStyle(
+                  color: Colors.cyan.shade300,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold),
+              h3: TextStyle(
+                  color: Colors.cyan.shade300,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  height: 2),
+              listBullet: TextStyle(color: Colors.cyan.shade300),
+              blockSpacing: 20,
+              // Fix: Bold text color (Strong)
+              strong: const TextStyle(
+                  color: Colors.amber, fontWeight: FontWeight.bold),
+              // Reset blockquote decoration to let custom builder handle it
+              blockquote: const TextStyle(color: Colors.transparent),
+              blockquoteDecoration: const BoxDecoration(),
+              blockquotePadding: EdgeInsets.zero,
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 32),
+
+        // Action Buttons
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: _resetAnalysis,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Nova Análise'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.cyan.shade300,
+                  side: BorderSide(color: Colors.cyan.shade300),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+      ],
+    );
   }
-  
 
   int _parseScoreFromAnalysis(String text) {
     // 1. High Priority: Look for "compatibilidade é de **XX%**" (Standard N8N Prompt)
-    final strictRegex = RegExp(r'compatibilidade é de \**(\d{1,3})%\**', caseSensitive: false);
+    final strictRegex =
+        RegExp(r'compatibilidade é de \**(\d{1,3})%\**', caseSensitive: false);
     final strictMatch = strictRegex.firstMatch(text);
     if (strictMatch != null) {
-       return int.tryParse(strictMatch.group(1)!)?.clamp(0, 100) ?? 0;
+      return int.tryParse(strictMatch.group(1)!)?.clamp(0, 100) ?? 0;
     }
 
     // 2. High Priority: Look for "Entenda seu Score (XX%)" (Standard N8N Prompt Header)
-    final headerRegex = RegExp(r'Entenda seu Score \((\d{1,3})%\)', caseSensitive: false);
+    final headerRegex =
+        RegExp(r'Entenda seu Score \((\d{1,3})%\)', caseSensitive: false);
     final headerMatch = headerRegex.firstMatch(text);
     if (headerMatch != null) {
-       return int.tryParse(headerMatch.group(1)!)?.clamp(0, 100) ?? 0;
+      return int.tryParse(headerMatch.group(1)!)?.clamp(0, 100) ?? 0;
     }
 
     // 3. Medium Priority: Look for "Score de XX%"
-    final scoreRegex = RegExp(r'Score de \**(\d{1,3})%\**', caseSensitive: false);
+    final scoreRegex =
+        RegExp(r'Score de \**(\d{1,3})%\**', caseSensitive: false);
     final scoreMatch = scoreRegex.firstMatch(text);
     if (scoreMatch != null) {
-       return int.tryParse(scoreMatch.group(1)!)?.clamp(0, 100) ?? 0;
+      return int.tryParse(scoreMatch.group(1)!)?.clamp(0, 100) ?? 0;
     }
 
     // 4. Fallback: Find the FIRST percentage that is NOT "100%" (unless it's the only one)
     // We avoid "100%" because it often appears in text like "100% focado", "100% garantido"
     final fallbackRegex = RegExp(r'(\d{1,3})\s*%');
     final matches = fallbackRegex.allMatches(text);
-    
+
     for (final m in matches) {
       final val = int.tryParse(m.group(1)!) ?? 0;
       // If we find a specific number like 35, 65, 90, we take it.
       // We skip 100, 50, 30, 20 IF they appear in "weights" context (hard to detect here but we try safe guess)
-      // Actually, safest is to rely on strict patterns above. 
+      // Actually, safest is to rely on strict patterns above.
       // This fallback is only if strict fails.
-      if (val != 100 && val != 50 && val != 30 && val != 20) { 
-         // returns the first "non-weight-looking" number
-         return val.clamp(0, 100); 
+      if (val != 100 && val != 50 && val != 30 && val != 20) {
+        // returns the first "non-weight-looking" number
+        return val.clamp(0, 100);
       }
     }
-    
+
     return 0;
   }
-  
+
   /// Get color based on score
   Color _getScoreColor(int score) {
     if (score >= 80) return Colors.greenAccent;
@@ -550,7 +601,7 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
     if (score >= 40) return Colors.amber;
     return Colors.redAccent;
   }
-  
+
   /// Get label based on score
   String _getScoreLabel(int score) {
     if (score >= 80) return 'Excelente';
@@ -560,8 +611,6 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
     return 'Desafiador';
   }
 }
-
-
 
 /// Builder for blockquotes (mantras/citations) in the professional aptitude modal
 /// Uses a dark, rounded background with readable text

@@ -21,7 +21,7 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
   Widget build(BuildContext context) {
     final currentPlan = widget.userData.subscription.plan;
     final planName = PlanLimits.getPlanName(currentPlan);
-    
+
     // Check if running on desktop
     final isDesktop = MediaQuery.of(context).size.width >= 720;
 
@@ -31,7 +31,6 @@ class _PlanSettingsTabState extends State<PlanSettingsTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SettingsSectionTitle(title: 'Meu Plano'),
-          
           LayoutBuilder(
             builder: (context, constraints) {
               final isMobile = constraints.maxWidth < 600;

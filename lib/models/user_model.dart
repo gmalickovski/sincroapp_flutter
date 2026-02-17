@@ -81,7 +81,8 @@ class UserModel {
       uid: data['uid'] ?? data['id'] ?? '',
       email: data['email'] ?? '',
       photoUrl: data['photoUrl'],
-      username: data['username'], // NOVO: pode ser null se usuário ainda não criou
+      username:
+          data['username'], // NOVO: pode ser null se usuário ainda não criou
       gender: data['gender'], // NOVO
       primeiroNome: data['first_name'] ?? data['primeiroNome'] ?? '',
       sobrenome: data['last_name'] ?? data['sobrenome'] ?? '',

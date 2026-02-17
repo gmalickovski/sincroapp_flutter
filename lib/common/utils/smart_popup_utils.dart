@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 
 /// Shows a smart popup that anchors to the context's widget (usually a button).
@@ -11,13 +10,13 @@ Future<T?> showSmartPopup<T>({
   final RenderBox? targetBox = context.findRenderObject() as RenderBox?;
   if (targetBox == null) return Future.value(null);
 
-  final OverlayState? overlay = Overlay.of(context);
-  if (overlay == null) return Future.value(null);
-  
+  final OverlayState overlay = Overlay.of(context);
+
   final RenderBox overlayBox = overlay.context.findRenderObject() as RenderBox;
 
   final Size targetSize = targetBox.size;
-  final Offset targetPos = targetBox.localToGlobal(Offset.zero, ancestor: overlayBox);
+  final Offset targetPos =
+      targetBox.localToGlobal(Offset.zero, ancestor: overlayBox);
   final Size overlaySize = overlayBox.size;
 
   return Navigator.push(
@@ -48,7 +47,8 @@ class _SmartPopupRoute<T> extends PopupRoute<T> {
   });
 
   @override
-  Color? get barrierColor => Colors.transparent; // Validar se o usuario quer dimming. Geralmente menus nao tem.
+  Color? get barrierColor => Colors
+      .transparent; // Validar se o usuario quer dimming. Geralmente menus nao tem.
 
   @override
   bool get barrierDismissible => true;
@@ -57,7 +57,8 @@ class _SmartPopupRoute<T> extends PopupRoute<T> {
   String? get barrierLabel => 'Fechar menu';
 
   @override
-  Widget buildPage(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+  Widget buildPage(BuildContext context, Animation<double> animation,
+      Animation<double> secondaryAnimation) {
     return _SmartPopupLayout(
       targetPos: targetPos,
       targetSize: targetSize,
@@ -92,9 +93,10 @@ class _SmartPopupLayout extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. Calculate space below and above
-    final double spaceBelow = overlaySize.height - (targetPos.dy + targetSize.height + offset.dy);
+    final double spaceBelow =
+        overlaySize.height - (targetPos.dy + targetSize.height + offset.dy);
     final double spaceAbove = targetPos.dy - offset.dy;
-    
+
     // 2. Decide Vertical Position
     // Prefer below if there's enough space (e.g., at least 200px or 40% of screen) or if it's larger than above.
     // However, if spaceBelow is very small (< 150), try above.
@@ -118,9 +120,10 @@ class _SmartPopupLayout extends StatelessWidget {
     // 3. Horizontal Position
     // Align Right edge of popup with Right edge of Target
     // If it goes off-screen left, shift right.
-    
-    final double rightDistance = overlaySize.width - (targetPos.dx + targetSize.width);
-    
+
+    final double rightDistance =
+        overlaySize.width - (targetPos.dx + targetSize.width);
+
     return Stack(
       children: [
         Positioned(
@@ -137,7 +140,7 @@ class _SmartPopupLayout extends StatelessWidget {
                 minWidth: 200,
               ),
               child: IntrinsicWidth(
-                 // IntrinsicWidth allows the child to define its width (up to maxWidth)
+                // IntrinsicWidth allows the child to define its width (up to maxWidth)
                 child: child,
                 // Removed SingleChildScrollView here because the Panels already have it.
                 // WE MUST NOT NEST SingleChildScrollView(Column(children: [Expanded])) improperly.

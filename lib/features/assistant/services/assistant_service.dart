@@ -10,11 +10,10 @@ import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/core/services/navigation_service.dart';
-import 'package:sincro_app_flutter/features/tasks/utils/task_parser.dart';
+import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/services/harmony_service.dart'; // 🚀 Import
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
-
 
 class AssistantService {
   static DateTime? _lastInteractionDate;
@@ -55,7 +54,7 @@ class AssistantService {
       final int finalInputTokens = inputTokens ?? (promptLength / 4).ceil();
       final int finalOutputTokens = outputTokens ?? (outputLength / 4).ceil();
       final int totalTokens = finalInputTokens + finalOutputTokens;
-      
+
       await Supabase.instance.client
           .schema('sincroapp')
           .from('usage_logs')
@@ -63,14 +62,17 @@ class AssistantService {
         'user_id': userId,
         'tokens_total': totalTokens,
         'tokens_input': finalInputTokens, // Matches Screenshot 'tokens_input'
-        'tokens_output': finalOutputTokens, // Matches Screenshot 'tokens_output'
-        'model_name': 'n8n-assistant', // Matches Screenshot 'model_name' (using default string)
+        'tokens_output':
+            finalOutputTokens, // Matches Screenshot 'tokens_output'
+        'model_name':
+            'n8n-assistant', // Matches Screenshot 'model_name' (using default string)
         'created_at': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       // Ignora erro de tabela inexistente (PGRST205) para não poluir logs
-      if (e.toString().contains('PGRST205') || e.toString().contains('usage_logs')) {
-         return;
+      if (e.toString().contains('PGRST205') ||
+          e.toString().contains('usage_logs')) {
+        return;
       }
       debugPrint('Erro ao logar uso de IA no Supabase: $e');
     }
@@ -94,7 +96,7 @@ class AssistantService {
 
     // 2. Parse Mentions using TaskParser
     final parsed = TaskParser.parse(question);
-    
+
     // Construct Mentions list for N8n
     // 3. Build Rich Context Data
     final mentionsList = <Map<String, dynamic>>[];
@@ -111,9 +113,9 @@ class AssistantService {
 
       try {
         // TODO: Replace with real ContactService lookup
-        // Mocking birthdate for demonstration. 
+        // Mocking birthdate for demonstration.
         // In production, fetch: await contactService.getByName(contactName)
-        final contactBirthDate = DateTime(1990, 5, 20); 
+        final contactBirthDate = DateTime(1990, 5, 20);
 
         // Current User Date
         DateTime? userBirthDate;
@@ -123,35 +125,31 @@ class AssistantService {
 
         if (userBirthDate != null) {
           // Current User Profile
-          final userProfile = numerology; // Already calculated and passed in args
+          final userProfile =
+              numerology; // Already calculated and passed in args
 
           // Contact Profile
           final contactEngine = NumerologyEngine(
-            nomeCompleto: contactName, 
-            dataNascimento: dateFormat.format(contactBirthDate)
-          );
+              nomeCompleto: contactName,
+              dataNascimento: dateFormat.format(contactBirthDate));
           final contactProfile = contactEngine.calculateProfile();
 
           // 1. Calculate Synastry
           final synastry = harmonyService.calculateSynastry(
-            profileA: userProfile, 
-            profileB: contactProfile
-          );
+              profileA: userProfile, profileB: contactProfile);
 
           // 2. Calculate Today's Compatibility
           final todayScore = harmonyService.calculateCompatibilityScore(
-            date: DateTime.now(), 
-            birthDateA: userBirthDate, 
-            birthDateB: contactBirthDate
-          );
+              date: DateTime.now(),
+              birthDateA: userBirthDate,
+              birthDateB: contactBirthDate);
 
           // 3. Find Next Best Dates
           final nextDates = harmonyService.findNextCompatibleDates(
-            startDate: DateTime.now().add(const Duration(days: 1)), 
-            birthDateA: userBirthDate, 
-            birthDateB: contactBirthDate,
-            limit: 3
-          );
+              startDate: DateTime.now().add(const Duration(days: 1)),
+              birthDateA: userBirthDate,
+              birthDateB: contactBirthDate,
+              limit: 3);
 
           mentionData['compatibility'] = {
             'synastryScore': synastry['score'],
@@ -159,7 +157,9 @@ class AssistantService {
             'description': synastry['description'],
             'todayScore': double.parse(todayScore.toStringAsFixed(2)),
             'isFavorableToday': todayScore > 0.6,
-            'nextBestDates': nextDates.map((d) => DateFormat('yyyy-MM-dd').format(d)).toList(),
+            'nextBestDates': nextDates
+                .map((d) => DateFormat('yyyy-MM-dd').format(d))
+                .toList(),
           };
         }
       } catch (e) {
@@ -172,43 +172,47 @@ class AssistantService {
     for (var goal in parsed.goals) {
       mentionsList.add({'type': 'goal', 'id': goal, 'label': '!$goal'});
     }
-    
+
     // Calculate Personal Year/Day manually to ensure it's in the payload
     int anoPessoalVal = 0;
     int diaPessoalVal = 0;
     try {
-        final dob = dateFormat.parse(user.dataNasc);
-        final today = DateTime.now();
-        
-        // Personal Day (using static helper)
-        diaPessoalVal = NumerologyEngine.calculatePersonalDay(today, user.dataNasc);
-        
-        // Personal Year (Logic replicated to ensure availability)
-        final anniversaryCurrentYear = DateTime(today.year, dob.month, dob.day);
-        final calcYear = today.isBefore(anniversaryCurrentYear) ? today.year - 1 : today.year;
-        
-        // Simple reduce function
-        int reduce(int n) {
-           n = n.abs();
-           if (n == 0) return 0;
-           while (n > 9) {
-             int sum = 0;
-             while (n > 0) {
-               sum += n % 10; // Sum digits
-               n ~/= 10;
-             }
-             n = sum;
-           }
-           return n;
+      final dob = dateFormat.parse(user.dataNasc);
+      final today = DateTime.now();
+
+      // Personal Day (using static helper)
+      diaPessoalVal =
+          NumerologyEngine.calculatePersonalDay(today, user.dataNasc);
+
+      // Personal Year (Logic replicated to ensure availability)
+      final anniversaryCurrentYear = DateTime(today.year, dob.month, dob.day);
+      final calcYear =
+          today.isBefore(anniversaryCurrentYear) ? today.year - 1 : today.year;
+
+      // Simple reduce function
+      int reduce(int n) {
+        n = n.abs();
+        if (n == 0) return 0;
+        while (n > 9) {
+          int sum = 0;
+          while (n > 0) {
+            sum += n % 10; // Sum digits
+            n ~/= 10;
+          }
+          n = sum;
         }
-        anoPessoalVal = reduce(dob.day + dob.month + calcYear);
+        return n;
+      }
+
+      anoPessoalVal = reduce(dob.day + dob.month + calcYear);
     } catch (e) {
       debugPrint('Error calculating personal dates for payload: $e');
     }
 
     // 3. Compact Context Payload (Optimized for Llama 3.1 & Token Usage)
     final compactNumerology = {
-      'numeros': numerology.numeros, // Key numbers (Life Path, Expression, etc.)
+      'numeros':
+          numerology.numeros, // Key numbers (Life Path, Expression, etc.)
       'listas': {
         'diasFavoraveis': numerology.listas['diasFavoraveis'],
         'licoesCarmicas': numerology.listas['licoesCarmicas'],
@@ -226,84 +230,90 @@ class AssistantService {
         'primeiroNome': user.primeiroNome,
         'sobrenome': user.sobrenome,
         'dataNasc': user.dataNasc,
-        'plan': user.subscription.plan.name, // Fix: Use .name for Enum serialization
+        'plan': user
+            .subscription.plan.name, // Fix: Use .name for Enum serialization
         'gender': user.gender, // 📌 Added Gender
       },
       'currentDate': DateTime.now().toLocal().toIso8601String(),
       'currentTime': DateFormat('HH:mm').format(DateTime.now()),
       'currentWeekDay': DateFormat('EEEE', 'pt_BR').format(DateTime.now()),
       'numerology': compactNumerology, // 🚀 Optimized Payload
-      'tasks': tasks.map((t) => {
-        'id': t.id,
-        'title': t.text,
-        'date': t.dueDate?.toIso8601String(),
-        'status': t.completed ? 'done' : 'pending'
-      }).toList(),
+      'tasks': tasks
+          .map((t) => {
+                'id': t.id,
+                'title': t.text,
+                'date': t.dueDate?.toIso8601String(),
+                'status': t.completed ? 'done' : 'pending'
+              })
+          .toList(),
       'goals': goals.map((g) => {'id': g.id, 'title': g.title}).toList(),
       'mentions': mentionsList,
       // 🚀 CTX: Chat History for Conversational Awareness
       'previous_messages': chatHistory
-          .take(6) // Limit to last 6 messages to save tokens but keep immediate context
+          .take(
+              6) // Limit to last 6 messages to save tokens but keep immediate context
           .map((m) => {
                 'role': m.role,
                 'content': m.content,
               })
           .toList(),
     };
-    
+
     // 4. Serialize (Clean Map)
     final payload = {
       'question': question,
       'context': contextData,
     };
     // serialized only for logging
-    final payloadJson = jsonEncode(payload); 
+    final payloadJson = jsonEncode(payload);
 
     final n8n = N8nService();
     // 5. Call N8n
     final text = await n8n.chat(payload: payload, userId: user.uid);
-    
+
     // Tentativa de Extrair Token Usage antes de logar
     int? preciseInputTokens;
     int? preciseOutputTokens;
-    
+
     try {
-       // Quick scan for usage block to avoid full double parse if possible, 
-       // but full parse is safer given we need it below anyway.
-       // We'll just do a lightweight regex check or parse explicitly if simple
-       // Logic: _logUsage is async fire-and-forget, but we want the data.
-       // We can defer logging until AFTER standard parsing below?
-       // But existing code structure has logging first.
-       // Let's refactor to Parse First -> Log -> Return.
+      // Quick scan for usage block to avoid full double parse if possible,
+      // but full parse is safer given we need it below anyway.
+      // We'll just do a lightweight regex check or parse explicitly if simple
+      // Logic: _logUsage is async fire-and-forget, but we want the data.
+      // We can defer logging until AFTER standard parsing below?
+      // But existing code structure has logging first.
+      // Let's refactor to Parse First -> Log -> Return.
     } catch (_) {}
 
     // --- REFACTORED PARSE & LOG LOGIC ---
 
     // 1. Remove markdown
-    final cleanText = text.replaceAll(RegExp(r'```json\s*'), '').replaceAll(RegExp(r'```\s*'), '');
-    
+    final cleanText = text
+        .replaceAll(RegExp(r'```json\s*'), '')
+        .replaceAll(RegExp(r'```\s*'), '');
+
     // 2. Locate JSON
     final startIndex = cleanText.indexOf('{');
     final endIndex = cleanText.lastIndexOf('}');
-    
+
     Map<String, dynamic>? parsedData;
 
     if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
-       final jsonStr = cleanText.substring(startIndex, endIndex + 1);
-       try {
-         parsedData = jsonDecode(jsonStr) as Map<String, dynamic>;
-         
-         // Extract Usage
-         if (parsedData.containsKey('usage')) {
-            final u = parsedData['usage'];
-            if (u is Map) {
-              preciseInputTokens = u['input'] ?? u['prompt_tokens'];
-              preciseOutputTokens = u['output'] ?? u['completion_tokens'];
-            }
-         }
-       } catch (e) {
-         debugPrint('Erro parse JSON pré-log: $e');
-       }
+      final jsonStr = cleanText.substring(startIndex, endIndex + 1);
+      try {
+        parsedData = jsonDecode(jsonStr) as Map<String, dynamic>;
+
+        // Extract Usage
+        if (parsedData.containsKey('usage')) {
+          final u = parsedData['usage'];
+          if (u is Map) {
+            preciseInputTokens = u['input'] ?? u['prompt_tokens'];
+            preciseOutputTokens = u['output'] ?? u['completion_tokens'];
+          }
+        }
+      } catch (e) {
+        debugPrint('Erro parse JSON pré-log: $e');
+      }
     }
 
     // 3. Log NOW
@@ -315,45 +325,51 @@ class AssistantService {
       inputTokens: preciseInputTokens,
       outputTokens: preciseOutputTokens,
     );
-     
+
     // 4. Return handling (Legacy Logic adapted)
     if (parsedData == null) {
-       // Fallback Text
-       if (cleanText.isNotEmpty) {
-           return AssistantAnswer(answer: cleanText, actions: []);
-       }
-       throw Exception('A IA não retornou um objeto JSON válido.');
+      // Fallback Text
+      if (cleanText.isNotEmpty) {
+        return AssistantAnswer(answer: cleanText, actions: []);
+      }
+      throw Exception('A IA não retornou um objeto JSON válido.');
     }
-    
+
     final data = parsedData; // Safe now
 
     // Hande N8n/AI specific errors
-    if (data.containsKey('errorMessage') || data.containsKey('errorDescription')) {
-      final errorMsg = data['errorDescription'] ?? data['errorMessage'] ?? 'Erro desconhecido.';
+    if (data.containsKey('errorMessage') ||
+        data.containsKey('errorDescription')) {
+      final errorMsg = data['errorDescription'] ??
+          data['errorMessage'] ??
+          'Erro desconhecido.';
       return AssistantAnswer(
-          answer: "⚠️ *Erro Técnico (N8n)*:\n$errorMsg\n\nIsso geralmente acontece quando o modelo de IA falha ao tentar estruturar a resposta. Tente simplificar a pergunta ou verifique os logs do N8n.",
+          answer:
+              "⚠️ *Erro Técnico (N8n)*:\n$errorMsg\n\nIsso geralmente acontece quando o modelo de IA falha ao tentar estruturar a resposta. Tente simplificar a pergunta ou verifique os logs do N8n.",
           actions: []);
     }
 
     // 🚀 FIX: Auto-Create Action if suggestedDates exist but actions is empty
-    if (data['suggestedDates'] is List && (data['suggestedDates'] as List).isNotEmpty) {
-      final hasActions = data['actions'] is List && (data['actions'] as List).isNotEmpty;
-      
+    if (data['suggestedDates'] is List &&
+        (data['suggestedDates'] as List).isNotEmpty) {
+      final hasActions =
+          data['actions'] is List && (data['actions'] as List).isNotEmpty;
+
       if (!hasActions) {
-         // Create synthetic action
-         final syntheticAction = {
-           'type': 'create_task',
-           'title': 'Agendar Sugestão',
-           'needsUserInput': true,
-           'suggestedDates': data['suggestedDates'],
-           'data': {'isSynthetic': true}
-         };
-         
-         if (data['actions'] == null) {
-           data['actions'] = [syntheticAction];
-         } else {
-           (data['actions'] as List).add(syntheticAction);
-         }
+        // Create synthetic action
+        final syntheticAction = {
+          'type': 'create_task',
+          'title': 'Agendar Sugestão',
+          'needsUserInput': true,
+          'suggestedDates': data['suggestedDates'],
+          'data': {'isSynthetic': true}
+        };
+
+        if (data['actions'] == null) {
+          data['actions'] = [syntheticAction];
+        } else {
+          (data['actions'] as List).add(syntheticAction);
+        }
       }
     }
 
@@ -365,12 +381,13 @@ class AssistantService {
   // --- Conversations Management ---
 
   static Future<String?> createConversation(String userId, String title) async {
-    // Single Table Mode: We just generate an ID client-side. 
+    // Single Table Mode: We just generate an ID client-side.
     // The conversation "exists" once a message is saved with this ID.
     return const Uuid().v4();
   }
 
-  static Future<List<AssistantConversation>> fetchConversations(String userId) async {
+  static Future<List<AssistantConversation>> fetchConversations(
+      String userId) async {
     try {
       final response = await Supabase.instance.client
           .schema('sincroapp')
@@ -390,7 +407,8 @@ class AssistantService {
     }
   }
 
-  static Future<List<AssistantMessage>> fetchMessages(String userId, String conversationId) async {
+  static Future<List<AssistantMessage>> fetchMessages(
+      String userId, String conversationId) async {
     try {
       final response = await Supabase.instance.client
           .schema('sincroapp')
@@ -426,7 +444,7 @@ class AssistantService {
       String userId, AssistantMessage message, String? conversationId) async {
     try {
       final actionsJson = message.actions.map((e) => e.toJson()).toList();
-      
+
       await Supabase.instance.client
           .schema('sincroapp') // Use correct schema
           .from('assistant_messages')
@@ -450,37 +468,38 @@ class AssistantService {
   static Future<void> _cleanupOldMessages(String userId) async {
     // Strategy: Non-blocking optimization
     try {
-       // 1. Count total
-       final count = await Supabase.instance.client
-           .schema('sincroapp') // Use correct schema
-           .from('assistant_messages')
-           .count(CountOption.exact) // Returns int directly in newer SDKs
-           .eq('user_id', userId);
-           
-       if (count > 50) {
-         final overflow = count - 50;
-         
-         // 2. Get IDs to delete (Oldest)
-         final idsToDeleteResponse = await Supabase.instance.client
-             .schema('sincroapp') // Use correct schema
-             .from('assistant_messages')
-             .select('id')
-             .eq('user_id', userId)
-             .order('created_at', ascending: true) // Oldest first
-             .limit(overflow);
-             
-         final ids = (idsToDeleteResponse as List).map((e) => e['id']).toList();
-         
-         // 3. Delete
-         if (ids.isNotEmpty) {
-            await Supabase.instance.client
-                .schema('sincroapp') // Use correct schema
-                .from('assistant_messages')
-                .delete()
-                .filter('id', 'in', ids);
-            debugPrint('🧹 Limpeza de histórico: ${ids.length} mensagens removidas.');
-         }
-       }
+      // 1. Count total
+      final count = await Supabase.instance.client
+          .schema('sincroapp') // Use correct schema
+          .from('assistant_messages')
+          .count(CountOption.exact) // Returns int directly in newer SDKs
+          .eq('user_id', userId);
+
+      if (count > 50) {
+        final overflow = count - 50;
+
+        // 2. Get IDs to delete (Oldest)
+        final idsToDeleteResponse = await Supabase.instance.client
+            .schema('sincroapp') // Use correct schema
+            .from('assistant_messages')
+            .select('id')
+            .eq('user_id', userId)
+            .order('created_at', ascending: true) // Oldest first
+            .limit(overflow);
+
+        final ids = (idsToDeleteResponse as List).map((e) => e['id']).toList();
+
+        // 3. Delete
+        if (ids.isNotEmpty) {
+          await Supabase.instance.client
+              .schema('sincroapp') // Use correct schema
+              .from('assistant_messages')
+              .delete()
+              .filter('id', 'in', ids);
+          debugPrint(
+              '🧹 Limpeza de histórico: ${ids.length} mensagens removidas.');
+        }
+      }
     } catch (_) {
       // Fail silently, not critical
     }
@@ -503,13 +522,14 @@ class AssistantService {
     };
     final payload = {
       'context': contextData,
-      'chatInput': 'Gere uma estratégia...', // Placeholder (not used by agent logic directly but good for logging)
+      'chatInput':
+          'Gere uma estratégia...', // Placeholder (not used by agent logic directly but good for logging)
     };
     final promptJson = jsonEncode(payload);
 
     try {
       final n8n = N8nService();
-      // O endpoint de estrategia pode esperar 'chatInput' ou 'context' direto. 
+      // O endpoint de estrategia pode esperar 'chatInput' ou 'context' direto.
       // Vamos padronizar enviando o payload.
       // Se o N8n strategy flow espera 'chatInput' explicitamente, pode precisar ajustar.
       // Assumindo que o fluxo principal unificado trata tudo.

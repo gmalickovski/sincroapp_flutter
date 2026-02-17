@@ -23,7 +23,7 @@ class CustomMonthYearPicker extends StatefulWidget {
 class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
   late DateTime _selectedDate;
   _PickerMode _mode = _PickerMode.month;
-  
+
   // For Year Pagination (viewing a page of years)
   late int _yearPageStart;
   static const int _yearsPerPage = 12;
@@ -42,7 +42,7 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
       final daysInMonth = DateUtils.getDaysInMonth(_selectedDate.year, month);
       int day = _selectedDate.day;
       if (day > daysInMonth) day = daysInMonth;
-      
+
       _selectedDate = DateTime(_selectedDate.year, month, day);
     });
   }
@@ -56,16 +56,17 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
       _selectedDate = DateTime(year, _selectedDate.month, day);
       // Optional: Switch back to month? Or stay in year?
       // Keeping user in year mode is safer for browsing.
-      
+
       // Update page if jumped
       _yearPageStart = (year ~/ _yearsPerPage) * _yearsPerPage;
-      _mode = _PickerMode.month; // Auto-switch back to month often feels natural after picking year
+      _mode = _PickerMode
+          .month; // Auto-switch back to month often feels natural after picking year
     });
   }
-  
+
   void _changeYearPage(int delta) {
     setState(() {
-       _yearPageStart += (delta * _yearsPerPage);
+      _yearPageStart += (delta * _yearsPerPage);
     });
   }
 
@@ -89,12 +90,12 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
               height: 300,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
-                child: _mode == _PickerMode.month 
+                child: _mode == _PickerMode.month
                     ? _buildMonthGrid()
                     : _buildYearGrid(),
               ),
             ),
-             const SizedBox(height: 8),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -126,16 +127,17 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
   }
 
   Widget _buildDisplay() {
-    final monthStr = DateFormat('MMM', 'pt_BR').format(_selectedDate).toUpperCase();
+    final monthStr =
+        DateFormat('MMM', 'pt_BR').format(_selectedDate).toUpperCase();
     final yearStr = DateFormat('yyyy').format(_selectedDate);
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         _buildDisplayItem(
-             text: monthStr, 
-             isSelected: _mode == _PickerMode.month,
-             onTap: () => setState(() => _mode = _PickerMode.month),
+          text: monthStr,
+          isSelected: _mode == _PickerMode.month,
+          onTap: () => setState(() => _mode = _PickerMode.month),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -149,29 +151,31 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
           ),
         ),
         _buildDisplayItem(
-             text: yearStr, 
-             isSelected: _mode == _PickerMode.year,
-             onTap: () => setState(() {
-               _mode = _PickerMode.year;
-               // Ensure page matches current year when switching
-               _yearPageStart = (_selectedDate.year ~/ _yearsPerPage) * _yearsPerPage;
-             }),
+          text: yearStr,
+          isSelected: _mode == _PickerMode.year,
+          onTap: () => setState(() {
+            _mode = _PickerMode.year;
+            // Ensure page matches current year when switching
+            _yearPageStart =
+                (_selectedDate.year ~/ _yearsPerPage) * _yearsPerPage;
+          }),
         ),
       ],
     );
   }
 
-  Widget _buildDisplayItem({
-    required String text, 
-    required bool isSelected, 
-    required VoidCallback onTap
-  }) {
+  Widget _buildDisplayItem(
+      {required String text,
+      required bool isSelected,
+      required VoidCallback onTap}) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.15) : Colors.transparent,
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.15)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Text(
@@ -204,10 +208,9 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
         final isSelected = _selectedDate.month == monthIndex;
 
         return _buildGridItem(
-           label: monthName, 
-           isSelected: isSelected, 
-           onTap: () => _handleMonthChanged(monthIndex)
-        );
+            label: monthName,
+            isSelected: isSelected,
+            onTap: () => _handleMonthChanged(monthIndex));
       },
     );
   }
@@ -216,73 +219,73 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
     // Determine viewable range
     final int startYear = _yearPageStart;
     final int endYear = startYear + _yearsPerPage - 1;
-    
+
     // Check bounds
     // We want to show a grid of years.
-    
+
     return Column(
       key: const ValueKey('OffsetYearGrid'),
       children: [
         // Pagination Header
         Row(
-           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-           children: [
-             IconButton(
-               icon: const Icon(Icons.chevron_left, color: AppColors.primaryText),
-               onPressed: startYear > widget.firstDate.year 
-                   ? () => _changeYearPage(-1) 
-                   : null,
-             ),
-             Text(
-               "$startYear - $endYear",
-               style: const TextStyle(
-                 color: AppColors.primaryText,
-                 fontWeight: FontWeight.bold,
-                 fontSize: 14
-               ),
-             ),
-             IconButton(
-               icon: const Icon(Icons.chevron_right, color: AppColors.primaryText),
-               onPressed: endYear < widget.lastDate.year
-                   ? () => _changeYearPage(1)
-                   : null,
-             ),
-           ],
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            IconButton(
+              icon:
+                  const Icon(Icons.chevron_left, color: AppColors.primaryText),
+              onPressed: startYear > widget.firstDate.year
+                  ? () => _changeYearPage(-1)
+                  : null,
+            ),
+            Text(
+              "$startYear - $endYear",
+              style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14),
+            ),
+            IconButton(
+              icon:
+                  const Icon(Icons.chevron_right, color: AppColors.primaryText),
+              onPressed: endYear < widget.lastDate.year
+                  ? () => _changeYearPage(1)
+                  : null,
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Expanded(
           child: GridView.builder(
-             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 1.5,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-             ),
-             itemCount: _yearsPerPage,
-             itemBuilder: (context, index) {
-                final year = startYear + index;
-                if (year < widget.firstDate.year || year > widget.lastDate.year) {
-                   return const SizedBox.shrink();
-                }
-                
-                final isSelected = _selectedDate.year == year;
-                return _buildGridItem(
-                  label: year.toString(),
-                  isSelected: isSelected,
-                  onTap: () => _handleYearChanged(year),
-                );
-             },
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              childAspectRatio: 1.5,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+            ),
+            itemCount: _yearsPerPage,
+            itemBuilder: (context, index) {
+              final year = startYear + index;
+              if (year < widget.firstDate.year || year > widget.lastDate.year) {
+                return const SizedBox.shrink();
+              }
+
+              final isSelected = _selectedDate.year == year;
+              return _buildGridItem(
+                label: year.toString(),
+                isSelected: isSelected,
+                onTap: () => _handleYearChanged(year),
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildGridItem({
-    required String label, 
-    required bool isSelected, 
-    required VoidCallback onTap
-  }) {
+  Widget _buildGridItem(
+      {required String label,
+      required bool isSelected,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),

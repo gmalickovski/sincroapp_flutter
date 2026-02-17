@@ -12,8 +12,6 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 
-import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
-import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 class GoalsScreen extends StatefulWidget {
@@ -98,12 +96,10 @@ class _GoalsScreenState extends State<GoalsScreen> {
           initialGoal: goal,
           userData: widget.userData,
         ),
-        settings: RouteSettings(
-            name: '/goal-detail',
-            arguments: {
-              'goalId': goal.id,
-              'goalTitle': goal.title,
-            }),
+        settings: RouteSettings(name: '/goal-detail', arguments: {
+          'goalId': goal.id,
+          'goalTitle': goal.title,
+        }),
       ));
     } catch (e, s) {
       debugPrint("GoalsScreen: ERRO durante Navigator.push: $e");
@@ -186,122 +182,126 @@ class _GoalsScreenState extends State<GoalsScreen> {
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
-            final double horizontalPadding = isDesktop ? 24.0 : 12.0;
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
+              final double horizontalPadding = isDesktop ? 24.0 : 16.0;
 
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildHeader(),
-                  Expanded(
-                    child: StreamBuilder<List<Goal>>(
-                      stream: _supabaseService.getGoalStream(_userId),
-                      builder: (context, snapshot) {
-                  if (snapshot.connectionState ==
-                          ConnectionState.waiting &&
-                      !snapshot.hasData) {
-                    return const Center(child: CustomLoadingSpinner());
-                  }
-                  if (snapshot.hasError) {
-                    debugPrint(
-                        "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
-                    return Center(
-                        child: Text(
-                            'Erro ao carregar jornadas: ${snapshot.error}',
-                            style: const TextStyle(color: Colors.red)));
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return _buildEmptyState();
-                  }
+              return Padding(
+                padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildHeader(isDesktop: isDesktop),
+                    Expanded(
+                      child: StreamBuilder<List<Goal>>(
+                        stream: _supabaseService.getGoalStream(_userId),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.waiting &&
+                              !snapshot.hasData) {
+                            return const Center(child: CustomLoadingSpinner());
+                          }
+                          if (snapshot.hasError) {
+                            debugPrint(
+                                "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
+                            return Center(
+                                child: Text(
+                                    'Erro ao carregar jornadas: ${snapshot.error}',
+                                    style: const TextStyle(color: Colors.red)));
+                          }
+                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return _buildEmptyState();
+                          }
 
-                  final goals = snapshot.data!;
+                          final goals = snapshot.data!;
 
-                  // Desktop: Masonry grid no estilo do Diário e Dashboard
-                  if (isDesktop) {
-                    // 2 colunas para 900-1400px, 3 para telas maiores
-                    final int columns =
-                        constraints.maxWidth >= 1200 ? 3 : 2;
-                    return MasonryGridView.count(
-                      padding: const EdgeInsets.only(top: 8, bottom: 100),
-                      crossAxisCount: columns,
-                      mainAxisSpacing: 16,
-                      crossAxisSpacing: 16,
-                      itemCount: goals.length,
-                      itemBuilder: (context, index) {
-                        final goal = goals[index];
-                        return GoalCard(
-                          goal: goal,
-                          userId: _userId,
-                          onTap: () => _navigateToGoalDetail(goal),
-                          onDelete: () =>
-                              _handleDeleteGoal(context, goal),
-                          onEdit: () => _navigateToCreateGoal(goal),
-                        );
-                      },
-                    );
-                  }
-                  // Mobile: lista vertical simples
-                  else {
-                    return ListView.builder(
-                      padding: const EdgeInsets.only(top: 8, bottom: 100),
-                      itemCount: goals.length,
-                      itemBuilder: (context, index) {
-                        final goal = goals[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12.0),
-                          child: GoalCard(
-                            goal: goal,
-                            userId: _userId,
-                            onTap: () => _navigateToGoalDetail(goal),
-                            onDelete: () =>
-                                _handleDeleteGoal(context, goal),
-                            onEdit: () => _navigateToCreateGoal(goal),
-                          ),
-                        );
-                      },
-                    );
-                  }
-                },
-              ),
-            ),
-          ],
+                          // Desktop: Masonry grid no estilo do Diário e Dashboard
+                          if (isDesktop) {
+                            // 2 colunas para 900-1400px, 3 para telas maiores
+                            final int columns =
+                                constraints.maxWidth >= 1200 ? 3 : 2;
+                            return MasonryGridView.count(
+                              padding:
+                                  const EdgeInsets.only(top: 8, bottom: 100),
+                              crossAxisCount: columns,
+                              mainAxisSpacing: 16,
+                              crossAxisSpacing: 16,
+                              itemCount: goals.length,
+                              itemBuilder: (context, index) {
+                                final goal = goals[index];
+                                return GoalCard(
+                                  goal: goal,
+                                  userId: _userId,
+                                  onTap: () => _navigateToGoalDetail(goal),
+                                  onDelete: () =>
+                                      _handleDeleteGoal(context, goal),
+                                  onEdit: () => _navigateToCreateGoal(goal),
+                                );
+                              },
+                            );
+                          }
+                          // Mobile: lista vertical simples
+                          else {
+                            return ListView.builder(
+                              padding:
+                                  const EdgeInsets.only(top: 8, bottom: 100),
+                              itemCount: goals.length,
+                              itemBuilder: (context, index) {
+                                final goal = goals[index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12.0),
+                                  child: GoalCard(
+                                    goal: goal,
+                                    userId: _userId,
+                                    onTap: () => _navigateToGoalDetail(goal),
+                                    onDelete: () =>
+                                        _handleDeleteGoal(context, goal),
+                                    onEdit: () => _navigateToCreateGoal(goal),
+                                  ),
+                                );
+                              },
+                            );
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
-      );
-    },
-  ),
-),
       ), // This closes ScreenInteractionListener
       floatingActionButton: TransparentFabWrapper(
         controller: _fabOpacityController,
-                  child: FloatingActionButton(
-                onPressed: _navigateToCreateGoal,
-                backgroundColor: AppColors.primary,
-                tooltip: 'Nova Jornada',
-                heroTag: 'fab_goals_screen',
-                elevation: 4,
-                shape: const CircleBorder(),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
+        child: FloatingActionButton(
+          onPressed: _navigateToCreateGoal,
+          backgroundColor: AppColors.primary,
+          tooltip: 'Nova Jornada',
+          heroTag: 'fab_goals_screen',
+          elevation: 4,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
 
-  Widget _buildHeader() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 8, bottom: 16),
-      child: Text(
-        // --- INÍCIO DA CORREÇÃO (Título) ---
-        'Metas', // Alterado de 'Meta' para 'Metas'
-        // --- FIM DA CORREÇÃO ---
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-        ),
+  Widget _buildHeader({required bool isDesktop}) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8, bottom: 16),
+      child: Row(
+        children: [
+          Text(
+            'Metas',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: isDesktop ? 32 : 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }

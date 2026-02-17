@@ -63,7 +63,8 @@ class _ScrollableChipsRowState extends State<ScrollableChipsRow> {
 
   void _scrollLeft() {
     _controller.animateTo(
-      (_controller.offset - 150).clamp(0.0, _controller.position.maxScrollExtent),
+      (_controller.offset - 150)
+          .clamp(0.0, _controller.position.maxScrollExtent),
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
@@ -71,7 +72,8 @@ class _ScrollableChipsRowState extends State<ScrollableChipsRow> {
 
   void _scrollRight() {
     _controller.animateTo(
-      (_controller.offset + 150).clamp(0.0, _controller.position.maxScrollExtent),
+      (_controller.offset + 150)
+          .clamp(0.0, _controller.position.maxScrollExtent),
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
@@ -83,7 +85,8 @@ class _ScrollableChipsRowState extends State<ScrollableChipsRow> {
       children: [
         if (_canScrollLeft) ...[
           IconButton(
-            icon: const Icon(Icons.chevron_left, color: AppColors.secondaryText),
+            icon:
+                const Icon(Icons.chevron_left, color: AppColors.secondaryText),
             onPressed: _scrollLeft,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
@@ -104,7 +107,8 @@ class _ScrollableChipsRowState extends State<ScrollableChipsRow> {
         if (_canScrollRight) ...[
           const SizedBox(width: 4), // Added spacing as requested
           IconButton(
-            icon: const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+            icon:
+                const Icon(Icons.chevron_right, color: AppColors.secondaryText),
             onPressed: _scrollRight,
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),

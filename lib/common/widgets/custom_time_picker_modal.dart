@@ -99,14 +99,18 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
         _minuteTextController.text = _selectedMinute.toString().padLeft(2, '0');
         // Foca na hora automaticamente
         Future.delayed(Duration.zero, () {
-             _hourFocusNode.requestFocus();
-             _hourTextController.selection = TextSelection(baseOffset: 0, extentOffset: _hourTextController.text.length);
+          _hourFocusNode.requestFocus();
+          _hourTextController.selection = TextSelection(
+              baseOffset: 0, extentOffset: _hourTextController.text.length);
         });
       } else {
         // Sincroniza as rodas ao voltar para o modo roda
-        if (_hourController.hasClients) _hourController.jumpToItem(_selectedHour);
-        if (_minuteController.hasClients)
+        if (_hourController.hasClients) {
+          _hourController.jumpToItem(_selectedHour);
+        }
+        if (_minuteController.hasClients) {
           _minuteController.jumpToItem(_selectedMinute);
+        }
       }
     });
   }
@@ -174,21 +178,25 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
           ),
           // Título e Botão de Toggle
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                 // Placeholder ou vazio para centralizar o texto se necessário
-                 const SizedBox(width: 48), 
+                // Placeholder ou vazio para centralizar o texto se necessário
+                const SizedBox(width: 48),
                 Text(
                   _isInputMode ? "Digitar horário" : "Selecionar horário",
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      color: AppColors.primaryText, fontWeight: FontWeight.bold),
+                      color: AppColors.primaryText,
+                      fontWeight: FontWeight.bold),
                 ),
                 IconButton(
                   onPressed: _toggleInputMode,
                   icon: Icon(
-                    _isInputMode ? Icons.access_time_filled_rounded : Icons.keyboard,
+                    _isInputMode
+                        ? Icons.access_time_filled_rounded
+                        : Icons.keyboard,
                     color: AppColors.primary,
                   ),
                   tooltip: _isInputMode ? "Modo seleção" : "Modo digitação",
@@ -275,7 +283,7 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           _buildTimeInput(_hourTextController, _hourFocusNode, (val) {
-             if (val.length == 2) _minuteFocusNode.requestFocus();
+            if (val.length == 2) _minuteFocusNode.requestFocus();
           }),
           Text(
             ":",
@@ -291,7 +299,8 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
     );
   }
 
-  Widget _buildTimeInput(TextEditingController controller, FocusNode focusNode, Function(String) onChanged) {
+  Widget _buildTimeInput(TextEditingController controller, FocusNode focusNode,
+      Function(String) onChanged) {
     return Container(
       width: 90,
       height: 80,
@@ -421,9 +430,8 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
                       height: _itemHeight * 0.8,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? AppColors.primary
-                            : Colors.transparent,
+                        color:
+                            isSelected ? AppColors.primary : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -448,9 +456,8 @@ class _CustomTimePickerModalState extends State<CustomTimePickerModal> {
             icon: const Icon(Icons.keyboard_arrow_down_rounded),
             iconSize: 32.0,
             color: isAtEnd ? AppColors.tertiaryText : AppColors.primaryText,
-            onPressed: isAtEnd
-                ? null
-                : () => _animateWheel(controller, 1, itemCount),
+            onPressed:
+                isAtEnd ? null : () => _animateWheel(controller, 1, itemCount),
           ),
         ],
       ),

@@ -27,7 +27,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   final _usernameController = TextEditingController(); // NOVO
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  
+
   // Username Logic State
   bool _isAutoUsername = false;
   bool _isCheckingUsername = false;
@@ -39,7 +39,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
   void initState() {
     super.initState();
   }
-  
+
   @override
   void dispose() {
     _nomeAnaliseController.dispose();
@@ -53,10 +53,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
 
   void _onUsernameChanged(String value) {
     if (_isAutoUsername) return; // Ignore limits if auto
-    
+
     // Cancel any pending remote check
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    
+
     // Reset state immediately on any change
     setState(() {
       _isUsernameValid = false;
@@ -84,18 +84,19 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
           setState(() {
             _isCheckingUsername = false;
             _isUsernameValid = isAvailable;
-            _usernameError = isAvailable ? null : 'Nome de usuário já está em uso.';
+            _usernameError =
+                isAvailable ? null : 'Nome de usuário já está em uso.';
           });
         }
       } catch (e) {
         if (mounted) {
-           setState(() {
-             _isCheckingUsername = false;
-             // Don't block user on network error, but maybe warn? 
-             // For now, assume valid if check fails to avoid blocking? 
-             // Or safer: assume invalid. Let's assume invalid and show generic error.
-             _usernameError = 'Erro ao verificar disponibilidade.';
-           });
+          setState(() {
+            _isCheckingUsername = false;
+            // Don't block user on network error, but maybe warn?
+            // For now, assume valid if check fails to avoid blocking?
+            // Or safer: assume invalid. Let's assume invalid and show generic error.
+            _usernameError = 'Erro ao verificar disponibilidade.';
+          });
         }
       }
     });
@@ -130,22 +131,22 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     if (parts.length > 1) {
       base += '.${parts.last.toLowerCase()}';
     }
-    
+
     // Sanitize
     base = base.replaceAll(RegExp(r'[^a-z0-9.]'), '');
 
     String candidate = base;
     bool isAvailable = await _supabaseService.isUsernameAvailable(candidate);
-    
+
     if (!isAvailable) {
       // Try adding random numbers until found
-       int attempts = 0;
-       while (!isAvailable && attempts < 5) {
-         final suffix = DateTime.now().millisecond.toString().padLeft(3, '0');
-         candidate = '$base$suffix';
-         isAvailable = await _supabaseService.isUsernameAvailable(candidate);
-         attempts++;
-       }
+      int attempts = 0;
+      while (!isAvailable && attempts < 5) {
+        final suffix = DateTime.now().millisecond.toString().padLeft(3, '0');
+        candidate = '$base$suffix';
+        isAvailable = await _supabaseService.isUsernameAvailable(candidate);
+        attempts++;
+      }
     }
 
     if (mounted) {
@@ -153,14 +154,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
         _usernameController.text = candidate;
         _isUsernameValid = isAvailable; // Should be true unless really unlucky
         _isCheckingUsername = false;
-        _usernameError = isAvailable ? null : 'Não foi possível gerar um nome único. Tente outro nome.';
+        _usernameError = isAvailable
+            ? null
+            : 'Não foi possível gerar um nome único. Tente outro nome.';
       });
     }
   }
 
   Future<void> _saveDetails() async {
     if (_nomeAnaliseController.text.isEmpty ||
-        _dataNascController.text.isEmpty || 
+        _dataNascController.text.isEmpty ||
         _usernameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -171,9 +174,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     }
 
     if (!_isUsernameValid) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(_usernameError ?? 'Nome de usuário inválido ou em uso.'),
+            content:
+                Text(_usernameError ?? 'Nome de usuário inválido ou em uso.'),
             backgroundColor: Colors.orange),
       );
       return;
@@ -198,11 +202,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     try {
       final displayName = widget.user.userMetadata?['full_name'] ?? '';
       final gender = widget.user.userMetadata?['gender']; // NOVO
-      
+
       // Lógica de Fallback: Se o displayName vier vazio (erro no cadastro),
       // usamos o nome de nascimento inserido pelo usuário.
-      final nameSource = displayName.toString().isNotEmpty 
-          ? displayName.toString() 
+      final nameSource = displayName.toString().isNotEmpty
+          ? displayName.toString()
           : _nomeAnaliseController.text.trim();
 
       final nameParts = nameSource.split(' ');
@@ -260,8 +264,6 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     }
   } // Fim de _saveDetails
 
-
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -278,13 +280,16 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               minHeight: isMobile ? size.height : 0,
             ),
             child: Container(
-              padding: EdgeInsets.all(isMobile ? 24.0 : 48.0), // More breathing room
-              decoration: isMobile 
+              padding:
+                  EdgeInsets.all(isMobile ? 24.0 : 48.0), // More breathing room
+              decoration: isMobile
                   ? null // Native fullscreen on mobile
                   : BoxDecoration(
                       color: AppColors.cardBackground.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(24.0), // Softer corners
-                      border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                      borderRadius:
+                          BorderRadius.circular(24.0), // Softer corners
+                      border: Border.all(
+                          color: AppColors.border.withValues(alpha: 0.5)),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.2),
@@ -303,7 +308,7 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     begin: const Offset(0.05, 0.0), // Subtle slide from right
                     end: Offset.zero,
                   ).animate(animation);
-                  
+
                   return FadeTransition(
                     opacity: animation,
                     child: SlideTransition(
@@ -363,81 +368,97 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               style: const TextStyle(color: Colors.white),
               onChanged: _onUsernameChanged,
               decoration: _buildInputDecoration(
-                "Nome de Usuário (@username)", 
-                Icons.alternate_email
-              ).copyWith(
-                 enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                    borderSide: BorderSide(
-                      color: _isUsernameValid 
-                          ? Colors.green.shade400 
-                          : (_usernameError != null ? Colors.red.shade400 : AppColors.border),
-                    ),
-                 ),
-                 focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                    borderSide: BorderSide(
-                      color: _isUsernameValid 
-                          ? Colors.green.shade400 
-                          : (_usernameError != null ? Colors.red.shade400 : AppColors.primaryAccent),
-                    ),
-                 ),
-                 suffixIcon: _isCheckingUsername 
-                    ? Transform.scale(scale: 0.5, child: const CircularProgressIndicator())
-                    : (_isUsernameValid 
+                      "Nome de Usuário (@username)", Icons.alternate_email)
+                  .copyWith(
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide(
+                    color: _isUsernameValid
+                        ? Colors.green.shade400
+                        : (_usernameError != null
+                            ? Colors.red.shade400
+                            : AppColors.border),
+                  ),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.0),
+                  borderSide: BorderSide(
+                    color: _isUsernameValid
+                        ? Colors.green.shade400
+                        : (_usernameError != null
+                            ? Colors.red.shade400
+                            : AppColors.primaryAccent),
+                  ),
+                ),
+                suffixIcon: _isCheckingUsername
+                    ? Transform.scale(
+                        scale: 0.5, child: const CircularProgressIndicator())
+                    : (_isUsernameValid
                         ? Icon(Icons.check_circle, color: Colors.green.shade400)
                         : null),
-                  errorText: _usernameError,
+                errorText: _usernameError,
               ),
             ),
-            
+
             // Username Instructions
             if (!_isAutoUsername) ...[
               const SizedBox(height: 8),
               Padding(
-                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     const Text(
-                       "O nome de usuário deve ser único, sem espaços ou acentos.",
-                       style: TextStyle(color: AppColors.secondaryText, fontSize: 13),
-                     ),
-                     const SizedBox(height: 4),
-                     RichText(
-                       text: TextSpan(
-                         style: const TextStyle(color: AppColors.tertiaryText, fontSize: 12),
-                         children: [
-                           const TextSpan(text: "Exemplos: "),
-                           TextSpan(text: "joaopedro", style: TextStyle(color: Colors.green.shade400)),
-                           const TextSpan(text: " ("),
-                           TextSpan(text: "não", style: TextStyle(color: Colors.red.shade400)),
-                           const TextSpan(text: ": joão pedro), "),
-                           TextSpan(text: "joao_pedro", style: TextStyle(color: Colors.green.shade400)),
-                           const TextSpan(text: ", "),
-                           TextSpan(text: "JoaoPedro", style: TextStyle(color: Colors.green.shade400)),
-                         ],
-                       ),
-                     ),
-                   ],
-                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "O nome de usuário deve ser único, sem espaços ou acentos.",
+                      style: TextStyle(
+                          color: AppColors.secondaryText, fontSize: 13),
+                    ),
+                    const SizedBox(height: 4),
+                    RichText(
+                      text: TextSpan(
+                        style: const TextStyle(
+                            color: AppColors.tertiaryText, fontSize: 12),
+                        children: [
+                          const TextSpan(text: "Exemplos: "),
+                          TextSpan(
+                              text: "joaopedro",
+                              style: TextStyle(color: Colors.green.shade400)),
+                          const TextSpan(text: " ("),
+                          TextSpan(
+                              text: "não",
+                              style: TextStyle(color: Colors.red.shade400)),
+                          const TextSpan(text: ": joão pedro), "),
+                          TextSpan(
+                              text: "joao_pedro",
+                              style: TextStyle(color: Colors.green.shade400)),
+                          const TextSpan(text: ", "),
+                          TextSpan(
+                              text: "JoaoPedro",
+                              style: TextStyle(color: Colors.green.shade400)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
-            
-             // "Let system create" Toggle
+
+            // "Let system create" Toggle
             Row(
               children: [
                 Checkbox(
-                  value: _isAutoUsername, 
+                  value: _isAutoUsername,
                   activeColor: AppColors.primary,
                   onChanged: _toggleAutoUsername,
-                  side: const BorderSide(color: AppColors.tertiaryText, width: 2),
+                  side:
+                      const BorderSide(color: AppColors.tertiaryText, width: 2),
                 ),
                 Expanded(
                   child: GestureDetector(
                     onTap: () => _toggleAutoUsername(!_isAutoUsername),
-                    child: const Text("Criar automaticamente para mim 🎲", 
-                        style: TextStyle(color: AppColors.secondaryText, fontSize: 13)),
+                    child: const Text("Criar automaticamente para mim 🎲",
+                        style: TextStyle(
+                            color: AppColors.secondaryText, fontSize: 13)),
                   ),
                 ),
               ],
@@ -447,8 +468,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: (_isUsernameValid || _isAutoUsername) 
-                    ? () => setState(() => _step = 2) 
+                onPressed: (_isUsernameValid || _isAutoUsername)
+                    ? () => setState(() => _step = 2)
                     : null,
                 child: const Text('Continuar'),
               ),
@@ -456,13 +477,14 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
             const SizedBox(height: 16),
             TextButton(
               onPressed: () async {
-                 // Cancel registration -> Sign out
-                 await Supabase.instance.client.auth.signOut();
-                 if (context.mounted) {
-                   Navigator.of(context).pushReplacementNamed(AppRoutes.login);
-                 }
+                // Cancel registration -> Sign out
+                await Supabase.instance.client.auth.signOut();
+                if (context.mounted) {
+                  Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                }
               },
-              child: const Text("Cancelar", style: TextStyle(color: AppColors.tertiaryText)),
+              child: const Text("Cancelar",
+                  style: TextStyle(color: AppColors.tertiaryText)),
             ),
           ],
         );
@@ -499,34 +521,36 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                     height: 1.5)),
             const SizedBox(height: 32),
             TextField(
-                controller: _nomeAnaliseController,
-                style: const TextStyle(color: Colors.white),
-                decoration: _buildInputDecoration("Seu nome completo de nascimento", Icons.person_outline),
-                textCapitalization: TextCapitalization.words,
-                onChanged: (_) {
-                  setState(() {}); 
-                  if (_isAutoUsername) _generateAndSetUsername();
-                },
-                ),
+              controller: _nomeAnaliseController,
+              style: const TextStyle(color: Colors.white),
+              decoration: _buildInputDecoration(
+                  "Seu nome completo de nascimento", Icons.person_outline),
+              textCapitalization: TextCapitalization.words,
+              onChanged: (_) {
+                setState(() {});
+                if (_isAutoUsername) _generateAndSetUsername();
+              },
+            ),
             const Padding(
               padding: EdgeInsets.only(top: 8.0, left: 4.0),
               child: Text("Exatamente como está na sua certidão. ✍️",
-                  style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
+                  style:
+                      TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
             ),
-            
             const SizedBox(height: 16),
-            
             TextField(
                 controller: _dataNascController,
-                 style: const TextStyle(color: Colors.white),
-                decoration: _buildInputDecoration("Data de Nascimento", Icons.calendar_today_outlined, hint: "DD/MM/AAAA"),
+                style: const TextStyle(color: Colors.white),
+                decoration: _buildInputDecoration(
+                    "Data de Nascimento", Icons.calendar_today_outlined,
+                    hint: "DD/MM/AAAA"),
                 keyboardType: TextInputType.datetime,
-                onChanged: (_) => setState(() {})
-                ),
+                onChanged: (_) => setState(() {})),
             const Padding(
-               padding: EdgeInsets.only(top: 8.0, left: 4.0),
-               child: Text("Use o formato dia/mês/ano. 📅",
-                  style: TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
+              padding: EdgeInsets.only(top: 8.0, left: 4.0),
+              child: Text("Use o formato dia/mês/ano. 📅",
+                  style:
+                      TextStyle(color: AppColors.tertiaryText, fontSize: 12)),
             ),
             const SizedBox(height: 32),
             Row(
@@ -534,23 +558,22 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 OutlinedButton(
                     onPressed:
                         _isLoading ? null : () => setState(() => _step = 1),
-                     style: OutlinedButton.styleFrom(
+                    style: OutlinedButton.styleFrom(
                         shape: const StadiumBorder(),
                         side: const BorderSide(color: AppColors.primary),
-                        foregroundColor: AppColors.primary
-                     ),
+                        foregroundColor: AppColors.primary),
                     child: const Text('Voltar')),
                 const SizedBox(width: 16),
                 Expanded(
                     child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                            shape: const StadiumBorder(),
+                          shape: const StadiumBorder(),
                         ),
-                        // Username validation happens at Step 1 now, check logic here just in case? 
+                        // Username validation happens at Step 1 now, check logic here just in case?
                         // Actually, _isUsernameValid should still be true from Step 1.
                         onPressed: _isLoading ||
                                 _nomeAnaliseController.text.isEmpty ||
-                                _dataNascController.text.isEmpty 
+                                _dataNascController.text.isEmpty
                             ? null
                             : _saveDetails,
                         child: const Text('Iniciar Jornada'))),
@@ -570,7 +593,8 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
     }
   }
 
-  InputDecoration _buildInputDecoration(String label, IconData icon, {String? hint}) {
+  InputDecoration _buildInputDecoration(String label, IconData icon,
+      {String? hint}) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
