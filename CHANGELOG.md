@@ -1,6 +1,14 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.4.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.1...v1.4.2) (2026-02-17)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement a comprehensive journal feature with a rich text editor, mood tracking, task parsing, and real-time task synchronization. ([c740ca8](https://github.com/gmalickovski/sincroapp_flutter/commit/c740ca8f361aae3f34a95276b07cca51e7f5020d))
+* **ci:** Introduce a comprehensive local notification service, implement the journal feature with dedicated screens and widgets, and add initial Windows platform build configuration. ([99ff752](https://github.com/gmalickovski/sincroapp_flutter/commit/99ff752c9ce9ac80853ef7ce5e378dfdb324cb06))
+
 ### [1.4.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.0...v1.4.1) (2026-02-17)
 
 
