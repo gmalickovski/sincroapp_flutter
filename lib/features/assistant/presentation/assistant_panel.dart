@@ -182,17 +182,17 @@ class _AssistantPanelState extends State<AssistantPanel>
       keyType = ParserKeyType.mention;
       // Mock Contacts - Replace with real ContactService later
       final allContacts = [
-        ParserSuggestion(
+        const ParserSuggestion(
             id: '1',
             label: '@Alice',
             type: ParserKeyType.mention,
             description: 'Designer'),
-        ParserSuggestion(
+        const ParserSuggestion(
             id: '2',
             label: '@Bob',
             type: ParserKeyType.mention,
             description: 'Developer'),
-        ParserSuggestion(
+        const ParserSuggestion(
             id: '3',
             label: '@Carol',
             type: ParserKeyType.mention,
@@ -205,17 +205,17 @@ class _AssistantPanelState extends State<AssistantPanel>
       keyType = ParserKeyType.goal;
       // Mock Goals - Replace with real GoalService later
       final allGoals = [
-        ParserSuggestion(
+        const ParserSuggestion(
             id: 'g1',
             label: '!Marathon',
             type: ParserKeyType.goal,
             description: 'Run 42km'),
-        ParserSuggestion(
+        const ParserSuggestion(
             id: 'g2',
             label: '!Website',
             type: ParserKeyType.goal,
             description: 'Launch Site'),
-        ParserSuggestion(
+        const ParserSuggestion(
             id: 'g3',
             label: '!Meditation',
             type: ParserKeyType.goal,

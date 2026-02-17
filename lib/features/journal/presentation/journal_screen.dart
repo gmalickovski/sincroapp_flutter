@@ -5,19 +5,21 @@ import 'package:animations/animations.dart'; // 🚀 Added for OpenContainer
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/core/routes/hero_dialog_route.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/journal/presentation/widgets/hoverable_card.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'journal_editor_screen.dart';
-
-import 'widgets/journal_entry_card.dart';
-import 'widgets/journal_filter_panel.dart';
-import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
-import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
-
-enum JournalViewScope { todas }
+import 'package:sincro_app_flutter/services/numerology_engine.dart'; // Import NumerologyEngine
+import 'package:uuid/uuid.dart'; // Import Uuid
+import 'journal_editor_screen.dart'; // Restore Editor
+import 'widgets/journal_entry_card.dart'; // Restore Card
+import 'widgets/journal_filter_panel.dart'; // Restore Filter
+import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart'; // Restore Popup Utils
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart'; // Restore Opacity Manager
+import 'package:sincro_app_flutter/features/journal/models/journal_view_scope.dart'; // Add Import
 
 class JournalScreen extends StatefulWidget {
   final UserModel userData;
@@ -35,6 +37,55 @@ class _JournalScreenState extends State<JournalScreen> {
   DateTime? _dateFilter;
   int? _vibrationFilter;
   int? _moodFilter;
+  
+  // Calculate Personal Day for duplication
+  int _calculatePersonalDay(DateTime date) {
+    final engine = NumerologyEngine(
+      nomeCompleto: widget.userData.nomeAnalise,
+      dataNascimento: widget.userData.dataNasc,
+    );
+    return engine.calculatePersonalDayForDate(date);
+  }
+
+  Future<void> _handleDuplicate(JournalEntry entry) async {
+    try {
+      final now = DateTime.now();
+      final newId = const Uuid().v4();
+      final personalDay = _calculatePersonalDay(now);
+      
+      final newEntry = JournalEntry(
+        id: newId,
+        // userID removed as it's not in the model
+        content: entry.content,
+        createdAt: now,
+        updatedAt: now,
+        personalDay: personalDay,
+        title: entry.title, // Copy title exactly
+        mood: entry.mood,
+      );
+
+      // Optimistic updat is hard with stream, so just await DB insert
+      await _supabaseService.createJournalEntry(newEntry);
+      
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Anotação duplicada com sucesso!'),
+            backgroundColor: AppColors.primary,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erro ao duplicar anotação: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
@@ -156,11 +207,136 @@ class _JournalScreenState extends State<JournalScreen> {
 
 
   Widget _buildNewNoteCard(BuildContext context) {
+    bool isDesktop = MediaQuery.of(context).size.width > 800;
+
+    if (isDesktop) {
+      return Hero(
+        tag: 'journal_new_note', // Unique tag for new note
+        createRectTween: (begin, end) {
+          return MaterialRectCenterArcTween(begin: begin, end: end);
+        },
+        child: HoverableCard(
+        borderRadius: 12,
+        borderColor: AppColors.primary,
+        onTap: () {
+          Navigator.of(context).push(
+            HeroDialogRoute(
+              builder: (context) {
+                return JournalEditorScreen(
+                  userData: widget.userData,
+                  entry: null,
+                );
+              },
+            ),
+          );
+        },
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 150),
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: AppColors.primary,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Nova Anotação",
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+     );
+    }
+
+    if (MediaQuery.of(context).size.width > 800) {
+      // Desktop: Hero Action
+      return Hero(
+        tag: 'new_note_fab',
+        createRectTween: (begin, end) {
+          return MaterialRectCenterArcTween(begin: begin, end: end);
+        },
+        child: Material(
+         type: MaterialType.transparency,
+         child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              HeroDialogRoute(
+                builder: (context) {
+                   return JournalEditorScreen(
+                      userData: widget.userData,
+                      entry: null,
+                   );
+                },
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 150),
+            decoration: BoxDecoration(
+              color: AppColors.cardBackground.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.5),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    color: AppColors.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  "Nova Anotação",
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+         ),
+        ),
+      );
+    }
+
     return OpenContainer(
       transitionDuration: const Duration(milliseconds: 500),
       transitionType: ContainerTransitionType.fadeThrough,
       closedColor: Colors.transparent,
-      openColor: AppColors.background,
+      openColor: Colors.transparent,
       middleColor: AppColors.background,
       closedElevation: 0,
       openElevation: 0,
@@ -180,13 +356,10 @@ class _JournalScreenState extends State<JournalScreen> {
       },
       closedBuilder: (context, openContainer) {
         return Container(
-          height: 180,
+          constraints: const BoxConstraints(minHeight: 150),
           decoration: BoxDecoration(
             color: AppColors.cardBackground.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
-             // Border is handled by closedShape to avoid duplication/clipping issues? 
-             // Actually OpenContainer clips. Let's keep decoration minimal or matching.
-             // If we put border on closedShape, we don't need it here.
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -314,10 +487,12 @@ class _JournalScreenState extends State<JournalScreen> {
                     final entries = snapshot.data!;
 
                     if (isDesktop) {
-                      return MasonryGridView.count(
+                      return MasonryGridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 40.0)
                             .copyWith(bottom: 100),
-                        crossAxisCount: 2,
+                        gridDelegate: const SliverSimpleGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 300,
+                        ),
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
                         itemCount: entries.length + 1, // +1 for "New Note" card
@@ -330,49 +505,35 @@ class _JournalScreenState extends State<JournalScreen> {
                             entry: entry,
                             userData: widget.userData,
                             onDelete: () => _handleDelete(entry),
+                            onDuplicate: () => _handleDuplicate(entry),
                           );
                         },
                       );
                     } else {
-                      final groupedEntries = groupBy<JournalEntry, String>(
-                        entries,
-                        (entry) =>
-                            DateFormat.yMMMM('pt_BR').format(entry.createdAt),
-                      );
-                      final List<Widget> listItems = [];
-                      groupedEntries.forEach((monthYear, entriesInMonth) {
-                        listItems.add(
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 4.0, vertical: 16),
-                            child: Text(
-                              toBeginningOfSentenceCase(monthYear)!,
-                              style: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        );
-                        listItems.addAll(
-                          entriesInMonth
-                              .map((entry) => Padding(
-                                    padding:
-                                        const EdgeInsets.only(bottom: 16.0),
-                                    child: JournalEntryCard(
-                                      entry: entry,
-                                      userData: widget.userData,
-                                      onDelete: () => _handleDelete(entry),
-                                    ),
-                                  ))
-                              .toList(),
-                        );
-                      });
-                      return ListView.builder(
+                      // MOBILE: Masonry Grid (Visual Parity) but NO "New Note" card (uses FAB)
+                      return MasonryGridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0)
                             .copyWith(bottom: 100),
-                        itemCount: listItems.length,
-                        itemBuilder: (context, index) => listItems[index],
+                         // Mobile typically expects 2 columns. 
+                         // maxCrossAxisExtent 200 allows 2 cols on screens > 400px width, 
+                         // or 1 col on very small screens. 
+                         // To force 2 columns on most mobiles (360px+), use count or smaller extent.
+                         // Using fixed count 2 is safer for standard "Pinterest" look on mobile.
+                        gridDelegate: const SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2, 
+                        ),
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
+                        itemCount: entries.length, // No "New Note" card
+                        itemBuilder: (context, index) {
+                          final entry = entries[index];
+                          return JournalEntryCard(
+                            entry: entry,
+                            userData: widget.userData,
+                             onDelete: () => _handleDelete(entry),
+                             onDuplicate: () => _handleDuplicate(entry),
+                          );
+                        },
                       );
                     }
                   },
@@ -382,32 +543,34 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ),
       ),
-      floatingActionButton: OpenContainer(
-        transitionDuration: const Duration(milliseconds: 500),
-        transitionType: ContainerTransitionType.fadeThrough,
-        closedElevation: 6,
-        openElevation: 0,
-        closedShape: const CircleBorder(),
-        closedColor: AppColors.primary,
-        openColor: AppColors.background,
-        middleColor: AppColors.background,
-        openBuilder: (context, closeContainer) {
-           return JournalEditorScreen(
-            userData: widget.userData,
-            entry: null,
-          );
-        },
-        closedBuilder: (context, openContainer) {
-          return const SizedBox(
-            width: 56,
-            height: 56,
-            child: Center(
-              child: Icon(Icons.add, color: Colors.white),
+      floatingActionButton: isDesktop
+          ? null
+          : OpenContainer(
+              transitionDuration: const Duration(milliseconds: 500),
+              transitionType: ContainerTransitionType.fadeThrough,
+              closedElevation: 6,
+              openElevation: 0,
+              closedShape: const CircleBorder(),
+              closedColor: AppColors.primary,
+              openColor: AppColors.cardBackground,
+              middleColor: AppColors.cardBackground,
+              openBuilder: (context, closeContainer) {
+                return JournalEditorScreen(
+                  userData: widget.userData,
+                  entry: null,
+                );
+              },
+              closedBuilder: (context, openContainer) {
+                return const SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: Center(
+                    child: Icon(Icons.add, color: Colors.white),
+                  ),
+                );
+              },
+              tappable: true,
             ),
-          );
-        },
-        tappable: true,
-      ),
     );
   }
 }

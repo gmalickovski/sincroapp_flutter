@@ -1,11 +1,10 @@
-// lib/common/widgets/custom_app_bar.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/user_avatar.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
+import 'package:window_manager/window_manager.dart';
 
 class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final UserModel? userData;
@@ -13,10 +12,10 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final AnimationController menuAnimationController;
   final bool isEditMode;
   final VoidCallback? onEditPressed;
-  final ValueChanged<String>? onSearchChanged; // New callback
-  final List<Widget>? actions; // New Parameter
-  final bool showSearch; // New Parameter to toggle search visibility
-  final Widget? assistantIcon; // New Parameter
+  final ValueChanged<String>? onSearchChanged;
+  final List<Widget>? actions;
+  final bool showSearch;
+  final Widget? assistantIcon;
 
   const CustomAppBar({
     super.key,
@@ -27,8 +26,8 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     this.onEditPressed,
     this.onSearchChanged,
     this.actions,
-    this.showSearch = true, // Default to true
-    this.assistantIcon, // New Parameter
+    this.showSearch = true,
+    this.assistantIcon,
   });
 
   @override
@@ -38,21 +37,23 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight + 1.0);
 }
 
-class _CustomAppBarState extends State<CustomAppBar> {
+class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
   bool _isSearchOpen = false;
-  bool _isSearchHovered = false; // Track field hover
-  bool _isCloseHovered = false; // Track close button hover (for color change)
+  bool _isSearchHovered = false;
+  bool _isCloseHovered = false;
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this); // Add listener
     _searchFocusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
+    windowManager.removeListener(this); // Remove listener
     _searchFocusNode.removeListener(_onFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -60,7 +61,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
   }
 
   void _onFocusChanged() {
-    setState(() {}); // Rebuild to update border on focus change
+    setState(() {});
   }
 
   void _openSearch() {
@@ -78,7 +79,6 @@ class _CustomAppBarState extends State<CustomAppBar> {
         _isSearchOpen = false;
         _searchFocusNode.unfocus();
       });
-      // Delay clearing text until animation finishes to avoid visual snap
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted && !_isSearchOpen) {
           _searchController.clear();
@@ -110,15 +110,24 @@ class _CustomAppBarState extends State<CustomAppBar> {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
-    Widget titleWidget = SvgPicture.asset(
-      'assets/images/sincroapp_logo.svg',
-      height: isDesktop ? 32 : 24,
-      fit: BoxFit.contain,
+    // Wrap title in DragToMoveArea for window dragging
+    Widget titleWidget = DragToMoveArea(
+      child: SvgPicture.asset(
+        'assets/images/sincroapp_logo.svg',
+        height: isDesktop ? 32 : 24,
+        fit: BoxFit.contain,
+      ),
     );
 
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
+      // Use flexibleSpace for draggable background area
+      flexibleSpace: DragToMoveArea(
+        child: Container(
+          color: Colors.transparent, // Ensures hit testing works
+        ),
+      ),
       leading: IconButton(
         icon: AnimatedIcon(
           icon: AnimatedIcons.menu_close,
@@ -128,16 +137,12 @@ class _CustomAppBarState extends State<CustomAppBar> {
         onPressed: widget.onMenuPressed,
         tooltip: 'Menu',
       ),
-      // Hide title on mobile when search is open to avoid push/shrink effect
-      title:
-          (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
+      title: (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
       centerTitle: true,
       actions: [
-        // Unified Search (same behavior for mobile and desktop)
-        if (widget.showSearch) // Check visibility
+        if (widget.showSearch)
           Padding(
-            padding:
-                const EdgeInsets.only(right: 8.0), // Spacing from next element
+            padding: const EdgeInsets.only(right: 8.0),
             child: _buildUnifiedSearch(context, isDesktop: isDesktop),
           ),
 
@@ -145,24 +150,19 @@ class _CustomAppBarState extends State<CustomAppBar> {
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: IconButton(
-              icon: const Icon(
-                Icons.swap_vert,
-                color: AppColors.secondaryText,
-              ),
+              icon: const Icon(Icons.swap_vert, color: AppColors.secondaryText),
               tooltip: 'Reordenar Cards',
               onPressed: widget.onEditPressed,
             ),
           ),
 
-        // Assistant Icon (Hollow Star) - Positioned BEFORE Avatar or custom actions
         if (widget.assistantIcon != null)
           Padding(
-            padding: const EdgeInsets.only(right: 12.0), // Spacing from Avatar
+            padding: const EdgeInsets.only(right: 12.0),
             child: widget.assistantIcon!,
           ),
 
-        if (widget.userData != null &&
-            isDesktop) // Mostra avatar apenas no desktop
+        if (widget.userData != null && isDesktop)
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: GestureDetector(
@@ -176,10 +176,13 @@ class _CustomAppBarState extends State<CustomAppBar> {
             ),
           ),
 
-        if (widget.actions != null) ...widget.actions!, // Insert custom actions
+        if (widget.actions != null) ...widget.actions!,
 
         if (!isDesktop && widget.userData == null)
           const SizedBox(width: kToolbarHeight),
+
+        // Add Window Buttons on Desktop
+        if (isDesktop) _buildWindowButtons(),
       ],
       shape: const Border(
         bottom: BorderSide(color: AppColors.border, width: 1.0),
@@ -187,15 +190,49 @@ class _CustomAppBarState extends State<CustomAppBar> {
     );
   }
 
-  /// Unified search widget - same behavior for mobile and desktop.
-  /// Expands leftward from the button position, X stays in place.
+  /// Builds Minimize, Maximize/Restore, Close buttons
+  Widget _buildWindowButtons() {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _WindowButton(
+          icon: Icons.minimize,
+          onPressed: () => windowManager.minimize(),
+        ),
+        FutureBuilder<bool>(
+          future: windowManager.isMaximized(),
+          builder: (context, snapshot) {
+            final isMaximized = snapshot.data ?? false;
+            return _WindowButton(
+              icon: isMaximized ? Icons.crop_square : Icons.crop_din, // Placeholder capability
+              // Better icons: Icons.check_box_outline_blank (max) vs Icons.filter_none (restore)
+              // But standard Material icons are fine
+              onPressed: () {
+                if (isMaximized) {
+                  windowManager.unmaximize();
+                } else {
+                  windowManager.maximize();
+                }
+                setState(() {}); // Rebuild icon
+              },
+            );
+          },
+        ),
+        _WindowButton(
+          icon: Icons.close,
+          onPressed: () => windowManager.close(),
+          isClose: true,
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  // ... _buildUnifiedSearch, _buildSearchButton, _buildCloseButton (kept as is)
   Widget _buildUnifiedSearch(BuildContext context, {required bool isDesktop}) {
     final isOpen = _isSearchOpen;
     final screenWidth = MediaQuery.of(context).size.width;
-    // Desktop: 35% of screen. Mobile: ~70% of screen (leaving space for menu and avatar)
     final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth * 0.70;
-
-    // Determine Border Color or Transparent if closed
     Color borderColor = Colors.transparent;
     Color bgColor = Colors.transparent;
 
@@ -220,11 +257,9 @@ class _CustomAppBarState extends State<CustomAppBar> {
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderColor),
       ),
-      // Use Stack to keep button anchored to the right
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // The Search Field (Visible only when open)
           if (isOpen)
             Positioned.fill(
               child: MouseRegion(
@@ -233,14 +268,12 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 child: TextField(
                   controller: _searchController,
                   focusNode: _searchFocusNode,
-                  autofillHints: const [], // Prevent browser password save prompt
+                  autofillHints: const [],
                   style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textAlignVertical:
-                      TextAlignVertical.center, // Center vertically
+                  textAlignVertical: TextAlignVertical.center,
                   decoration: const InputDecoration(
                     hintText: 'Pesquisar...',
-                    hintStyle:
-                        TextStyle(color: AppColors.tertiaryText, fontSize: 14),
+                    hintStyle: TextStyle(color: AppColors.tertiaryText, fontSize: 14),
                     border: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     enabledBorder: InputBorder.none,
@@ -248,10 +281,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
                     disabledBorder: InputBorder.none,
                     isDense: true,
                     filled: false,
-                    contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical:
-                            12), // Symmetric vertical padding for centering
+                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: widget.onSearchChanged,
                   onTapOutside: (event) {
@@ -260,15 +290,10 @@ class _CustomAppBarState extends State<CustomAppBar> {
                 ),
               ),
             ),
-
-          // The Toggle Button (Search or Close) - always anchored to right
           Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
+            right: 0, top: 0, bottom: 0,
             child: SizedBox(
-              width: 48,
-              height: 48,
+              width: 48, height: 48,
               child: isOpen ? _buildCloseButton() : _buildSearchButton(),
             ),
           ),
@@ -280,8 +305,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
   Widget _buildSearchButton() {
     return Center(
       child: SizedBox(
-        width: 40,
-        height: 40,
+        width: 40, height: 40,
         child: Material(
           color: Colors.transparent,
           shape: const CircleBorder(),
@@ -291,11 +315,7 @@ class _CustomAppBarState extends State<CustomAppBar> {
             hoverColor: AppColors.primary.withValues(alpha: 0.1),
             splashColor: AppColors.primary.withValues(alpha: 0.2),
             child: const Center(
-              child: Icon(
-                Icons.search,
-                color: AppColors.secondaryText,
-                size: 24,
-              ),
+              child: Icon(Icons.search, color: AppColors.secondaryText, size: 24),
             ),
           ),
         ),
@@ -303,7 +323,6 @@ class _CustomAppBarState extends State<CustomAppBar> {
     );
   }
 
-  /// Builds a close button that changes color on hover (no background splash).
   Widget _buildCloseButton() {
     return MouseRegion(
       onEnter: (_) => setState(() => _isCloseHovered = true),
@@ -312,15 +331,69 @@ class _CustomAppBarState extends State<CustomAppBar> {
       child: GestureDetector(
         onTap: _closeSearch,
         child: Container(
-          width: 48,
-          height: 48,
+          width: 48, height: 48,
           alignment: Alignment.center,
           color: Colors.transparent,
           child: Icon(
             Icons.close,
-            color:
-                _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
+            color: _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
             size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // WindowListener callbacks
+  @override
+  void onWindowMaximize() {
+    setState(() {});
+  }
+
+  @override
+  void onWindowUnmaximize() {
+    setState(() {});
+  }
+}
+
+class _WindowButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final bool isClose;
+
+  const _WindowButton({
+    required this.icon,
+    required this.onPressed,
+    this.isClose = false,
+  });
+
+  @override
+  State<_WindowButton> createState() => _WindowButtonState();
+}
+
+class _WindowButtonState extends State<_WindowButton> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onPressed,
+        child: Container(
+          width: 46,
+          height: 32, // Typical title bar height
+          color: _isHovered
+              ? (widget.isClose ? Colors.red : Colors.white.withAlpha(25))
+              : Colors.transparent,
+          alignment: Alignment.center,
+          child: Icon(
+            widget.icon,
+            size: 16,
+            color: _isHovered && widget.isClose
+                ? Colors.white
+                : AppColors.secondaryText,
           ),
         ),
       ),

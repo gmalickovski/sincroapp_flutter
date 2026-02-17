@@ -3,8 +3,9 @@
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:animations/animations.dart'; // For MaterialRectCenterArcTween
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -157,6 +158,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   @override
   void initState() {
     super.initState();
+    _isTitleFocused = true; // Start with title focused/toolbar hidden
     // V22: Listener is hooked in _loadDocument() after controller creation
     _titleControllerField.text = widget.entry?.title ?? '';
     _noteDate = widget.entry?.createdAt ?? DateTime.now();
@@ -165,6 +167,11 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     _selectedMood = widget.entry?.mood;
     _initialMood = _selectedMood;
     _loadDocument();
+
+    // Determine initial toolbar state
+    // If editing (entry != null), toolbar should be visible (Title NOT focused)
+    // If new (entry == null), toolbar hidden (Title focused)
+    _isTitleFocused = widget.entry == null;
 
     // Apply syntax highlighting once on load
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -181,12 +188,17 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       });
     });
 
-    // Auto-focus title if new entry
-    if (!_isEditing) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-         _titleFocusNode.requestFocus();
-      });
-    }
+    // Smart Focus Logic
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+       if (widget.entry == null) {
+          // New Entry: Focus Title
+          _titleFocusNode.requestFocus();
+       } else {
+          // Edit Entry: Focus Editor at the end
+          _editorFocusNode.requestFocus();
+          _controller.moveCursorToEnd();
+       }
+    });
 
     // Fetch data for popup (Contacts, Goals, Tags)
     _fetchContactsAndGoals();
@@ -291,7 +303,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       
       // Find Line
       Node? line = lineNode;
-      while (line != null && line is! Line) line = line.parent;
+      while (line != null && line is! Line) {
+        line = line.parent;
+      }
       if (line == null) return;
       
       final lineText = line.toPlainText();
@@ -542,19 +556,23 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               }
            }
          } else if (node is Block) {
-            for (final child in node.children) scan(child);
+            for (final child in node.children) {
+              scan(child);
+            }
          }
        }
        
-       for (final child in root.children) scan(child);
+       for (final child in root.children) {
+         scan(child);
+       }
 
        if (rangesToClear.isNotEmpty) {
           debugPrint('🧹 [Journal] Clearing ${rangesToClear.length} duplicate IDs & Unchecking...');
           rangesToClear.forEach((offset, len) {
              // 1. Remove taskId (Target BOTH inline and block scopes to be safe)
-             _controller.formatText(offset, len, Attribute(_taskIdKey, AttributeScope.inline, null));
-             _controller.formatText(offset, len, Attribute(_taskIdKey, AttributeScope.block, null)); // Fix deduplication scope
-             _controller.formatText(offset, len, Attribute(_taskIdKey, AttributeScope.ignore, null)); 
+             _controller.formatText(offset, len, const Attribute(_taskIdKey, AttributeScope.inline, null));
+             _controller.formatText(offset, len, const Attribute(_taskIdKey, AttributeScope.block, null)); // Fix deduplication scope
+             _controller.formatText(offset, len, const Attribute(_taskIdKey, AttributeScope.ignore, null)); 
              
              // 2. FORCE Uncheck to ensure new item is empty
              _controller.formatText(offset, len, Attribute.unchecked);
@@ -783,8 +801,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
            // Reset styles at the *newline* position (index) and *start of new line* (index+1)
            
            // Prepare "Unset" attributes
-           final unsetTaskIdInline = Attribute.clone(Attribute(_taskIdKey, AttributeScope.inline, null), null);
-           final unsetTaskIdBlock = Attribute.clone(Attribute(_taskIdKey, AttributeScope.block, null), null);
+           final unsetTaskIdInline = Attribute.clone(const Attribute(_taskIdKey, AttributeScope.inline, null), null);
+           final unsetTaskIdBlock = Attribute.clone(const Attribute(_taskIdKey, AttributeScope.block, null), null);
            final unsetStrike = Attribute.clone(Attribute.strikeThrough, null);
            
            // Apply "Unchecked" explicitly to the new line (overwriting checked if inherited)
@@ -914,7 +932,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         // Update existing task - FETCH FIRST (or use from list) to preserve other fields
 
           // Update existing or create new
-          if (taskId != null && taskId.isNotEmpty) {
+          if (taskId.isNotEmpty) {
             try {
               final existingTask = existingTasksOnBackend.firstWhere(
                 (t) => t.id == taskId,
@@ -931,9 +949,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
               TaskModel? targetTask = existingTask.id.isNotEmpty ? existingTask : null;
                // If not in bulk fetch, try individual fetch
-              if (targetTask == null) {
-                 targetTask = await _supabaseService.getTaskById(taskId);
-              }
+              targetTask ??= await _supabaseService.getTaskById(taskId);
 
               if (targetTask != null) {
                 final mergedSharedWith = {...targetTask.sharedWith, ...parsed.sharedWith}.toList();
@@ -1245,7 +1261,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               style: ButtonStyle(
                 foregroundColor: const WidgetStatePropertyAll(Colors.white),
                 overlayColor: WidgetStatePropertyAll(
-                  AppColors.primary.withOpacity(0.15),
+                  AppColors.primary.withValues(alpha: 0.15),
                 ),
               ),
             ),
@@ -1378,13 +1394,16 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     );
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: isMobile ? 8.0 : 24.0),
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0), // Reduced to 8.0 for both to push arrows to edge
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
+         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      child: ScrollableToolbarWrapper(
-        isMobile: isMobile,
-        child: toolbarContent,
+      child: _ScrollableToolbarWrapper(
+        child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 600), // Ensure content is wide enough to scroll if needed
+            child: toolbarContent,
+        ),
       ),
     );
   }
@@ -1407,30 +1426,34 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     final isMobile = _isMobile(context);
     final isDesktop = !isMobile;
 
-    // On mobile, always expanded (fullscreen)
-    // Removed showAsSheet logic for desktop as it is now a Dialog
+    // Determine Hero Tag
+    final heroTag = widget.entry?.id ?? 'new_note_fab';
 
+    // Define the Body Content (Title + Editor + Toolbar)
     Widget editorBody = Column(
       children: [
-        // Toolbar Desktop (Top) - Hide if title is focused
-        if (isDesktop && !_isTitleFocused) _buildToolbar(context, false),
+        // Toolbar Desktop (Top)
+        // Removed !_isTitleFocused check to ensure toolbar visibility for now/debug
+        if (isDesktop) 
+           _buildToolbar(context, false),
 
         // Title Field
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
           child: TextField(
-            autofocus: false, // Managed manually via focus node
+            autofocus: widget.entry == null, // Autofocus only on new notes
             focusNode: _titleFocusNode,
             controller: _titleControllerField,
-            textCapitalization: TextCapitalization.sentences, // Auto-capitalize
+            textCapitalization: TextCapitalization.sentences,
+            inputFormatters: [SentenceCaseTextFormatter()],
             onSubmitted: (_) {
-               // Move focus to editor on Enter
                _editorFocusNode.requestFocus();
             },
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 24, // Increased font size per request
               fontWeight: FontWeight.bold,
               color: Colors.white,
+              fontFamily: 'Poppins',
             ),
             decoration: const InputDecoration(
               filled: false,
@@ -1445,10 +1468,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             ),
             enableSuggestions: false,
             autocorrect: false,
-            autofillHints: const [], // FIX: Disable autofill to prevent password prompt
-            keyboardType: TextInputType.text,
-            textInputAction: TextInputAction.next,
-            enableIMEPersonalizedLearning: false, // Prevent password managers
+            keyboardType: TextInputType.multiline,
+            maxLines: null, // Allow unlimited lines
+            textInputAction: TextInputAction.newline,
           ),
         ),
 
@@ -1456,25 +1478,23 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 24.0),
           child: Divider(
-            color: Colors.white12, // Very subtle
+            color: Colors.white12,
             height: 1,
             thickness: 1,
           ),
         ),
 
+        // Editor Area
         Expanded(
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             child: QuillEditor.basic(
-              key: _editorKey, // Assign GlobalKey
+              key: _editorKey,
               controller: _controller,
               focusNode: _editorFocusNode,
               config: QuillEditorConfig(
                 padding: EdgeInsets.zero,
-                // FIX: Capitalize sentences
                 textCapitalization: TextCapitalization.sentences,
-                // Enable markdown shortcuts
                 characterShortcutEvents: standardCharactersShortcutEvents,
                 spaceShortcutEvents: standardSpaceShorcutEvents,
                 requestKeyboardFocusOnCheckListChanged: true,
@@ -1484,52 +1504,55 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                   return _handleEnterPressed(event);
                 },
                 customStyles: DefaultStyles(
-                  h1: DefaultTextBlockStyle(
-                    const TextStyle(
+                  h1: const DefaultTextBlockStyle(
+                    TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                       height: 1.15,
                       color: Colors.white,
+                      fontFamily: 'Poppins',
                     ),
-                    const HorizontalSpacing(0, 0),
-                    const VerticalSpacing(24, 12),
-                    const VerticalSpacing(0, 0),
+                    HorizontalSpacing(0, 0),
+                    VerticalSpacing(24, 12),
+                    VerticalSpacing(0, 0),
                     null,
                   ),
-                  h2: DefaultTextBlockStyle(
-                    const TextStyle(
+                  h2: const DefaultTextBlockStyle(
+                    TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       height: 1.15,
                       color: Colors.white,
+                      fontFamily: 'Poppins',
                     ),
-                    const HorizontalSpacing(0, 0),
-                    const VerticalSpacing(20, 10),
-                    const VerticalSpacing(0, 0),
+                    HorizontalSpacing(0, 0),
+                    VerticalSpacing(20, 10),
+                    VerticalSpacing(0, 0),
                     null,
                   ),
-                  h3: DefaultTextBlockStyle(
-                    const TextStyle(
+                  h3: const DefaultTextBlockStyle(
+                    TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       height: 1.15,
                       color: Colors.white,
+                      fontFamily: 'Poppins',
                     ),
-                    const HorizontalSpacing(0, 0),
-                    const VerticalSpacing(16, 8),
-                    const VerticalSpacing(0, 0),
+                    HorizontalSpacing(0, 0),
+                    VerticalSpacing(16, 8),
+                    VerticalSpacing(0, 0),
                     null,
                   ),
-                  paragraph: DefaultTextBlockStyle(
-                    const TextStyle(
+                  paragraph: const DefaultTextBlockStyle(
+                    TextStyle(
                       fontSize: 16,
                       color: AppColors.secondaryText,
                       height: 1.5,
                       fontFamily: 'Poppins',
                     ),
-                    const HorizontalSpacing(0, 0),
-                    const VerticalSpacing(0, 0),
-                    const VerticalSpacing(0, 0),
+                    HorizontalSpacing(0, 0),
+                    VerticalSpacing(0, 0),
+                    VerticalSpacing(0, 0),
                     null,
                   ),
                   lists: DefaultListBlockStyle(
@@ -1552,38 +1575,30 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         ),
 
         // Toolbar Mobile (Bottom)
-        if (isMobile) ...[
-          _buildToolbar(context, true),
-        ],
+        if (isMobile)
+           _buildToolbar(context, true),
       ],
     );
 
-    // Desktop dialog mode: direct body
-    // The dialog container is provided by the parent (JournalEntryCard)
-    // Widget bodyContent = editorBody; // OLD
-
-    // NEW: Window Mode Logic
+    // Default Scaffold (Content)
     Widget mainContent = Scaffold(
-          backgroundColor: AppColors.cardBackground, // Always card background in dialog
+          backgroundColor: AppColors.cardBackground,
           appBar: AppBar(
             backgroundColor: AppColors.cardBackground,
             elevation: 0,
-            automaticallyImplyLeading: false, // Custom leading/actions
+            automaticallyImplyLeading: false,
             leadingWidth: 0,
             titleSpacing: 24,
             title: Text(
-              _isEditing ? 'Editar Anotação' : 'Nova Anotação',
+              (widget.entry != null) ? 'Editar Anotação' : 'Nova Anotação',
               style: const TextStyle(
                   color: Colors.white, fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600),
             ),
             actions: [
-              // 1. Personal Day Pill
               Padding(
                 padding: const EdgeInsets.only(right: 8.0),
                 child: VibrationPill(vibrationNumber: _personalDay),
               ),
-              
-              // 2. Fullscreen Toggle (Desktop Only)
               if (isDesktop)
                 Padding(
                   padding: const EdgeInsets.only(right: 8.0),
@@ -1596,10 +1611,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                     tooltip: _isWindowMode ? 'Tela Cheia' : 'Modo Janela',
                   ),
                 ),
-
-              // 3. Close Button (Rightmost)
               Padding(
-                padding: const EdgeInsets.only(right: 16.0),
+                padding: const EdgeInsets.only(right: 8.0), // Reduced from 16.0
                 child: IconButton(
                    icon: const Icon(Icons.close, color: AppColors.secondaryText),
                    onPressed: () => Navigator.of(context).pop(),
@@ -1608,12 +1621,12 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ),
             ],
           ),
-          body: editorBody,
+          body: editorBody, // Use the body defined above
           bottomNavigationBar: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
             decoration: const BoxDecoration(
               color: AppColors.cardBackground,
-              border: const Border(top: BorderSide(color: AppColors.border)),
+              border: Border(top: BorderSide(color: AppColors.border)),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1630,7 +1643,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Ctrl+S hint (desktop only)
                     if (isDesktop && _hasUnsavedChanges)
                       Padding(
                         padding: const EdgeInsets.only(right: 8),
@@ -1643,84 +1655,107 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                           ),
                         ),
                       ),
-                    AnimatedOpacity(
-                      opacity: _hasUnsavedChanges || _isSaving ? 1.0 : 0.4,
-                      duration: const Duration(milliseconds: 250),
-                      child: AnimatedScale(
-                        scale: _hasUnsavedChanges || _isSaving ? 1.0 : 0.9,
+                    if (_hasUnsavedChanges || _isSaving)
+                      AnimatedScale(
+                        scale: _hasUnsavedChanges || _isSaving ? 1.0 : 0.0,
                         duration: const Duration(milliseconds: 250),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: _hasUnsavedChanges ? _handleSave : null,
-                            borderRadius: BorderRadius.circular(20),
-                            hoverColor: AppColors.primary.withValues(alpha: 0.1),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: _hasUnsavedChanges || _isSaving
-                                  ? BoxDecoration(
-                                      color: Colors.transparent,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(color: Colors.transparent),
-                                    )
-                                  : null,
-                              child: Center(
+                        child: isDesktop
+                            ? // DESKTOP: Capsule Button "Salvar"
+                              ElevatedButton(
+                                onPressed: _hasUnsavedChanges ? _handleSave : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 24, vertical: 12),
+                                  elevation: 4,
+                                ),
                                 child: _isSaving
                                     ? const SizedBox(
-                                        width: 20,
+                                        width: 20, // Smaller spinner
                                         height: 20,
                                         child: CircularProgressIndicator(
-                                          color: AppColors.primary,
-                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                          strokeWidth: 2,
                                         ),
                                       )
-                                    : const Icon(
-                                        Icons.check_rounded,
-                                        color: AppColors.primary,
-                                        size: 28,
+                                    : const Text(
+                                        'Salvar',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Poppins',
+                                          fontSize: 14,
+                                        ),
                                       ),
+                              )
+                            : // MOBILE: Round Button (Smaller)
+                              Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: _hasUnsavedChanges ? _handleSave : null,
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(10), // Reduced from 12
+                                    decoration: const BoxDecoration(
+                                        color: AppColors.primary,
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.black26,
+                                            blurRadius: 4,
+                                            offset: Offset(0, 2),
+                                          )
+                                        ]),
+                                    child: _isSaving
+                                        ? const SizedBox(
+                                            width: 20, // Reduced from 24
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2.5,
+                                            ),
+                                          )
+                                        : const Icon(
+                                            Icons.check,
+                                            color: Colors.white,
+                                            size: 20, // Reduced from 24
+                                          ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ),
                       ),
-                    ),
                   ],
                 ),
               ],
             ),
           ),
-        ),
-      ),
     );
 
-    // Wrap in Window Mode Container if valid
+    // Apply Desktop Animation Wrapper (Hero + AnimatedContainer)
     Widget finalLayer = mainContent;
-
-    if (isDesktop && _isWindowMode) {
-      finalLayer = Stack(
-        children: [
-          // Scrim (Dark background) (Simulating Dialog Barrier)
-          Positioned.fill(
-            child: GestureDetector(
-              onTap: () => Navigator.of(context).pop(), // Close if clicked outside
-              child: Container(color: Colors.black.withOpacity(0.5)),
-            ),
-          ),
-          // Centered Window (Simulating Dialog Content)
-          Center(
-             child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 850),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+    if (isDesktop) {
+        finalLayer = AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOutCubic,
+          width: _isWindowMode ? 700 : MediaQuery.of(context).size.width,
+          height: _isWindowMode ? 800 : MediaQuery.of(context).size.height,
+          child: Hero(
+             tag: heroTag,
+             // Removed createRectTween to allow default Hero transition (smoother for Cards)
+             child: Material(
+               type: MaterialType.transparency, // Match Source Material
+               child: ClipRRect(
+                  borderRadius: BorderRadius.circular(_isWindowMode ? 16 : 0),
                   child: mainContent,
-                ),
+               ),
              ),
           ),
-        ],
-      );
-    }
+        );
+        finalLayer = Center(child: finalLayer);
+    } 
 
     return CallbackShortcuts(
       bindings: {
@@ -1730,7 +1765,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       },
       child: Focus(
         autofocus: true,
-        child: finalLayer, // Use the wrapped layer
+        child: finalLayer,
       ),
     );
   }
@@ -1807,9 +1842,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         String cleanText = rawText;
 
         if (isAttributeChecklist) {
-          isCompleted = listAttr?.value == Attribute.checked.value;
+          isCompleted = listAttr.value == Attribute.checked.value;
         } else if (isMarkdownChecklist) {
-          final checkMark = markdownMatch!.group(2) ?? '';
+          final checkMark = markdownMatch.group(2) ?? '';
           isCompleted = checkMark.toLowerCase() == 'x';
           cleanText = markdownMatch.group(3) ?? '';
           debugPrint('   -> Detected Markdown Pattern! Status: $isCompleted, Text: "$cleanText"');
@@ -1861,7 +1896,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
        if (existingTaskId != null) {
          // Fix: Check for duplicates
          if (seenTaskIdsInThisPass.contains(existingTaskId)) {
-            debugPrint('⚠️ [JournalExtract] Duplicate Task ID $existingTaskId found at "${text}". Treating as NEW task.');
+            debugPrint('⚠️ [JournalExtract] Duplicate Task ID $existingTaskId found at "$text". Treating as NEW task.');
             existingTaskId = null; // Force creation of new task
          } else {
             seenTaskIdsInThisPass.add(existingTaskId);
@@ -2097,7 +2132,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         }
         
         // Skip lines without taskId
-        if (taskId == null || taskId is! String || taskId.isEmpty) continue;
+        if (taskId == null || taskId.isEmpty) continue;
         
         final systemTask = taskMap[taskId];
         
@@ -2226,9 +2261,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         if (!systemTasksMap.containsKey(taskId)) {
           // Task removed in system -> remove checkbox & taskId attribute (convert to plain text)
           _controller.formatText(line.documentOffset, line.length,
-              Attribute(_taskIdKey, AttributeScope.inline, null));
+              const Attribute(_taskIdKey, AttributeScope.inline, null));
           _controller.formatText(line.documentOffset, line.length,
-              Attribute('list', AttributeScope.block, null));
+              const Attribute('list', AttributeScope.block, null));
           docChanged = true;
           continue;
         }
@@ -2375,7 +2410,7 @@ class _SincroCheckboxBuilder extends QuillCheckboxBuilder {
               border: Border.all(
                 color: isChecked
                     ? AppColors.primary
-                    : AppColors.secondaryText.withOpacity(0.5),
+                    : AppColors.secondaryText.withValues(alpha: 0.5),
                 width: 2,
               ),
               borderRadius: BorderRadius.circular(4),
@@ -2392,6 +2427,198 @@ class _SincroCheckboxBuilder extends QuillCheckboxBuilder {
           ),
         ),
       ),
+    );
+  }
+}
+// ─── Scrollable Toolbar Wrapper ───
+
+// ─── Input Formatter for Sentence Case ───
+class SentenceCaseTextFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) return newValue;
+
+    String text = newValue.text;
+    if (text.length == 1 && text != text.toUpperCase()) {
+       return newValue.copyWith(text: text.toUpperCase());
+    }
+    
+    // Only capitalize first char if following a reset (not perfect for all sentences but good for Title)
+    // A more robust regex would be needed for full paragraphs, but for Title field (often short), 
+    // basic capitalization is key.
+    return newValue; 
+  }
+}
+
+// ─── Scrollable Toolbar Wrapper ───
+
+class _ArrowButton extends StatefulWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _ArrowButton({required this.icon, required this.onTap});
+
+  @override
+  State<_ArrowButton> createState() => _ArrowButtonState();
+}
+
+class _ArrowButtonState extends State<_ArrowButton> {
+  bool _isHovering = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovering = true),
+      onExit: (_) => setState(() => _isHovering = false),
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: Container(
+          // Minimal padding to be clickable but "close to edge"
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 8), 
+          color: Colors.transparent, 
+          child: Icon(
+            widget.icon,
+            // Hover: Primary Color
+            // Non-Hover: Secondary Text with low opacity
+            color: _isHovering ? AppColors.primary : AppColors.secondaryText.withValues(alpha: 0.5),
+            size: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScrollableToolbarWrapper extends StatefulWidget {
+  final Widget child;
+  const _ScrollableToolbarWrapper({required this.child});
+
+  @override
+  State<_ScrollableToolbarWrapper> createState() => _ScrollableToolbarWrapperState();
+}
+
+class _ScrollableToolbarWrapperState extends State<_ScrollableToolbarWrapper> {
+  final ScrollController _scrollController = ScrollController();
+  bool _canScrollLeft = false;
+  bool _canScrollRight = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_checkScrollability);
+    // Initial check
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollability());
+  }
+
+  @override
+  void didUpdateWidget(_ScrollableToolbarWrapper oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-check when widget updates (e.g. constraints change)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollability());
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_checkScrollability);
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _checkScrollability() {
+    if (!_scrollController.hasClients) return;
+    
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    
+    // Tolerance
+    final canScrollLeft = currentScroll > 1.0;
+    final canScrollRight = currentScroll < maxScroll - 1.0;
+
+    if (canScrollLeft != _canScrollLeft || canScrollRight != _canScrollRight) {
+      if (mounted) {
+        setState(() {
+          _canScrollLeft = canScrollLeft;
+          _canScrollRight = canScrollRight;
+        });
+      }
+    }
+  }
+
+  void _scrollLeft() {
+    _scrollController.animateTo(
+      (_scrollController.offset - 200).clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _scrollRight() {
+    _scrollController.animateTo(
+      (_scrollController.offset + 200).clamp(0.0, _scrollController.position.maxScrollExtent),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Check on build too (handle resize instantly if layout allows)
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkScrollability());
+
+    return Row(
+      children: [
+        // Left Arrow
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: AnimatedOpacity(
+            opacity: _canScrollLeft ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: _canScrollLeft
+                ? Padding(
+                    padding: const EdgeInsets.only(right: 0), // Minimal padding
+                    child: _ArrowButton(icon: Icons.chevron_left, onTap: _scrollLeft),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+        
+        // Scrollable Content
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              // Also listen to ScrollMetricsNotification for resize events
+              if (notification is ScrollMetricsNotification || notification is ScrollNotification) {
+                 _checkScrollability();
+              }
+              return false;
+            },
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              physics: const ClampingScrollPhysics(),
+              child: widget.child,
+            ),
+          ),
+        ),
+
+        // Right Arrow
+        AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: AnimatedOpacity(
+            opacity: _canScrollRight ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 300),
+            child: _canScrollRight
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 0), // Minimal padding
+                    child: _ArrowButton(icon: Icons.chevron_right, onTap: _scrollRight),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ),
+      ],
     );
   }
 }

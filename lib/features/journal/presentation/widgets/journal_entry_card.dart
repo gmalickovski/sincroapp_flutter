@@ -4,242 +4,95 @@ import 'dart:convert';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:sincro_app_flutter/core/routes/hero_dialog_route.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/journal/presentation/journal_editor_screen.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/features/journal/presentation/widgets/hoverable_card.dart';
 
 class JournalEntryCard extends StatelessWidget {
   final JournalEntry entry;
   final UserModel userData;
   final VoidCallback onDelete;
-
+  final VoidCallback onDuplicate; // New callback
 
   const JournalEntryCard({
     super.key,
     required this.entry,
     required this.userData,
     required this.onDelete,
+    required this.onDuplicate, // Required
   });
 
-  // Mapeia o ID do humor para o emoji correspondente
-  static const Map<int, String> _moodMap = {
-    1: '😔',
-    2: '😟',
-    3: '😐',
-    4: '😊',
-    5: '😄',
-  };
+  // ... (Mood Map and getBorderColor remain same)
 
-  // Mapeia o número do Dia Pessoal para uma cor de borda
+  // ... (_buildRichContent remains same)
+
   Color _getBorderColor() {
-    switch (entry.personalDay) {
-      case 1:
-        return Colors.red.shade400;
-      case 2:
-        return Colors.orange.shade400;
-      case 3:
-        return Colors.yellow.shade400;
-      case 4:
-        return Colors.lime.shade400;
-      case 5:
-        return Colors.cyan.shade400;
-      case 6:
-        return Colors.blue.shade400;
-      case 7:
-        return Colors.purple.shade400;
-      case 8:
-        return Colors.pink.shade400;
-      case 9:
-        return Colors.teal.shade400;
-      case 11:
-        return Colors.purple.shade300;
-      case 22:
-        return Colors.indigo.shade300;
-      default:
-        return AppColors.primary;
+    switch (entry.mood) {
+      case 1: return AppColors.moodAwful;
+      case 2: return AppColors.moodBad;
+      case 3: return AppColors.moodNeutral;
+      case 4: return AppColors.moodGood;
+      case 5: return AppColors.moodGreat;
+      default: return AppColors.border;
     }
   }
 
-  // Constrói o conteúdo rico (QuillEditor) ou Texto Simples (Fallback)
-  Widget _buildRichContent() {
-    try {
-      if (entry.content.isEmpty) return const SizedBox.shrink();
-
-      final json = jsonDecode(entry.content);
-      final doc = quill.Document.fromJson(json);
-
-      return AbsorbPointer( // Impede interação (scroll, seleção)
-        child: quill.QuillEditor.basic(
-          controller: quill.QuillController(
-            document: doc,
-            selection: const TextSelection.collapsed(offset: 0),
-            readOnly: true,
-          ),
-          focusNode: FocusNode(canRequestFocus: false),
-          scrollController: ScrollController(),
-          config: const quill.QuillEditorConfig(
-            scrollable: false,
-            autoFocus: false,
-            expands: false,
-            padding: EdgeInsets.zero,
-            showCursor: false,
-            enableInteractiveSelection: false,
-            enableSelectionToolbar: false,
-          ),
-        ),
-      );
-    } catch (e) {
-      // Fallback para texto simples
-      return Text(
-        entry.content,
-        style: const TextStyle(
-          color: AppColors.secondaryText,
-          fontSize: 15,
-          height: 1.5,
-          fontFamily: 'Poppins',
-        ),
-      );
-    }
-  }
-
-  Widget _buildCardContent(BuildContext context) {
-    final borderColor = _getBorderColor();
-    final formattedDate =
-        DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt);
-    final formattedTime = DateFormat("HH:mm").format(entry.createdAt);
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cabeçalho do Card
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (entry.title != null && entry.title!.isNotEmpty)
-                      Text(
-                        entry.title!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Text(
-                      '$formattedDate • $formattedTime',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
-              if (entry.mood != null && _moodMap.containsKey(entry.mood))
-                Text(_moodMap[entry.mood]!,
-                    style: const TextStyle(fontSize: 24)),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Corpo do Card (Preview Rico)
-          Container(
-            constraints: const BoxConstraints(maxHeight: 150),
-            child: ShaderMask(
-              shaderCallback: (Rect bounds) {
-                return LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.white, Colors.white, Colors.transparent],
-                  stops: const [0.0, 0.7, 1.0],
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.dstIn,
-              child: _buildRichContent(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Rodapé do Card
-          Row(
+  Widget _buildFooter(BuildContext context) {
+    return Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center, // Ensure vertical alignment
             children: [
               VibrationPill(vibrationNumber: entry.personalDay),
-              // Wrap in GestureDetector to absorb taps and prevent
-              // the parent OpenContainer from navigating away before the
-              // popup can open (fixes "deactivated widget" error).
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {}, // absorb tap so OpenContainer doesn't fire
+              Transform.translate(
+                offset: const Offset(10, 0), // Push button towards the right edge
                 child: PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      final isDesktop = MediaQuery.of(context).size.width >= 768;
-                      // Edit now just pushes the screen. 
-                      // Ideally we'd trigger the local OpenContainer but that requires a key or callback.
-                      // Pushing directly works fine for the menu action.
-                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (_) => JournalEditorScreen(
-                              userData: userData,
-                              entry: entry,
-                            ),
-                          ),
-                        );
-                    } else if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  icon: const Icon(Icons.more_vert,
-                      color: AppColors.secondaryText),
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20, // Slightly larger for mobile touch target
+                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
                   tooltip: "Opções",
+                  offset: const Offset(0, 40),
                   color: AppColors.cardBackground,
                   elevation: 8,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                       side: const BorderSide(
                           color: AppColors.border, width: 1)),
+                  onSelected: (value) {
+                    if (value == 'duplicate') {
+                        onDuplicate();
+                    } else if (value == 'delete') {
+                      onDelete();
+                    }
+                  },
                   itemBuilder: (BuildContext context) =>
                       <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'edit',
+                     const PopupMenuItem<String>(
+                      value: 'duplicate',
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined,
-                              color: Colors.white, size: 20),
+                          Icon(Icons.content_copy, 
+                              color: Colors.white, size: 18),
                           SizedBox(width: 8),
-                          Text('Editar',
-                              style: TextStyle(color: Colors.white)),
+                          Text('Duplicar', 
+                              style: TextStyle(color: Colors.white, fontSize: 14)),
                         ],
                       ),
                     ),
-
                     const PopupMenuDivider(height: 1),
                     PopupMenuItem<String>(
                       value: 'delete',
                       child: Row(
                         children: [
                            Icon(Icons.delete_outline_rounded,
-                              color: Colors.red.shade400, size: 20),
+                              color: Colors.red.shade400, size: 18),
                           const SizedBox(width: 8),
                           Text('Excluir',
-                              style: TextStyle(color: Colors.red.shade400)),
+                              style: TextStyle(color: Colors.red.shade400, fontSize: 14)),
                         ],
                       ),
                     ),
@@ -247,41 +100,331 @@ class JournalEntryCard extends StatelessWidget {
                 ),
               ),
             ],
-          )
-        ],
-      ),
-    );
+          );
   }
 
   @override
   Widget build(BuildContext context) {
     final borderColor = _getBorderColor();
+    final isDesktop = MediaQuery.of(context).size.width > 800;
 
+    // Desktop: Use showDialog for "Floating Modal" (keeps background visible)
+    if (isDesktop) {
+      return Hero(
+        tag: entry.id, // Unique tag for this entry
+        // Removed custom flightShuttleBuilder to restore default Hero flight
+        child: Material( 
+          type: MaterialType.transparency,
+          child: HoverableCard(
+            borderRadius: 12,
+            borderColor: borderColor,
+            onTap: () {
+              Navigator.of(context).push(
+                HeroDialogRoute(
+                  builder: (context) {
+                    return JournalEditorScreen(
+                      userData: userData,
+                      entry: entry,
+                    );
+                  },
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: const BoxDecoration(
+                 color: AppColors.cardBackground, // Force background color for Desktop
+                 borderRadius: BorderRadius.all(Radius.circular(12)),
+              ),
+              constraints: const BoxConstraints(minHeight: 150),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   _buildHeader(formattedDate: DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt), formattedTime: DateFormat("HH:mm").format(entry.createdAt)),
+                   const SizedBox(height: 12),
+                   _buildBody(),
+                   const SizedBox(height: 12),
+                   _buildFooter(context),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Mobile: OpenContainer logic...
     return OpenContainer(
+      transitionType: ContainerTransitionType.fade,
       transitionDuration: const Duration(milliseconds: 500),
-      transitionType: ContainerTransitionType.fadeThrough,
-      closedColor: Colors.transparent, // Transparent for custom card style
-      openColor: AppColors.background, // Fullscreen background
-      middleColor: AppColors.background,
-      closedElevation: 0,
-      openElevation: 0,
-      closedShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: borderColor, width: 1.5),
+      openBuilder: (context, _) => JournalEditorScreen(
+        userData: userData,
+        entry: entry,
       ),
-      openBuilder: (context, closeContainer) {
-        return JournalEditorScreen(
-          userData: userData,
-          entry: entry,
-        );
-      },
-      closedBuilder: (context, openContainer) {
-        return _buildCardContent(context);
-        // Note: _buildCardContent's InkWell onTap is now redundant/conflicting if present.
-        // We will remove the internal InkWell/GestureDetector in _buildCardContent if it exists
-        // or ensure OpenContainer's tappable property handles the interaction.
-      },
-      tappable: true,
+      closedElevation: 0,
+       closedShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: borderColor, width: 1),
+      ),
+      closedColor: AppColors.cardBackground,
+      openColor: AppColors.cardBackground,
+      middleColor: AppColors.cardBackground,
+      closedBuilder: (context, openContainer) => HoverableCard(
+        borderRadius: 12,
+        borderColor: borderColor,
+        onTap: openContainer,
+        child: Container(
+          padding: const EdgeInsets.all(16.0),
+          constraints: const BoxConstraints(minHeight: 150),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+               _buildHeader(formattedDate: DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt), formattedTime: DateFormat("HH:mm").format(entry.createdAt)),
+               const SizedBox(height: 12),
+               _buildBody(),
+               const SizedBox(height: 12),
+               _buildFooter(context),
+            ],
+          ),
+        ),
+      ),
     );
   }
+
+  // ... (_buildHeader, _buildBody remain same)
+
+  Widget _buildHeader({required String formattedDate, required String formattedTime}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          formattedDate,
+          style: const TextStyle(
+             color: AppColors.secondaryText,
+             fontSize: 12,
+             fontWeight: FontWeight.w500,
+             fontFamily: 'Poppins',
+          ),
+        ),
+         Text(
+          formattedTime,
+          style: const TextStyle(
+             color: AppColors.secondaryText,
+             fontSize: 12,
+              fontFamily: 'Poppins',
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody() {
+    if (entry.content.isEmpty) return const SizedBox.shrink();
+
+    // 1. Parse Document
+    quill.Document? doc;
+    try {
+      if (entry.content.startsWith('[')) {
+        doc = quill.Document.fromJson(jsonDecode(entry.content));
+      }
+    } catch (_) {
+      // Fallback handled below
+    }
+
+    // 2. Fallback for Plain Text
+    if (doc == null) {
+      return Text(
+        entry.content,
+        maxLines: 8, // Increased line limit
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: AppColors.secondaryText,
+          fontSize: 14,
+          fontFamily: 'Poppins',
+        ),
+      );
+    }
+
+    // 3. Extract first few lines (visual lines)
+    final root = doc.root;
+    final lines = <quill.Line>[];
+    int currentChars = 0;
+    const int maxChars = 300; // Limit total characters in preview
+    
+    // Helper to extract lines from Blocks or direct Line nodes
+    void extractLines(quill.Node node) {
+      if (lines.length >= 6 || currentChars >= maxChars) return;
+      if (node is quill.Line) {
+         final text = node.toPlainText().trim();
+         if (text.isNotEmpty) {
+             lines.add(node);
+             currentChars += text.length;
+         }
+      } else if (node is quill.Block) {
+        for (var child in node.children) {
+          extractLines(child);
+        }
+      }
+    }
+
+    for (var node in root.children) {
+      extractLines(node);
+      if (lines.length >= 6 || currentChars >= maxChars) break;
+    }
+
+    // 4. Build Widgets
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (entry.title != null && entry.title!.isNotEmpty) ...[
+          Text(
+            entry.title!,
+            maxLines: 3, // Allow wrapping for Title
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+
+        ...lines.map((line) => _buildLinePreview(line)),
+        
+        if (currentChars >= maxChars || lines.length >= 6)
+            const Padding(
+              padding: EdgeInsets.only(top: 4.0),
+              child: Text(
+                '...',
+                style: TextStyle(color: AppColors.secondaryText),
+              ),
+            ),
+
+        if (lines.isEmpty && (entry.title == null || entry.title!.isEmpty))
+           const Text(
+              'Sem conteúdo',
+              style: TextStyle(color: AppColors.tertiaryText, fontSize: 14),
+           ),
+      ],
+    );
+  }
+
+  Widget _buildLinePreview(quill.Line line) {
+    final text = line.toPlainText().trim();
+    if (text.isEmpty) return const SizedBox.shrink();
+
+    // Attributes
+    final attrs = line.style.attributes;
+    final listAttr = attrs['list']?.value;
+    final isCheckbox = listAttr == 'checked' || listAttr == 'unchecked';
+    final isChecked = listAttr == 'checked';
+    final isBullet = listAttr == 'bullet';
+    final isOrdered = listAttr == 'ordered';
+    
+    // Prefix
+    Widget? prefix;
+    if (isCheckbox) {
+      // Replicating _SincroCheckboxBuilder style
+      prefix = Container(
+        width: 16,
+        height: 16,
+        margin: const EdgeInsets.only(top: 2, right: 8),
+        decoration: BoxDecoration(
+           color: isChecked ? AppColors.primary : Colors.transparent,
+           border: Border.all(
+             color: isChecked
+                 ? AppColors.primary
+                 : AppColors.secondaryText.withValues(alpha: 0.5),
+             width: 2,
+           ),
+           borderRadius: BorderRadius.circular(4),
+        ),
+        child: isChecked
+            ? const Center(
+                child: Icon(
+                  Icons.check,
+                  size: 12,
+                  color: Colors.white,
+                ),
+              )
+            : null,
+      );
+    } else if (isBullet) {
+      prefix = const Padding(
+        padding: EdgeInsets.only(top: 6.0, right: 8.0), // Align with text
+        child: Icon(Icons.circle, size: 5, color: AppColors.secondaryText),
+      );
+    } else if (isOrdered) {
+        // Simple dot for preview smoothness, handling numbers strictly is complex without index context
+        prefix = const Padding(
+             padding: EdgeInsets.only(top: 4.0, right: 8.0),
+             child: Text("•", style: TextStyle(color: AppColors.secondaryText)),
+        );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0), // Increased spacing for readablity
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (prefix != null) prefix,
+          Expanded(child: _buildRichText(text)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRichText(String text) {
+    // Regex Patterns
+    final tagRegex = RegExp(r'\B#\w+');
+    final mentionRegex = RegExp(r'\B@\w+');
+    final timeRegex = RegExp(r'\b\d{1,2}:\d{2}\b');
+    
+    final spans = <InlineSpan>[];
+    
+    text.splitMapJoin(
+       RegExp(r'(\B#\w+)|(\B@\w+)|(\b\d{1,2}:\d{2}\b)'),
+       onMatch: (m) {
+          final match = m.group(0)!;
+          Color color = AppColors.secondaryText;
+          FontWeight weight = FontWeight.normal;
+
+          if (tagRegex.hasMatch(match)) {
+             color = AppColors.secondaryAccent; // Purple for tags
+             weight = FontWeight.w600;
+          } else if (mentionRegex.hasMatch(match)) {
+             color = AppColors.primary; // Primary for mentions
+             weight = FontWeight.bold;
+          } else if (timeRegex.hasMatch(match)) {
+             color = AppColors.primary; // Primary for time
+             weight = FontWeight.w600;
+          }
+          
+          spans.add(TextSpan(
+            text: match,
+            style: TextStyle(color: color, fontWeight: weight, fontFamily: 'Poppins'),
+          ));
+          return '';
+       },
+       onNonMatch: (n) {
+         spans.add(TextSpan(
+           text: n,
+           style: const TextStyle(color: AppColors.secondaryText, fontSize: 14, fontFamily: 'Poppins'),
+         ));
+         return '';
+       },
+    );
+
+    return RichText(
+      maxLines: 3, // Allow logical line to wrap up to 3 times
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(children: spans),
+    );
+  }
+
+
 }

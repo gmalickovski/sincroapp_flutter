@@ -40,7 +40,7 @@ class ParserTextEditingController extends TextEditingController {
           if (validMentions.contains(username)) {
             children.add(TextSpan(
               text: matchText,
-              style: style?.merge(TextStyle(
+              style: style?.merge(const TextStyle(
                 color: TaskParser.mentionColor,
                 fontWeight: FontWeight.bold,
               )),
@@ -52,7 +52,7 @@ class ParserTextEditingController extends TextEditingController {
           // Tag: sempre estiliza
           children.add(TextSpan(
             text: matchText,
-            style: style?.merge(TextStyle(
+            style: style?.merge(const TextStyle(
               color: TaskParser.tagColor,
             )),
           ));
@@ -60,7 +60,7 @@ class ParserTextEditingController extends TextEditingController {
           // Meta: sempre estiliza
           children.add(TextSpan(
             text: matchText,
-            style: style?.merge(TextStyle(
+            style: style?.merge(const TextStyle(
               color: TaskParser.goalColor,
               fontWeight: FontWeight.bold,
             )),

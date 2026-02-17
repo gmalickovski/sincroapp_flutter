@@ -94,10 +94,11 @@ dependencies:
   flutter_quill: ^11.5.0
 
   markdown: ^7.3.0
-  firebase_auth: any
+
   flutter_animate: ^4.5.2
   animations: ^2.1.1
   window_manager: ^0.5.1
+  firebase_auth: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

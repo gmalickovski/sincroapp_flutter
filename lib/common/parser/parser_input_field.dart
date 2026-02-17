@@ -114,7 +114,9 @@ class _ParserInputFieldState extends State<ParserInputField> {
   void _showSuggestions(ParserTrigger trigger) {
     if (_currentSearchTerm == trigger.query &&
         _activeType == trigger.type &&
-        _overlayEntry != null) return;
+        _overlayEntry != null) {
+      return;
+    }
 
     _currentSearchTerm = trigger.query;
     _triggerStartIndex = trigger.startIndex;

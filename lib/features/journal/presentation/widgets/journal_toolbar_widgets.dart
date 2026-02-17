@@ -107,7 +107,7 @@ class _ScrollableToolbarWrapperState extends State<ScrollableToolbarWrapper> {
                     end: Alignment.centerRight,
                     colors: [
                       AppColors.cardBackground,
-                      AppColors.cardBackground.withOpacity(0.0),
+                      AppColors.cardBackground.withValues(alpha: 0.0),
                     ],
                   ),
                 ),
@@ -141,7 +141,7 @@ class _ScrollableToolbarWrapperState extends State<ScrollableToolbarWrapper> {
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     colors: [
-                      AppColors.cardBackground.withOpacity(0.0),
+                      AppColors.cardBackground.withValues(alpha: 0.0),
                       AppColors.cardBackground,
                     ],
                   ),
@@ -329,7 +329,7 @@ class _ColorSelectionButtonState extends State<ColorSelectionButton> {
 
   Widget _buildColorOption(Color? color) {
     final bool isSelected =
-        _selectedColor?.value == color?.value; // Compara valor (null safe)
+        _selectedColor?.toARGB32() == color?.toARGB32(); // Compara valor (null safe)
 
     return GestureDetector(
       onTap: () {
@@ -367,7 +367,7 @@ class _ColorSelectionButtonState extends State<ColorSelectionButton> {
 
     String hex = '';
     if (color != null) {
-      hex = '#${color.value.toRadixString(16).padLeft(8, '0').substring(2)}';
+      hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
     }
 
     if (widget.isBackground) {

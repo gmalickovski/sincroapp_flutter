@@ -7,7 +7,8 @@ import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 
-import 'package:sincro_app_flutter/features/journal/presentation/journal_screen.dart'; // For JournalViewScope
+import 'package:sincro_app_flutter/features/journal/models/journal_view_scope.dart'; // New Import
+// import 'package:sincro_app_flutter/features/journal/presentation/journal_screen.dart'; // REMOVED to break cycle
 
 class JournalFilterPanel extends StatefulWidget {
   final JournalViewScope initialScope;

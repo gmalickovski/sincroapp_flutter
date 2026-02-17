@@ -2282,4 +2282,22 @@ class SupabaseService {
       return null;
     }
   }
+  /// Creates a new Journal Entry
+  Future<void> createJournalEntry(JournalEntry entry) async {
+      try {
+        final user = _supabase.auth.currentUser;
+        if (user == null) throw Exception('User not authenticated');
+
+        final data = entry.toMap();
+        data['user_id'] = user.id; // Explicitly set user_id
+
+        await _supabase
+            .schema('sincroapp')
+            .from('journal_entries')
+            .insert(data);
+      } catch (e) {
+        debugPrint('Error creating journal entry: $e');
+        rethrow;
+      }
+  }
 }

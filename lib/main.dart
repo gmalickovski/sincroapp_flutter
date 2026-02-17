@@ -4,7 +4,6 @@ import 'dart:ui'; // For PointerDeviceKind
 import 'dart:io'; // For Platform check
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
 import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:window_manager/window_manager.dart';
 import 'package:workmanager/workmanager.dart'; // 🚀 Import Workmanager
@@ -200,45 +199,6 @@ class SincroApp extends StatelessWidget {
       theme: AppTheme.darkTheme,
       home: const AuthCheck(),
       builder: (context, child) {
-        // Desktop Custom Title Bar Wrapper
-        if (!kIsWeb &&
-            (defaultTargetPlatform == TargetPlatform.windows ||
-                defaultTargetPlatform == TargetPlatform.linux ||
-                defaultTargetPlatform == TargetPlatform.macOS)) {
-          return Column(
-            children: [
-              // Custom Title Bar Area
-              Container(
-                height: 32,
-                decoration: const BoxDecoration(
-                  color: AppColors.background,
-                  border: Border(
-                    bottom: BorderSide(
-                      color: Color(0xFF2A2A2A), // Subtle horizontal line
-                      width: 1.0,
-                    ),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DragToMoveArea(
-                        child: Container(
-                          color: Colors.transparent,
-                        ),
-                      ),
-                    ),
-                    const WindowCaption(
-                      brightness: Brightness.dark,
-                      backgroundColor: AppColors.background,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(child: child ?? const SizedBox()),
-            ],
-          );
-        }
         return child ?? const SizedBox();
       },
     );
