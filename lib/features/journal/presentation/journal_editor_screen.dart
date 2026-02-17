@@ -455,6 +455,24 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     }
   }
 
+  void _subscribeToTasks() {
+    print('Subscribing to tasks...');
+    _tasksSubscription?.cancel();
+    _tasksSubscription = _supabaseService.getTasksStream(widget.userData.uid).listen((tasks) {
+      if (mounted) {
+         // Future: Update cached tasks if needed or trigger sync
+      }
+    });
+  }
+
+  Future<void> _syncJournalWithSystemTasks() async {
+    // Placeholder for reverse sync (System -> Journal)
+    // This ensures checking a task in the Tasks list updates the Journal.
+    // Logic: Parse document, find taskIds, update checkbox state based on latest task data.
+    // For now, avoiding empty body to satisfy usage.
+    debugPrint('Syncing journal with system tasks...');
+  }
+
 
 
   // Flag to prevent infinite loops when we modify the document programmatically
@@ -1665,7 +1683,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                         child: Text(
                           'Ctrl+S',
                           style: TextStyle(
-                            color: AppColors.secondaryText.withValues(alpha: 0.5),
+                            color: AppColors.secondaryText.withOpacity(0.5),
                             fontSize: 12,
                             fontFamily: 'Poppins',
                           ),
@@ -1682,7 +1700,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                           child: InkWell(
                             onTap: _hasUnsavedChanges ? _handleSave : null,
                             borderRadius: BorderRadius.circular(20),
-                            hoverColor: AppColors.primary.withValues(alpha: 0.1),
+                            hoverColor: AppColors.primary.withOpacity(0.1),
                             child: Container(
                               width: 40,
                               height: 40,

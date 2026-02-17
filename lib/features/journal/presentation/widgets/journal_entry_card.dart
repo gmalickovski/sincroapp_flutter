@@ -9,6 +9,7 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/journal/presentation/journal_editor_screen.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:sincro_app_flutter/models/user_model.dart';
 
 class JournalEntryCard extends StatelessWidget {
@@ -105,192 +106,214 @@ class JournalEntryCard extends StatelessWidget {
     }
   }
 
-  Widget _buildCardContent(BuildContext context) {
-    final borderColor = _getBorderColor();
-    final formattedDate =
-        DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt);
-    final formattedTime = DateFormat("HH:mm").format(entry.createdAt);
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor, width: 1.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Cabeçalho do Card
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (entry.title != null && entry.title!.isNotEmpty)
-                      Text(
-                        entry.title!,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    Text(
-                      '$formattedDate • $formattedTime',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                  ],
-                ),
-              ),
-              if (entry.mood != null && _moodMap.containsKey(entry.mood))
-                Text(_moodMap[entry.mood]!,
-                    style: const TextStyle(fontSize: 24)),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Corpo do Card (Preview Rico)
-          Container(
-            constraints: const BoxConstraints(maxHeight: 150),
-            child: ShaderMask(
-              shaderCallback: (Rect bounds) {
-                return LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.white, Colors.white, Colors.transparent],
-                  stops: const [0.0, 0.7, 1.0],
-                ).createShader(bounds);
-              },
-              blendMode: BlendMode.dstIn,
-              child: _buildRichContent(),
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          // Rodapé do Card
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              VibrationPill(vibrationNumber: entry.personalDay),
-              // Wrap in GestureDetector to absorb taps and prevent
-              // the parent OpenContainer from navigating away before the
-              // popup can open (fixes "deactivated widget" error).
-              GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () {}, // absorb tap so OpenContainer doesn't fire
-                child: PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      final isDesktop = MediaQuery.of(context).size.width >= 768;
-                      if (isDesktop) {
-                         // Use same dialog logic
-                         // We need a helper or just re-call the logic. 
-                         // Check if we can access the wrapper method.
-                         // Actually, I can't access `_openEditor` easily from here if it stays inside `JournalEntryCard` which is stateless,
-                         // wait, `_openEditor` IS in the class. I can call it.
-                         _openEditor(context);
-                      } else {
-                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                            fullscreenDialog: true,
-                            builder: (_) => JournalEditorScreen(
-                              userData: userData,
-                              entry: entry,
-                            ),
-                          ),
-                        );
-                      }
-                    } else if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  icon: const Icon(Icons.more_vert,
-                      color: AppColors.secondaryText),
-                  tooltip: "Opções",
-                  color: AppColors.cardBackground,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: AppColors.border, width: 1)),
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                    const PopupMenuItem<String>(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined,
-                              color: Colors.white, size: 20),
-                          SizedBox(width: 8),
-                          Text('Editar',
-                              style: TextStyle(color: Colors.white)),
-                        ],
-                      ),
-                    ),
-
-                    const PopupMenuDivider(height: 1),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                           Icon(Icons.delete_outline_rounded,
-                              color: Colors.red.shade400, size: 20),
-                          const SizedBox(width: 8),
-                          Text('Excluir',
-                              style: TextStyle(color: Colors.red.shade400)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  void _openEditor(BuildContext context) {
-    if (kIsWeb ||
-        (defaultTargetPlatform == TargetPlatform.windows ||
-            defaultTargetPlatform == TargetPlatform.linux ||
-            defaultTargetPlatform == TargetPlatform.macOS)) {
-      // Desktop: Open in our new responsive dialog
-      showJournalEditorDialog(
-        context,
-        userData: widget.userData,
-        entry: widget.entry,
-      );
-    } else {
-      // Mobile: Use existing OpenContainer logic or simple push if preferred
-      // For now, OpenContainer is handled in the build method wrapper.
-      // If we are here, it might be triggered by menu.
-      // On mobile, let's just push the route conventionally if not using container transform
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (context) => JournalEditorScreen(
-              userData: widget.userData,
-              entry: widget.entry,
-            ),
-          ),
-        );
+  // Extracts plain text from Quill JSON or returns raw content
+  String _getPreviewText() {
+    if (entry.content.isEmpty) return 'Nenhum conteúdo.';
+    try {
+      final json = jsonDecode(entry.content);
+      final doc = quill.Document.fromJson(json);
+      return doc.toPlainText().trim();
+    } catch (e) {
+      return entry.content; // Fallback to raw content if JSON parsing fails
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = _getBorderColor();
-    final isDesktop = MediaQuery.of(context).size.width >= 768; // Simple breakpoint
+    final entryDate = entry.createdAt;
+    final day = entryDate.day.toString().padLeft(2, '0');
+    final month = DateFormat.MMM('pt_BR').format(entryDate).toUpperCase();
+    final weekDay = DateFormat.E('pt_BR').format(entryDate).toUpperCase();
+    final moodEmoji = _moodMap[entry.mood] ?? '';
+
+    // Define the card content separately so we can reuse it
+    Widget cardContent = Container(
+      decoration: BoxDecoration(
+        color: AppColors.cardBackground,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _getBorderColor(),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Date Column
+                    Column(
+                      children: [
+                        Text(
+                          day,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            height: 1,
+                          ),
+                        ),
+                        Text(
+                          month,
+                          style: const TextStyle(
+                            color: AppColors.secondaryText,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          weekDay,
+                          style: const TextStyle(
+                            color: AppColors.secondaryText,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    // Content Column
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  entry.title.isNotEmpty
+                                      ? entry.title
+                                      : 'Sem título',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (moodEmoji.isNotEmpty) ...[
+                                const SizedBox(width: 8),
+                                Text(
+                                  moodEmoji,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _getPreviewText(),
+                            style: const TextStyle(
+                              color: AppColors.secondaryText,
+                              fontSize: 14,
+                              height: 1.4,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Actions Menu
+          Positioned(
+            bottom: 0,
+            right: 0,
+            child: PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert,
+                  color: AppColors.secondaryText, size: 20),
+              color: AppColors.cardBackground,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: AppColors.border)),
+              onSelected: (value) {
+                if (value == 'delete') {
+                  onDelete();
+                }
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline,
+                          color: Colors.redAccent, size: 20),
+                      SizedBox(width: 8),
+                      Text('Excluir', style: TextStyle(color: Colors.white)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    // Platform Check for Interaction
+    if (kIsWeb ||
+        (defaultTargetPlatform == TargetPlatform.windows ||
+            defaultTargetPlatform == TargetPlatform.linux ||
+            defaultTargetPlatform == TargetPlatform.macOS)) {
+      // Desktop: InkWell -> Dialog
+      return Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _openEditor(context),
+          borderRadius: BorderRadius.circular(12),
+          child: cardContent,
+        ),
+      );
+    } else {
+      // Mobile: OpenContainer -> Full Page Transition
+      return OpenContainer(
+        transitionType: ContainerTransitionType.fadeThrough,
+        openBuilder: (BuildContext context, VoidCallback _) {
+          return JournalEditorScreen(
+            userData: userData,
+            entry: entry,
+          );
+        },
+        closedElevation: 0,
+        closedShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        closedColor: AppColors.cardBackground, // Match card color
+        middleColor: AppColors.cardBackground,
+        openColor: AppColors.cardBackground,
+        tappable: true,
+        closedBuilder: (BuildContext context, VoidCallback openContainer) {
+          return cardContent;
+        },
+      );
+    }
+  }
+
+  void _openEditor(BuildContext context) {
+      // Desktop: Open in our new responsive dialog
+      showJournalEditorDialog(
+        context,
+        userData: userData,
+        entry: entry,
+      );
 
     if (isDesktop) {
       // Desktop: Simple Card with Dialog navigation

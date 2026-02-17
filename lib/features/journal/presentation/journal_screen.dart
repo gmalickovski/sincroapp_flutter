@@ -1,11 +1,13 @@
 // lib/features/journal/presentation/journal_screen.dart
 
+import 'package:animations/animations.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
+import 'package:sincro_app_flutter/common/widgets/server_status_wrapper.dart'; // Ensure this exists
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -176,6 +178,65 @@ class _JournalScreenState extends State<JournalScreen> {
 
 
 
+
+  Widget _buildDesktopNewEntryCard(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openJournalEditor(),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground
+                .withValues(alpha: 0.5), // Slightly transparent
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.primary.withValues(alpha: 0.5),
+              width: 2,
+              style: BorderStyle.solid,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.add,
+                    size: 32,
+                    color: AppColors.primary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  "Nova Anotação",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Escreva sobre seu dia...",
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     bool isDesktop = MediaQuery.of(context).size.width > 800;
@@ -276,12 +337,17 @@ class _JournalScreenState extends State<JournalScreen> {
                         crossAxisCount: 2,
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        itemCount: entries.length,
+                        // Add 1 for the "New Entry" card
+                        itemCount: entries.length + 1,
                         itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _buildDesktopNewEntryCard(context);
+                          }
+                          final entryIndex = index - 1;
                           return JournalEntryCard(
-                            entry: entries[index],
+                            entry: entries[entryIndex],
                             userData: widget.userData,
-                            onDelete: () => _handleDelete(entries[index]),
+                            onDelete: () => _handleDelete(entries[entryIndex]),
                           );
                         },
                       );
@@ -334,17 +400,38 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ),
       ),
-      floatingActionButton: TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: FloatingActionButton(
-          onPressed: () => _openJournalEditor(),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add),
-        ),
-      ),
+      floatingActionButton: isDesktop
+          ? null // Hide FAB on desktop (using Grid Card instead)
+          : TransparentFabWrapper(
+              controller: _fabOpacityController,
+              child: OpenContainer(
+                transitionType: ContainerTransitionType.fadeThrough,
+                openBuilder: (BuildContext context, VoidCallback _) {
+                  return ServerStatusWrapper(
+                    userData: widget.userData,
+                    child: JournalEditorScreen(
+                      userData: widget.userData,
+                    ),
+                  );
+                },
+                closedElevation: 4,
+                closedShape: const CircleBorder(),
+                closedColor: AppColors.primary,
+                openColor: AppColors.cardBackground,
+                tappable: true,
+                closedBuilder:
+                    (BuildContext context, VoidCallback openContainer) {
+                  return FloatingActionButton(
+                    onPressed: openContainer,
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: const CircleBorder(),
+                    child: const Icon(Icons.add),
+                  );
+                },
+              ),
+            ),
     );
   }
 }
