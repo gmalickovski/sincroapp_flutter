@@ -191,24 +191,17 @@ class JournalEntryCard extends StatelessWidget {
                   onSelected: (value) {
                     if (value == 'edit') {
                       final isDesktop = MediaQuery.of(context).size.width >= 768;
-                      if (isDesktop) {
-                         // Use same dialog logic
-                         // We need a helper or just re-call the logic. 
-                         // Check if we can access the wrapper method.
-                         // Actually, I can't access `_openEditor` easily from here if it stays inside `JournalEntryCard` which is stateless,
-                         // wait, `_openEditor` IS in the class. I can call it.
-                         _openEditor(context);
-                      } else {
+                      // Edit now just pushes the screen. 
+                      // Ideally we'd trigger the local OpenContainer but that requires a key or callback.
+                      // Pushing directly works fine for the menu action.
                          Navigator.of(context).push(
                           MaterialPageRoute(
-                            fullscreenDialog: true,
                             builder: (_) => JournalEditorScreen(
                               userData: userData,
                               entry: entry,
                             ),
                           ),
                         );
-                      }
                     } else if (value == 'delete') {
                       onDelete();
                     }
@@ -260,57 +253,15 @@ class JournalEntryCard extends StatelessWidget {
     );
   }
 
-  void _openEditor(BuildContext context) {
-    // Desktop/Web: Open in a styled Dialog
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.7),
-      builder: (context) {
-        return Dialog(
-          backgroundColor: AppColors.cardBackground,
-          insetPadding: const EdgeInsets.all(24),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: AppColors.border, width: 1),
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 900),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: JournalEditorScreen(
-                userData: userData,
-                entry: entry,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final borderColor = _getBorderColor();
-    final isDesktop = MediaQuery.of(context).size.width >= 768; // Simple breakpoint
 
-    if (isDesktop) {
-      // Desktop: Simple Card with Dialog navigation
-      return Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openEditor(context),
-          borderRadius: BorderRadius.circular(12),
-          child: _buildCardContent(context),
-        ),
-      );
-    }
-
-    // Mobile: Container Transform
     return OpenContainer(
       transitionDuration: const Duration(milliseconds: 500),
       transitionType: ContainerTransitionType.fadeThrough,
-      closedColor: AppColors.cardBackground,
-      openColor: AppColors.background,
+      closedColor: Colors.transparent, // Transparent for custom card style
+      openColor: AppColors.background, // Fullscreen background
       middleColor: AppColors.background,
       closedElevation: 0,
       openElevation: 0,
@@ -326,6 +277,9 @@ class JournalEntryCard extends StatelessWidget {
       },
       closedBuilder: (context, openContainer) {
         return _buildCardContent(context);
+        // Note: _buildCardContent's InkWell onTap is now redundant/conflicting if present.
+        // We will remove the internal InkWell/GestureDetector in _buildCardContent if it exists
+        // or ensure OpenContainer's tappable property handles the interaction.
       },
       tappable: true,
     );

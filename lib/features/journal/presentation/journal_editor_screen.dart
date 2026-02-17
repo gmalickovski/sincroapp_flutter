@@ -67,6 +67,23 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
   bool get _isEditing => widget.entry != null;
   bool _isSyncing = false; // Flag to silence auto-save UI during sync
+  bool _isWindowMode = true; // Default to true (dialog-like) on Desktop
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Initialize window mode based on screen width
+    final width = MediaQuery.of(context).size.width;
+    if (width < 768) {
+      _isWindowMode = false; // Mobile always fullscreen
+    }
+  }
+
+  void _toggleWindowMode() {
+    setState(() {
+      _isWindowMode = !_isWindowMode;
+    });
+  }
 
   final List<Color> _customColors = const [
     Color(0xffef4444), // 1
@@ -154,9 +171,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       _applySyntaxHighlighting();
       // Start Real-time Sync
       _subscribeToTasks();
+      _syncJournalWithSystemTasks();
     });
-
-    _loadDocument();
 
     // Monitor title focus to hide toolbar
     _titleFocusNode.addListener(() {
@@ -1544,36 +1560,55 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
     // Desktop dialog mode: direct body
     // The dialog container is provided by the parent (JournalEntryCard)
-    Widget bodyContent = editorBody;
+    // Widget bodyContent = editorBody; // OLD
 
-    return CallbackShortcuts(
-      bindings: {
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
-          if (_hasUnsavedChanges) _handleSave();
-        },
-      },
-      child: Focus(
-        autofocus: true,
-        child: Scaffold(
+    // NEW: Window Mode Logic
+    Widget mainContent = Scaffold(
           backgroundColor: AppColors.cardBackground, // Always card background in dialog
           appBar: AppBar(
             backgroundColor: AppColors.cardBackground,
             elevation: 0,
-            leading: const CloseButton(color: AppColors.secondaryText),
+            automaticallyImplyLeading: false, // Custom leading/actions
+            leadingWidth: 0,
+            titleSpacing: 24,
             title: Text(
               _isEditing ? 'Editar Anotação' : 'Nova Anotação',
               style: const TextStyle(
-                  color: Colors.white, fontSize: 18, fontFamily: 'Poppins'),
+                  color: Colors.white, fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600),
             ),
             actions: [
-              // Fullscreen toggle removed for Dialog mode
+              // 1. Personal Day Pill
+              Padding(
+                padding: const EdgeInsets.only(right: 8.0),
+                child: VibrationPill(vibrationNumber: _personalDay),
+              ),
+              
+              // 2. Fullscreen Toggle (Desktop Only)
+              if (isDesktop)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: IconButton(
+                    icon: Icon(
+                      _isWindowMode ? Icons.fullscreen : Icons.fullscreen_exit,
+                      color: AppColors.secondaryText,
+                    ),
+                    onPressed: _toggleWindowMode,
+                    tooltip: _isWindowMode ? 'Tela Cheia' : 'Modo Janela',
+                  ),
+                ),
+
+              // 3. Close Button (Rightmost)
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: VibrationPill(vibrationNumber: _personalDay),
+                child: IconButton(
+                   icon: const Icon(Icons.close, color: AppColors.secondaryText),
+                   onPressed: () => Navigator.of(context).pop(),
+                   tooltip: 'Fechar',
+                ),
               ),
             ],
           ),
-          body: bodyContent,
+          body: editorBody,
           bottomNavigationBar: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
             decoration: const BoxDecoration(
@@ -1657,6 +1692,45 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             ),
           ),
         ),
+      ),
+    );
+
+    // Wrap in Window Mode Container if valid
+    Widget finalLayer = mainContent;
+
+    if (isDesktop && _isWindowMode) {
+      finalLayer = Stack(
+        children: [
+          // Scrim (Dark background) (Simulating Dialog Barrier)
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(), // Close if clicked outside
+              child: Container(color: Colors.black.withOpacity(0.5)),
+            ),
+          ),
+          // Centered Window (Simulating Dialog Content)
+          Center(
+             child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1000, maxHeight: 850),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: mainContent,
+                ),
+             ),
+          ),
+        ],
+      );
+    }
+
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () {
+          if (_hasUnsavedChanges) _handleSave();
+        },
+      },
+      child: Focus(
+        autofocus: true,
+        child: finalLayer, // Use the wrapped layer
       ),
     );
   }
@@ -2126,113 +2200,66 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   }
 
   /// Synchronizes System Tasks -> Journal Entry (Updates status, text, or deletes lines)
+
   Future<void> _syncJournalWithSystemTasks() async {
-    if (!mounted) return;
-
-    final doc = _controller.document;
-    final root = doc.root;
-    final nodesToCheck = <Line>[];
-    final taskIdsToFetch = <String>[];
-
-    // 1. Scan document for lines with taskId
-    for (var node in root.children) {
-      if (node is Line) {
-        final taskId = node.style.attributes[_taskIdKey]?.value;
-        if (taskId != null && taskId is String && taskId.isNotEmpty) {
-          nodesToCheck.add(node);
-          taskIdsToFetch.add(taskId);
-        }
-      }
-    }
-
-    if (taskIdsToFetch.isEmpty) return;
+    if (widget.entry == null || widget.entry!.id.isEmpty) return;
 
     try {
-      debugPrint('🔄 [JournalSync] Fetching ${taskIdsToFetch.length} linked tasks from System...');
-      
-      final tasks = <TaskModel?>[];
-      for (final id in taskIdsToFetch) {
-        try {
-          final t = await _supabaseService.getTaskById(id);
-          tasks.add(t);
-        } catch (_) {
-          tasks.add(null);
-        }
-      }
+      final systemTasks =
+          await _supabaseService.getTasksBySourceJournalId(widget.entry!.id);
+      if (systemTasks.isEmpty) return;
 
-      final taskMap = {
-        for (var t in tasks)
-          if (t != null) t.id: t
-      };
-
+      final systemTasksMap = {for (var t in systemTasks) t.id: t};
       bool docChanged = false;
+      final doc = _controller.document;
 
-      // 3. Update Journal Content
-      for (final line in nodesToCheck) {
-        final taskId = line.style.attributes[_taskIdKey]?.value;
-        final systemTask = taskMap[taskId];
+      // Iterate backwards to avoid index issues if we were deleting lines (checking forwards is fine for updates)
+      for (final node in doc.root.children) {
+        if (node is! Line) continue;
+        final line = node;
+        final attrs = line.toDelta().last.attributes;
 
-        if (systemTask == null) {
-          // Task DELETED in backend -> Remove from Journal
-          debugPrint('🗑️ [JournalSync] Task $taskId processed: DELETED in system. Removing line.');
-          final offset = line.documentOffset;
-          // Delete operation: remove length + 1 (newline) to remove the line completely
-          _controller.replaceText(offset, line.length + 1, '', null);
+        if (attrs == null || !attrs.containsKey(_taskIdKey)) continue;
+
+        final taskId = attrs[_taskIdKey];
+
+        if (!systemTasksMap.containsKey(taskId)) {
+          // Task removed in system -> remove checkbox & taskId attribute (convert to plain text)
+          _controller.formatText(line.documentOffset, line.length,
+              Attribute(_taskIdKey, AttributeScope.inline, null));
+          _controller.formatText(line.documentOffset, line.length,
+              Attribute('list', AttributeScope.block, null));
           docChanged = true;
           continue;
         }
 
-        // Task Exists -> Check for updates
+        final task = systemTasksMap[taskId]!;
 
-        // A. Status Sync (System -> Journal)
-        // Check "list" attribute value
-        final currentListVal = line.style.attributes[Attribute.list.key]?.value;
-        final isCheckedInJournal = currentListVal == Attribute.checked.value;
-        
-        if (systemTask.completed != isCheckedInJournal) {
-          debugPrint('🔄 [JournalSync] Task $taskId status mismatch. System: ${systemTask.completed} vs Journal: $isCheckedInJournal');
-          final newAttr =
-              systemTask.completed ? Attribute.checked : Attribute.unchecked;
-          // Apply attribute to the whole line
-          _controller.formatText(line.documentOffset, line.length, newAttr);
+        // Update Checkbox
+        final currentListAttr = attrs[Attribute.list.key];
+        final shouldBeChecked = task.completed
+            ? Attribute.checked.value
+            : Attribute.unchecked.value;
+
+        if (currentListAttr != shouldBeChecked) {
+          _controller.formatText(line.documentOffset, line.length,
+              task.completed ? Attribute.checked : Attribute.unchecked);
           docChanged = true;
         }
-        
-        // B. Text Sync (System -> Journal)
-        final currentRaw = line.toPlainText().trim();
-        // Reconstruct Expected Text
-        final expectedText = TaskParser.toText(systemTask);
-        
-        if (currentRaw != expectedText) {
-           debugPrint('📝 [JournalSync] Manual: Task $taskId content mismatch. Updating Journal.');
-           
-           _controller.replaceText(
-             line.documentOffset, 
-             line.length, // Don't replace newline
-             expectedText, 
-             null
-           );
-           
-           _controller.formatText(line.documentOffset, expectedText.length, Attribute(_taskIdKey, AttributeScope.inline, taskId));
-           _controller.formatText(line.documentOffset, expectedText.length, systemTask.completed ? Attribute.checked : Attribute.unchecked);
-           
-           docChanged = true;
+
+        // Update Text
+        final currentText = line.toPlainText().trim();
+        final expectedText = TaskParser.toText(task);
+
+        if (currentText != expectedText) {
+          // Replace text content
+          _controller.replaceText(
+              line.documentOffset, currentText.length, expectedText, null);
+          docChanged = true;
         }
       }
-      
-      if (docChanged) {
-        debugPrint('✅ [JournalSync] Applied system updates to Journal content.');
-        // If this method is called outside of a manual save flow (e.g. init), 
-        // we might want to auto-save. But usually it's called IN _handleSave.
-        // However, if we want consistency:
-        // _saveJournalContentSilent(); 
-        // NOTE: User requested this logic "only when entering note" which implies stream/init.
-        // Since _syncJournalWithSystemTasks is called on Save, we DON'T need to save again here.
-        // BUT, if we call it on Init... let's check.
-      }
-
     } catch (e) {
-      debugPrint('❌ [JournalSync] Error syncing journal from system: $e');
+      debugPrint('Error syncing journal with system tasks: $e');
     }
   }
 }

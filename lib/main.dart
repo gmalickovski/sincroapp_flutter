@@ -1,6 +1,7 @@
 // lib/main.dart
 import 'dart:async';
 import 'dart:ui'; // For PointerDeviceKind
+import 'dart:io'; // For Platform check
 import 'package:flutter_dotenv/flutter_dotenv.dart'; // 🚀 Import dotenv
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -102,7 +103,7 @@ Future<void> main() async {
   }
 
   // Initialize Workmanager
-  if (!kIsWeb) {
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     try {
       Workmanager().initialize(callbackDispatcher,
           isInDebugMode: kDebugMode // Set to false in production

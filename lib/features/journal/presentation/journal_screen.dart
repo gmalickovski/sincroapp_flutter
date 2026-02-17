@@ -1,6 +1,7 @@
 // lib/features/journal/presentation/journal_screen.dart
 
 import 'package:collection/collection.dart';
+import 'package:animations/animations.dart'; // 🚀 Added for OpenContainer
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:intl/intl.dart';
@@ -64,17 +65,8 @@ class _JournalScreenState extends State<JournalScreen> {
     super.dispose();
   }
 
-  void _openJournalEditor({JournalEntry? entry}) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (context) => JournalEditorScreen(
-          userData: widget.userData,
-          entry: entry,
-        ),
-      ),
-    );
-  }
+  // Removed _openJournalEditor as we now use OpenContainer directly or Navigator.push
+
 
   void _openFilterUI() {
     showSmartPopup(
@@ -162,6 +154,71 @@ class _JournalScreenState extends State<JournalScreen> {
   }
 
 
+
+  Widget _buildNewNoteCard(BuildContext context) {
+    return OpenContainer(
+      transitionDuration: const Duration(milliseconds: 500),
+      transitionType: ContainerTransitionType.fadeThrough,
+      closedColor: Colors.transparent,
+      openColor: AppColors.background,
+      middleColor: AppColors.background,
+      closedElevation: 0,
+      openElevation: 0,
+      closedShape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: AppColors.primary.withValues(alpha: 0.5),
+          width: 1.5,
+          style: BorderStyle.solid, 
+        ),
+      ),
+      openBuilder: (context, closeContainer) {
+        return JournalEditorScreen(
+          userData: widget.userData,
+          entry: null, 
+        );
+      },
+      closedBuilder: (context, openContainer) {
+        return Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: AppColors.cardBackground.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(12),
+             // Border is handled by closedShape to avoid duplication/clipping issues? 
+             // Actually OpenContainer clips. Let's keep decoration minimal or matching.
+             // If we put border on closedShape, we don't need it here.
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.add,
+                  color: AppColors.primary,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Nova Anotação",
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      tappable: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -263,12 +320,16 @@ class _JournalScreenState extends State<JournalScreen> {
                         crossAxisCount: 2,
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        itemCount: entries.length,
+                        itemCount: entries.length + 1, // +1 for "New Note" card
                         itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _buildNewNoteCard(context);
+                          }
+                          final entry = entries[index - 1];
                           return JournalEntryCard(
-                            entry: entries[index],
+                            entry: entry,
                             userData: widget.userData,
-                            onDelete: () => _handleDelete(entries[index]),
+                            onDelete: () => _handleDelete(entry),
                           );
                         },
                       );
@@ -321,16 +382,31 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ),
       ),
-      floatingActionButton: TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: FloatingActionButton(
-          onPressed: () => _openJournalEditor(),
-          backgroundColor: AppColors.primary,
-          foregroundColor: Colors.white,
-          elevation: 4,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add),
-        ),
+      floatingActionButton: OpenContainer(
+        transitionDuration: const Duration(milliseconds: 500),
+        transitionType: ContainerTransitionType.fadeThrough,
+        closedElevation: 6,
+        openElevation: 0,
+        closedShape: const CircleBorder(),
+        closedColor: AppColors.primary,
+        openColor: AppColors.background,
+        middleColor: AppColors.background,
+        openBuilder: (context, closeContainer) {
+           return JournalEditorScreen(
+            userData: widget.userData,
+            entry: null,
+          );
+        },
+        closedBuilder: (context, openContainer) {
+          return const SizedBox(
+            width: 56,
+            height: 56,
+            child: Center(
+              child: Icon(Icons.add, color: Colors.white),
+            ),
+          );
+        },
+        tappable: true,
       ),
     );
   }

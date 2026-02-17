@@ -110,6 +110,12 @@ class NotificationService {
   /// Inicializa os pacotes, configura canais e solicita permissões
   Future<void> init() async {
     await _configureTimezone();
+
+    // Disable notifications on Windows/Linux to prevent crashes for now
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+      return;
+    }
+
     await _requestPermissions();
 
     // Configurações de inicialização do FlutterLocalNotifications
@@ -258,6 +264,7 @@ class NotificationService {
     String channelId = _channelIdDaily,
     String? payload,
   }) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     final androidDetails = fln.AndroidNotificationDetails(
       channelId,
       channelId == _channelIdDaily ? _channelNameDaily : _channelNameReminder,
@@ -284,6 +291,7 @@ class NotificationService {
     required String body,
     required TimeOfDay scheduleTime,
   }) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     await _localNotifications.cancel(_dailyPersonalDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
     const androidDetails = fln.AndroidNotificationDetails(
@@ -313,6 +321,7 @@ class NotificationService {
 
   /// 2. Lembrete de Tarefa Agendada (FEATURE #3)
   Future<void> scheduleTaskReminder(TaskModel task) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     final int notificationId = task.id.hashCode.abs() % 2147483647;
 
     if (task.dueDate == null || task.reminderTime == null || task.completed) {
@@ -354,6 +363,7 @@ class NotificationService {
 
   /// Cancela um lembrete de tarefa
   Future<void> cancelTaskReminder(int notificationId) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     await _localNotifications.cancel(notificationId);
   }
 
@@ -366,6 +376,7 @@ class NotificationService {
   /// 3. Lembrete de Tarefas Não Concluídas (FEATURE #1)
   Future<void> scheduleDailyEndOfDayCheck(
       String userId, TimeOfDay scheduleTime) async {
+    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     await _localNotifications.cancel(_dailyEndOfDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
     const androidDetails = fln.AndroidNotificationDetails(
