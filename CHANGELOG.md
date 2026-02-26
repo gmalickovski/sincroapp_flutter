@@ -1,6 +1,18 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.5.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.3...v1.5.0) (2026-02-26)
+
+
+### Funcionalidades ✨
+
+* Initialize Sincro Flutter application with core features, UI components, and utilities. ([e32ec5c](https://github.com/gmalickovski/sincroapp_flutter/commit/e32ec5c0ecd060760de44070a9ca3f1686403f67))
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Altareção em massa no sistema de filtros e sistematica de tarefa, agedamentos, e marcos, e muitas melhorias de UI e UX desing ([ccc8659](https://github.com/gmalickovski/sincroapp_flutter/commit/ccc86591f923aaefd0c45153c4c023234be52696))
+
 ### [1.4.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.2...v1.4.3) (2026-02-17)
 
 
