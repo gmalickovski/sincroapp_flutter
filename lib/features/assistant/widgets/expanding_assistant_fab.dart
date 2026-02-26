@@ -361,7 +361,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
               ),
               style: _isListening && !hasText
                   ? IconButton.styleFrom(
-                      backgroundColor: Colors.redAccent.withOpacity(0.8),
+                      backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
                       hoverColor: Colors.redAccent,
                     )
                   : null,

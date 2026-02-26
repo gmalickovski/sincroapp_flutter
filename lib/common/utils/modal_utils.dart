@@ -4,16 +4,32 @@ import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 
+// import 'package:sincro_app_flutter/common/widgets/responsive_widget.dart';
+
 void showTaskDetailModal(
     BuildContext context, TaskModel task, UserModel userData) {
-  showDialog(
-    context: context,
-    // barrierDismissible: true, // Permite fechar clicando fora (opcional)
-    builder: (BuildContext dialogContext) {
-      return TaskDetailModal(
-        task: task,
-        userData: userData,
-      );
-    },
-  );
+  if (MediaQuery.of(context).size.width < 600) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (BuildContext dialogContext) {
+        return TaskDetailModal(
+          task: task,
+          userData: userData,
+        );
+      },
+    );
+  } else {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return TaskDetailModal(
+          task: task,
+          userData: userData,
+        );
+      },
+    );
+  }
 }

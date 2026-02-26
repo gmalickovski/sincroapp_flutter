@@ -36,14 +36,14 @@ class _GoalImageCardState extends State<GoalImageCard> {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: _isHovering
-                  ? AppColors.primary.withOpacity(0.5)
-                  : AppColors.border.withOpacity(0.3),
+                  ? AppColors.primary.withValues(alpha: 0.5)
+                  : AppColors.border.withValues(alpha: 0.3),
               width: _isHovering ? 1.5 : 1.0,
             ),
             boxShadow: _isHovering
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withOpacity(0.15),
+                      color: AppColors.primary.withValues(alpha: 0.15),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     )
@@ -105,7 +105,7 @@ class _GoalImageCardState extends State<GoalImageCard> {
             child: Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.edit, color: Colors.white, size: 16),
@@ -134,7 +134,7 @@ class _GoalImageCardState extends State<GoalImageCard> {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: _isHovering
-                    ? AppColors.primary.withOpacity(0.2)
+                    ? AppColors.primary.withValues(alpha: 0.2)
                     : AppColors.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
@@ -142,7 +142,7 @@ class _GoalImageCardState extends State<GoalImageCard> {
                 Icons.add_photo_alternate_outlined,
                 color: _isHovering
                     ? AppColors.primary
-                    : AppColors.primary.withOpacity(0.8),
+                    : AppColors.primary.withValues(alpha: 0.8),
                 size: 32,
               ),
             ),

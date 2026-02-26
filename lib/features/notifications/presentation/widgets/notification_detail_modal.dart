@@ -238,7 +238,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.2),
+                    color: AppColors.primary.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.primary),
                   ),
@@ -402,9 +402,9 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         shape: BoxShape.circle,
-        border: Border.all(color: color.withOpacity(0.3), width: 2),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
       ),
       child: Icon(iconData, color: color, size: 32),
     );
@@ -477,7 +477,7 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: AppColors.cardBackground.withOpacity(0.5),
+          color: AppColors.cardBackground.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppColors.border),
         ),

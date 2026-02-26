@@ -47,7 +47,7 @@ class UpdateDetailModal extends StatelessWidget {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.tertiaryText.withOpacity(0.3),
+                color: AppColors.tertiaryText.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -61,7 +61,7 @@ class UpdateDetailModal extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.rocket_launch_rounded,
@@ -144,7 +144,7 @@ class UpdateDetailModal extends StatelessWidget {
                             fontWeight: FontWeight.bold),
                         listBullet: const TextStyle(color: AppColors.primary),
                         code: TextStyle(
-                          backgroundColor: Colors.black.withOpacity(0.3),
+                          backgroundColor: Colors.black.withValues(alpha: 0.3),
                           color: AppColors.secondaryText,
                           fontFamily: 'monospace',
                         ),
@@ -198,9 +198,9 @@ class UpdateDetailModal extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.blue.withOpacity(0.1),
+        color: Colors.blue.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
       ),
       child: const Row(
         children: [

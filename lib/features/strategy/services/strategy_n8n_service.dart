@@ -61,9 +61,9 @@ class StrategyN8NService {
       // REVERTED: Send payload directly to body (no chatInput wrapper)
       // This is the format that was working on January 15th commit.
       final encodedPayload = jsonEncode(payload);
-      print('--- STRATEGY AI PAYLOAD ---');
-      print(encodedPayload);
-      print('---------------------------');
+      debugPrint('--- STRATEGY AI PAYLOAD ---');
+      debugPrint(encodedPayload);
+      debugPrint('---------------------------');
 
       final response = await http
           .post(

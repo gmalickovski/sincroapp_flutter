@@ -77,7 +77,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
   List<String> _selectedTags = []; // Novo estado para as tags
   List<String> _sharedWithUsernames =
       []; // NOVO: Usernames selecionados para compartilhar
-  Duration? _selectedReminderOffset; // Novo estado para o offset do lembrete
+  List<int>? _selectedReminderOffsets; // Novo estado para offsets do lembrete
 
   bool get _isEditing => widget.taskToEdit != null;
 
@@ -211,6 +211,104 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   bool isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Future<List<ParserSuggestion>> _onSearchForParser(
+      ParserKeyType type, String query) async {
+    // REGRA: Meta e contatos são mutuamente exclusivos
+    if (type == ParserKeyType.mention && _selectedGoalId != null) return [];
+    if (type == ParserKeyType.goal && _sharedWithUsernames.isNotEmpty) return [];
+
+    final normalizedQuery =
+        TaskParser.normalizeParserKey(query, type).toLowerCase();
+
+    if (type == ParserKeyType.mention) {
+      if (_cachedContacts == null) {
+        await _fetchContactsForMentions();
+      }
+      return (_cachedContacts ?? [])
+          .where((c) => c.status == 'active' && c.username.isNotEmpty)
+          .where((c) {
+        final uname =
+            TaskParser.normalizeParserKey(c.username, type).toLowerCase();
+        return uname.contains(normalizedQuery);
+      }).map((c) {
+        final normalizedLabel =
+            TaskParser.normalizeParserKey(c.username, type);
+        return ParserSuggestion(
+          id: c.userId,
+          label: normalizedLabel,
+          type: type,
+          description: c.displayName,
+        );
+      }).toList();
+    } else if (type == ParserKeyType.tag) {
+      final userTags = await _supabaseService.getTags(widget.userId);
+      return userTags.where((t) {
+        final tNorm = TaskParser.normalizeParserKey(t, type).toLowerCase();
+        return tNorm.contains(normalizedQuery);
+      }).map((t) {
+        final normalizedLabel = TaskParser.normalizeParserKey(t, type);
+        return ParserSuggestion(
+          id: t, // use tag string as id
+          label: normalizedLabel,
+          type: type,
+        );
+      }).toList();
+    } else if (type == ParserKeyType.goal) {
+      if (widget.userData == null) return [];
+      try {
+        final goalsStream =
+            _supabaseService.getGoalStream(widget.userData!.uid);
+        final goalsList = await goalsStream.first;
+        return goalsList.where((g) {
+          final gNorm =
+              TaskParser.normalizeParserKey(g.title, type).toLowerCase();
+          return gNorm.contains(normalizedQuery);
+        }).map((g) {
+          final normalizedLabel = TaskParser.normalizeParserKey(g.title, type);
+          return ParserSuggestion(
+            id: g.id,
+            label: normalizedLabel,
+            type: type,
+            description: g.title,
+          );
+        }).toList();
+      } catch (e) {
+        debugPrint("Error fetching goals for parser: $e");
+        return [];
+      }
+    }
+    return [];
+  }
+
+  void _onSuggestionSelected(ParserKeyType type, ParserSuggestion suggestion) {
+    setState(() {
+      if (type == ParserKeyType.mention &&
+          !_sharedWithUsernames.contains(suggestion.label)) {
+        _sharedWithUsernames.add(suggestion.label); // label is already normalized
+      } else if (type == ParserKeyType.tag &&
+          !_selectedTags.contains(suggestion.label)) {
+        _selectedTags.add(suggestion.label);
+      } else if (type == ParserKeyType.goal) {
+        _selectedGoalId = suggestion.id;
+        _selectedGoalTitle = suggestion.description ?? suggestion.label;
+      }
+    });
+  }
+
+  /// Remove uma menção do parser do texto (ex: @username, #tag, !meta)
+  void _removeParserTextFromInput(String triggerChar, String value) {
+    final text = _textController.text;
+    final pattern = '$triggerChar$value';
+    // Remove o padrão e espaço extra que pode ficar
+    final newText = text.replaceAll('$pattern ', '').replaceAll(pattern, '');
+    // Limpa espaços duplos resultantes
+    final cleaned = newText.replaceAll(RegExp(r'  +'), ' ').trim();
+    _textController.text = cleaned;
+    _textController.selection = TextSelection.fromPosition(
+      TextPosition(offset: cleaned.length),
+    );
   }
 
   void _updateVibrationForDate(DateTime date) {
@@ -366,23 +464,32 @@ class _TaskInputModalState extends State<TaskInputModal> {
     ).then((result) {
       if (result != null) {
         final selectedDateTime = result.dateTime;
-        final selectedDateMidnight = DateTime(selectedDateTime.year,
-            selectedDateTime.month, selectedDateTime.day);
+        if (selectedDateTime != null) {
+          final selectedDateMidnight = DateTime(selectedDateTime.year,
+              selectedDateTime.month, selectedDateTime.day);
 
-        _updateVibrationForDate(selectedDateMidnight);
+          _updateVibrationForDate(selectedDateMidnight);
 
-        setState(() {
-          _selectedDate = selectedDateMidnight;
+          setState(() {
+            _selectedDate = selectedDateMidnight;
 
-          if (result.hasTime) {
-            _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
-          } else {
-            _selectedTime = null;
-          }
+            if (result.hasTime) {
+              _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+            } else {
+              _selectedTime = null;
+            }
 
-          _selectedRecurrenceRule = result.recurrenceRule;
-          _selectedReminderOffset = result.reminderOffset;
-        });
+            _selectedRecurrenceRule = result.recurrenceRule;
+            _selectedReminderOffsets = result.reminderOffsets;
+          });
+        } else {
+            setState(() {
+                _selectedDate = null;
+                _selectedTime = null;
+                _selectedRecurrenceRule = result.recurrenceRule;
+                _selectedReminderOffsets = result.reminderOffsets;
+            });
+        }
       }
     });
   }
@@ -421,17 +528,20 @@ class _TaskInputModalState extends State<TaskInputModal> {
       journeyId: _selectedGoalId,
       journeyTitle: _selectedGoalTitle,
     )
-        .copyWith(reminderAt: () {
-      if (_selectedDate == null) return null;
-      if (_selectedReminderOffset == null) return null;
+        .copyWith(
+          reminderOffsets: _selectedReminderOffsets,
+          reminderAt: () {
+            if (_selectedDate == null) return null;
+            if (_selectedReminderOffsets == null || _selectedReminderOffsets!.isEmpty) return null;
 
-      DateTime base = _selectedDate!;
-      if (_selectedTime != null) {
-        base = DateTime(base.year, base.month, base.day, _selectedTime!.hour,
-            _selectedTime!.minute);
-      }
-      return base.subtract(_selectedReminderOffset!);
-    }());
+            DateTime base = _selectedDate!;
+            if (_selectedTime != null) {
+              base = DateTime(base.year, base.month, base.day, _selectedTime!.hour,
+                  _selectedTime!.minute);
+            }
+            return base.subtract(Duration(minutes: _selectedReminderOffsets!.first));
+          }()
+        );
 
     widget.onAddTask(finalParsedTask);
 
@@ -541,26 +651,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // --- Título (Solicitação: Substituir X por Título) ---
-              Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: Text(
-                  _isEditing ? 'Editar Tarefa' : 'Nova Tarefa',
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.primaryText,
-                  ),
-                ),
-              ),
+              // --- Título Removido a pedido do usuário ---
               // Substituído TextField por MentionInputField
               ParserInputField(
                 controller: _textController,
                 focusNode: _textFieldFocusNode,
+                disabledTriggers: [
+                  if (_sharedWithUsernames.isNotEmpty) ParserKeyType.goal,
+                  if (_selectedGoalId != null) ParserKeyType.mention,
+                ],
                 onSubmitted: (_) => _submit(), // Chama o submit atualizado
                 hintText: _selectedGoalId != null
                     ? "Adicionar novo marco... use @ para mencionar"
-                    : "Adicionar tarefa... use @ para mencionar",
+                    : "Adicionar tarefa... use @, # ou ! para parser",
                 decoration: const InputDecoration(
                   hintStyle: TextStyle(color: AppColors.tertiaryText),
                   border: InputBorder.none,
@@ -574,8 +677,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   hoverColor: Colors.transparent,
                 ),
                 maxLines: null,
-                textCapitalization:
-                    TextCapitalization.sentences, // Capitalize first letter
+                textCapitalization: TextCapitalization.sentences,
+                onSearch: _onSearchForParser,
+                onSuggestionSelected: _onSuggestionSelected,
               ),
 
               // --- IN├ìCIO: ├üREA DE "PILLS" ---
@@ -597,11 +701,14 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         onDeleted: widget.preselectedGoal != null
                             ? null
                             : () {
+                                // Remove do texto antes de limpar o estado
+                                final goalKey = TaskParser.normalizeParserKey(
+                                    _selectedGoalTitle!, ParserKeyType.goal);
+                                _removeParserTextFromInput('!', goalKey);
                                 setState(() {
                                   _selectedGoalId = null;
                                   _selectedGoalTitle = null;
-                                  _selectedGoalDeadline =
-                                      null; // Limpa deadline
+                                  _selectedGoalDeadline = null;
                                 });
                               },
                       ),
@@ -631,6 +738,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         icon: Icons.label_rounded,
                         color: Colors.purpleAccent,
                         onDeleted: () {
+                          _removeParserTextFromInput('#', tag);
                           setState(() {
                             _selectedTags.remove(tag);
                           });
@@ -645,6 +753,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         icon: Icons.person,
                         color: Colors.lightBlueAccent,
                         onDeleted: () {
+                          _removeParserTextFromInput('@', username);
                           setState(() {
                             _sharedWithUsernames.remove(username);
                           });

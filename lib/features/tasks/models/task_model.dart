@@ -20,6 +20,7 @@ class TaskModel {
   final List<int> recurrenceDaysOfWeek; // Dias da semana (1-7)
   final DateTime? recurrenceEndDate; // Data final da recorrência
   final TimeOfDay? reminderTime; // Horário do lembrete (hora/minuto)
+  final List<int>? reminderOffsets; // Array de offsets em minutos p/ multiplos lembretes
 
   final String? recurrenceId; // ID para agrupar tarefas recorrentes geradas
   final String? goalId; // ID da meta vinculada (Marco)
@@ -31,6 +32,7 @@ class TaskModel {
   final DateTime? reminderAt; // Precise reminder timestamp
   final String? taskType; // 'appointment' or 'task'
   final int? durationMinutes; // Duração em minutos
+  final bool isFocus; // Tarefas sem data marcadas como foco
 
   TaskModel({
     required this.id,
@@ -48,6 +50,7 @@ class TaskModel {
     this.recurrenceDaysOfWeek = const [],
     this.recurrenceEndDate,
     this.reminderTime,
+    this.reminderOffsets,
     this.recurrenceId,
     this.goalId,
     this.sourceJournalId,
@@ -55,7 +58,14 @@ class TaskModel {
     this.reminderAt,
     this.taskType,
     this.durationMinutes,
+    this.isFocus = false,
   });
+
+  /// Data efetiva da tarefa: dueDate tem prioridade, senão usa hoje (tarefas sem vencimento rolam para o dia atual).
+  DateTime get effectiveDate => dueDate ?? DateTime.now();
+
+  /// Se a tarefa possui uma data de vencimento definida.
+  bool get hasDeadline => dueDate != null;
 
   bool get isAppointment {
     // Se taskType estiver definido no banco, confia nele.
@@ -82,6 +92,7 @@ class TaskModel {
     List<int>? recurrenceDaysOfWeek,
     Object? recurrenceEndDate = const _Undefined(),
     Object? reminderTime = const _Undefined(),
+    Object? reminderOffsets = const _Undefined(),
     Object? recurrenceId = const _Undefined(),
     Object? goalId = const _Undefined(),
     Object? sourceJournalId = const _Undefined(),
@@ -89,6 +100,7 @@ class TaskModel {
     Object? reminderAt = const _Undefined(),
     Object? taskType = const _Undefined(),
     Object? durationMinutes = const _Undefined(),
+    bool? isFocus,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -114,6 +126,9 @@ class TaskModel {
       reminderTime: reminderTime is _Undefined
           ? this.reminderTime
           : reminderTime as TimeOfDay?,
+      reminderOffsets: reminderOffsets is _Undefined
+          ? this.reminderOffsets
+          : reminderOffsets as List<int>?,
       recurrenceId: recurrenceId is _Undefined
           ? this.recurrenceId
           : recurrenceId as String?,
@@ -130,6 +145,7 @@ class TaskModel {
       durationMinutes: durationMinutes is _Undefined
           ? this.durationMinutes
           : durationMinutes as int?,
+      isFocus: isFocus ?? this.isFocus,
     );
   }
 
@@ -180,6 +196,12 @@ class TaskModel {
       }
     }
 
+    List<int>? remOffsets;
+    final rOffsetsVal = data['reminder_offsets'] ?? data['reminderOffsets'];
+    if (rOffsetsVal != null && rOffsetsVal is List) {
+      remOffsets = List<int>.from(rOffsetsVal);
+    }
+
     return TaskModel(
       id: data['id'] ?? data['id'] ?? '',
       text: data['text'] ?? '',
@@ -199,6 +221,7 @@ class TaskModel {
       recurrenceEndDate:
           _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate']),
       reminderTime: reminder,
+      reminderOffsets: remOffsets,
       recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
       goalId: data['goal_id'] ?? data['goalId'],
       sourceJournalId: data['source_journal_id'] ?? data['sourceJournalId'],
@@ -206,6 +229,7 @@ class TaskModel {
       reminderAt: _parseDate(data['reminder_at']),
       taskType: data['task_type'] ?? data['taskType'],
       durationMinutes: data['duration_minutes'] ?? data['durationMinutes'],
+      isFocus: data['is_focus'] ?? false,
     );
   }
 
@@ -229,39 +253,42 @@ class TaskModel {
       'recurrence_interval': recurrenceInterval,
       'recurrence_days_of_week': recurrenceDaysOfWeek,
       'recurrence_end_date': recurrenceEndDate?.toIso8601String(),
+      'reminder_offsets': reminderOffsets,
       'recurrence_id': recurrenceId,
       'goal_id': goalId,
       'source_journal_id': sourceJournalId,
       'completed_at': completedAt?.toIso8601String(),
       'reminder_at': reminderAt?.toIso8601String(),
       'task_type': taskType,
-      'duration_minutes': durationMinutes, // Escrita do novo campo
+      'duration_minutes': durationMinutes,
+      'is_focus': isFocus,
     };
   }
 
   Map<String, dynamic> toJson() => toMap();
 
   bool get isOverdue {
-    if (completed || dueDate == null) return false;
+    if (completed) return false;
+    // Tarefas sem vencimento nunca ficam atrasadas
+    if (dueDate == null) return false;
     final now = DateTime.now();
-    final localDue = dueDate!.toLocal();
+    // Usa dueDate diretamente (já sabemos que não é null)
+    final localDate = dueDate!.toLocal();
 
-    // Se tiver horário definido (não for meia-noite exata) ou tiver reminderTime, considera horário exato
-    if ((localDue.hour != 0 || localDue.minute != 0) || reminderTime != null) {
+    // Se tiver dueDate com horário definido (não meia-noite) ou reminderTime, considera horário exato
+    if (dueDate != null && ((localDate.hour != 0 || localDate.minute != 0) || reminderTime != null)) {
       if (durationMinutes != null) {
-        // Se tiver duração, o "late" é só depois que ACABA
-        final end = localDue.add(Duration(minutes: durationMinutes!));
+        final end = localDate.add(Duration(minutes: durationMinutes!));
         return end.isBefore(now);
       }
-      return localDue.isBefore(now);
+      return localDate.isBefore(now);
     }
 
     // Senão, compara apenas data (tarefa de dia inteiro)
     final today = DateTime(now.year, now.month, now.day);
-    final localDueDateOnly =
-        DateTime(localDue.year, localDue.month, localDue.day);
+    final localDateOnly = DateTime(localDate.year, localDate.month, localDate.day);
 
-    return localDueDateOnly.isBefore(today);
+    return localDateOnly.isBefore(today);
   }
 }
 

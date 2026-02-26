@@ -856,8 +856,7 @@ class SupabaseService {
       await _supabase
           .schema('sincroapp')
           .from('tasks')
-          .update({'source_journal_id': null})
-          .eq('id', taskId);
+          .update({'source_journal_id': null}).eq('id', taskId);
       debugPrint('✅ [SupabaseService] Task $taskId unlinked from journal.');
     } catch (e) {
       debugPrint('❌ [SupabaseService] Error unlinking task: $e');
@@ -1293,11 +1292,17 @@ class SupabaseService {
           case 'recurrenceEndDate':
             mappedUpdates['recurrence_end_date'] = value;
             break;
+          case 'reminder_offsets':
+            // Column does not exist in Supabase — skip to avoid PGRST204
+            break;
           case 'reminderAt':
             mappedUpdates['reminder_at'] = value;
             break;
           case 'personalDay':
             mappedUpdates['personal_day'] = value;
+            break;
+          case 'sharedWith':
+            mappedUpdates['shared_with'] = value;
             break;
           default:
             mappedUpdates[key] = value;
@@ -1694,6 +1699,8 @@ class SupabaseService {
   Stream<List<JournalEntry>> getJournalEntriesStream(
     String uid, {
     DateTime? date,
+    DateTime? startDate, // New: Start of range
+    DateTime? endDate, // New: End of range
     int? mood,
     int? vibration,
   }) {
@@ -1708,7 +1715,15 @@ class SupabaseService {
       var entries = data.map((item) => JournalEntry.fromMap(item)).toList();
 
       // Client-side filtering
-      if (date != null) {
+      if (startDate != null && endDate != null) {
+        // Range Filtering (Week, Month, Year)
+        entries = entries.where((e) {
+          return e.createdAt
+                  .isAfter(startDate.subtract(const Duration(seconds: 1))) &&
+              e.createdAt.isBefore(endDate.add(const Duration(seconds: 1)));
+        }).toList();
+      } else if (date != null) {
+        // Single Day Filtering (Legacy/Specific Day)
         entries = entries
             .where((e) =>
                 e.createdAt.year == date.year &&
@@ -1727,6 +1742,24 @@ class SupabaseService {
 
       return entries;
     });
+  }
+
+  Future<JournalEntry?> getJournalEntryById(String uid, String entryId) async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('journal_entries')
+          .select()
+          .eq('user_id', uid)
+          .eq('id', entryId)
+          .maybeSingle();
+
+      if (response == null) return null;
+      return JournalEntry.fromMap(response);
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar anotação por ID: $e');
+      return null;
+    }
   }
 
   Future<JournalEntry?> addJournalEntry(
@@ -1772,8 +1805,9 @@ class SupabaseService {
       if (data.containsKey('content')) mapped['content'] = data['content'];
       if (data.containsKey('mood')) mapped['mood'] = data['mood']?.toString();
       if (data.containsKey('tags')) mapped['tags'] = data['tags'];
-      if (data.containsKey('title')) mapped['title'] = data['title']; // Ensure title is mapped
-      
+      if (data.containsKey('title'))
+        mapped['title'] = data['title']; // Ensure title is mapped
+
       mapped['updated_at'] = DateTime.now().toIso8601String();
 
       await _supabase
@@ -1787,10 +1821,7 @@ class SupabaseService {
     }
   }
 
-
   // --- JOURNAL ---
-
-
 
   // --- USAGE LOGGING ---
 
@@ -2187,7 +2218,9 @@ class SupabaseService {
         .eq('user_id', uid)
         .order('created_at', ascending: false)
         .map((data) {
-          final List<TaskModel> tasks = data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
+          final List<TaskModel> tasks = data
+              .map<TaskModel>((item) => _mapTaskFromSupabase(item))
+              .toList();
 
           final now = DateTime.now(); // Local time
           final startOfDay = DateTime(now.year, now.month, now.day);
@@ -2255,7 +2288,8 @@ class SupabaseService {
         .order('created_at', ascending: false);
 
     final List<dynamic> data = response;
-    final List<TaskModel> tasks = data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
+    final List<TaskModel> tasks =
+        data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
 
     return tasks.where((task) {
       if (task.dueDate != null) {
@@ -2282,22 +2316,20 @@ class SupabaseService {
       return null;
     }
   }
+
   /// Creates a new Journal Entry
   Future<void> createJournalEntry(JournalEntry entry) async {
-      try {
-        final user = _supabase.auth.currentUser;
-        if (user == null) throw Exception('User not authenticated');
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('User not authenticated');
 
-        final data = entry.toMap();
-        data['user_id'] = user.id; // Explicitly set user_id
+      final data = entry.toMap();
+      data['user_id'] = user.id; // Explicitly set user_id
 
-        await _supabase
-            .schema('sincroapp')
-            .from('journal_entries')
-            .insert(data);
-      } catch (e) {
-        debugPrint('Error creating journal entry: $e');
-        rethrow;
-      }
+      await _supabase.schema('sincroapp').from('journal_entries').insert(data);
+    } catch (e) {
+      debugPrint('Error creating journal entry: $e');
+      rethrow;
+    }
   }
 }

@@ -118,18 +118,26 @@ class _SmartPopupLayout extends StatelessWidget {
     }
 
     // 3. Horizontal Position
-    // Align Right edge of popup with Right edge of Target
-    // If it goes off-screen left, shift right.
+    double? left;
+    double? right;
 
-    final double rightDistance =
-        overlaySize.width - (targetPos.dx + targetSize.width);
+    if (targetPos.dx > overlaySize.width / 2) {
+      // Align right edges if target is on the right half of the screen
+      right = overlaySize.width - (targetPos.dx + targetSize.width);
+      if (right < 16) right = 16;
+    } else {
+      // Align left edges if target is on the left half
+      left = targetPos.dx;
+      if (left < 16) left = 16;
+    }
 
     return Stack(
       children: [
         Positioned(
           top: top,
           bottom: bottom,
-          right: rightDistance, // Align right edges
+          left: left,
+          right: right,
           child: Material(
             color: Colors.transparent,
             type: MaterialType.transparency,
@@ -137,9 +145,9 @@ class _SmartPopupLayout extends StatelessWidget {
               constraints: BoxConstraints(
                 maxHeight: maxHeight > 0 ? maxHeight : 100,
                 maxWidth: overlaySize.width - 32, // Padding 16 on each side
-                minWidth: 200,
               ),
               child: IntrinsicWidth(
+                stepWidth: 0.0, // Removes step width behavior
                 // IntrinsicWidth allows the child to define its width (up to maxWidth)
                 child: child,
                 // Removed SingleChildScrollView here because the Panels already have it.

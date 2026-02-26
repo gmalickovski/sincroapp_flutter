@@ -146,7 +146,7 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
             style: TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
-              color: AppColors.primaryText.withOpacity(0.4),
+              color: AppColors.primaryText.withValues(alpha: 0.4),
             ),
           ),
         ),
@@ -174,7 +174,7 @@ class _CustomMonthYearPickerState extends State<CustomMonthYearPicker> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.15)
+              ? AppColors.primary.withValues(alpha: 0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),

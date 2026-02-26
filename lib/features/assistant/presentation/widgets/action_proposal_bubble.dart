@@ -216,10 +216,11 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primaryAccent.withOpacity(0.3)),
+        border:
+            Border.all(color: AppColors.primaryAccent.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 12,
             offset: const Offset(0, 6),
           )
@@ -461,8 +462,8 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
-              ? color.withOpacity(0.2)
-              : AppColors.background.withOpacity(0.5),
+              ? color.withValues(alpha: 0.2)
+              : AppColors.background.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? color : Colors.white10,
@@ -502,9 +503,9 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
       margin: const EdgeInsets.only(top: 12, bottom: 12, left: 32, right: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -541,14 +542,14 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
       margin: const EdgeInsets.only(top: 12, bottom: 12, left: 32, right: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.redAccent.withOpacity(0.1),
+        color: Colors.redAccent.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Icon(Icons.cancel_outlined,
-              color: Colors.redAccent.withOpacity(0.8), size: 24),
+              color: Colors.redAccent.withValues(alpha: 0.8), size: 24),
           const SizedBox(width: 12),
           Expanded(
             child: Column(

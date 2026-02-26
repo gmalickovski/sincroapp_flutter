@@ -216,8 +216,8 @@ class _AddContactDialogState extends State<AddContactDialog> {
                       decoration: BoxDecoration(
                         color: Colors.green.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
-                        border:
-                            Border.all(color: Colors.green.withOpacity(0.5)),
+                        border: Border.all(
+                            color: Colors.green.withValues(alpha: 0.5)),
                       ),
                       child: Row(
                         children: [

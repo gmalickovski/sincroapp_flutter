@@ -57,6 +57,9 @@ class TasksListView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > 900;
+    final horizontalPadding = isDesktop ? 40.0 : 16.0;
 
     if (tasks.isEmpty) {
       // Empty state must be scrollable to support RefreshIndicator
@@ -90,7 +93,7 @@ class TasksListView extends StatelessWidget {
       );
     } else {
       content = ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 80),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: tasks.length,
         itemBuilder: (context, index) {

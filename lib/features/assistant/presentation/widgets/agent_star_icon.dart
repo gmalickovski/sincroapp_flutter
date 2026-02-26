@@ -269,6 +269,13 @@ class _AgentStarPainter extends CustomPainter {
 
   void _drawFace(
       Canvas canvas, double cx, double cy, double radius, double scale) {
+    canvas.save();
+    if (isWhiteFilled || isHollow) {
+      canvas.translate(cx, cy);
+      canvas.scale(1.35); // Aumenta os olhos e boca ("rosto") em 35%
+      canvas.translate(-cx, -cy);
+    }
+
     // Proportional Scaling based on standard JS radius (65) vs current radius
     const double standardRadius = 65.0;
     // FIXED: Ratio strictly controls POSITIONS (layout), never scale.
@@ -357,6 +364,7 @@ class _AgentStarPainter extends CustomPainter {
       mouthPath.moveTo(cx - mx, cy + my1);
       mouthPath.quadraticBezierTo(cx, cy + my2, cx + mx, cy + my1);
       canvas.drawPath(mouthPath, paintStroke);
+      canvas.restore();
       return;
     }
 
@@ -521,6 +529,7 @@ class _AgentStarPainter extends CustomPainter {
     }
 
     canvas.drawPath(mouthPath, paintStroke);
+    canvas.restore();
   }
 
   @override

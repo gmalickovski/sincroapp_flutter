@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
@@ -47,13 +48,13 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this); // Add listener
+    if (!kIsWeb) windowManager.addListener(this); // Add listener
     _searchFocusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
-    windowManager.removeListener(this); // Remove listener
+    if (!kIsWeb) windowManager.removeListener(this); // Remove listener
     _searchFocusNode.removeListener(_onFocusChanged);
     _searchController.dispose();
     _searchFocusNode.dispose();
@@ -110,24 +111,32 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.of(context).size.width > 800;
 
-    // Wrap title in DragToMoveArea for window dragging
-    Widget titleWidget = DragToMoveArea(
-      child: SvgPicture.asset(
-        'assets/images/sincroapp_logo.svg',
-        height: isDesktop ? 32 : 24,
-        fit: BoxFit.contain,
-      ),
-    );
+    // Wrap title in DragToMoveArea for window dragging (native desktop only)
+    Widget titleWidget = kIsWeb
+        ? SvgPicture.asset(
+            'assets/images/sincroapp_logo.svg',
+            height: isDesktop ? 32 : 24,
+            fit: BoxFit.contain,
+          )
+        : DragToMoveArea(
+            child: SvgPicture.asset(
+              'assets/images/sincroapp_logo.svg',
+              height: isDesktop ? 32 : 24,
+              fit: BoxFit.contain,
+            ),
+          );
 
     return AppBar(
       backgroundColor: AppColors.background,
       elevation: 0,
-      // Use flexibleSpace for draggable background area
-      flexibleSpace: DragToMoveArea(
-        child: Container(
-          color: Colors.transparent, // Ensures hit testing works
-        ),
-      ),
+      // Use flexibleSpace for draggable background area (native desktop only)
+      flexibleSpace: kIsWeb
+          ? null
+          : DragToMoveArea(
+              child: Container(
+                color: Colors.transparent, // Ensures hit testing works
+              ),
+            ),
       leading: IconButton(
         icon: AnimatedIcon(
           icon: AnimatedIcons.menu_close,
@@ -137,7 +146,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
         onPressed: widget.onMenuPressed,
         tooltip: 'Menu',
       ),
-      title: (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
+      title:
+          (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
       centerTitle: true,
       actions: [
         if (widget.showSearch)
@@ -181,8 +191,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
         if (!isDesktop && widget.userData == null)
           const SizedBox(width: kToolbarHeight),
 
-        // Add Window Buttons on Desktop
-        if (isDesktop) _buildWindowButtons(),
+        // Add Window Buttons on native Desktop only (not web)
+        if (isDesktop && !kIsWeb) _buildWindowButtons(),
       ],
       shape: const Border(
         bottom: BorderSide(color: AppColors.border, width: 1.0),
@@ -204,7 +214,9 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
           builder: (context, snapshot) {
             final isMaximized = snapshot.data ?? false;
             return _WindowButton(
-              icon: isMaximized ? Icons.crop_square : Icons.crop_din, // Placeholder capability
+              icon: isMaximized
+                  ? Icons.crop_square
+                  : Icons.crop_din, // Placeholder capability
               // Better icons: Icons.check_box_outline_blank (max) vs Icons.filter_none (restore)
               // But standard Material icons are fine
               onPressed: () {
@@ -273,7 +285,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
                   textAlignVertical: TextAlignVertical.center,
                   decoration: const InputDecoration(
                     hintText: 'Pesquisar...',
-                    hintStyle: TextStyle(color: AppColors.tertiaryText, fontSize: 14),
+                    hintStyle:
+                        TextStyle(color: AppColors.tertiaryText, fontSize: 14),
                     border: InputBorder.none,
                     focusedBorder: InputBorder.none,
                     enabledBorder: InputBorder.none,
@@ -281,7 +294,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
                     disabledBorder: InputBorder.none,
                     isDense: true,
                     filled: false,
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                   onChanged: widget.onSearchChanged,
                   onTapOutside: (event) {
@@ -291,9 +305,12 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
               ),
             ),
           Positioned(
-            right: 0, top: 0, bottom: 0,
+            right: 0,
+            top: 0,
+            bottom: 0,
             child: SizedBox(
-              width: 48, height: 48,
+              width: 48,
+              height: 48,
               child: isOpen ? _buildCloseButton() : _buildSearchButton(),
             ),
           ),
@@ -305,7 +322,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
   Widget _buildSearchButton() {
     return Center(
       child: SizedBox(
-        width: 40, height: 40,
+        width: 40,
+        height: 40,
         child: Material(
           color: Colors.transparent,
           shape: const CircleBorder(),
@@ -315,7 +333,8 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
             hoverColor: AppColors.primary.withValues(alpha: 0.1),
             splashColor: AppColors.primary.withValues(alpha: 0.2),
             child: const Center(
-              child: Icon(Icons.search, color: AppColors.secondaryText, size: 24),
+              child:
+                  Icon(Icons.search, color: AppColors.secondaryText, size: 24),
             ),
           ),
         ),
@@ -331,12 +350,14 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
       child: GestureDetector(
         onTap: _closeSearch,
         child: Container(
-          width: 48, height: 48,
+          width: 48,
+          height: 48,
           alignment: Alignment.center,
           color: Colors.transparent,
           child: Icon(
             Icons.close,
-            color: _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
+            color:
+                _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
             size: 20,
           ),
         ),

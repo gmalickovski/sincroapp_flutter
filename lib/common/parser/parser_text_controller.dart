@@ -16,6 +16,12 @@ class ParserTextEditingController extends TextEditingController {
     notifyListeners();
   }
 
+  /// Adiciona um username válido individual
+  void addValidMention(String username) {
+    validMentions.add(username);
+    notifyListeners();
+  }
+
   @override
   TextSpan buildTextSpan({
     required BuildContext context,
@@ -35,19 +41,13 @@ class ParserTextEditingController extends TextEditingController {
         final String matchText = match[0]!;
 
         if (matchText.startsWith('@')) {
-          // Menção: verifica se é válido
-          final username = matchText.substring(1);
-          if (validMentions.contains(username)) {
-            children.add(TextSpan(
-              text: matchText,
-              style: style?.merge(const TextStyle(
-                color: TaskParser.mentionColor,
-                fontWeight: FontWeight.bold,
-              )),
-            ));
-          } else {
-            children.add(TextSpan(text: matchText, style: style));
-          }
+          // Menção: sempre colorir durante digitação ativa
+          children.add(TextSpan(
+            text: matchText,
+            style: style?.merge(const TextStyle(
+              color: TaskParser.mentionColor,
+            )),
+          ));
         } else if (matchText.startsWith('#')) {
           // Tag: sempre estiliza
           children.add(TextSpan(
@@ -62,7 +62,6 @@ class ParserTextEditingController extends TextEditingController {
             text: matchText,
             style: style?.merge(const TextStyle(
               color: TaskParser.goalColor,
-              fontWeight: FontWeight.bold,
             )),
           ));
         } else {

@@ -234,7 +234,8 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                         children: [
                           Icon(Icons.search_off,
                               size: 64,
-                              color: AppColors.secondaryText.withOpacity(0.5)),
+                              color: AppColors.secondaryText
+                                  .withValues(alpha: 0.5)),
                           const SizedBox(height: 16),
                           const Text(
                             'Nenhum usuário encontrado',
@@ -315,12 +316,12 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: AppColors.border.withOpacity(0.5),
+            color: AppColors.border.withValues(alpha: 0.5),
             width: 1,
           ),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 10,
                 offset: const Offset(0, 4))
           ]),
@@ -384,7 +385,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.2),
+                                    color: Colors.amber.withValues(alpha: 0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Text('ADMIN',
@@ -488,9 +489,9 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? color.withOpacity(0.1) : Colors.transparent,
+        color: isActive ? color.withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         text,

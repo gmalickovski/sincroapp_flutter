@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_bottom_sheet.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/models/subscription_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -48,14 +48,21 @@ class _CreateGoalScreenState extends State<CreateGoalScreen> {
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
 
-    final pickedDate = await showDialog<DateTime>(
+    final pickedDate = await showModalBottomSheet<DateTime>(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return CustomEndDatePickerDialog(
-          userData: widget.userData,
-          initialDate: _targetDate ?? DateTime.now(),
-          firstDate: DateTime.now(),
-          lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: CustomEndDatePickerBottomSheet(
+            userData: widget.userData,
+            initialDate: _targetDate ?? DateTime.now(),
+            firstDate: DateTime.now(),
+            lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+          ),
         );
       },
     );

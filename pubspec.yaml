@@ -99,6 +99,7 @@ dependencies:
   animations: ^2.1.1
   window_manager: ^0.5.1
   firebase_auth: any
+  local_notifier: ^0.1.6
 dev_dependencies:
   flutter_test:
     sdk: flutter

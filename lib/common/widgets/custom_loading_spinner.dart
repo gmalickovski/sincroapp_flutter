@@ -281,7 +281,7 @@ class StarCometPainter extends CustomPainter {
     // Fill da estrela (animado)
     if (fillOpacity > 0) {
       final fillPaint = Paint()
-        ..color = color.withOpacity(fillOpacity)
+        ..color = color.withValues(alpha: fillOpacity)
         ..style = PaintingStyle.fill;
 
       canvas.drawPath(starPath, fillPaint);

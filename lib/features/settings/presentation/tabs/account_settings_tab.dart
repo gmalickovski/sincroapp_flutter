@@ -381,7 +381,7 @@ class _AccountSettingsTabState extends State<AccountSettingsTab> {
             width: double.infinity,
             child: TextButton.icon(
               style: TextButton.styleFrom(
-                foregroundColor: Colors.redAccent.withOpacity(0.8),
+                foregroundColor: Colors.redAccent.withValues(alpha: 0.8),
               ),
               icon: const Icon(Icons.delete_forever, size: 20),
               onPressed: _isDeleting ? null : _handleDeleteAccount,

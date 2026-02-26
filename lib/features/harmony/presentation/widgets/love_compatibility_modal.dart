@@ -225,7 +225,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: const StadiumBorder(),
                           elevation: 4,
-                          shadowColor: AppColors.primary.withOpacity(0.4),
+                          shadowColor: AppColors.primary.withValues(alpha: 0.4),
                         ),
                         child: _isLoading
                             ? const SizedBox(
@@ -309,7 +309,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             splashBorderRadius: BorderRadius.circular(16),
             indicator: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: AppColors.harmonyPink.withOpacity(0.2),
+                color: AppColors.harmonyPink.withValues(alpha: 0.2),
                 border: Border.all(color: AppColors.harmonyPink)),
             labelColor: Colors.white,
             unselectedLabelColor: Colors.white70,
@@ -369,12 +369,12 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     // Keep SingleChildScrollView but wrap in Flexible in parent
     final inputDecoration = InputDecoration(
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withValues(alpha: 0.05),
       border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
       enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
       focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.harmonyPink, width: 2)),
@@ -435,16 +435,18 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+              Expanded(
+                  child: Divider(color: Colors.white.withValues(alpha: 0.1))),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Text('OU',
                     style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color: Colors.white.withValues(alpha: 0.4),
                         fontSize: 12,
                         fontWeight: FontWeight.bold)),
               ),
-              Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+              Expanded(
+                  child: Divider(color: Colors.white.withValues(alpha: 0.1))),
             ],
           ),
           const SizedBox(height: 16),
@@ -471,7 +473,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                     _selectedUser != null ? Colors.redAccent : Colors.white70,
                 side: BorderSide(
                     color: _selectedUser != null
-                        ? Colors.redAccent.withOpacity(0.5)
+                        ? Colors.redAccent.withValues(alpha: 0.5)
                         : Colors.white24),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
@@ -604,10 +606,10 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: AppColors.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                              color: AppColors.primary.withOpacity(0.3)),
+                              color: AppColors.primary.withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           detailedDescription,
@@ -685,8 +687,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        AppColors.harmonyPink.withOpacity(0.9),
-                        AppColors.harmonyPink.withOpacity(0.6)
+                        AppColors.harmonyPink.withValues(alpha: 0.9),
+                        AppColors.harmonyPink.withValues(alpha: 0.6)
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -750,10 +752,10 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                         fontSize: 16,
                         fontWeight: FontWeight.w500),
                     blockquoteDecoration: BoxDecoration(
-                      color: AppColors.harmonyPink.withOpacity(0.1),
+                      color: AppColors.harmonyPink.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                          color: AppColors.harmonyPink.withOpacity(0.3)),
+                          color: AppColors.harmonyPink.withValues(alpha: 0.3)),
                     ),
                     blockquotePadding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 20),
@@ -796,7 +798,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
                         : [
                             BoxShadow(
                               color: const Color(0xFFD4AF37)
-                                  .withOpacity(0.2), // Gold glow
+                                  .withValues(alpha: 0.2), // Gold glow
                               blurRadius: 20,
                               spreadRadius: 1,
                             ),
@@ -870,13 +872,13 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
             ? Colors.white
             : Colors.black, // High contrast black on gold
         disabledForegroundColor: Colors.white38,
-        disabledBackgroundColor: Colors.grey.withOpacity(0.1),
+        disabledBackgroundColor: Colors.grey.withValues(alpha: 0.1),
         padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 8,
         shadowColor: isPremium
-            ? AppColors.primary.withOpacity(0.5)
-            : const Color(0xFFD4AF37).withOpacity(0.5),
+            ? AppColors.primary.withValues(alpha: 0.5)
+            : const Color(0xFFD4AF37).withValues(alpha: 0.5),
       ),
     );
   }
@@ -924,8 +926,8 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        border: Border.all(color: color.withOpacity(0.3)),
+        color: color.withValues(alpha: 0.1),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -1022,9 +1024,9 @@ class MantraBuilder extends MarkdownElementBuilder {
       margin: const EdgeInsets.symmetric(vertical: 24),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.15),
+        color: AppColors.primary.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.primary.withOpacity(0.4)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.4)),
       ),
       child: Column(
         children: [
@@ -1069,20 +1071,20 @@ class MantraEmphasisBuilder extends MarkdownElementBuilder {
         decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                AppColors.primary.withOpacity(0.2),
-                Colors.cyanAccent.withOpacity(0.1),
+                AppColors.primary.withValues(alpha: 0.2),
+                Colors.cyanAccent.withValues(alpha: 0.1),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.cyanAccent.withOpacity(0.5),
+              color: Colors.cyanAccent.withValues(alpha: 0.5),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.cyanAccent.withOpacity(0.1),
+                color: Colors.cyanAccent.withValues(alpha: 0.1),
                 blurRadius: 10,
                 spreadRadius: 1,
               )
@@ -1122,9 +1124,9 @@ class RoundedHeaderBuilder extends MarkdownElementBuilder {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.2),
+        color: AppColors.primary.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Text(
         text.text,

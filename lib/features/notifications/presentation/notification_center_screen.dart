@@ -275,7 +275,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       color: _isSelectionMode
-          ? AppColors.primary.withOpacity(0.1)
+          ? AppColors.primary.withValues(alpha: 0.1)
           : Colors.transparent,
       child: Row(
         children: [
@@ -355,7 +355,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         });
       },
       backgroundColor: AppColors.cardBackground,
-      selectedColor: AppColors.primary.withOpacity(0.2),
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
       checkmarkColor: AppColors.primary,
       labelStyle: TextStyle(
         color: isSelected ? AppColors.primary : AppColors.secondaryText,
@@ -403,7 +403,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.notifications_off_outlined,
-              size: 64, color: AppColors.tertiaryText.withOpacity(0.5)),
+              size: 64, color: AppColors.tertiaryText.withValues(alpha: 0.5)),
           const SizedBox(height: 16),
           const Text(
             'Nenhuma notificação encontrada',
@@ -479,14 +479,14 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: AppColors.primary.withOpacity(0.4),
+            color: AppColors.primary.withValues(alpha: 0.4),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -509,7 +509,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.system_update,
@@ -532,7 +532,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                       Text(
                         'Versão $_remoteVersion - Toque para detalhes',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           fontSize: 13,
                         ),
                       ),
@@ -578,9 +578,9 @@ class _NotificationTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.primary.withOpacity(0.15)
+              ? AppColors.primary.withValues(alpha: 0.15)
               : (notification.isRead
-                  ? AppColors.cardBackground.withOpacity(0.3)
+                  ? AppColors.cardBackground.withValues(alpha: 0.3)
                   : AppColors.cardBackground),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -591,7 +591,7 @@ class _NotificationTile extends StatelessWidget {
               ? []
               : [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: Colors.black.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   )
@@ -622,7 +622,7 @@ class _NotificationTile extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: theme.color.withOpacity(0.15),
+                        color: theme.color.withValues(alpha: 0.15),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(theme.icon, color: theme.color, size: 24),

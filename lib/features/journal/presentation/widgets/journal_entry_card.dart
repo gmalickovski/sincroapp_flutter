@@ -16,15 +16,11 @@ import 'package:sincro_app_flutter/features/journal/presentation/widgets/hoverab
 class JournalEntryCard extends StatelessWidget {
   final JournalEntry entry;
   final UserModel userData;
-  final VoidCallback onDelete;
-  final VoidCallback onDuplicate; // New callback
 
   const JournalEntryCard({
     super.key,
     required this.entry,
     required this.userData,
-    required this.onDelete,
-    required this.onDuplicate, // Required
   });
 
   // ... (Mood Map and getBorderColor remain same)
@@ -33,74 +29,29 @@ class JournalEntryCard extends StatelessWidget {
 
   Color _getBorderColor() {
     switch (entry.mood) {
-      case 1: return AppColors.moodAwful;
-      case 2: return AppColors.moodBad;
-      case 3: return AppColors.moodNeutral;
-      case 4: return AppColors.moodGood;
-      case 5: return AppColors.moodGreat;
-      default: return AppColors.border;
+      case 1:
+        return AppColors.moodAwful;
+      case 2:
+        return AppColors.moodBad;
+      case 3:
+        return AppColors.moodNeutral;
+      case 4:
+        return AppColors.moodGood;
+      case 5:
+        return AppColors.moodGreat;
+      default:
+        return AppColors.border;
     }
   }
 
   Widget _buildFooter(BuildContext context) {
     return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center, // Ensure vertical alignment
-            children: [
-              VibrationPill(vibrationNumber: entry.personalDay),
-              Transform.translate(
-                offset: const Offset(10, 0), // Push button towards the right edge
-                child: PopupMenuButton<String>(
-                  padding: EdgeInsets.zero,
-                  splashRadius: 20, // Slightly larger for mobile touch target
-                  icon: const Icon(Icons.more_vert, color: AppColors.secondaryText),
-                  tooltip: "Opções",
-                  offset: const Offset(0, 40),
-                  color: AppColors.cardBackground,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: AppColors.border, width: 1)),
-                  onSelected: (value) {
-                    if (value == 'duplicate') {
-                        onDuplicate();
-                    } else if (value == 'delete') {
-                      onDelete();
-                    }
-                  },
-                  itemBuilder: (BuildContext context) =>
-                      <PopupMenuEntry<String>>[
-                     const PopupMenuItem<String>(
-                      value: 'duplicate',
-                      child: Row(
-                        children: [
-                          Icon(Icons.content_copy, 
-                              color: Colors.white, size: 18),
-                          SizedBox(width: 8),
-                          Text('Duplicar', 
-                              style: TextStyle(color: Colors.white, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                    const PopupMenuDivider(height: 1),
-                    PopupMenuItem<String>(
-                      value: 'delete',
-                      child: Row(
-                        children: [
-                           Icon(Icons.delete_outline_rounded,
-                              color: Colors.red.shade400, size: 18),
-                          const SizedBox(width: 8),
-                          Text('Excluir',
-                              style: TextStyle(color: Colors.red.shade400, fontSize: 14)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        VibrationPill(vibrationNumber: entry.personalDay),
+      ],
+    );
   }
 
   @override
@@ -113,7 +64,7 @@ class JournalEntryCard extends StatelessWidget {
       return Hero(
         tag: entry.id, // Unique tag for this entry
         // Removed custom flightShuttleBuilder to restore default Hero flight
-        child: Material( 
+        child: Material(
           type: MaterialType.transparency,
           child: HoverableCard(
             borderRadius: 12,
@@ -133,19 +84,24 @@ class JournalEntryCard extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(16.0),
               decoration: const BoxDecoration(
-                 color: AppColors.cardBackground, // Force background color for Desktop
-                 borderRadius: BorderRadius.all(Radius.circular(12)),
+                color: AppColors
+                    .cardBackground, // Force background color for Desktop
+                borderRadius: BorderRadius.all(Radius.circular(12)),
               ),
               constraints: const BoxConstraints(minHeight: 150),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                   _buildHeader(formattedDate: DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt), formattedTime: DateFormat("HH:mm").format(entry.createdAt)),
-                   const SizedBox(height: 12),
-                   _buildBody(),
-                   const SizedBox(height: 12),
-                   _buildFooter(context),
+                  _buildHeader(
+                      formattedDate: DateFormat("d 'de' MMMM", 'pt_BR')
+                          .format(entry.createdAt),
+                      formattedTime:
+                          DateFormat("HH:mm").format(entry.createdAt)),
+                  const SizedBox(height: 12),
+                  _buildBody(),
+                  const SizedBox(height: 12),
+                  _buildFooter(context),
                 ],
               ),
             ),
@@ -153,7 +109,7 @@ class JournalEntryCard extends StatelessWidget {
         ),
       );
     }
-    
+
     // Mobile: OpenContainer logic...
     return OpenContainer(
       transitionType: ContainerTransitionType.fade,
@@ -163,7 +119,7 @@ class JournalEntryCard extends StatelessWidget {
         entry: entry,
       ),
       closedElevation: 0,
-       closedShape: RoundedRectangleBorder(
+      closedShape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: borderColor, width: 1),
       ),
@@ -181,11 +137,14 @@ class JournalEntryCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-               _buildHeader(formattedDate: DateFormat("d 'de' MMMM", 'pt_BR').format(entry.createdAt), formattedTime: DateFormat("HH:mm").format(entry.createdAt)),
-               const SizedBox(height: 12),
-               _buildBody(),
-               const SizedBox(height: 12),
-               _buildFooter(context),
+              _buildHeader(
+                  formattedDate: DateFormat("d 'de' MMMM", 'pt_BR')
+                      .format(entry.createdAt),
+                  formattedTime: DateFormat("HH:mm").format(entry.createdAt)),
+              const SizedBox(height: 12),
+              _buildBody(),
+              const SizedBox(height: 12),
+              _buildFooter(context),
             ],
           ),
         ),
@@ -195,25 +154,26 @@ class JournalEntryCard extends StatelessWidget {
 
   // ... (_buildHeader, _buildBody remain same)
 
-  Widget _buildHeader({required String formattedDate, required String formattedTime}) {
+  Widget _buildHeader(
+      {required String formattedDate, required String formattedTime}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           formattedDate,
           style: const TextStyle(
-             color: AppColors.secondaryText,
-             fontSize: 12,
-             fontWeight: FontWeight.w500,
-             fontFamily: 'Poppins',
+            color: AppColors.secondaryText,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            fontFamily: 'Poppins',
           ),
         ),
-         Text(
+        Text(
           formattedTime,
           style: const TextStyle(
-             color: AppColors.secondaryText,
-             fontSize: 12,
-              fontFamily: 'Poppins',
+            color: AppColors.secondaryText,
+            fontSize: 12,
+            fontFamily: 'Poppins',
           ),
         ),
       ],
@@ -252,16 +212,16 @@ class JournalEntryCard extends StatelessWidget {
     final lines = <quill.Line>[];
     int currentChars = 0;
     const int maxChars = 300; // Limit total characters in preview
-    
+
     // Helper to extract lines from Blocks or direct Line nodes
     void extractLines(quill.Node node) {
       if (lines.length >= 6 || currentChars >= maxChars) return;
       if (node is quill.Line) {
-         final text = node.toPlainText().trim();
-         if (text.isNotEmpty) {
-             lines.add(node);
-             currentChars += text.length;
-         }
+        final text = node.toPlainText().trim();
+        if (text.isNotEmpty) {
+          lines.add(node);
+          currentChars += text.length;
+        }
       } else if (node is quill.Block) {
         for (var child in node.children) {
           extractLines(child);
@@ -292,23 +252,20 @@ class JournalEntryCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
         ],
-
         ...lines.map((line) => _buildLinePreview(line)),
-        
         if (currentChars >= maxChars || lines.length >= 6)
-            const Padding(
-              padding: EdgeInsets.only(top: 4.0),
-              child: Text(
-                '...',
-                style: TextStyle(color: AppColors.secondaryText),
-              ),
+          const Padding(
+            padding: EdgeInsets.only(top: 4.0),
+            child: Text(
+              '...',
+              style: TextStyle(color: AppColors.secondaryText),
             ),
-
+          ),
         if (lines.isEmpty && (entry.title == null || entry.title!.isEmpty))
-           const Text(
-              'Sem conteúdo',
-              style: TextStyle(color: AppColors.tertiaryText, fontSize: 14),
-           ),
+          const Text(
+            'Sem conteúdo',
+            style: TextStyle(color: AppColors.tertiaryText, fontSize: 14),
+          ),
       ],
     );
   }
@@ -324,7 +281,7 @@ class JournalEntryCard extends StatelessWidget {
     final isChecked = listAttr == 'checked';
     final isBullet = listAttr == 'bullet';
     final isOrdered = listAttr == 'ordered';
-    
+
     // Prefix
     Widget? prefix;
     if (isCheckbox) {
@@ -334,14 +291,14 @@ class JournalEntryCard extends StatelessWidget {
         height: 16,
         margin: const EdgeInsets.only(top: 2, right: 8),
         decoration: BoxDecoration(
-           color: isChecked ? AppColors.primary : Colors.transparent,
-           border: Border.all(
-             color: isChecked
-                 ? AppColors.primary
-                 : AppColors.secondaryText.withValues(alpha: 0.5),
-             width: 2,
-           ),
-           borderRadius: BorderRadius.circular(4),
+          color: isChecked ? AppColors.primary : Colors.transparent,
+          border: Border.all(
+            color: isChecked
+                ? AppColors.primary
+                : AppColors.secondaryText.withValues(alpha: 0.5),
+            width: 2,
+          ),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: isChecked
             ? const Center(
@@ -359,15 +316,16 @@ class JournalEntryCard extends StatelessWidget {
         child: Icon(Icons.circle, size: 5, color: AppColors.secondaryText),
       );
     } else if (isOrdered) {
-        // Simple dot for preview smoothness, handling numbers strictly is complex without index context
-        prefix = const Padding(
-             padding: EdgeInsets.only(top: 4.0, right: 8.0),
-             child: Text("•", style: TextStyle(color: AppColors.secondaryText)),
-        );
+      // Simple dot for preview smoothness, handling numbers strictly is complex without index context
+      prefix = const Padding(
+        padding: EdgeInsets.only(top: 4.0, right: 8.0),
+        child: Text("•", style: TextStyle(color: AppColors.secondaryText)),
+      );
     }
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6.0), // Increased spacing for readablity
+      padding: const EdgeInsets.only(
+          bottom: 6.0), // Increased spacing for readablity
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -383,40 +341,44 @@ class JournalEntryCard extends StatelessWidget {
     final tagRegex = RegExp(r'\B#\w+');
     final mentionRegex = RegExp(r'\B@\w+');
     final timeRegex = RegExp(r'\b\d{1,2}:\d{2}\b');
-    
-    final spans = <InlineSpan>[];
-    
-    text.splitMapJoin(
-       RegExp(r'(\B#\w+)|(\B@\w+)|(\b\d{1,2}:\d{2}\b)'),
-       onMatch: (m) {
-          final match = m.group(0)!;
-          Color color = AppColors.secondaryText;
-          FontWeight weight = FontWeight.normal;
 
-          if (tagRegex.hasMatch(match)) {
-             color = AppColors.secondaryAccent; // Purple for tags
-             weight = FontWeight.w600;
-          } else if (mentionRegex.hasMatch(match)) {
-             color = AppColors.primary; // Primary for mentions
-             weight = FontWeight.bold;
-          } else if (timeRegex.hasMatch(match)) {
-             color = AppColors.primary; // Primary for time
-             weight = FontWeight.w600;
-          }
-          
-          spans.add(TextSpan(
-            text: match,
-            style: TextStyle(color: color, fontWeight: weight, fontFamily: 'Poppins'),
-          ));
-          return '';
-       },
-       onNonMatch: (n) {
-         spans.add(TextSpan(
-           text: n,
-           style: const TextStyle(color: AppColors.secondaryText, fontSize: 14, fontFamily: 'Poppins'),
-         ));
-         return '';
-       },
+    final spans = <InlineSpan>[];
+
+    text.splitMapJoin(
+      RegExp(r'(\B#\w+)|(\B@\w+)|(\b\d{1,2}:\d{2}\b)'),
+      onMatch: (m) {
+        final match = m.group(0)!;
+        Color color = AppColors.secondaryText;
+        FontWeight weight = FontWeight.normal;
+
+        if (tagRegex.hasMatch(match)) {
+          color = AppColors.secondaryAccent; // Purple for tags
+          weight = FontWeight.w600;
+        } else if (mentionRegex.hasMatch(match)) {
+          color = AppColors.primary; // Primary for mentions
+          weight = FontWeight.bold;
+        } else if (timeRegex.hasMatch(match)) {
+          color = AppColors.primary; // Primary for time
+          weight = FontWeight.w600;
+        }
+
+        spans.add(TextSpan(
+          text: match,
+          style: TextStyle(
+              color: color, fontWeight: weight, fontFamily: 'Poppins'),
+        ));
+        return '';
+      },
+      onNonMatch: (n) {
+        spans.add(TextSpan(
+          text: n,
+          style: const TextStyle(
+              color: AppColors.secondaryText,
+              fontSize: 14,
+              fontFamily: 'Poppins'),
+        ));
+        return '';
+      },
     );
 
     return RichText(
@@ -425,6 +387,4 @@ class JournalEntryCard extends StatelessWidget {
       text: TextSpan(children: spans),
     );
   }
-
-
 }

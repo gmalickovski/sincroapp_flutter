@@ -93,7 +93,8 @@ Future<void> main() async {
       backgroundColor: Colors.transparent,
       skipTaskbar: false,
       titleBarStyle: TitleBarStyle.hidden,
-      windowButtonVisibility: false, // We will draw our own buttons or use window_manager's caption
+      windowButtonVisibility:
+          false, // We will draw our own buttons or use window_manager's caption
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();

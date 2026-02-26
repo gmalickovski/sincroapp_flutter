@@ -328,8 +328,8 @@ class _ColorSelectionButtonState extends State<ColorSelectionButton> {
   }
 
   Widget _buildColorOption(Color? color) {
-    final bool isSelected =
-        _selectedColor?.toARGB32() == color?.toARGB32(); // Compara valor (null safe)
+    final bool isSelected = _selectedColor?.toARGB32() ==
+        color?.toARGB32(); // Compara valor (null safe)
 
     return GestureDetector(
       onTap: () {
@@ -367,7 +367,8 @@ class _ColorSelectionButtonState extends State<ColorSelectionButton> {
 
     String hex = '';
     if (color != null) {
-      hex = '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
+      hex =
+          '#${color.toARGB32().toRadixString(16).padLeft(8, '0').substring(2)}';
     }
 
     if (widget.isBackground) {

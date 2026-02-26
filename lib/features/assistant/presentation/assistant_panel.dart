@@ -783,13 +783,13 @@ class _AssistantPanelState extends State<AssistantPanel>
                         return Container(
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.primary.withOpacity(0.2)
+                                ? AppColors.primary.withValues(alpha: 0.2)
                                 : AppColors.cardBackground,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                                 color: isSelected
                                     ? AppColors.primary
-                                    : Colors.white.withOpacity(0.05)),
+                                    : Colors.white.withValues(alpha: 0.05)),
                           ),
                           child: ListTile(
                             leading: Icon(Icons.chat_bubble_outline,
@@ -924,8 +924,8 @@ class _AssistantPanelState extends State<AssistantPanel>
                           keyboardType: TextInputType.multiline,
                           textInputAction: TextInputAction.send,
                           obscureText: false,
-                          enableSuggestions: false,
-                          autocorrect: false,
+                          enableSuggestions: true,
+                          autocorrect: true,
                           autofillHints: const [], // Prevent browser password save prompt
                           style: const TextStyle(
                               color: Colors.white, fontSize: 15),

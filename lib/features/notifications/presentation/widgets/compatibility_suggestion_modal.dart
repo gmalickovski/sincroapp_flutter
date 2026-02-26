@@ -278,8 +278,8 @@ class _CompatibilitySuggestionModalState
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: isGoodSynergy
-                  ? Colors.green.withOpacity(0.2)
-                  : Colors.red.withOpacity(0.2),
+                  ? Colors.green.withValues(alpha: 0.2)
+                  : Colors.red.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border:
                   Border.all(color: isGoodSynergy ? Colors.green : Colors.red),

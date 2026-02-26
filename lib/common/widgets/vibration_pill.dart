@@ -55,8 +55,8 @@ VibrationColors getColorsForVibration(int vibrationNumber) {
   }
 }
 
-// --- INÍCIO DA MUDANÇA: Adiciona o tipo 'micro' ---
-enum VibrationPillType { standard, compact, micro }
+// --- INÍCIO DA MUDANÇA: Adiciona o tipo 'micro', 'medium' e 'filterPopup' ---
+enum VibrationPillType { standard, compact, micro, medium, filterPopup }
 // --- FIM DA MUDANÇA ---
 
 class VibrationPill extends StatelessWidget {
@@ -85,10 +85,13 @@ class VibrationPill extends StatelessWidget {
     final Color effectiveTextColor =
         forceInvertedColors ? baseColors.background : baseColors.text;
 
-    final VoidCallback effectiveOnTap = onTap ??
-        () {
-          showVibrationInfoModal(context, vibrationNumber: vibrationNumber);
-        };
+    final VoidCallback? effectiveOnTap = onTap ??
+        (type == VibrationPillType.filterPopup
+            ? null
+            : () {
+                showVibrationInfoModal(context,
+                    vibrationNumber: vibrationNumber);
+              });
 
     // --- INÍCIO DA MUDANÇA: Lógica para o tipo 'micro' ---
     if (type == VibrationPillType.micro) {
@@ -166,6 +169,62 @@ class VibrationPill extends StatelessWidget {
       return InkWell(
         onTap: effectiveOnTap,
         borderRadius: borderRadius,
+        child: pillContent,
+      );
+    }
+    // --- FIM DA MUDANÇA ---
+
+    // --- INÍCIO DA MUDANÇA: Lógica para o tipo 'medium' (36x36) ---
+    if (type == VibrationPillType.medium) {
+      Widget pillContent = Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: effectiveBgColor,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            '$vibrationNumber',
+            style: TextStyle(
+              color: effectiveTextColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 14, // Fonte um pouco maior
+            ),
+          ),
+        ),
+      );
+      return InkWell(
+        onTap: effectiveOnTap,
+        borderRadius: BorderRadius.circular(18),
+        child: pillContent,
+      );
+    }
+    // --- FIM DA MUDANÇA ---
+
+    // --- INÍCIO DA MUDANÇA: Lógica para o tipo 'filterPopup' (44x44) ---
+    if (type == VibrationPillType.filterPopup) {
+      Widget pillContent = Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: effectiveBgColor,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Text(
+            '$vibrationNumber',
+            style: TextStyle(
+              color: effectiveTextColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 15, // Fonte ajustada para 40px
+            ),
+          ),
+        ),
+      );
+      return InkWell(
+        onTap: effectiveOnTap,
+        borderRadius: BorderRadius.circular(20),
         child: pillContent,
       );
     }

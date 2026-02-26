@@ -30,7 +30,6 @@ class HeroDialogRoute<T> extends PageRoute<T> {
   @override
   String get barrierLabel => 'Fechar';
 
-
   @override
   Widget buildPage(
     BuildContext context,
@@ -47,7 +46,7 @@ class HeroDialogRoute<T> extends PageRoute<T> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    // We return the child directly. 
+    // We return the child directly.
     // The Hero widget will handle the transition of the shared element.
     // The barrier fades in automatically due to barrierColor.
     return FadeTransition(

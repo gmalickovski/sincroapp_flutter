@@ -353,11 +353,11 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isBad
-                ? Colors.red.withOpacity(0.1)
-                : Colors.green.withOpacity(0.1),
+                ? Colors.red.withValues(alpha: 0.1)
+                : Colors.green.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: statusColor.withOpacity(0.3),
+              color: statusColor.withValues(alpha: 0.3),
               width: 1,
             ),
           ),
@@ -383,7 +383,7 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                           Text(
                             'Sinergia do grupo',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
+                              color: Colors.white.withValues(alpha: 0.7),
                               fontSize: 12,
                             ),
                           ),
@@ -410,7 +410,7 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                         ? '📅 Datas com melhor compatibilidade:'
                         : '⚠️ Nenhuma data ideal encontrada nos próximos 30 dias',
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -441,13 +441,13 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                                   horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? Colors.amber.withOpacity(0.2)
+                                    ? Colors.amber.withValues(alpha: 0.2)
                                     : AppColors.cardBackground,
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: isSelected
                                       ? Colors.amber
-                                      : Colors.amber.withOpacity(0.5),
+                                      : Colors.amber.withValues(alpha: 0.5),
                                   width: isSelected ? 2 : 1,
                                 ),
                               ),
@@ -478,7 +478,8 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 6, vertical: 2),
                                       decoration: BoxDecoration(
-                                        color: Colors.green.withOpacity(0.2),
+                                        color:
+                                            Colors.green.withValues(alpha: 0.2),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: const Text(

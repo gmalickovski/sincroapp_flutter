@@ -113,4 +113,13 @@ server/node_modules/
 
 # SSH Keys
 chave_deploy
-chave_deploy.pub
+chave_deploy.pubanalysis.txt
+analysis_output.txt
+analyze*.txt
+analyze.json
+errors.txt
+machine.txt
+parse_errors.dart
+replace_opacity.dart
+update_detail_modal.py
+git_status_output.txt

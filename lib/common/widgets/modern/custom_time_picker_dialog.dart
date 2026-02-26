@@ -19,19 +19,43 @@ class TimePickerResult {
   TimePickerResult(this.time, this.durationMinutes);
 }
 
-class CustomTimePickerDialog extends StatefulWidget {
+class CustomTimePickerWidget extends StatefulWidget {
   final TimeOfDay initialTime;
+  final ValueChanged<TimePickerResult>? onConfirm;
+  final VoidCallback? onCancel;
 
-  const CustomTimePickerDialog({
+  const CustomTimePickerWidget({
     super.key,
     required this.initialTime,
+    this.onConfirm,
+    this.onCancel,
   });
 
   @override
-  State<CustomTimePickerDialog> createState() => _CustomTimePickerDialogState();
+  State<CustomTimePickerWidget> createState() => _CustomTimePickerWidgetState();
 }
 
-class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
+class CustomTimePickerDialog extends StatelessWidget {
+  final TimeOfDay initialTime;
+
+  const CustomTimePickerDialog({super.key, required this.initialTime});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: AppColors.cardBackground,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+      child: CustomTimePickerWidget(
+        initialTime: initialTime,
+        onConfirm: (result) => Navigator.pop(context, result),
+        onCancel: () => Navigator.pop(context),
+      ),
+    );
+  }
+}
+
+class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
   late TimeOfDay _selectedTime; // Horário de Início
   TimeOfDay? _endTime; // Horário de Fim (para Definir Período)
 
@@ -163,44 +187,41 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Dialog(
-      backgroundColor: AppColors.cardBackground,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-      child: Container(
-        width: 340, // Expanded width as requested
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildTimeDisplay(),
-            if (_isCustomPeriod) ...[
-              const SizedBox(height: 16),
-              _buildPeriodInputs(),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              height: 280,
-              child: _ClockDial(
-                selectedTime: _activeField == _TimeField.start
-                    ? _selectedTime
-                    : (_endTime ?? _selectedTime),
-                mode: _mode,
-                onTimeChanged: _handleTimeChanged,
-                onModeChanged: (mode) {
-                  _handleModeChanged(mode);
-                  if (mode == _TimePickerMode.minute) {
-                    // Optionally focus minute field? Usually annoying if Dialing.
-                  }
-                },
-              ),
-            ),
+    return Container(
+      width: double.infinity, // takes full width inside bottom sheet
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 24),
+          _buildTimeDisplay(),
+          if (_isCustomPeriod) ...[
             const SizedBox(height: 16),
-            _buildDurationChips(),
+            _buildPeriodInputs(),
           ],
-        ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 280,
+            child: _ClockDial(
+              selectedTime: _activeField == _TimeField.start
+                  ? _selectedTime
+                  : (_endTime ?? _selectedTime),
+              mode: _mode,
+              onTimeChanged: _handleTimeChanged,
+              onModeChanged: (mode) {
+                _handleModeChanged(mode);
+                if (mode == _TimePickerMode.minute) {
+                  // Optionally focus minute field? Usually annoying if Dialing.
+                }
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildDurationChips(),
+          const SizedBox(height: 24),
+          _buildFooter(),
+        ],
       ),
     );
   }
@@ -233,7 +254,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
           color: isActive
-              ? AppColors.primary.withOpacity(0.1)
+              ? AppColors.primary.withValues(alpha: 0.1)
               : Colors.transparent,
           border: Border.all(
             color: isActive ? AppColors.primary : AppColors.border,
@@ -353,7 +374,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         }
       },
       selectedColor: AppColors.primary,
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.cardBackground,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppColors.secondaryText,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -393,7 +414,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         }
       },
       selectedColor: AppColors.primary,
-      backgroundColor: AppColors.background,
+      backgroundColor: AppColors.cardBackground,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppColors.secondaryText,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -408,14 +429,10 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        IconButton(
-          icon: const Icon(Icons.close, color: AppColors.secondaryText),
-          onPressed: () => Navigator.pop(context),
-        ),
-        const Text(
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.only(bottom: 8.0),
+        child: Text(
           "Selecione o horário",
           style: TextStyle(
             color: AppColors.primaryText,
@@ -423,24 +440,80 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
             fontWeight: FontWeight.w600,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.check, color: AppColors.primary),
-          onPressed: () {
-            int? finalDuration = _selectedDuration;
+      ),
+    );
+  }
 
-            if (_isCustomPeriod && _endTime != null) {
-              final startMin = _selectedTime.hour * 60 + _selectedTime.minute;
-              final endMin = _endTime!.hour * 60 + _endTime!.minute;
-              var diff = endMin - startMin;
-              if (diff < 0) {
-                diff += 24 * 60; // Assume next day overlap if end < start
-              }
-              finalDuration = diff;
-            }
+  Widget _buildFooter() {
+    return Row(
+      children: [
+        Expanded(
+          child: SizedBox(
+            height: 48,
+            child: OutlinedButton(
+              onPressed: () {
+                if (widget.onCancel != null) {
+                  widget.onCancel!();
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                backgroundColor: AppColors.cardBackground,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text("Cancelar",
+                  style: TextStyle(
+                      color: AppColors.secondaryText, fontFamily: 'Poppins')),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: SizedBox(
+            height: 48,
+            child: ElevatedButton(
+              onPressed: () {
+                int? finalDuration = _selectedDuration;
 
-            Navigator.pop(
-                context, TimePickerResult(_selectedTime, finalDuration));
-          },
+                if (_isCustomPeriod && _endTime != null) {
+                  final startMin =
+                      _selectedTime.hour * 60 + _selectedTime.minute;
+                  final endMin = _endTime!.hour * 60 + _endTime!.minute;
+                  var diff = endMin - startMin;
+                  if (diff < 0) {
+                    diff += 24 * 60;
+                  }
+                  finalDuration = diff;
+                }
+
+                if (widget.onConfirm != null) {
+                  widget.onConfirm!(
+                      TimePickerResult(_selectedTime, finalDuration));
+                }
+              },
+              style: ButtonStyle(
+                backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (states) => AppColors.primary),
+                foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (states) => Colors.white),
+                elevation:
+                    WidgetStateProperty.resolveWith<double>((states) => 0),
+                padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                    (states) => const EdgeInsets.symmetric(vertical: 12)),
+                shape: WidgetStateProperty.resolveWith<OutlinedBorder>(
+                    (states) {
+                  return RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  );
+                }),
+              ),
+              child: const Text("Definir",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            ),
+          ),
         ),
       ],
     );
@@ -453,14 +526,14 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         _buildDisplayItem(
             _hourController, _hourFocus, _TimePickerMode.hour, _onHourChanged),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0),
           child: Text(
             ":",
             style: TextStyle(
-              fontSize: 56,
+              fontSize: 40,
               height: 1,
               fontWeight: FontWeight.bold,
-              color: AppColors.primaryText.withOpacity(0.9),
+              color: AppColors.primaryText.withValues(alpha: 0.9),
             ),
           ),
         ),
@@ -484,14 +557,14 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
         focusNode.requestFocus();
       },
       child: Container(
-        width: 96,
+        width: 80,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
           color: AppColors.background, // Restored dark background
           borderRadius: BorderRadius.circular(12),
           border: isSelected
               ? Border.all(color: AppColors.primary, width: 2)
-              : Border.all(color: Colors.transparent, width: 2),
+              : Border.all(color: AppColors.border, width: 1),
         ),
         child: TextField(
           controller: controller,
@@ -504,7 +577,7 @@ class _CustomTimePickerDialogState extends State<CustomTimePickerDialog> {
             LengthLimitingTextInputFormatter(2),
           ],
           style: TextStyle(
-            fontSize: 56,
+            fontSize: 40,
             height: 1,
             fontWeight: FontWeight.bold,
             color: isSelected ? AppColors.primary : AppColors.primaryText,

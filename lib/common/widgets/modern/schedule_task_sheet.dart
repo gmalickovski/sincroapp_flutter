@@ -10,23 +10,28 @@ import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/common/widgets/scrollable_chips_row.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/inline_month_year_selector.dart';
 
 class ScheduleTaskSheet extends StatefulWidget {
   final DateTime? initialDate;
   final TimeOfDay? initialTime;
   final RecurrenceRule? initialRecurrence;
-  final Duration? initialReminderOffset; // Novo par├ómetro
+  final DateTime? initialReminder;
+  final List<int>? initialReminderOffsets; // Modificado para lista de minutos
   final DateTime? goalDeadline; // Prazo final da meta (se houver)
   final UserModel userData;
+  final bool isDesktop;
 
   const ScheduleTaskSheet({
     super.key,
     this.initialDate,
     this.initialTime,
     this.initialRecurrence,
-    this.initialReminderOffset, // Recebe no construtor
+    this.initialReminder,
+    this.initialReminderOffsets, // Recebe no construtor
     this.goalDeadline, // Novo parâmetro para limitar opções
     required this.userData,
+    this.isDesktop = false,
   });
 
   @override
@@ -35,24 +40,27 @@ class ScheduleTaskSheet extends StatefulWidget {
 
 class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   late DateTime _focusedDay;
-  late DateTime _selectedDay;
+  DateTime? _selectedDay;
   late DateTime _todayMidnight;
   TimeOfDay? _selectedTime;
   late RecurrenceRule _recurrenceRule;
   late NumerologyEngine _engine;
 
   // UI State
-  bool _isAllDay = false;
+  bool _isAllDay = true;
+  bool _isSelectingTime = false;
 
   // Reminder State
   bool _showReminder = false; // Controls visibility of reminder options
-  Duration? _selectedReminderOffset;
+  Set<int> _selectedReminderOffsets = {};
 
   // Recurrence State
   bool _showRecurrence = false; // Controls visibility of recurrence options
 
   // Duration State
   int? _selectedDuration;
+
+  bool _isSelectingYearMonth = false;
 
   // REMOVED ScrollControllers (managed internally by ScrollableChipsRow)
 
@@ -64,17 +72,18 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   @override
   void initState() {
     super.initState();
-    _selectedReminderOffset = widget.initialReminderOffset; // Inicializa
+    if (widget.initialReminderOffsets != null) {
+      _selectedReminderOffsets = widget.initialReminderOffsets!.toSet();
+    }
     final now = DateTime.now();
     _todayMidnight = DateTime(now.year, now.month, now.day);
 
     _focusedDay = widget.initialDate ?? now;
-    _selectedDay = widget.initialDate ?? now;
-    _selectedDay = widget.initialDate ?? now;
+    _selectedDay = widget.initialDate;
     _selectedTime = widget.initialTime;
     _recurrenceRule = widget.initialRecurrence ?? RecurrenceRule();
     _showRecurrence = _recurrenceRule.type != RecurrenceType.none;
-    _showReminder = _selectedReminderOffset != null;
+    _showReminder = _selectedReminderOffsets.isNotEmpty;
 
     _isAllDay = _selectedTime == null;
 
@@ -95,7 +104,11 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     setState(() {
-      _selectedDay = selectedDay;
+      if (_selectedDay != null && _isSameDay(_selectedDay!, selectedDay)) {
+        _selectedDay = null; // Toggle off if clicked again
+      } else {
+        _selectedDay = selectedDay;
+      }
       _focusedDay = focusedDay;
     });
   }
@@ -106,42 +119,16 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       if (value) {
         _selectedTime = null;
       } else {
-        // If turning on time, immediately pick a time
-        _pickTime();
+        // If turning on time, slide into time picker view
+        _isSelectingTime = true;
       }
     });
   }
 
-  Future<void> _pickTime() async {
-    final now = TimeOfDay.now();
-    final initial = _selectedTime ?? TimeOfDay(hour: now.hour + 1, minute: 0);
-
-    final dynamic picked = await showDialog(
-      context: context,
-      builder: (context) => CustomTimePickerDialog(initialTime: initial),
-    );
-
-    if (picked != null) {
-      if (picked is TimePickerResult) {
-        setState(() {
-          _selectedTime = picked.time;
-          _selectedDuration = picked.durationMinutes;
-          _isAllDay = false;
-        });
-      } else if (picked is TimeOfDay) {
-        // Fallback just in case
-        setState(() {
-          _selectedTime = picked;
-          _isAllDay = false;
-        });
-      }
-    } else {
-      // user cancelled picker
-      if (_selectedTime == null) {
-        // Revert to all day if they cancelled initial pick
-        setState(() => _isAllDay = true);
-      }
-    }
+  void _pickTime() {
+    setState(() {
+      _isSelectingTime = true;
+    });
   }
 
   Future<void> _pickReminderTime() async {
@@ -165,45 +152,55 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
           targetDt = targetDt.subtract(const Duration(days: 1));
         }
 
-        _selectedReminderOffset = baseDt.difference(targetDt);
+        final diffMinutes = baseDt.difference(targetDt).inMinutes;
+        if (diffMinutes >= 0) {
+          _selectedReminderOffsets.add(diffMinutes);
+        }
       });
     }
   }
 
   void _onSave() {
-    // Calculate reminder time if applicable
-    TimeOfDay? reminderTime;
-    if (_selectedReminderOffset != null) {
-      final hour = _selectedTime?.hour ?? 0; // Default to midnight if All Day
-      final minute = _selectedTime?.minute ?? 0;
-      final dt = DateTime(2024, 1, 1, hour, minute);
-      final reminded = dt.subtract(_selectedReminderOffset!);
-      reminderTime = TimeOfDay(hour: reminded.hour, minute: reminded.minute);
+    // If no day is selected but we are saving, maybe we just return nulls or whatever was there.
+    // Use a data selecionada base (meia noite)
+    DateTime? finalDateTime;
+
+    if (_selectedDay != null) {
+      finalDateTime = DateTime(
+        _selectedDay!.year,
+        _selectedDay!.month,
+        _selectedDay!.day,
+      );
+
+      // Combina com a hora se n├úo for dia inteiro
+      if (!_isAllDay && _selectedTime != null) {
+        finalDateTime = DateTime(
+          _selectedDay!.year,
+          _selectedDay!.month,
+          _selectedDay!.day,
+          _selectedTime!.hour,
+          _selectedTime!.minute,
+        );
+      }
     }
 
-    // Use a data selecionada base (meia noite)
-    DateTime finalDateTime = DateTime(
-      _selectedDay.year,
-      _selectedDay.month,
-      _selectedDay.day,
-    );
-
-    // Combina com a hora se n├úo for dia inteiro
-    if (!_isAllDay && _selectedTime != null) {
-      finalDateTime = DateTime(
-        _selectedDay.year,
-        _selectedDay.month,
-        _selectedDay.day,
-        _selectedTime!.hour,
-        _selectedTime!.minute,
-      );
+    // Calculate reminder time if applicable
+    TimeOfDay? reminderTime;
+    // reminder time computation is mostly obsolete here, handling offsets individually
+    if (_selectedReminderOffsets.isNotEmpty &&
+        finalDateTime != null &&
+        !_isAllDay &&
+        _selectedTime != null) {
+      final firstOffset = _selectedReminderOffsets.first;
+      final reminded = finalDateTime.subtract(Duration(minutes: firstOffset));
+      reminderTime = TimeOfDay(hour: reminded.hour, minute: reminded.minute);
     }
 
     final result = DatePickerResult(
       finalDateTime,
       _recurrenceRule,
       reminderTime: reminderTime,
-      reminderOffset: _selectedReminderOffset,
+      reminderOffsets: _selectedReminderOffsets.toList(),
       hasTime: !_isAllDay && _selectedTime != null,
       durationMinutes: _selectedDuration,
     );
@@ -211,28 +208,76 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     Navigator.pop(context, result);
   }
 
-  Future<void> _showMonthYearPicker() async {
-    final DateTime? pickedDate = await showDialog<DateTime>(
-      context: context,
-      builder: (dialogContext) {
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-          child: CustomMonthYearPicker(
-            initialDate: _focusedDay,
-            firstDate: DateTime(2020),
-            lastDate: DateTime(2101),
-          ),
-        );
-      },
-    );
+  void _onClear() {
+    setState(() {
+      _selectedDay = null;
+      _selectedTime = null;
+      _isAllDay = true;
+      _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
+      _showRecurrence = false;
+      _selectedReminderOffsets.clear();
+      _showReminder = false;
+      _selectedDuration = null;
+    });
+  }
 
-    if (pickedDate != null && mounted) {
-      setState(() {
-        _focusedDay = pickedDate;
-      });
-    }
+  Widget _buildCustomHeader() {
+    final headerText = DateFormat('MMMM yyyy', 'pt_BR').format(_focusedDay);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          if (!_isSelectingYearMonth)
+            IconButton(
+              icon: const Icon(Icons.chevron_left, color: AppColors.primaryText),
+              onPressed: () => setState(() => _focusedDay =
+                  DateTime(_focusedDay.year, _focusedDay.month - 1)),
+            )
+          else
+            const SizedBox(width: 48),
+
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isSelectingYearMonth = !_isSelectingYearMonth;
+              });
+            },
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _capitalize(headerText),
+                  style: const TextStyle(
+                      color: AppColors.primaryText,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Poppins'),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  _isSelectingYearMonth
+                      ? Icons.keyboard_arrow_up
+                      : Icons.unfold_more_rounded,
+                  color: AppColors.secondaryText,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+
+          if (!_isSelectingYearMonth)
+            IconButton(
+              icon: const Icon(Icons.chevron_right, color: AppColors.primaryText),
+              onPressed: () => setState(() => _focusedDay =
+                  DateTime(_focusedDay.year, _focusedDay.month + 1)),
+            )
+          else
+            const SizedBox(width: 48),
+        ],
+      ),
+    );
   }
 
   String _capitalize(String s) {
@@ -240,87 +285,250 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     return s[0].toUpperCase() + s.substring(1);
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
+  bool _isSameDay(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  bool _isSameMonth(DateTime a, DateTime b) {
+  bool _isSameMonth(DateTime? a, DateTime? b) {
+    if (a == null || b == null) return false;
     return a.year == b.year && a.month == b.month;
   }
 
   @override
   Widget build(BuildContext context) {
-    final double maxSheetHeight = MediaQuery.of(context).size.height * 0.9;
-
-    return Container(
-      constraints: BoxConstraints(maxHeight: maxSheetHeight),
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    return Theme(
+      data: Theme.of(context).copyWith(
+        textTheme: Theme.of(context).textTheme.apply(fontFamily: 'Poppins'),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 1. Header (Minimalist Icons)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Row(
+      child: Container(
+        constraints: BoxConstraints(
+          maxHeight: widget.isDesktop
+              ? double.infinity
+              : MediaQuery.of(context).size.height * 0.9,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground,
+          borderRadius: widget.isDesktop
+              ? BorderRadius.circular(16)
+              : const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, animation) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(1.0, 0.0), // Slide in from right
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            );
+          },
+          child: _isSelectingTime
+              ? _buildTimeSelectionView()
+              : _buildMainScheduleView(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeSelectionView() {
+    final now = TimeOfDay.now();
+    final initial = _selectedTime ?? TimeOfDay(hour: now.hour + 1, minute: 0);
+
+    return Column(
+      key: const ValueKey('TimeSelectionView'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: SingleChildScrollView(
+            child: CustomTimePickerWidget(
+              initialTime: initial,
+              onCancel: () {
+                setState(() {
+                  _isSelectingTime = false;
+                  if (_selectedTime == null) {
+                    _isAllDay = true;
+                  }
+                });
+              },
+              onConfirm: (result) {
+                setState(() {
+                  _selectedTime = result.time;
+                  _selectedDuration = result.durationMinutes;
+                  _isAllDay = false;
+                  _isSelectingTime = false;
+                });
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMainScheduleView() {
+    return Column(
+      key: const ValueKey('MainScheduleView'),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildHeader(),
+        Flexible(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
               children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close,
-                      color: AppColors.secondaryText, size: 24),
-                  tooltip: 'Cancelar',
-                ),
-                const Expanded(
-                  child: Text(
-                    "Agendar Tarefa",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.primaryText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                IconButton(
-                  onPressed: _onSave,
-                  icon: const Icon(Icons.check,
-                      color: AppColors.primary, size: 28),
-                  tooltip: 'Salvar',
-                ),
+                // 2. Calendar
+                _buildCalendar(),
+                const SizedBox(height: 16), // Spacing requested
+
+                const Divider(color: AppColors.border, height: 1),
+
+                // 3. Time Row (Horário)
+                _buildTimeRow(),
+
+                const Divider(color: AppColors.border, height: 1),
+
+                // 5. Recurrence Row (Repetir)
+                _buildRecurrenceRow(),
+
+                const Divider(color: AppColors.border, height: 1),
+
+                // 6. Reminder Row (Lembrete)
+                _buildReminderRow(),
               ],
             ),
           ),
+        ),
+        _buildFooter(),
+      ],
+    );
+  }
 
-          Flexible(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 24),
-              child: Column(
-                children: [
-                  // 2. Calendar
-                  _buildCalendar(),
-                  const SizedBox(height: 16), // Spacing requested
-
-                  const Divider(color: AppColors.border, height: 1),
-
-                  // 3. Time Row (Hor├írio)
-                  _buildTimeRow(),
-
-                  const Divider(color: AppColors.border, height: 1),
-
-                  // 5. Recurrence Row (Repetir)
-                  _buildRecurrenceRow(),
-
-                  const Divider(color: AppColors.border, height: 1),
-
-                  // 6. Reminder Row (Lembrete)
-                  _buildReminderRow(),
-                ],
-              ),
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.only(
+          top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          const Text(
+            "Agendar Tarefa",
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppColors.primaryText,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFooter() {
+    bool hasAnySelection = _selectedDay != null ||
+        _selectedTime != null ||
+        _recurrenceRule.type != RecurrenceType.none;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 150),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+              opacity: animation,
+              child: ScaleTransition(scale: animation, child: child));
+        },
+        child: hasAnySelection
+            ? Row(
+                key: const ValueKey('ClearSaveButtons'),
+                children: [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _onClear,
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: AppColors.cardBackground,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text("Limpar",
+                            style: TextStyle(
+                                color: AppColors.secondaryText,
+                                fontFamily: 'Poppins')),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: _onSave,
+                        style: ButtonStyle(
+                          backgroundColor:
+                              WidgetStateProperty.resolveWith<Color>(
+                                  (states) => AppColors.primary),
+                          foregroundColor:
+                              WidgetStateProperty.resolveWith<Color>(
+                                  (states) => Colors.white),
+                          elevation: WidgetStateProperty.resolveWith<double>(
+                              (states) => 0),
+                          padding: WidgetStateProperty
+                              .resolveWith<EdgeInsetsGeometry>((states) =>
+                                  const EdgeInsets.symmetric(vertical: 12)),
+                          shape:
+                              WidgetStateProperty.resolveWith<OutlinedBorder>(
+                                  (states) {
+                            if (states.contains(WidgetState.hovered)) {
+                              return RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: const BorderSide(
+                                    color: Colors.white, width: 2),
+                              );
+                            }
+                            return RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: const BorderSide(
+                                  color: AppColors.primary, width: 2),
+                            );
+                          }),
+                        ),
+                        child: const Text("Aplicar",
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins')),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : SizedBox(
+                key: const ValueKey('CloseButton'),
+                height: 48,
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: AppColors.cardBackground,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Fechar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
       ),
     );
   }
@@ -390,7 +598,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
     return InkWell(
       onTap: _isAllDay ? null : _pickTime,
-      hoverColor: AppColors.primary.withOpacity(0.05),
+      hoverColor: AppColors.primary.withValues(alpha: 0.05),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Row(
@@ -460,7 +668,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               }
             });
           },
-          hoverColor: AppColors.primary.withOpacity(0.05),
+          hoverColor: AppColors.primary.withValues(alpha: 0.05),
           child: Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -541,53 +749,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                           padding: const EdgeInsets.symmetric(vertical: 16.0),
                           child: _buildWeeklyDaysSelector(),
                         ),
-
-                      const SizedBox(height: 16),
-                      // Removed Termina em label
-
-                      // Duration / End Date Chips
-                      const SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: Row(
-                          children: [
-                            // Removed "Nunca" to enforce finite recurrence
-                            // _buildDurationChip("1 Mês", const Duration(days: 30)),
-                            SizedBox(width: 8),
-                            // _buildDurationChip("6 Meses", const Duration(days: 180)),
-                            SizedBox(width: 8),
-                            // _buildDurationChip("1 Ano", const Duration(days: 365)),
-                            SizedBox(width: 8),
-                            /* ActionChip( label: Text(_recurrenceRule.endDate != null && 
-                                 _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 && // Rough check to differentiate from presets
-                                 _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365
-                                  ? DateFormat('dd/MM/yy').format(_recurrenceRule.endDate!)
-                                  : "Definir Data",
-                                ),
-                                onPressed: _pickRecurrenceEndDate,
-                                backgroundColor: AppColors.background,
-                                labelStyle: TextStyle(
-                                  color: (_recurrenceRule.endDate != null && 
-                                          _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 &&
-                                          _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365)
-                                      ? Colors.white 
-                                      : AppColors.primary,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                  side: BorderSide(
-                                    color: (_recurrenceRule.endDate != null && 
-                                            _recurrenceRule.endDate!.difference(_selectedDay).inDays != 30 &&
-                                            _recurrenceRule.endDate!.difference(_selectedDay).inDays != 365)
-                                        ? AppColors.primary 
-                                        : AppColors.primary.withOpacity(0.5),
-                                  ),
-                                ),
-                                // Fill if custom date selected
-                                elevation: 0,
-                                visualDensity: VisualDensity.compact, ), */
-                          ],
-                        ),
-                      ),
                     ],
                   ),
                 )
@@ -602,9 +763,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     bool isDisabled = false;
     String? disabledReason;
 
-    if (widget.goalDeadline != null) {
+    if (widget.goalDeadline != null && _selectedDay != null) {
       final daysUntilDeadline =
-          widget.goalDeadline!.difference(_selectedDay).inDays;
+          widget.goalDeadline!.difference(_selectedDay!).inDays;
 
       if (type == RecurrenceType.weekly && daysUntilDeadline < 7) {
         isDisabled = true;
@@ -631,20 +792,29 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       onSelected: isDisabled
           ? null
           : (val) {
-              if (val) {
-                setState(() {
+              setState(() {
+                if (!val) {
+                  // Deselect
+                  _recurrenceRule = RecurrenceRule(type: RecurrenceType.none);
+                  if (type == RecurrenceType.none) {
+                    _showRecurrence =
+                        false; // Hide if selected 'none' or deselected all
+                  }
+                } else {
+                  // Select
                   _recurrenceRule = _recurrenceRule.copyWith(type: type);
                   // Initialize days if switching to weekly and empty
                   if (type == RecurrenceType.weekly &&
-                      _recurrenceRule.daysOfWeek.isEmpty) {
+                      _recurrenceRule.daysOfWeek.isEmpty &&
+                      _selectedDay != null) {
                     _recurrenceRule = _recurrenceRule
-                        .copyWith(daysOfWeek: [_selectedDay.weekday]);
+                        .copyWith(daysOfWeek: [_selectedDay!.weekday]);
                   }
-                });
-              }
+                }
+              });
             },
       // Cores desabilitadas
-      disabledColor: AppColors.background.withOpacity(0.5),
+      disabledColor: AppColors.background.withValues(alpha: 0.5),
 
       selectedColor: isDisabled
           ? AppColors.secondaryText
@@ -652,14 +822,15 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       backgroundColor: AppColors.background,
       labelStyle: TextStyle(
         color: isDisabled
-            ? AppColors.secondaryText.withOpacity(0.5)
+            ? AppColors.secondaryText.withValues(alpha: 0.5)
             : (isSelected ? Colors.white : AppColors.secondaryText),
+        fontFamily: 'Poppins',
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
             color: isDisabled
-                ? AppColors.border.withOpacity(0.3)
+                ? AppColors.border.withValues(alpha: 0.3)
                 : (isSelected ? AppColors.primary : AppColors.border)),
       ),
     );
@@ -730,10 +901,12 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   Widget _buildReminderRow() {
-    final bool hasReminder = _selectedReminderOffset != null;
+    if (_isAllDay || _selectedTime == null) {
+      return const SizedBox.shrink(); // Hide entirely if no time
+    }
+
     final String summary = _getReminderSummary();
 
-    final bool canRemind = _canUseReminders && !_isAllDay;
     // Opacity logic: If AllDay, reduce opacity of Icon/Title.
     final double contentOpacity = _isAllDay ? 0.5 : 1.0;
 
@@ -750,14 +923,14 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             setState(() {
               _showReminder = !_showReminder; // Toggle the visibility state
               if (!_showReminder) {
-                _selectedReminderOffset = null;
+                _selectedReminderOffsets.clear();
               } else {
                 // If turning on, and no reminder is set, default to "Na hora"
-                _selectedReminderOffset ??= Duration.zero;
+                if (_selectedReminderOffsets.isEmpty) _selectedReminderOffsets.add(0);
               }
             });
           },
-          hoverColor: AppColors.primary.withOpacity(0.05),
+          hoverColor: AppColors.primary.withValues(alpha: 0.05),
           child: Padding(
             padding:
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
@@ -792,7 +965,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   Text(
                     "Defina um horário",
                     style: TextStyle(
-                        color: AppColors.secondaryText.withOpacity(0.6),
+                        color: AppColors.secondaryText.withValues(alpha: 0.6),
                         fontSize: 14),
                   )
                 else ...[
@@ -801,7 +974,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     Text(
                       "Recurso Premium",
                       style: TextStyle(
-                          color: AppColors.secondaryText.withOpacity(0.6),
+                          color: AppColors.secondaryText.withValues(alpha: 0.6),
                           fontSize: 12),
                     )
                   else
@@ -822,10 +995,10 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                             setState(() {
                               _showReminder = val;
                               if (!val) {
-                                _selectedReminderOffset = null;
+                                _selectedReminderOffsets.clear();
                               } else {
                                 // If turning on, and no reminder is set, default to "Na hora"
-                                _selectedReminderOffset ??= Duration.zero;
+                                if (_selectedReminderOffsets.isEmpty) _selectedReminderOffsets.add(0);
                               }
                             });
                           },
@@ -845,18 +1018,18 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: ScrollableChipsRow(
                     children: [
-                      _buildReminderChip("Na hora", Duration.zero),
+                      _buildReminderChip("Na hora", 0),
                       const SizedBox(width: 8),
                       _buildReminderChip(
-                          "10 min antes", const Duration(minutes: 10)),
+                          "10 min antes", 10),
                       const SizedBox(width: 8),
                       _buildReminderChip(
-                          "30 min antes", const Duration(minutes: 30)),
+                          "30 min antes", 30),
                       const SizedBox(width: 8),
-                      _buildReminderChip("1 h antes", const Duration(hours: 1)),
+                      _buildReminderChip("1 h antes", 60),
                       const SizedBox(width: 8),
                       _buildReminderChip(
-                          "1 dia antes", const Duration(days: 1)),
+                          "1 dia antes", 24 * 60),
                       const SizedBox(width: 8),
                       ActionChip(
                         label: const Text("Definir horário"),
@@ -878,104 +1051,39 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   String _getReminderSummary() {
-    if (_selectedReminderOffset == null) return "Sem lembrete";
-    if (_selectedReminderOffset == Duration.zero) return "Na hora";
-    final minutes = _selectedReminderOffset!.inMinutes;
+    if (_selectedReminderOffsets.isEmpty) return "Sem lembrete";
+    if (_selectedReminderOffsets.length > 1) return "${_selectedReminderOffsets.length} lembretes";
+    
+    final minutes = _selectedReminderOffsets.first;
+    if (minutes == 0) return "Na hora";
     if (minutes < 60) return "$minutes min antes";
-    final hours = _selectedReminderOffset!.inHours;
+    final hours = minutes ~/ 60;
     if (hours < 24) return "$hours h antes";
-    return "${_selectedReminderOffset!.inDays} dia(s) antes";
+    return "${hours ~/ 24} dia(s) antes";
   }
 
-  Widget _buildDurationChip(String label, Duration? duration) {
-    // Check if selected:
-    // If duration is null (Nunca) -> endDate must be null
-    // If duration is set -> endDate must match _selectedDay + duration (approx)
-    bool isSelected = false;
-
-    if (duration == null) {
-      isSelected = _recurrenceRule.endDate == null;
-    } else {
-      if (_recurrenceRule.endDate != null) {
-        final diff = _recurrenceRule.endDate!.difference(_selectedDay).inDays;
-        // Allow slight flexibility or exact match? Exact match is safer for now.
-        // 30 days vs 1 Month logic might be tricky, so sticking to fixed days (30/365)
-        isSelected = diff == duration.inDays;
-      }
-    }
-
+  Widget _buildReminderChip(String label, int offsetMinutes) {
+    final isSelected = _selectedReminderOffsets.contains(offsetMinutes);
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (val) {
-        if (val) {
-          setState(() {
-            if (duration == null) {
-              _recurrenceRule = _recurrenceRule.copyWith(clearEndDate: true);
-            } else {
-              _recurrenceRule = _recurrenceRule.copyWith(
-                endDate: _selectedDay.add(duration),
-              );
-            }
-          });
-        }
+        setState(() {
+          if (val) {
+             _selectedReminderOffsets.add(offsetMinutes);
+          } else {
+             _selectedReminderOffsets.remove(offsetMinutes);
+          }
+        });
       },
       selectedColor: AppColors.primary,
       backgroundColor: AppColors.background,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : AppColors.secondaryText,
+        fontFamily: 'Poppins',
       ),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-            color: isSelected ? AppColors.primary : AppColors.border),
-      ),
-    );
-  }
-
-  Future<void> _pickRecurrenceEndDate() async {
-    final DateTime? picked = await showDialog<DateTime>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-        child: CustomMonthYearPicker(
-          // Reuse or standard picker? User images showed standard calendar, but we have CustomDatePickerModal too.
-          initialDate: _recurrenceRule.endDate ??
-              _selectedDay.add(const Duration(days: 7)),
-          firstDate: _selectedDay, // Cannot end before start
-          lastDate: DateTime(2101),
-        ),
-      ),
-    );
-
-    if (picked != null) {
-      // If picked via CustomMonthYearPicker it selects a whole day/month focus.
-      // Maybe simpler to use standard showDatePicker for exact date or CustomDatePickerModal if needed.
-      // Given the flow, let's stick to standard internal logic or reusing existing.
-      // But CustomMonthYearPicker is for... month/year.
-      // I should use showDatePicker for specific day.
-      setState(() {
-        _recurrenceRule = _recurrenceRule.copyWith(endDate: picked);
-      });
-    }
-  }
-
-  Widget _buildReminderChip(String label, Duration? offset) {
-    final isSelected = _selectedReminderOffset == offset;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (val) {
-        setState(() => _selectedReminderOffset = offset);
-      },
-      selectedColor: AppColors.primary,
-      backgroundColor: AppColors.background,
-      labelStyle: TextStyle(
-        color: isSelected ? Colors.white : AppColors.secondaryText,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(12),
         side: BorderSide(
             color: isSelected ? AppColors.primary : AppColors.border),
       ),
@@ -985,121 +1093,102 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   Widget _buildCalendar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: TableCalendar(
-        locale: 'pt_BR',
-        firstDay: DateTime.utc(2020, 1, 1),
-        lastDay: DateTime.utc(2101, 12, 31),
-        focusedDay: _focusedDay,
-        currentDay: DateTime.now(),
-        selectedDayPredicate: (day) => _isSameDay(_selectedDay, day),
-        onDaySelected: _onDaySelected,
-        onPageChanged: (focused) => _focusedDay = focused,
-        calendarFormat: CalendarFormat.month,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _buildCustomHeader(),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 150),
+            crossFadeState: _isSelectingYearMonth
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: TableCalendar(
+              locale: 'pt_BR',
+              firstDay: DateTime.utc(2020, 1, 1),
+              lastDay: DateTime.utc(2101, 12, 31),
+              focusedDay: _focusedDay,
+              currentDay: DateTime.now(),
+              selectedDayPredicate: (day) => _isSameDay(_selectedDay, day),
+              onDaySelected: _onDaySelected,
+              onPageChanged: (focused) => _focusedDay = focused,
+              calendarFormat: CalendarFormat.month,
 
-        // --- Styles ---
-        headerStyle: const HeaderStyle(
-          titleCentered: true,
-          formatButtonVisible: false,
-          titleTextStyle:
-              TextStyle(height: 0, fontSize: 0), // Oculta titulo padrao
-          leftChevronIcon:
-              Icon(Icons.chevron_left, color: AppColors.primaryText),
-          rightChevronIcon:
-              Icon(Icons.chevron_right, color: AppColors.primaryText),
-          leftChevronMargin: EdgeInsets.symmetric(horizontal: 4),
-          rightChevronMargin: EdgeInsets.symmetric(horizontal: 4),
-        ),
-        daysOfWeekStyle: const DaysOfWeekStyle(
-          weekdayStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-          weekendStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-        ),
-        rowHeight: 54,
-        calendarStyle: const CalendarStyle(
-          defaultDecoration: BoxDecoration(),
-          selectedDecoration: BoxDecoration(),
-          todayDecoration: BoxDecoration(),
-          outsideDecoration: BoxDecoration(),
-        ),
-
-        // --- Custom Builders (Restoring Visuals) ---
-        calendarBuilders: CalendarBuilders(
-          headerTitleBuilder: (context, day) {
-            final titleText =
-                _capitalize(DateFormat.yMMMM('pt_BR').format(day));
-            return Center(
-              child: InkWell(
-                onTap: _showMonthYearPicker,
-                borderRadius: BorderRadius.circular(8.0),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 8.0, horizontal: 12.0),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        titleText,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.primaryText,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(Icons.unfold_more_rounded,
-                          color: AppColors.secondaryText, size: 20),
-                    ],
-                  ),
-                ),
+              // --- Styles ---
+              headerVisible: false, // Hide native header
+              daysOfWeekStyle: const DaysOfWeekStyle(
+                weekdayStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                weekendStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
               ),
-            );
-          },
-          defaultBuilder: (context, day, focusedDay) {
-            return _buildCalendarDayCell(
-              day: day,
-              isEnabled: true,
-              isSelected: false,
-              isToday: _isSameDay(day, _todayMidnight),
-              isOutside: false,
-            );
-          },
-          selectedBuilder: (context, day, focusedDay) {
-            return _buildCalendarDayCell(
-              day: day,
-              isEnabled: true,
-              isSelected: true,
-              isToday: _isSameDay(day, _todayMidnight),
-              isOutside: false,
-            );
-          },
-          todayBuilder: (context, day, focusedDay) {
-            return _buildCalendarDayCell(
-              day: day,
-              isEnabled: true,
-              isSelected: _isSameDay(day, _selectedDay),
-              isToday: true,
-              isOutside: false,
-            );
-          },
-          outsideBuilder: (context, day, focusedDay) {
-            return _buildCalendarDayCell(
-              day: day,
-              isEnabled: false,
-              isSelected: false,
-              isToday: _isSameDay(day, _todayMidnight),
-              isOutside: true,
-            );
-          },
-          disabledBuilder: (context, day, focusedDay) {
-            return _buildCalendarDayCell(
-              day: day,
-              isEnabled: false,
-              isSelected: false,
-              isToday: _isSameDay(day, _todayMidnight),
-              isOutside: !_isSameMonth(day, _focusedDay),
-            );
-          },
-        ),
+              rowHeight: 54,
+              calendarStyle: const CalendarStyle(
+                defaultDecoration: BoxDecoration(),
+                selectedDecoration: BoxDecoration(),
+                todayDecoration: BoxDecoration(),
+                outsideDecoration: BoxDecoration(),
+              ),
+
+              // --- Custom Builders (Restoring Visuals) ---
+              calendarBuilders: CalendarBuilders(
+                defaultBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(
+                    day: day,
+                    isEnabled: true,
+                    isSelected: false,
+                    isToday: _isSameDay(day, _todayMidnight),
+                    isOutside: false,
+                  );
+                },
+                selectedBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(
+                    day: day,
+                    isEnabled: true,
+                    isSelected: true,
+                    isToday: _isSameDay(day, _todayMidnight),
+                    isOutside: false,
+                  );
+                },
+                todayBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(
+                    day: day,
+                    isEnabled: true,
+                    isSelected: _isSameDay(day, _selectedDay),
+                    isToday: true,
+                    isOutside: false,
+                  );
+                },
+                outsideBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(
+                    day: day,
+                    isEnabled: false,
+                    isSelected: false,
+                    isToday: _isSameDay(day, _todayMidnight),
+                    isOutside: true,
+                  );
+                },
+                disabledBuilder: (context, day, focusedDay) {
+                  return _buildCalendarDayCell(
+                    day: day,
+                    isEnabled: false,
+                    isSelected: false,
+                    isToday: _isSameDay(day, _todayMidnight),
+                    isOutside: !_isSameMonth(day, _focusedDay),
+                  );
+                },
+              ),
+            ),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 8.0, bottom: 16.0),
+              child: InlineMonthYearSelector(
+                focusedDay: _focusedDay,
+                onDateChanged: (newDate) {
+                  setState(() {
+                    _focusedDay = newDate;
+                  });
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

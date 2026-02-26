@@ -95,7 +95,7 @@ class AIModalTheme {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
       ),
       child: IconButton(
@@ -119,7 +119,7 @@ class AIModalTheme {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(10),
       ),
       child: IconButton(
@@ -147,7 +147,7 @@ class AIModalTheme {
       splashBorderRadius: BorderRadius.circular(50),
       indicator: BoxDecoration(
         borderRadius: BorderRadius.circular(50),
-        color: activeColor.withOpacity(0.2),
+        color: activeColor.withValues(alpha: 0.2),
         border: Border.all(color: activeColor),
       ),
       labelColor: Colors.white,
@@ -167,19 +167,19 @@ class AIModalTheme {
   }) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
       helperText: helperText,
       helperStyle:
-          TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+          TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
       filled: true,
-      fillColor: Colors.white.withOpacity(0.05),
+      fillColor: Colors.white.withValues(alpha: 0.05),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(inputBorderRadius),
         borderSide: BorderSide.none,
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(inputBorderRadius),
-        borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
+        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(inputBorderRadius),
@@ -244,8 +244,8 @@ class AIModalTheme {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            primaryColor.withOpacity(0.8),
-            primaryColor.withOpacity(0.5),
+            primaryColor.withValues(alpha: 0.8),
+            primaryColor.withValues(alpha: 0.5),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -272,7 +272,7 @@ class AIModalTheme {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.85),
+                    color: Colors.white.withValues(alpha: 0.85),
                     fontSize: 13,
                   ),
                 ),
@@ -307,7 +307,7 @@ class AIModalTheme {
                 child: CircularProgressIndicator(
                   value: 1.0,
                   strokeWidth: 12,
-                  color: Colors.white.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                 ),
               ),
               // Progress ring
@@ -336,7 +336,7 @@ class AIModalTheme {
                   Text(
                     label,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.6),
+                      color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 12,
                     ),
                   ),
@@ -360,12 +360,12 @@ class AIModalTheme {
         color: backgroundDark,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.cyan.withOpacity(0.4),
+          color: Colors.cyan.withValues(alpha: 0.4),
           width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.cyan.withOpacity(0.08),
+            color: Colors.cyan.withValues(alpha: 0.08),
             blurRadius: 10,
             spreadRadius: 2,
           ),
@@ -403,9 +403,9 @@ class AIModalTheme {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Row(
         children: [

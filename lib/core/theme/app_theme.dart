@@ -80,13 +80,14 @@ class AppTheme {
 
       // Scrollbar Theme (Subtle)
       scrollbarTheme: ScrollbarThemeData(
-         thumbColor: WidgetStateProperty.all(AppColors.secondaryText.withValues(alpha: 0.2)),
-         trackColor: WidgetStateProperty.all(Colors.transparent),
-         trackBorderColor: WidgetStateProperty.all(Colors.transparent),
-         thickness: WidgetStateProperty.all(6.0),
-         radius: const Radius.circular(8.0),
-         minThumbLength: 48.0,
-         interactive: true,
+        thumbColor: WidgetStateProperty.all(
+            AppColors.secondaryText.withValues(alpha: 0.2)),
+        trackColor: WidgetStateProperty.all(Colors.transparent),
+        trackBorderColor: WidgetStateProperty.all(Colors.transparent),
+        thickness: WidgetStateProperty.all(6.0),
+        radius: const Radius.circular(8.0),
+        minThumbLength: 48.0,
+        interactive: true,
       ),
 
       // Input Decoration Theme
@@ -158,7 +159,7 @@ class AppTheme {
 
       // Chip Theme
       chipTheme: ChipThemeData(
-        backgroundColor: Colors.white.withOpacity(0.05),
+        backgroundColor: Colors.white.withValues(alpha: 0.05),
         labelStyle: const TextStyle(color: AppColors.secondaryText),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),

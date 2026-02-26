@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:sincro_app_flutter/features/tasks/models/task_view_scope.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // To access TaskViewScope
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:intl/intl.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
+import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_bottom_sheet.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 
 class GoalFilterPanel extends StatefulWidget {
@@ -50,8 +51,6 @@ class _GoalFilterPanelState extends State<GoalFilterPanel> {
 
   String _getScopeLabel(TaskViewScope type) {
     switch (type) {
-      case TaskViewScope.focoDoDia:
-        return 'Foco do Dia';
       case TaskViewScope.todas:
         return 'Todas as Tarefas';
       case TaskViewScope.concluidas:
@@ -105,7 +104,6 @@ class _GoalFilterPanelState extends State<GoalFilterPanel> {
                   },
                   items: [
                     TaskViewScope.todas,
-                    TaskViewScope.focoDoDia,
                     TaskViewScope.concluidas,
                     TaskViewScope.atrasadas,
                   ].map((type) {
@@ -153,13 +151,20 @@ class _GoalFilterPanelState extends State<GoalFilterPanel> {
                     if (initial.isBefore(firstDate)) initial = firstDate;
                     if (initial.isAfter(lastDate)) initial = lastDate;
 
-                    showDialog(
+                    showModalBottomSheet(
                       context: context,
-                      builder: (context) => CustomEndDatePickerDialog(
-                        initialDate: initial,
-                        firstDate: firstDate,
-                        lastDate: lastDate,
-                        userData: widget.userData!,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) => Padding(
+                        padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(context).viewInsets.bottom,
+                        ),
+                        child: CustomEndDatePickerBottomSheet(
+                          initialDate: initial,
+                          firstDate: firstDate,
+                          lastDate: lastDate,
+                          userData: widget.userData!,
+                        ),
                       ),
                     ).then((pickedDate) {
                       if (pickedDate != null && pickedDate is DateTime) {

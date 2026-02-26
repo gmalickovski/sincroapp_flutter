@@ -158,6 +158,35 @@ class DayDetailPanel extends StatelessWidget {
                     },
                   ),
           ),
+          // Bottom action button for desktop
+          if (isDesktop)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 44,
+                child: ElevatedButton.icon(
+                  onPressed: onAddTask,
+                  icon: const Icon(Icons.add, size: 20),
+                  label: const Text(
+                    'Nova Tarefa',
+                    style: TextStyle(
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

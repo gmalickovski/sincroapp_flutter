@@ -286,9 +286,9 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.cyan.withOpacity(0.1),
+            color: Colors.cyan.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.cyan.withOpacity(0.2)),
+            border: Border.all(color: Colors.cyan.withValues(alpha: 0.2)),
           ),
           child: Row(
             children: [
@@ -315,9 +315,9 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
             labelText: 'Qual profissão você quer analisar?',
             labelStyle: const TextStyle(color: Colors.white70),
             hintText: 'Ex: Advogado, Designer, Engenheiro...',
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+            hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.05),
+            fillColor: Colors.white.withValues(alpha: 0.05),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide.none,
@@ -338,7 +338,8 @@ class _ProfessionalAptitudeModalState extends State<ProfessionalAptitudeModal>
         // Helper Text
         Text(
           '💡 Dica: Você pode digitar uma profissão específica (ex: "Arquiteto") ou uma área de atuação (ex: "Tecnologia", "Saúde").',
-          style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+          style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
         ),
 
         const SizedBox(height: 32),
@@ -626,7 +627,7 @@ class ProfessionalMantraBuilder extends MarkdownElementBuilder {
         color: const Color(0xFF0D1B21), // Very dark teal/navy background
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.cyan.withOpacity(0.3),
+          color: Colors.cyan.withValues(alpha: 0.3),
           width: 1,
         ),
       ),

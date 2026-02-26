@@ -3,6 +3,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:flutter/foundation.dart';
 
 class LoveCompatibilityService {
   // failover
@@ -39,7 +40,7 @@ class LoveCompatibilityService {
     if (_cache.containsKey(cacheKey)) {
       final entry = _cache[cacheKey]!;
       if (DateTime.now().difference(entry.timestamp) < _cacheValidity) {
-        print(
+        debugPrint(
             '✅ [LoveCompatibilityService] Returning cached result for $cacheKey');
         return entry.response;
       } else {
@@ -71,11 +72,11 @@ class LoveCompatibilityService {
         'requestTime': DateTime.now().toIso8601String(),
       };
 
-      print('--- AI REQUEST PAYLOAD ---');
+      debugPrint('--- AI REQUEST PAYLOAD ---');
       // REVERTED: Send payload directly to body (no chatInput wrapper)
       final encodedPayload = jsonEncode(payload);
-      print(encodedPayload);
-      print('--------------------------');
+      debugPrint(encodedPayload);
+      debugPrint('--------------------------');
 
       final response = await http.post(
         Uri.parse(_webhookUrl),
@@ -103,7 +104,7 @@ class LoveCompatibilityService {
       }
     } catch (e) {
       // In production, log to crashlytics
-      print('Error getting compatibility analysis: $e');
+      debugPrint('Error getting compatibility analysis: $e');
       rethrow;
     }
   }

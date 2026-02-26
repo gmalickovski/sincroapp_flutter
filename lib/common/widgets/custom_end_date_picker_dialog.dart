@@ -117,17 +117,20 @@ class _CustomEndDatePickerDialogState extends State<CustomEndDatePickerDialog> {
   @override
   Widget build(BuildContext context) {
     final content = Container(
-      constraints: const BoxConstraints(maxWidth: 400),
+      width: 320,
+      padding: const EdgeInsets.all(12), // Reduced padding
       decoration: widget.isPopup
           ? BoxDecoration(
-              color: AppColors.cardBackground,
-              borderRadius: BorderRadius.circular(24.0),
+              color: const Color(0xFF1E212B), // Matches reference
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.1), width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha: 0.5),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
-                ),
+                )
               ],
             )
           : null,

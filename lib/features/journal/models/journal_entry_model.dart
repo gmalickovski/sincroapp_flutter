@@ -16,7 +16,6 @@ class JournalEntry {
     required this.createdAt,
     required this.updatedAt,
     required this.personalDay,
-
     this.mood,
     this.title,
   });

@@ -310,7 +310,7 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
         boxShadow: isFocused
             ? [
                 BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primary.withValues(alpha: 0.3),
                     blurRadius: 8,
                     spreadRadius: 1)
               ]
@@ -333,7 +333,8 @@ class _ModernTimePickerState extends State<ModernTimePicker> {
         decoration: InputDecoration(
           border: InputBorder.none,
           hintText: "00",
-          hintStyle: TextStyle(color: AppColors.tertiaryText.withOpacity(0.3)),
+          hintStyle:
+              TextStyle(color: AppColors.tertiaryText.withValues(alpha: 0.3)),
         ),
         onChanged: onChanged,
       ),

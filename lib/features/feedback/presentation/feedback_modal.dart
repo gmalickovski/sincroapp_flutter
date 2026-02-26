@@ -351,10 +351,10 @@ class _FeedbackModalState extends State<FeedbackModal> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: Colors.green.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                                color: Colors.green.withOpacity(0.3)),
+                                color: Colors.green.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
@@ -511,9 +511,10 @@ class _FeedbackModalState extends State<FeedbackModal> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
                     decoration: BoxDecoration(
-                      color: Colors.green.withOpacity(0.1),
+                      color: Colors.green.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green.withOpacity(0.3)),
+                      border: Border.all(
+                          color: Colors.green.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       children: [

@@ -197,13 +197,16 @@ class TaskItem extends StatelessWidget {
         task.journeyTitle!.isNotEmpty;
     // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
-    final bool shouldShowDateIcon = _isNotToday(task.dueDate) &&
+    // Usa effectiveDate (dueDate ?? createdAt) para ícone de data
+    final bool shouldShowDateIcon = _isNotToday(task.effectiveDate) &&
         !isRecurrent; // Só mostra data se NÃO for recorrente
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
         task.personalDay! > 0;
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
+    // Flag para ícone de foco (tarefas sem data marcadas como foco)
+    final bool shouldShowFocusIcon = !task.hasDeadline && task.isFocus;
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;
@@ -336,6 +339,7 @@ class TaskItem extends StatelessWidget {
                   shouldShowGoalIcon ||
                   // shouldShowTagIcon || // REMOVIDO
                   shouldShowReminderIcon ||
+                  shouldShowFocusIcon ||
                   shouldShowPill)
                 Padding(
                   // Alinha com a primeira linha do texto (considerando height 1.45)
@@ -387,6 +391,16 @@ class TaskItem extends StatelessWidget {
                             color: Color(0xFF06B6D4), // cyan-500
                           ),
                         ),
+                      // Ícone de foco (bolt) para tarefas sem data em foco
+                      if (shouldShowFocusIcon)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 3.0),
+                          child: Icon(
+                            Icons.bolt,
+                            size: iconIndicatorSize,
+                            color: Colors.amber,
+                          ),
+                        ),
                       // ICONE DE TAG REMOVIDO DAQUI
                       if (shouldShowPill)
                         Padding(
@@ -407,108 +421,7 @@ class TaskItem extends StatelessWidget {
                   ),
                 ),
 
-              // (Solicitação 3) Menu de 3 Pontos com Ações Rápidas
-              // (Solicitação 3) Menu de 3 Pontos com Ações Rápidas
-              if (!selectionMode && MediaQuery.of(context).size.width <= 900)
-                Padding(
-                  padding: const EdgeInsets.only(left: 2.0),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      popupMenuTheme: PopupMenuThemeData(
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(
-                                color: AppColors.border, width: 1)),
-                        color: AppColors.cardBackground,
-                        elevation: 8,
-                      ),
-                    ),
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(Icons.more_vert_rounded,
-                          size: 20, color: AppColors.secondaryText),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      tooltip: 'Opções da tarefa',
-                      onSelected: (value) async {
-                        if (value == 'today') {
-                          onRescheduleDate?.call(task, DateTime.now());
-                        } else if (value == 'tomorrow') {
-                          final now = DateTime.now();
-                          final tomorrow =
-                              DateTime(now.year, now.month, now.day + 1);
-                          onRescheduleDate?.call(task, tomorrow);
-                        } else if (value == 'reschedule') {
-                          if (onSwipeRight != null) {
-                            await onSwipeRight!(task);
-                          }
-                        } else if (value == 'delete') {
-                           if (onSwipeLeft != null) {
-                            await onSwipeLeft!(task);
-                           }
-                        }
-                      },
-                      itemBuilder: (context) {
-                        final List<PopupMenuEntry<String>> items = [];
 
-                        if (task.isOverdue) {
-                          items.add(const PopupMenuItem(
-                            value: 'today',
-                            child: Row(children: [
-                              Icon(Icons.today,
-                                  color: AppColors.primary, size: 18),
-                              SizedBox(width: 8),
-                              Text('Enviar para Hoje',
-                                  style: TextStyle(
-                                      fontSize: 14, fontFamily: 'Poppins'))
-                            ]),
-                          ));
-                        } else {
-                          items.add(const PopupMenuItem(
-                            value: 'tomorrow',
-                            child: Row(children: [
-                              Icon(Icons.event_repeat,
-                                  color: AppColors.primary, size: 18),
-                              SizedBox(width: 8),
-                              Text('Mover para Amanhã',
-                                  style: TextStyle(
-                                      fontSize: 14, fontFamily: 'Poppins'))
-                            ]),
-                          ));
-                        }
-
-                        items.add(const PopupMenuItem(
-                            value: 'reschedule',
-                            child: Row(children: [
-                              Icon(Icons.edit_calendar,
-                                  color: AppColors.secondaryText, size: 18),
-                              SizedBox(width: 8),
-                              Text('Reagendar...',
-                                  style: TextStyle(
-                                      fontSize: 14, fontFamily: 'Poppins'))
-                            ])));
-                        
-                        // Separator
-                        items.add(const PopupMenuDivider(height: 1));
-
-                        // Delete Option
-                        items.add(PopupMenuItem(
-                            value: 'delete',
-                            child: Row(children: [
-                              Icon(Icons.delete_outline_rounded,
-                                  color: Colors.red.shade400, size: 18),
-                              const SizedBox(width: 8),
-                              Text('Excluir',
-                                  style: TextStyle(
-                                      fontSize: 14, 
-                                      fontFamily: 'Poppins',
-                                      color: Colors.red.shade400))
-                            ])));
-
-                        return items;
-                      },
-                    ),
-                  ),
-                ),
             ],
           ),
         ),
@@ -528,10 +441,13 @@ class TaskItem extends StatelessWidget {
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20.0),
         decoration: BoxDecoration(
-          color: Colors.orange, // Laranja (Reagendar)
+          color: task.hasDeadline ? Colors.orange : Colors.amber.shade700,
           borderRadius: BorderRadius.circular(8.0),
         ),
-        child: const Icon(Icons.calendar_month_outlined, color: Colors.white),
+        child: Icon(
+          task.hasDeadline ? Icons.calendar_month_outlined : Icons.bolt,
+          color: Colors.white,
+        ),
       ),
       secondaryBackground: Container(
         alignment: Alignment.centerRight,

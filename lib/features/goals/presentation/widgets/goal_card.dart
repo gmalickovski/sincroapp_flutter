@@ -7,10 +7,13 @@ import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 // CONVERTIDO PARA STATEFULWIDGET para gerenciar o estado de hover
 class GoalCard extends StatefulWidget {
   final Goal goal;
-  final String userId; // usado para calcular progresso igual ao GoalDetail
+  final String userId;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
   final VoidCallback? onEdit;
+  final bool selectionMode;
+  final bool isSelected;
+  final VoidCallback? onSelected;
 
   const GoalCard({
     super.key,
@@ -19,6 +22,9 @@ class GoalCard extends StatefulWidget {
     required this.userId,
     this.onDelete,
     this.onEdit,
+    this.selectionMode = false,
+    this.isSelected = false,
+    this.onSelected,
   });
 
   @override
@@ -36,7 +42,10 @@ class _GoalCardState extends State<GoalCard> {
     final Color borderColor;
     final double borderWidth;
 
-    if (_isHovered) {
+    if (widget.isSelected) {
+      borderColor = AppColors.primary;
+      borderWidth = 2.0;
+    } else if (_isHovered) {
       borderColor = AppColors.primary.withValues(alpha: 0.8);
       borderWidth = 1.5;
     } else {
@@ -127,34 +136,31 @@ class _GoalCardState extends State<GoalCard> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              // Header: Title (with padding to avoid menu)
-                              Padding(
-                                padding: const EdgeInsets.only(right: 32.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      widget.goal.title,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                              // Header: Title
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    widget.goal.title,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    if (widget.goal.description.isNotEmpty) ...[
-                                      const SizedBox(height: 6),
-                                      Text(
-                                        widget.goal.description,
-                                        style: const TextStyle(
-                                          color: AppColors.secondaryText,
-                                          fontSize: 14,
-                                        ),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                  ),
+                                  if (widget.goal.description.isNotEmpty) ...[
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      widget.goal.description,
+                                      style: const TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontSize: 14,
                                       ),
-                                    ],
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ],
-                                ),
+                                ],
                               ),
 
                               const SizedBox(height: 24),
@@ -197,60 +203,33 @@ class _GoalCardState extends State<GoalCard> {
                   ],
                 ),
 
-                // Menu Button (Absolute Top Right)
-                if (widget.onDelete != null || widget.onEdit != null)
+                // Selection Checkbox (Top Left) - shown in selection mode
+                if (widget.selectionMode)
                   Positioned(
                     top: 8,
-                    right: 8,
-                    child: PopupMenuButton<String>(
-                      icon: const Icon(
-                        Icons.more_vert,
-                        color: AppColors.secondaryText,
-                        size: 20,
+                    left: 8,
+                    child: GestureDetector(
+                      onTap: widget.onSelected,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: widget.isSelected
+                              ? AppColors.primary
+                              : AppColors.cardBackground.withValues(alpha: 0.8),
+                          border: Border.all(
+                            color: widget.isSelected
+                                ? AppColors.primary
+                                : AppColors.secondaryText,
+                            width: 2,
+                          ),
+                        ),
+                        child: widget.isSelected
+                            ? const Icon(Icons.check,
+                                color: Colors.white, size: 18)
+                            : null,
                       ),
-                      tooltip: 'Opções',
-                      color: AppColors.cardBackground,
-                      position: PopupMenuPosition.under,
-                      itemBuilder: (context) {
-                        final items = <PopupMenuEntry<String>>[];
-                        if (widget.onEdit != null) {
-                          items.add(const PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit_outlined,
-                                    color: Colors.white, size: 18),
-                                SizedBox(width: 8),
-                                Text('Editar',
-                                    style: TextStyle(color: Colors.white)),
-                              ],
-                            ),
-                          ));
-                        }
-                        if (widget.onDelete != null) {
-                          items.add(const PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete_outline,
-                                    color: Colors.redAccent, size: 18),
-                                SizedBox(width: 8),
-                                Text('Excluir',
-                                    style: TextStyle(color: Colors.white)),
-                              ],
-                            ),
-                          ));
-                        }
-                        return items;
-                      },
-                      onSelected: (value) {
-                        if (value == 'edit' && widget.onEdit != null) {
-                          widget.onEdit!();
-                        } else if (value == 'delete' &&
-                            widget.onDelete != null) {
-                          widget.onDelete!();
-                        }
-                      },
                     ),
                   ),
               ],

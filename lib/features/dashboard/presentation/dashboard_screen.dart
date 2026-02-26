@@ -95,6 +95,8 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _initialTaskFilter; // Filtro inicial para tarefas (via deep link)
   bool _pendingFavorableDayModal =
       false; // Flag para abrir modal de dias favoráveis após carregar dados
+  final GlobalKey<AssistantLayoutManagerState> _assistantLayoutKey =
+      GlobalKey<AssistantLayoutManagerState>();
 
   // initState, dispose, _loadInitialData, _initializeTasksStream,
   // _reloadDataNonStream, _handleTaskStatusChange, _handleTaskTap
@@ -2506,6 +2508,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     return ScreenInteractionListener(
         controller: _fabOpacityController,
         child: AssistantLayoutManager(
+          key: _assistantLayoutKey,
           isMobile: true,
           isAiSidebarOpen: false,
           onToggleAiSidebar: () {},
@@ -2516,7 +2519,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   numerologyData: _numerologyData,
                   activeContext: _getPageName(_sidebarIndex),
                   isFullScreen: true,
-                  onClose: () {}, // Swipe handles close usually
+                  onClose: () => _assistantLayoutKey.currentState?.closeAssistant(),
                 )
               : const SizedBox.shrink(),
           child: Stack(
@@ -2529,6 +2532,33 @@ class _DashboardScreenState extends State<DashboardScreen>
                     isEditMode: _isEditMode,
                     showSearch:
                         _sidebarIndex == 0, // Only show search on Dashboard tab
+                    assistantIcon: Padding(
+                      padding: const EdgeInsets.only(right: 8.0),
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Material(
+                          color: Colors.transparent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            onTap: () => _assistantLayoutKey.currentState?.openAssistant(),
+                            customBorder: const CircleBorder(),
+                            hoverColor:
+                                AppColors.primary.withValues(alpha: 0.1),
+                            splashColor:
+                                AppColors.primary.withValues(alpha: 0.2),
+                            child: const Center(
+                              child: AgentStarIcon(
+                                size: 28,
+                                isStatic: true,
+                                isHollow: false,
+                                isWhiteFilled: true,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                     onEditPressed: (_sidebarIndex == 0 &&
                             !_isLoading &&
                             !_isUpdatingLayout)
@@ -2618,7 +2648,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (!isDesktop) {
       return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 80),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
         itemCount: _cards.length,
         itemBuilder: (context, index) {
           final itemWidget = _cards[index];

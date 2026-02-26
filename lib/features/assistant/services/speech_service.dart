@@ -88,11 +88,13 @@ class SpeechService {
           onDone?.call();
         }
       },
-      cancelOnError: true,
-      partialResults: true,
-      listenMode: ListenMode.dictation,
-      // pauseFor ajuda, mas o nosso timer manual _silenceTimer é a garantia real
-      pauseFor: const Duration(seconds: 3),
+      listenFor: const Duration(seconds: 30),
+      // Use SpeechListenOptions for newer versions of speech_to_text:
+      listenOptions: SpeechListenOptions(
+        cancelOnError: true,
+        partialResults: true,
+        listenMode: ListenMode.dictation,
+      ),
     );
   }
 

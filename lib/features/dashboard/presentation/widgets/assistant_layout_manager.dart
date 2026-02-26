@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_peeking_handle.dart';
+
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 
 class AssistantLayoutManager extends StatefulWidget {
@@ -24,10 +24,10 @@ class AssistantLayoutManager extends StatefulWidget {
   });
 
   @override
-  State<AssistantLayoutManager> createState() => _AssistantLayoutManagerState();
+  State<AssistantLayoutManager> createState() => AssistantLayoutManagerState();
 }
 
-class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
+class AssistantLayoutManagerState extends State<AssistantLayoutManager> {
   late PageController _pageController;
   double _swipeProgress = 0.0; // 0.0 (App) to 1.0 (Assistant)
 
@@ -87,7 +87,9 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
           },
           child: PageView(
             controller: _pageController,
-            physics: const BouncingScrollPhysics(),
+            physics: _swipeProgress > 0.0
+                ? const BouncingScrollPhysics()
+                : const NeverScrollableScrollPhysics(),
             children: [
               // Page 0: Main App (with Scale Effect)
               AnimatedBuilder(
@@ -114,72 +116,28 @@ class _AssistantLayoutManagerState extends State<AssistantLayoutManager> {
           ),
         ),
 
-        // Interactive Handle Animation
-        AnimatedBuilder(
-          animation: _pageController,
-          builder: (context, child) {
-            double progress = 0.0;
-            if (_pageController.hasClients &&
-                _pageController.position.haveDimensions) {
-              progress = _pageController.page ?? 0.0;
-            }
-
-            // If fully open (1.0), hide handle
-            if (progress > 0.9) return const SizedBox.shrink();
-
-            // Peeking Handle (Fixed to Right Edge)
-            // Only show when closed or partially open
-            if (progress > 0.1) return const SizedBox.shrink();
-
-            Widget handle = AgentPeekingHandle(
-              opacity: widget.opacityController != null
-                  ? 1.0 // If using controller, handle internal opacity via wrapper
-                  : (_isScrolling ? 0.05 : 1.0),
-            );
-
-            if (widget.opacityController != null) {
-              handle = TransparentFabWrapper(
-                controller: widget.opacityController!,
-                child: handle,
-              );
-            }
-
-            return Positioned(
-              right: 0,
-              // Adjust vertical position
-              top: MediaQuery.of(context).size.height * 0.4,
-              child: GestureDetector(
-                onTap: () {
-                  _pageController.animateToPage(1,
-                      duration: const Duration(milliseconds: 400),
-                      curve: Curves.easeInOutCubicEmphasized);
-                },
-                onHorizontalDragUpdate: (details) {
-                  _pageController.position
-                      .jumpTo(_pageController.offset - details.delta.dx);
-                },
-                onHorizontalDragEnd: (details) {
-                  final velocity = details.primaryVelocity ?? 0;
-
-                  // Snap Logic
-                  // If moving Left fast (< -300) OR passed 30% of screen width, open.
-                  if (velocity < -300 || _pageController.page! > 0.3) {
-                    _pageController.animateToPage(1,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut);
-                  } else {
-                    _pageController.animateToPage(0,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeOut);
-                  }
-                },
-                child: handle,
-              ),
-            );
-          },
-        ),
       ],
     );
+  }
+
+  void openAssistant() {
+    if (widget.isMobile && _pageController.hasClients) {
+      _pageController.animateToPage(
+        1,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubicEmphasized,
+      );
+    }
+  }
+
+  void closeAssistant() {
+    if (widget.isMobile && _pageController.hasClients) {
+      _pageController.animateToPage(
+        0,
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOutCubicEmphasized,
+      );
+    }
   }
 
   Widget _buildDesktopLayout() {

@@ -40,8 +40,10 @@ class _HoverableCardState extends State<HoverableCard> {
               borderRadius: BorderRadius.circular(widget.borderRadius),
               border: Border.all(
                 color: _isHovered
-                    ? (widget.borderColor ?? AppColors.primary).withValues(alpha: 1.0)
-                    : (widget.borderColor ?? AppColors.primary).withValues(alpha: 0.5),
+                    ? (widget.borderColor ?? AppColors.primary)
+                        .withValues(alpha: 1.0)
+                    : (widget.borderColor ?? AppColors.primary)
+                        .withValues(alpha: 0.5),
                 width: 1.5,
               ),
               color: Colors.transparent, // Ensures child content is visible

@@ -229,8 +229,9 @@ class _TypingIndicatorState extends State<TypingIndicator>
                   width: widget.dotSize,
                   height: widget.dotSize,
                   decoration: BoxDecoration(
-                    color: widget.color.withOpacity(
-                        0.6 + (sineValue.abs() * 0.4)), // Pulse opacity too
+                    color: widget.color.withValues(
+                        alpha:
+                            0.6 + (sineValue.abs() * 0.4)), // Pulse opacity too
                     shape: BoxShape.circle,
                   ),
                 ),

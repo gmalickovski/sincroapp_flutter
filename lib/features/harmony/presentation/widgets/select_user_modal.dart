@@ -198,7 +198,7 @@ class _SelectUserModalState extends State<SelectUserModal> {
                                   vertical: 4, horizontal: 8),
                               leading: CircleAvatar(
                                 backgroundColor:
-                                    AppColors.primary.withOpacity(0.2),
+                                    AppColors.primary.withValues(alpha: 0.2),
                                 child: Text(
                                   user.username?[0].toUpperCase() ??
                                       user.primeiroNome[0].toUpperCase(),

@@ -545,34 +545,62 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _handleTaskTap(TaskModel task) {
-    showDialog(
-      context: context,
-      builder: (context) => TaskDetailModal(
-        task: task,
-        userData: widget.userData,
-      ),
-    );
+    final isDesktopLayout = MediaQuery.of(context).size.width > 600;
+    if (isDesktopLayout) {
+      showDialog(
+        context: context,
+        builder: (context) => TaskDetailModal(
+          task: task,
+          userData: widget.userData,
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => TaskDetailModal(
+          task: task,
+          userData: widget.userData,
+        ),
+      );
+    }
   }
 
   void _openNewTaskDetail() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        // Usa dia selecionado ou hoje
-        final date = _selectedDay ?? DateTime.now();
-
-        return TaskDetailModal(
-          task: TaskModel(
-            id: const Uuid().v4(),
-            text: '',
-            createdAt: DateTime.now(),
-            dueDate: date,
-          ),
+    final date = _selectedDay ?? DateTime.now();
+    // Use local date components to avoid UTC→local timezone shift
+    // (e.g., UTC midnight becomes previous day in UTC-3)
+    final localDate = DateTime(date.year, date.month, date.day);
+    final taskData = TaskModel(
+      id: const Uuid().v4(),
+      text: '',
+      createdAt: DateTime.now(),
+      dueDate: localDate,
+    );
+    
+    final isDesktopLayout = MediaQuery.of(context).size.width > 600;
+    if (isDesktopLayout) {
+      showDialog(
+        context: context,
+        builder: (context) => TaskDetailModal(
+          task: taskData,
           userData: widget.userData,
           isNew: true,
-        );
-      },
-    );
+        ),
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => TaskDetailModal(
+          task: taskData,
+          userData: widget.userData,
+          isNew: true,
+        ),
+      );
+    }
   }
 
   @override
@@ -595,6 +623,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       body: ScreenInteractionListener(
         controller: _fabOpacityController,
         child: SafeArea(
+          top: false,
           bottom:
               false, // Prevent SafeArea from reacting to keyboard/bottom insets
           child: _isScreenLoading
@@ -610,20 +639,22 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
         ),
       ),
-      floatingActionButton: TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: FloatingActionButton(
-          onPressed: _openNewTaskDetail,
-          backgroundColor: AppColors.primary,
-          tooltip: 'Nova Tarefa',
-          heroTag: 'calendar_fab',
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
-      ),
+      floatingActionButton: MediaQuery.of(context).size.width >= kTabletBreakpoint
+          ? null
+          : TransparentFabWrapper(
+              controller: _fabOpacityController,
+              child: FloatingActionButton(
+                onPressed: _openNewTaskDetail,
+                backgroundColor: AppColors.primary,
+                tooltip: 'Nova Tarefa',
+                heroTag: 'calendar_fab',
+                elevation: 4,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
+            ),
     );
   }
 
@@ -699,7 +730,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
               personalDayNumber: _personalDayNumber,
               events: _getRawEventsForDay(_selectedDay),
               isDesktop: false,
-              onAddTask: _openAddTaskModal,
+              onAddTask: _openNewTaskDetail,
               onToggleTask: _onToggleTask,
               onTaskTap: _handleTaskTap,
               // Callbacks de Swipe
@@ -717,14 +748,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
           // Page Title
           const Padding(
             padding: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 8.0, bottom: 16.0),
+                left: 16.0, right: 16.0, top: 0.0, bottom: 8.0),
             child: Row(
               children: [
                 Text(
                   'Agenda',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 28,
+                    fontSize: 20, // Realigned with SincroToolbar
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -804,7 +835,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 personalDayNumber: _personalDayNumber,
                 events: _getRawEventsForDay(_selectedDay),
                 isDesktop: false,
-                onAddTask: _openAddTaskModal,
+                onAddTask: _openNewTaskDetail,
                 onToggleTask: _onToggleTask,
                 onTaskTap: _handleTaskTap,
                 // Callbacks de Swipe
@@ -840,7 +871,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
           flex: 2,
           child: SingleChildScrollView(
             padding: const EdgeInsets.only(
-                left: 24.0, top: 8.0, right: 24.0, bottom: 24.0),
+                left: 40.0, top: 8.0, right: 40.0, bottom: 24.0),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -850,7 +881,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   'Agenda',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 32,
+                    fontSize: 24, // Realigned with SincroToolbar
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -893,7 +924,8 @@ class _CalendarScreenState extends State<CalendarScreen> {
         Expanded(
           flex: 1,
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.only(
+                left: 16.0, top: 24.0, right: 40.0, bottom: 24.0),
             child: Container(
               decoration: BoxDecoration(
                 color: AppColors.cardBackground,
@@ -914,7 +946,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                   personalDayNumber: _personalDayNumber,
                   events: _getRawEventsForDay(_selectedDay),
                   isDesktop: true,
-                  onAddTask: _openAddTaskModal,
+                  onAddTask: _openNewTaskDetail,
                   onToggleTask: _onToggleTask,
                   onTaskTap: _handleTaskTap,
                   // Callbacks de Swipe
