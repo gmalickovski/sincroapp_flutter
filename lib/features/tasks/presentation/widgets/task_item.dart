@@ -69,16 +69,16 @@ class TaskItem extends StatelessWidget {
     return !today.isAtSameMomentAs(targetDate);
   }
 
-  /// Helper para criar TextSpan com destaque de @menções em azul e #tags em roxo
   TextSpan _buildMentionHighlightedText(
     String text, {
     required TextStyle baseStyle,
     required TextStyle mentionStyle,
     required TextStyle tagStyle,
+    required TextStyle goalStyle,
   }) {
     // Regex para encontrar @username OU #tag
-    // Captura @letras.pontos ou #letras
-    final regex = RegExp(r'(@[\w.]+|#[\wÀ-ÿ]+)');
+    // Captura @letras.pontos, #letras ou !letras
+    final regex = RegExp(r'(@[\w.]+|#[\wÀ-ÿ]+|![\wÀ-ÿ]+)');
     final matches = regex.allMatches(text);
 
     if (matches.isEmpty) {
@@ -99,11 +99,22 @@ class TaskItem extends StatelessWidget {
         ));
       }
 
-      // Aplica estilo dependendo se é menção ou tag
+      // Aplica estilo dependendo se é menção, tag ou meta
       final isMention = matchText.startsWith('@');
+      final isGoal = matchText.startsWith('!');
+      
+      TextStyle matchStyle;
+      if (isMention) {
+        matchStyle = mentionStyle;
+      } else if (isGoal) {
+        matchStyle = goalStyle;
+      } else {
+        matchStyle = tagStyle;
+      }
+
       spans.add(TextSpan(
         text: matchText,
-        style: isMention ? mentionStyle : tagStyle,
+        style: matchStyle,
       ));
 
       lastEnd = match.end;
@@ -307,7 +318,7 @@ class TaskItem extends StatelessWidget {
                       fontFamily: 'Poppins',
                     ),
                     mentionStyle: TextStyle(
-                      color: Colors.lightBlueAccent,
+                      color: AppColors.taskMarker, // Blue-500
                       fontWeight: FontWeight.bold,
                       decoration: task.completed
                           ? TextDecoration.lineThrough
@@ -318,10 +329,19 @@ class TaskItem extends StatelessWidget {
                       fontFamily: 'Poppins',
                     ),
                     tagStyle: TextStyle(
-                      color: const Color(
-                          0xFFEC4899), // Pink-500 (mesma cor do ícone antigo)
-                      fontWeight: FontWeight
-                          .normal, // Tags geralmente normal ou semi-bold
+                      color: AppColors.secondaryAccent, // Purple for tags
+                      fontWeight: FontWeight.w600,
+                      decoration: task.completed
+                          ? TextDecoration.lineThrough
+                          : TextDecoration.none,
+                      fontSize: mainFontSize,
+                      height: 1.45,
+                      letterSpacing: 0.15,
+                      fontFamily: 'Poppins',
+                    ),
+                    goalStyle: TextStyle(
+                      color: AppColors.goalTaskMarker, // Pink for goals
+                      fontWeight: FontWeight.w600,
                       decoration: task.completed
                           ? TextDecoration.lineThrough
                           : TextDecoration.none,

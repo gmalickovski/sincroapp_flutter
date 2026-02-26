@@ -827,10 +827,10 @@ class SupabaseService {
         .schema('sincroapp')
         .from('tasks')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid) // Filtro server-side vital para evitar TimeOut
         .order('created_at', ascending: false)
         .map((data) {
           return data
-              .where((item) => item['user_id'] == uid)
               .map<TaskModel>((item) => _mapTaskFromSupabase(item))
               .toList();
         });
@@ -1348,10 +1348,10 @@ class SupabaseService {
         .schema('sincroapp')
         .from('goals')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid) // Filtro server-side vital para não dar TimeOut
         .order('created_at', ascending: false)
         .map((data) {
           return data
-              .where((item) => item['user_id'] == uid)
               .map((item) => _mapGoalFromSupabase(item))
               .toList();
         });
@@ -1523,10 +1523,10 @@ class SupabaseService {
         .schema('sincroapp')
         .from('goals')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid) // Filtro server-side vital para evitar TimeOut
         .order('created_at', ascending: false)
         .map((data) {
           return data
-              .where((item) => item['user_id'] == uid)
               .map((item) => _mapGoalFromSupabase(item))
               .toList();
         });
@@ -1537,10 +1537,11 @@ class SupabaseService {
         .schema('sincroapp')
         .from('goals')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid)
         .order('created_at') // Optional
         .map((data) {
           return data
-              .where((item) => item['user_id'] == uid && item['id'] == goalId)
+              .where((item) => item['id'] == goalId)
               .map((item) => _mapGoalFromSupabase(item))
               .single;
         });
@@ -2248,10 +2249,10 @@ class SupabaseService {
         .schema('sincroapp')
         .from('tasks')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid) // Server-side filter
         .order('created_at')
         .map((data) => data
-            .where((item) =>
-                item['user_id'] == uid && item['journey_id'] == goalId)
+            .where((item) => item['journey_id'] == goalId)
             .map<TaskModel>((item) => _mapTaskFromSupabase(item))
             .toList());
   }
@@ -2262,10 +2263,10 @@ class SupabaseService {
         .schema('sincroapp')
         .from('tasks')
         .stream(primaryKey: ['id'])
+        .eq('user_id', uid) // Server-side filter
         .order('created_at')
         .map((data) {
           return data
-              .where((item) => item['user_id'] == uid)
               .map<TaskModel>((item) => _mapTaskFromSupabase(item))
               .where((task) {
             if (task.dueDate == null) return false;

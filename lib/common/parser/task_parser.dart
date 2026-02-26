@@ -95,8 +95,8 @@ class ParsedTask {
 class TaskParser {
   // ─── Cores padrão por tipo de chave ───
   static const Color tagColor = Colors.purpleAccent;
-  static const Color mentionColor = Colors.lightBlueAccent;
-  static const Color goalColor = Colors.cyanAccent;
+  static const Color mentionColor = Color(0xFF3B82F6); // AppColors.taskMarker (Deep Blue)
+  static const Color goalColor = Color(0xFF06B6D4); // AppColors.goalTaskMarker (Cyan)
 
   // ─── Regex patterns (públicos para reuso) ───
   static final tagPattern = RegExp(r'#[a-zA-Z0-9_À-ÿ]+');

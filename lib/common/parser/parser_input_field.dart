@@ -260,11 +260,32 @@ class _ParserInputFieldState extends State<ParserInputField> {
   OverlayEntry _createOverlayEntry() {
     return OverlayEntry(
       builder: (context) {
+        final screenSize = MediaQuery.of(context).size;
+        final isMobile = screenSize.width < 768;
+
+        if (isMobile) {
+          final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+          return Positioned(
+            left: 0,
+            right: 0,
+            bottom: bottomInset,
+            child: Material(
+              color: Colors.transparent,
+              child: ParserPopup(
+                suggestions: _suggestions,
+                activeType: _activeType ?? ParserKeyType.mention,
+                onSelected: _selectSuggestion,
+                isLoading: _isLoading,
+                isMobile: true,
+              ),
+            ),
+          );
+        }
+
         // Encontra a caixa de renderização do widget original para checar a posição global
         final renderBox = this.context.findRenderObject() as RenderBox?;
-        final screenSize = MediaQuery.of(context).size;
         
-        double maxPopupWidth = 280;
+        double maxPopupWidth = 320;
         double xOffset = 0;
 
         if (renderBox != null) {
@@ -289,7 +310,7 @@ class _ParserInputFieldState extends State<ParserInputField> {
             showWhenUnlinked: false,
             targetAnchor: Alignment.bottomLeft,
             followerAnchor: Alignment.topLeft,
-            offset: Offset(xOffset, 0),
+            offset: Offset(xOffset, 4),
             child: Material(
               color: Colors.transparent,
               child: ParserPopup(
@@ -297,6 +318,7 @@ class _ParserInputFieldState extends State<ParserInputField> {
                 activeType: _activeType ?? ParserKeyType.mention,
                 onSelected: _selectSuggestion,
                 isLoading: _isLoading,
+                isMobile: false,
               ),
             ),
           ),

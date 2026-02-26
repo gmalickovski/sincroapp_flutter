@@ -340,12 +340,13 @@ class JournalEntryCard extends StatelessWidget {
     // Regex Patterns
     final tagRegex = RegExp(r'\B#\w+');
     final mentionRegex = RegExp(r'\B@\w+');
+    final goalRegex = RegExp(r'\B!\w+');
     final timeRegex = RegExp(r'\b\d{1,2}:\d{2}\b');
 
     final spans = <InlineSpan>[];
 
     text.splitMapJoin(
-      RegExp(r'(\B#\w+)|(\B@\w+)|(\b\d{1,2}:\d{2}\b)'),
+      RegExp(r'(\B#\w+)|(\B@\w+)|(\B!\w+)|(\b\d{1,2}:\d{2}\b)'),
       onMatch: (m) {
         final match = m.group(0)!;
         Color color = AppColors.secondaryText;
@@ -355,8 +356,11 @@ class JournalEntryCard extends StatelessWidget {
           color = AppColors.secondaryAccent; // Purple for tags
           weight = FontWeight.w600;
         } else if (mentionRegex.hasMatch(match)) {
-          color = AppColors.primary; // Primary for mentions
+          color = AppColors.taskMarker; // Blue for mentions
           weight = FontWeight.bold;
+        } else if (goalRegex.hasMatch(match)) {
+          color = AppColors.goalTaskMarker; // Pink for goals
+          weight = FontWeight.w600;
         } else if (timeRegex.hasMatch(match)) {
           color = AppColors.primary; // Primary for time
           weight = FontWeight.w600;

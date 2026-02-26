@@ -10,6 +10,7 @@ class ParserPopup extends StatelessWidget {
   final bool isLoading;
   final ParserKeyType activeType;
   final Function(ParserSuggestion) onSelected;
+  final bool isMobile;
 
   const ParserPopup({
     super.key,
@@ -17,6 +18,7 @@ class ParserPopup extends StatelessWidget {
     required this.activeType,
     required this.onSelected,
     this.isLoading = false,
+    this.isMobile = false,
   });
 
   @override
@@ -24,16 +26,21 @@ class ParserPopup extends StatelessWidget {
     final color = TaskParser.colorForType(activeType);
 
     return Container(
-      constraints: const BoxConstraints(maxHeight: 200),
+      constraints: BoxConstraints(
+        maxHeight: isMobile ? MediaQuery.of(context).size.height * 0.35 : 280,
+      ),
+      margin: isMobile ? EdgeInsets.zero : const EdgeInsets.only(top: 4),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: isMobile
+            ? const BorderRadius.vertical(top: Radius.circular(16))
+            : BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 12,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -69,7 +76,7 @@ class ParserPopup extends StatelessWidget {
                     final item = suggestions[index];
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 0),
+                          horizontal: 16, vertical: 4),
                       dense: true,
                       leading: Container(
                         padding: const EdgeInsets.all(4),

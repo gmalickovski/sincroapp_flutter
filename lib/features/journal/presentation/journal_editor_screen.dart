@@ -664,23 +664,11 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             bottom: effectiveBottom,
             child: Material(
               color: Colors.transparent,
-              child: Container(
-                constraints: BoxConstraints(
-                  maxHeight: MediaQuery.of(ctx).size.height * 0.30,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.cardBackground,
-                  border: Border(
-                    top: BorderSide(
-                      color: AppColors.secondaryText.withValues(alpha: 0.2),
-                    ),
-                  ),
-                ),
-                child: ParserPopup(
-                  suggestions: _suggestions,
-                  activeType: _activeKeyType ?? ParserKeyType.mention,
-                  onSelected: _applySuggestion,
-                ),
+              child: ParserPopup(
+                suggestions: _suggestions,
+                activeType: _activeKeyType ?? ParserKeyType.mention,
+                onSelected: _applySuggestion,
+                isMobile: true,
               ),
             ),
           );
@@ -748,9 +736,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         // FIX: Clamp popup position to screen bounds
         final screenSize = MediaQuery.of(context).size;
         const popupWidth = 300.0;
-        const popupMaxHeight = 200.0;
+        const popupMaxHeight = 280.0;
 
-        double dy = globalPoint.dy + 25;
+        double dy = globalPoint.dy + 10;
         double dx = globalPoint.dx;
 
         // Clamp horizontal: don't exceed right edge
@@ -761,7 +749,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
         // Clamp vertical: if popup would overflow bottom, show above cursor
         if (dy + popupMaxHeight > screenSize.height - 60) {
-          dy = globalPoint.dy - popupMaxHeight - 10;
+          dy = globalPoint.dy - popupMaxHeight - 5;
         }
         if (dy < 60) dy = 60;
 
