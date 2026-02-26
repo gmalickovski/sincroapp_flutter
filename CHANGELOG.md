@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.6.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.5.0...v1.6.0) (2026-02-26)
+
+
+### Funcionalidades ✨
+
+* implement initial journal and task management, parser components, Supabase service, and deployment documentation. ([e5e1fe6](https://github.com/gmalickovski/sincroapp_flutter/commit/e5e1fe6b3ae07b3de4673cb96a0303848fab1891))
+
 ## [1.5.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.4.3...v1.5.0) (2026-02-26)
 
 
