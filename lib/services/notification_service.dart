@@ -1,4 +1,5 @@
 // lib/services/notification_service.dart
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     as fln;
@@ -6,16 +7,15 @@ import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:flutter/material.dart'; // Import Material for TimeOfDay, Colors
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-// import 'package:sincro_app_flutter/firebase_options.dart'; // Removido
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sincro_app_flutter/core/services/navigation_service.dart'; // Import NavigationService
-import 'dart:convert'; // Para JSON decode
+import 'package:sincro_app_flutter/core/services/navigation_service.dart';
+import 'dart:convert';
 
-// Importa os DADOS de fuso horário (do arquivo 'latest.dart') com um apelido ÚNICO
 import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
+import 'package:local_notifier/local_notifier.dart';
 
 // --- IMPORTANTE ---
 // Esta função DEVE ser de nível superior (fora de qualquer classe)
@@ -92,6 +92,13 @@ class NotificationService {
   final fln.FlutterLocalNotificationsPlugin _localNotifications =
       fln.FlutterLocalNotificationsPlugin();
 
+  /// Helper: verifica se estamos em desktop (Windows/Linux)
+  bool get _isDesktop =>
+      !kIsWeb && (Platform.isWindows || Platform.isLinux);
+
+  /// Timers ativos para notificações agendadas no Windows
+  final Map<int, Timer> _windowsTimers = {};
+
   // IDs dos Canais (Android)
   static const String _channelIdReminder = 'task_reminders';
   static const String _channelNameReminder = 'Lembretes de Tarefas';
@@ -111,8 +118,9 @@ class NotificationService {
   Future<void> init() async {
     await _configureTimezone();
 
-    // Disable notifications on Windows/Linux to prevent crashes for now
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) {
+    // Desktop: usa local_notifier (Windows/Linux)
+    if (_isDesktop) {
+      await _initDesktopNotifier();
       return;
     }
 
@@ -121,7 +129,7 @@ class NotificationService {
     // Configurações de inicialização do FlutterLocalNotifications
     const fln.AndroidInitializationSettings androidSettings =
         fln.AndroidInitializationSettings(
-            '@drawable/ic_notification'); // Usa ícone monocromático correto
+            '@drawable/ic_notification');
     const fln.DarwinInitializationSettings iosSettings =
         fln.DarwinInitializationSettings(
       requestAlertPermission: true,
@@ -140,6 +148,60 @@ class NotificationService {
 
     // Cria os canais Android
     await _createAndroidChannels();
+  }
+
+  /// Inicializa o local_notifier para Windows/Linux
+  Future<void> _initDesktopNotifier() async {
+    try {
+      await localNotifier.setup(
+        appName: 'SincroApp',
+        shortcutPolicy: ShortcutPolicy.requireCreate,
+      );
+      debugPrint('✅ Desktop Notifier (local_notifier) inicializado.');
+    } catch (e) {
+      debugPrint('❌ Erro ao inicializar local_notifier: $e');
+    }
+  }
+
+  /// Exibe uma notificação nativa no Windows/Linux via local_notifier
+  void _showDesktopNotification({
+    required String title,
+    required String body,
+  }) {
+    try {
+      final notification = LocalNotification(
+        title: title,
+        body: body,
+      );
+      notification.onClick = () {
+        debugPrint('[Desktop Notification] Clicked: $title');
+      };
+      notification.show();
+    } catch (e) {
+      debugPrint('❌ Erro ao exibir notificação desktop: $e');
+    }
+  }
+
+  /// Agenda uma notificação no Windows via Timer (funciona enquanto app aberto)
+  void _scheduleDesktopNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) {
+    // Cancela timer anterior com mesmo ID
+    _windowsTimers[id]?.cancel();
+
+    final now = DateTime.now();
+    final delay = scheduledDate.difference(now);
+
+    if (delay.isNegative) return; // Já passou
+
+    _windowsTimers[id] = Timer(delay, () {
+      _showDesktopNotification(title: title, body: body);
+      _windowsTimers.remove(id);
+    });
+    debugPrint('[Desktop] Notificação agendada: "$title" em ${delay.inMinutes}min');
   }
 
   /// Solicita permissões de notificação usando permission_handler
@@ -250,6 +312,16 @@ class NotificationService {
     return scheduledDate;
   }
 
+  /// Versão local (DateTime puro) para uso no Windows/Linux
+  DateTime _nextInstanceOfTimeLocal(TimeOfDay time) {
+    final now = DateTime.now();
+    var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+    return scheduledDate;
+  }
+
   /// Converte uma data e hora específicas para tz.TZDateTime
   tz.TZDateTime _instanceOfDateTime(DateTime date, TimeOfDay time) {
     return tz.TZDateTime(
@@ -264,7 +336,12 @@ class NotificationService {
     String channelId = _channelIdDaily,
     String? payload,
   }) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
+    // Desktop: usa local_notifier
+    if (_isDesktop) {
+      _showDesktopNotification(title: title, body: body);
+      return;
+    }
+
     final androidDetails = fln.AndroidNotificationDetails(
       channelId,
       channelId == _channelIdDaily ? _channelNameDaily : _channelNameReminder,
@@ -291,7 +368,16 @@ class NotificationService {
     required String body,
     required TimeOfDay scheduleTime,
   }) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
+    if (_isDesktop) {
+      final scheduledDate = _nextInstanceOfTimeLocal(scheduleTime);
+      _scheduleDesktopNotification(
+        id: _dailyPersonalDayId,
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+      );
+      return;
+    }
     await _localNotifications.cancel(_dailyPersonalDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
     const androidDetails = fln.AndroidNotificationDetails(
@@ -315,17 +401,31 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           fln.UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents:
-          fln.DateTimeComponents.time, // Repete diariamente
+          fln.DateTimeComponents.time,
     );
   }
 
   /// 2. Lembrete de Tarefa Agendada (FEATURE #3)
   Future<void> scheduleTaskReminder(TaskModel task) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
     final int notificationId = task.id.hashCode.abs() % 2147483647;
 
     if (task.dueDate == null || task.reminderTime == null || task.completed) {
       await cancelTaskReminder(notificationId);
+      return;
+    }
+
+    if (_isDesktop) {
+      final scheduledDate = DateTime(
+        task.dueDate!.year, task.dueDate!.month, task.dueDate!.day,
+        task.reminderTime!.hour, task.reminderTime!.minute,
+      );
+      if (scheduledDate.isBefore(DateTime.now())) return;
+      _scheduleDesktopNotification(
+        id: notificationId,
+        title: 'Lembrete de Tarefa',
+        body: task.text,
+        scheduledDate: scheduledDate,
+      );
       return;
     }
 
@@ -363,7 +463,11 @@ class NotificationService {
 
   /// Cancela um lembrete de tarefa
   Future<void> cancelTaskReminder(int notificationId) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
+    if (_isDesktop) {
+      _windowsTimers[notificationId]?.cancel();
+      _windowsTimers.remove(notificationId);
+      return;
+    }
     await _localNotifications.cancel(notificationId);
   }
 
@@ -376,7 +480,16 @@ class NotificationService {
   /// 3. Lembrete de Tarefas Não Concluídas (FEATURE #1)
   Future<void> scheduleDailyEndOfDayCheck(
       String userId, TimeOfDay scheduleTime) async {
-    if (!kIsWeb && (Platform.isWindows || Platform.isLinux)) return;
+    if (_isDesktop) {
+      final scheduledDate = _nextInstanceOfTimeLocal(scheduleTime);
+      _scheduleDesktopNotification(
+        id: _dailyEndOfDayId,
+        title: 'Verificação de fim de dia',
+        body: 'Verificando suas tarefas...',
+        scheduledDate: scheduledDate,
+      );
+      return;
+    }
     await _localNotifications.cancel(_dailyEndOfDayId);
     final tz.TZDateTime scheduledDate = _nextInstanceOfTime(scheduleTime);
     const androidDetails = fln.AndroidNotificationDetails(
@@ -400,7 +513,7 @@ class NotificationService {
       uiLocalNotificationDateInterpretation:
           fln.UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents:
-          fln.DateTimeComponents.time, // Repete diariamente
+          fln.DateTimeComponents.time,
     );
   }
   // --- NOVAS FUNCIONALIDADES PARA CROSS-PLATFORM & INCENTIVOS ---
@@ -408,7 +521,7 @@ class NotificationService {
   /// 4. Listener Global para Sincronizar Central -> Nativo
   /// Deve ser chamado no init do Dashboard
   void listenToRealtimeNotifications(String userId) {
-    if (kIsWeb) return; // Não suportado nativamente na web da mesma forma
+    if (kIsWeb) return;
 
     Supabase.instance.client
         .channel('public:notifications:userId=eq.$userId')
@@ -671,6 +784,17 @@ class NotificationService {
       required String body,
       required tz.TZDateTime date,
       String? payload}) async {
+    // Desktop: usa Timer
+    if (_isDesktop) {
+      _scheduleDesktopNotification(
+        id: id,
+        title: title,
+        body: body,
+        scheduledDate: DateTime(date.year, date.month, date.day, date.hour, date.minute),
+      );
+      return;
+    }
+
     const androidDetails = fln.AndroidNotificationDetails(
       _channelIdDaily,
       _channelNameDaily,
