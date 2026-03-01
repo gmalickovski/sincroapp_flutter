@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.0...v1.6.1) (2026-03-01)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement core application features including journal management with multi-selection and advanced filtering, dashboard, goals, tasks, strategy, assistant, calendar, and a comprehensive set of common UI components. ([a47dc5f](https://github.com/gmalickovski/sincroapp_flutter/commit/a47dc5f0ecbda425463049c260c45af937906231))
+
 ## [1.6.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.5.0...v1.6.0) (2026-02-26)
 
 
