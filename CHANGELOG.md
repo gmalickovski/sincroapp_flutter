@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.1...v1.6.2) (2026-03-01)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** implement local notification service with Android permissions, background processing, and cross-platform scheduling. ([70286a2](https://github.com/gmalickovski/sincroapp_flutter/commit/70286a2ff3abcff82d00529ff0235eedb73a59f0))
+
 ### [1.6.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.0...v1.6.1) (2026-03-01)
 
 
