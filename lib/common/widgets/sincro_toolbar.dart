@@ -111,7 +111,8 @@ class _SincroToolbarState extends State<SincroToolbar> {
       if (!_filterScrollController.hasClients) return;
       final pos = _filterScrollController.position;
       setState(() {
-        _showRightArrow = pos.maxScrollExtent > 0 && pos.pixels < pos.maxScrollExtent - 1;
+        _showRightArrow =
+            pos.maxScrollExtent > 0 && pos.pixels < pos.maxScrollExtent - 1;
         _showLeftArrow = pos.pixels > 0;
       });
     });
@@ -142,7 +143,8 @@ class _SincroToolbarState extends State<SincroToolbar> {
         return Container(
           padding: widget.contentPadding ??
               EdgeInsets.symmetric(
-                  horizontal: isDesktop ? 40.0 : 16.0, vertical: isDesktop ? 8.0 : 4.0),
+                  horizontal: isDesktop ? 40.0 : 16.0,
+                  vertical: isDesktop ? 8.0 : 4.0),
           alignment: Alignment.topLeft,
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -153,7 +155,7 @@ class _SincroToolbarState extends State<SincroToolbar> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
+                    Flexible(
                       child: Text(
                         widget.title!,
                         style: TextStyle(
@@ -181,7 +183,10 @@ class _SincroToolbarState extends State<SincroToolbar> {
                         direction: AxisDirection.left,
                         onTap: () {
                           _filterScrollController.animateTo(
-                            (_filterScrollController.offset - 120).clamp(0.0, _filterScrollController.position.maxScrollExtent),
+                            (_filterScrollController.offset - 120).clamp(
+                                0.0,
+                                _filterScrollController
+                                    .position.maxScrollExtent),
                             duration: const Duration(milliseconds: 200),
                             curve: Curves.easeOut,
                           );
@@ -200,8 +205,8 @@ class _SincroToolbarState extends State<SincroToolbar> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
-                            children:
-                                _buildToolbarChildren(availableWidth, isDesktop),
+                            children: _buildToolbarChildren(
+                                availableWidth, isDesktop),
                           ),
                         ),
                       ),
@@ -212,7 +217,10 @@ class _SincroToolbarState extends State<SincroToolbar> {
                         direction: AxisDirection.right,
                         onTap: () {
                           _filterScrollController.animateTo(
-                            (_filterScrollController.offset + 120).clamp(0.0, _filterScrollController.position.maxScrollExtent),
+                            (_filterScrollController.offset + 120).clamp(
+                                0.0,
+                                _filterScrollController
+                                    .position.maxScrollExtent),
                             duration: const Duration(milliseconds: 200),
                             curve: Curves.easeOut,
                           );
@@ -412,13 +420,12 @@ class _SincroToolbarState extends State<SincroToolbar> {
   }
 
   Widget _buildSearchRow({required bool isDesktop}) {
-
     return TapRegion(
       onTapOutside: (event) {
         if (_isSearchOpen) {
           // Ignora se o tap foi no botão de pesquisa (ele já faz toggle)
-          final searchBtnBox = _searchButtonKey.currentContext
-              ?.findRenderObject() as RenderBox?;
+          final searchBtnBox =
+              _searchButtonKey.currentContext?.findRenderObject() as RenderBox?;
           if (searchBtnBox != null) {
             final localPos = searchBtnBox.globalToLocal(event.position);
             if (searchBtnBox.paintBounds.contains(localPos)) return;
@@ -474,7 +481,8 @@ class _SincroToolbarState extends State<SincroToolbar> {
                       ),
                       GestureDetector(
                         onTap: _toggleSearch,
-                        child: const Icon(Icons.close, color: Colors.white, size: 18),
+                        child: const Icon(Icons.close,
+                            color: Colors.white, size: 18),
                       ),
                     ],
                   ),
@@ -614,42 +622,44 @@ class _SincroFilterChip extends StatelessWidget {
       child: GestureDetector(
         key: item.key,
         onTap: item.onTap,
-        child: AnimatedContainer(
+        child: AnimatedSize(
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeInOut,
-          height: 30,
-          width: isSelected ? null : 30,
-          padding: isSelected
-              ? const EdgeInsets.symmetric(horizontal: 12)
-              : EdgeInsets.zero,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: bgColor,
-            shape: isSelected ? BoxShape.rectangle : BoxShape.circle,
-            borderRadius: isSelected ? BorderRadius.circular(100) : null,
-            border:
-                isSelected ? Border.all(color: Colors.white, width: 1.5) : null,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.icon,
-                size: 20,
-                color: Colors.white,
-              ),
-              if (isSelected) ...[
-                const SizedBox(width: 8),
-                Text(
-                  item.label,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+          child: Container(
+            height: 30,
+            constraints: const BoxConstraints(minWidth: 30),
+            padding: isSelected
+                ? const EdgeInsets.symmetric(horizontal: 12)
+                : EdgeInsets.zero,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(100),
+              border: isSelected
+                  ? Border.all(color: Colors.white, width: 1.5)
+                  : Border.all(color: Colors.transparent, width: 0),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  item.icon,
+                  size: 20,
+                  color: Colors.white,
                 ),
+                if (isSelected) ...[
+                  const SizedBox(width: 4), // Reduced from 8 as requested
+                  Text(
+                    item.label,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

@@ -17,15 +17,15 @@ class ParserInputField extends StatefulWidget {
   final TextCapitalization textCapitalization;
 
   /// Callback para buscar sugestões quando um trigger é detectado.
-  final Future<List<ParserSuggestion>> Function(ParserKeyType type, String query)?
-      onSearch;
+  final Future<List<ParserSuggestion>> Function(
+      ParserKeyType type, String query)? onSearch;
 
   final void Function(ParserKeyType type, ParserSuggestion suggestion)?
       onSuggestionSelected;
 
   /// Tipos de trigger que estão desativados (serão tratados como texto normal)
   final List<ParserKeyType> disabledTriggers;
-  
+
   final bool autocorrect;
   final bool enableSuggestions;
   final TextInputType? keyboardType;
@@ -62,7 +62,8 @@ class _ParserInputFieldState extends State<ParserInputField> {
   Timer? _debounce;
   String? _currentSearchTerm;
   int? _triggerStartIndex;
-  bool _isSelectingSuggestion = false; // Flag para evitar remover overlay durante seleção
+  bool _isSelectingSuggestion =
+      false; // Flag para evitar remover overlay durante seleção
 
   @override
   void initState() {
@@ -135,7 +136,8 @@ class _ParserInputFieldState extends State<ParserInputField> {
             label: normalizedLabel,
             type: ParserKeyType.tag,
           );
-          widget.onSuggestionSelected?.call(ParserKeyType.tag, newTagSuggestion);
+          widget.onSuggestionSelected
+              ?.call(ParserKeyType.tag, newTagSuggestion);
         }
       }
     }
@@ -284,21 +286,21 @@ class _ParserInputFieldState extends State<ParserInputField> {
 
         // Encontra a caixa de renderização do widget original para checar a posição global
         final renderBox = this.context.findRenderObject() as RenderBox?;
-        
+
         double maxPopupWidth = 320;
         double xOffset = 0;
 
         if (renderBox != null) {
           final offset = renderBox.localToGlobal(Offset.zero);
           final dx = offset.dx;
-          
+
           // Se o popup estourar a borda direita da tela...
           if (dx + maxPopupWidth > screenSize.width - 16) {
             xOffset = (screenSize.width - 16) - (dx + maxPopupWidth);
             // Evita estourar a borda esquerda
             if (dx + xOffset < 16) {
               xOffset = 16 - dx;
-              maxPopupWidth = screenSize.width - 32; 
+              maxPopupWidth = screenSize.width - 32;
             }
           }
         }
@@ -336,7 +338,10 @@ class _ParserInputFieldState extends State<ParserInputField> {
         focusNode: widget.focusNode,
         autofillHints: const [],
         maxLines: widget.maxLines,
-        keyboardType: widget.keyboardType ?? (widget.maxLines == 1 ? TextInputType.text : TextInputType.multiline),
+        keyboardType: widget.keyboardType ??
+            (widget.maxLines == 1
+                ? TextInputType.text
+                : TextInputType.multiline),
         autocorrect: widget.autocorrect,
         enableSuggestions: widget.enableSuggestions,
         style: widget.style ?? const TextStyle(color: Colors.white),

@@ -183,156 +183,145 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.vertical(
-            top: Radius.circular(24.0)), // Matches TagSelectionModal
+            top: Radius.circular(24.0)),
       ),
-      padding: EdgeInsets.fromLTRB(
-          16, 16, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min, // Shrink to fit content
         children: [
-          // Header (Fixed)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-                onPressed: () {
-                  widget.onSelectionChanged([]);
-                  Navigator.pop(context);
-                },
-              ),
-              const Text(
+          // 1. Header (Standardized)
+          const Padding(
+            padding: EdgeInsets.only(
+                top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
+            child: Center(
+              child: Text(
                 'Meus Contatos',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Colors.white,
+                  color: AppColors.primaryText,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
                 ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.check, color: AppColors.primary),
-                onPressed: () {
-                  widget.onSelectionChanged(_selectedUsernames.toList());
-                  if (_pendingDate != null && widget.onDateChanged != null) {
-                    widget.onDateChanged!(_pendingDate!);
-                  }
-                  Navigator.pop(context, _selectedUsernames.toList());
-                },
-              ),
-            ],
-          ),
-
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const SizedBox(height: 16),
-
-                  // Search & Add
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _searchController,
-                          style: const TextStyle(color: Colors.white),
-                          onChanged: _filterContacts,
-                          decoration: InputDecoration(
-                            hintText: 'Buscar nos meus contatos',
-                            hintStyle:
-                                const TextStyle(color: AppColors.secondaryText),
-                            prefixIcon: const Icon(Icons.search,
-                                color: AppColors.tertiaryText),
-                            filled: true,
-                            fillColor: AppColors.background,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(30),
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding:
-                                const EdgeInsets.symmetric(horizontal: 16),
-                          ),
-                          autofillHints: const [],
-                          enableSuggestions: false,
-                          autocorrect: false,
-                          keyboardType: TextInputType.text,
-                          textInputAction: TextInputAction.search,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      // ADD USER BUTTON
-                      InkWell(
-                        onTap: _openAddContactModal,
-                        borderRadius: BorderRadius.circular(15),
-                        child: Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: const Icon(Icons.person_add,
-                              color: Colors.white, size: 28),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12), // Spacing
-
-                  // Contacts List
-                  _contacts.isEmpty
-                      ? Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 24.0, horizontal: 16.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.people_outline,
-                                  size: 48, color: AppColors.tertiaryText),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Você ainda não tem contatos.',
-                                style:
-                                    TextStyle(color: AppColors.secondaryText),
-                                textAlign: TextAlign.center,
-                              ),
-                              TextButton(
-                                  onPressed: _openAddContactModal,
-                                  child: const Text('Buscar novas pessoas',
-                                      style:
-                                          TextStyle(color: AppColors.primary))),
-                            ],
-                          ),
-                        )
-                      : ListView.separated(
-                          shrinkWrap: true, // Key for dynamic height
-                          physics:
-                              const NeverScrollableScrollPhysics(), // Scroll handled by parent
-                          itemCount: _filteredContacts.length,
-                          separatorBuilder: (_, __) =>
-                              const Divider(height: 1, color: AppColors.border),
-                          itemBuilder: (context, index) {
-                            final contact = _filteredContacts[index];
-                            final isSelected =
-                                _selectedUsernames.contains(contact.username);
-                            return ContactListItem.picker(
-                              contact: contact,
-                              isSelected: isSelected,
-                              onTap: () => _toggleContact(contact),
-                            );
-                          },
-                        ),
-
-                  // Compatibility Widget Area
-                  if (_selectedUsernames.isNotEmpty) ...[
-                    const Divider(color: AppColors.border),
-                    const SizedBox(height: 8),
-                    _buildCompatibilitySection(),
-                  ],
-                ],
               ),
             ),
           ),
+
+          Flexible(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(height: 16),
+
+                    // Search & Add
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            style: const TextStyle(color: Colors.white),
+                            onChanged: _filterContacts,
+                            decoration: InputDecoration(
+                              hintText: 'Buscar nos meus contatos',
+                              hintStyle:
+                                  const TextStyle(color: AppColors.secondaryText),
+                              prefixIcon: const Icon(Icons.search,
+                                  color: AppColors.tertiaryText),
+                              filled: true,
+                              fillColor: AppColors.background,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(30),
+                                borderSide: BorderSide.none,
+                              ),
+                              contentPadding:
+                                  const EdgeInsets.symmetric(horizontal: 16),
+                            ),
+                            autofillHints: const [],
+                            enableSuggestions: false,
+                            autocorrect: false,
+                            keyboardType: TextInputType.text,
+                            textInputAction: TextInputAction.search,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // ADD USER BUTTON
+                        InkWell(
+                          onTap: _openAddContactModal,
+                          borderRadius: BorderRadius.circular(15),
+                          child: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(Icons.person_add,
+                                color: Colors.white, size: 28),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12), // Spacing
+
+                    // Contacts List
+                    _contacts.isEmpty
+                        ? Padding(
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 24.0, horizontal: 16.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.people_outline,
+                                    size: 48, color: AppColors.tertiaryText),
+                                const SizedBox(height: 12),
+                                const Text(
+                                  'Você ainda não tem contatos.',
+                                  style:
+                                      TextStyle(color: AppColors.secondaryText),
+                                  textAlign: TextAlign.center,
+                                ),
+                                TextButton(
+                                    onPressed: _openAddContactModal,
+                                    child: const Text('Buscar novas pessoas',
+                                        style:
+                                            TextStyle(color: AppColors.primary))),
+                              ],
+                            ),
+                          )
+                        : ListView.separated(
+                            shrinkWrap: true, // Key for dynamic height
+                            physics:
+                                const NeverScrollableScrollPhysics(), // Scroll handled by parent
+                            itemCount: _filteredContacts.length,
+                            separatorBuilder: (_, __) =>
+                                const Divider(height: 1, color: AppColors.border),
+                            itemBuilder: (context, index) {
+                              final contact = _filteredContacts[index];
+                              final isSelected =
+                                  _selectedUsernames.contains(contact.username);
+                              return ContactListItem.picker(
+                                contact: contact,
+                                isSelected: isSelected,
+                                onTap: () => _toggleContact(contact),
+                              );
+                            },
+                          ),
+
+                    // Compatibility Widget Area
+                    if (_selectedUsernames.isNotEmpty) ...[
+                      const Divider(color: AppColors.border),
+                      const SizedBox(height: 8),
+                      _buildCompatibilitySection(),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+          
+          _buildFooter(),
         ],
       ),
     );
@@ -521,6 +510,103 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildFooter() {
+    if (_selectedUsernames.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedUsernames.clear();
+                    });
+                    widget.onSelectionChanged([]);
+                    Navigator.of(context).pop([]);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Limpar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onSelectionChanged(_selectedUsernames.toList());
+                    if (_pendingDate != null && widget.onDateChanged != null) {
+                      widget.onDateChanged!(_pendingDate!);
+                    }
+                    Navigator.pop(context, _selectedUsernames.toList());
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.disabled)) return AppColors.border;
+                      return AppColors.primary;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.disabled)) return AppColors.secondaryText;
+                      return Colors.white;
+                    }),
+                    elevation: WidgetStateProperty.resolveWith<double>((states) => 0),
+                    padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                        (states) => const EdgeInsets.symmetric(vertical: 12)),
+                    shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+                      return RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      );
+                    }),
+                  ),
+                  child: const Text("Confirmar",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default "Fechar" state
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton(
+          onPressed: () {
+            widget.onSelectionChanged([]);
+            Navigator.pop(context, []);
+          },
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Fechar",
+              style: TextStyle(
+                  color: AppColors.secondaryText, fontFamily: 'Poppins')),
+        ),
+      ),
     );
   }
 }

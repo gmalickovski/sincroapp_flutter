@@ -6,9 +6,15 @@ import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 /// Controller que destaca #tags, @menções e !metas no texto em tempo real.
 class ParserTextEditingController extends TextEditingController {
   Set<String> validMentions;
+  bool mentionEnabled;
+  bool goalEnabled;
 
-  ParserTextEditingController({super.text, Set<String>? validUsernames})
-      : validMentions = validUsernames ?? {};
+  ParserTextEditingController({
+    super.text,
+    Set<String>? validUsernames,
+    this.mentionEnabled = true,
+    this.goalEnabled = true,
+  }) : validMentions = validUsernames ?? {};
 
   /// Atualiza a lista de usuários válidos e refaz o style
   void updateValidMentions(Set<String> newMentions) {
@@ -41,13 +47,17 @@ class ParserTextEditingController extends TextEditingController {
         final String matchText = match[0]!;
 
         if (matchText.startsWith('@')) {
-          // Menção: sempre colorir durante digitação ativa
-          children.add(TextSpan(
-            text: matchText,
-            style: style?.merge(const TextStyle(
-              color: TaskParser.mentionColor,
-            )),
-          ));
+          // Menção: só colorir se mentionEnabled (requer due date e sem meta)
+          if (mentionEnabled) {
+            children.add(TextSpan(
+              text: matchText,
+              style: style?.merge(const TextStyle(
+                color: TaskParser.mentionColor,
+              )),
+            ));
+          } else {
+            children.add(TextSpan(text: matchText, style: style));
+          }
         } else if (matchText.startsWith('#')) {
           // Tag: sempre estiliza
           children.add(TextSpan(
@@ -57,13 +67,17 @@ class ParserTextEditingController extends TextEditingController {
             )),
           ));
         } else if (matchText.startsWith('!')) {
-          // Meta: sempre estiliza
-          children.add(TextSpan(
-            text: matchText,
-            style: style?.merge(const TextStyle(
-              color: TaskParser.goalColor,
-            )),
-          ));
+          // Meta: só colorir se goalEnabled (sem contatos compartilhados)
+          if (goalEnabled) {
+            children.add(TextSpan(
+              text: matchText,
+              style: style?.merge(const TextStyle(
+                color: TaskParser.goalColor,
+              )),
+            ));
+          } else {
+            children.add(TextSpan(text: matchText, style: style));
+          }
         } else {
           children.add(TextSpan(text: matchText, style: style));
         }

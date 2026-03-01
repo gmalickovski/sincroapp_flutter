@@ -152,6 +152,18 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
     _hidden.removeWhere((id) => !_cardDisplayData.containsKey(id));
   }
 
+  bool get _hasChanges {
+    if (_currentOrder.length != widget.initialOrder.length) return true;
+    for (int i = 0; i < _currentOrder.length; i++) {
+      if (_currentOrder[i] != widget.initialOrder[i]) return true;
+    }
+    if (_hidden.length != widget.initialHidden.length) return true;
+    for (final h in _hidden) {
+      if (!widget.initialHidden.contains(h)) return true;
+    }
+    return false;
+  }
+
   Future<void> _onSave() async {
     // Usando a versão com callback, que funcionou para o erro anterior
     final messenger = ScaffoldMessenger.of(context);
@@ -196,41 +208,36 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
 
   @override
   Widget build(BuildContext context) {
-    // Usamos Container mas agora pensado para Dialog
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+
+    // Usamos Container mas agora pensado para Dialog na versão Desktop e BottomSheet na versão mobile
     return Container(
       constraints: BoxConstraints(
           maxWidth: 500,
           maxHeight: MediaQuery.of(context).size.height *
               0.8), // Limita altura e largura
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.all(Radius.circular(24)),
+        borderRadius: isDesktop
+            ? BorderRadius.circular(16.0)
+            : const BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           // REMOVIDO: Handle (barra cinza)
 
-          // Título centralizado e Fechar
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Título
-                const Text('Organizar Dashboard',
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold)),
-                // Fechar
-                IconButton(
-                  icon: const Icon(Icons.close_rounded,
-                      color: AppColors.secondaryText),
-                  onPressed: () => widget.onSaveComplete(false),
-                  tooltip: 'Fechar',
-                ),
-              ],
+          // Título centralizado
+          const Padding(
+            padding: EdgeInsets.fromLTRB(24, 24, 24, 16),
+            child: Center(
+              child: Text(
+                'Organizar Dashboard',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
             ),
           ),
           const Divider(height: 1, color: AppColors.border),
@@ -319,33 +326,116 @@ class _ReorderDashboardModalState extends State<ReorderDashboardModal> {
               },
             ),
           ),
-          // Botão Salvar (Pill)
+          // Botões dinâmicos (Footer)
           const Divider(height: 1, color: AppColors.border),
           Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Center(
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _onSave,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24)), // Pilula
-                  elevation: 4,
-                ),
-                child: _isLoading
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white))
-                    : const Text('Salvar Ordem',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold)),
-              ),
+            padding: const EdgeInsets.all(16.0),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 150),
+              transitionBuilder: (Widget child, Animation<double> animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+              child: !_hasChanges
+                  ? SizedBox(
+                      key: const ValueKey('CloseButton'),
+                      width: double.infinity,
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.cardBackground,
+                          elevation: 0,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () => widget.onSaveComplete(false),
+                        child: const Text(
+                          "Fechar",
+                          style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins',
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Row(
+                      key: const ValueKey('ActionButtons'),
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                // Reverter mudanças
+                                setState(() {
+                                  _currentOrder =
+                                      List.from(widget.initialOrder);
+                                  _hidden = {...widget.initialHidden};
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                                side: const BorderSide(color: AppColors.border),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: const Text("Cancelar",
+                                  style: TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontFamily: 'Poppins')),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: SizedBox(
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _onSave,
+                              style: ButtonStyle(
+                                backgroundColor:
+                                    WidgetStateProperty.resolveWith<Color>(
+                                        (states) => AppColors.primary),
+                                foregroundColor:
+                                    WidgetStateProperty.resolveWith<Color>(
+                                        (states) => Colors.white),
+                                elevation:
+                                    WidgetStateProperty.resolveWith<double>(
+                                        (states) => 0),
+                                padding: WidgetStateProperty.resolveWith<
+                                        EdgeInsetsGeometry>(
+                                    (states) => const EdgeInsets.symmetric(
+                                        vertical: 12)),
+                                shape: WidgetStateProperty.resolveWith<
+                                    OutlinedBorder>((states) {
+                                  return RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(
+                                        color: AppColors.primary, width: 2),
+                                  );
+                                }),
+                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2, color: Colors.white))
+                                  : const Text("Salvar Ordem",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontFamily: 'Poppins')),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
         ],

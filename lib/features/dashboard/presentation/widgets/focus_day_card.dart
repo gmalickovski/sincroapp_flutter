@@ -5,7 +5,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_item.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class FocusDayCard extends StatefulWidget {
   final List<TaskModel> tasks;
@@ -44,47 +43,39 @@ class _FocusDayCardState extends State<FocusDayCard> {
 
   @override
   Widget build(BuildContext context) {
+    const Color focusOrange = Color(0xFFFB923C); // orange-400
     final Color borderColor = _isHovered
         ? AppColors.primary.withValues(alpha: 0.8)
-        : AppColors.border.withValues(alpha: 0.7);
+        : focusOrange.withValues(alpha: 0.45);
     final double borderWidth = _isHovered ? 1.5 : 1.0;
 
-    // --- Lógica de Filtro Movida para o Build ---
-    final nowLocal = DateTime.now().toLocal();
-    final todayLocal = DateTime(nowLocal.year, nowLocal.month, nowLocal.day);
+    // --- Lógica de Filtro: mesma do filtro 'foco' da foco_do_dia_screen ---
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = todayStart.add(const Duration(days: 1));
 
-    final engine = NumerologyEngine(
-      nomeCompleto: widget.userData.nomeAnalise,
-      dataNascimento: widget.userData.dataNasc,
-    );
-    final int todayPersonalDay = engine.calculatePersonalDayForDate(todayLocal);
-
-    DateTime? localDateOnly(DateTime? d) {
-      if (d == null) return null;
-      final dl = d.toLocal();
-      return DateTime(dl.year, dl.month, dl.day);
-    }
-
-    // Filtra TODAS as tarefas do Foco do Dia (apenas pela data)
     final allFocusDayTasks = widget.tasks.where((task) {
-      final DateTime taskDate = task.dueDate ?? task.createdAt;
-      final taskDateOnly = localDateOnly(taskDate);
-      if (taskDateOnly == null) return false;
-
-      // Verifica apenas se a data é hoje
-      return (taskDateOnly.year == todayLocal.year &&
-          taskDateOnly.month == todayLocal.month &&
-          taskDateOnly.day == todayLocal.day);
+      if (task.completed) return false;
+      // Tarefas sem data marcadas como foco (raio)
+      if (!task.hasDeadline && task.isFocus) return true;
+      // Tarefas atrasadas (com data)
+      if (task.isOverdue) return true;
+      // Tarefas agendadas para hoje
+      if (task.hasDeadline) {
+        final taskDateLocal = task.dueDate!.toLocal();
+        final taskDateOnly = DateTime(
+            taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+        return !taskDateOnly.isBefore(todayStart) &&
+            taskDateOnly.isBefore(tomorrowStart);
+      }
+      return false;
     }).toList();
 
     final int totalTasks = allFocusDayTasks.length;
     final int completedTasks =
         allFocusDayTasks.where((t) => t.completed).length;
 
-    // Para a lista visual, mostramos apenas as não concluídas (ou todas, se preferir, mas o padrão era não-concluídas)
-    // O pedido não especificou mudar a lógica da lista, apenas mover botões.
-    // Mas geralmente "Foco do Dia" mostra o que falta fazer.
-    // Vou manter a lógica de exibir as pendentes para a lista principal.
+    // Para a lista visual, mostramos apenas as não concluídas
     final tasksToDisplay =
         allFocusDayTasks.where((t) => !t.completed).take(3).toList();
 
@@ -106,7 +97,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
                 ]
               : [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
+                    color: focusOrange.withValues(alpha: 0.08),
                     blurRadius: 10,
                     offset: const Offset(0, 5),
                   )
@@ -156,8 +147,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(Icons.check_box_outlined,
-                    color: AppColors.primary, size: 24),
+                Icon(Icons.bolt,
+                    color: Color(0xFFFB923C), size: 24),
                 SizedBox(width: 12),
                 Flexible(
                   child: Text(
@@ -241,15 +232,15 @@ class _FocusDayCardState extends State<FocusDayCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: const Color(0xFFFB923C).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3), width: 1),
+                    color: const Color(0xFFFB923C).withValues(alpha: 0.3), width: 1),
               ),
               child: const Text(
                 'Ver tudo',
                 style: TextStyle(
-                  color: AppColors.primary, // Roxo mais vibrante
+                  color: Color(0xFFFB923C),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -268,12 +259,12 @@ class _FocusDayCardState extends State<FocusDayCard> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: const Color(0xFFFB923C).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.add,
-                  color: AppColors.primary,
+                  color: Color(0xFFFB923C),
                   size: 20,
                 ),
               ),

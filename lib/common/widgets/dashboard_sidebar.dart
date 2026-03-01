@@ -31,12 +31,12 @@ class DashboardSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final navItems = [
-      {'icon': Icons.home_outlined, 'label': 'Rota do Dia'},
-      {'icon': Icons.calendar_today_outlined, 'label': 'Agenda'},
-      {'icon': Icons.book_outlined, 'label': 'Diário de Bordo'},
-      {'icon': Icons.check_box_outlined, 'label': 'Tarefas'},
+      {'icon': Icons.home_outlined, 'label': 'Portal da Essência'},
+      {'icon': Icons.calendar_today_outlined, 'label': 'Agenda de Sincronia'},
+      {'icon': Icons.book_outlined, 'label': 'Manuscritos'},
+      {'icon': Icons.check_box_outlined, 'label': 'Trilha de Ação'},
       // Metas/Jornadas: troca ícone de "alvo" para "bandeira" (flag)
-      {'icon': Icons.flag_outlined, 'label': 'Metas'},
+      {'icon': Icons.flag_outlined, 'label': 'Jornadas'},
     ];
 
     return AnimatedContainer(
@@ -143,21 +143,8 @@ class DashboardSidebar extends StatelessWidget {
                 children: [
                   const Divider(color: Color(0x804B5563), height: 1),
                   const SizedBox(height: 8),
-                  // Admin - apenas se for admin
-                  if (userData.isAdmin)
-                    _buildNavItem(
-                      context: context,
-                      icon: Icons.admin_panel_settings_outlined,
-                      text: 'Admin',
-                      index: 97,
-                      onTap: () {
-                        Navigator.of(context).push(MaterialPageRoute(
-                          builder: (context) => AdminScreen(userData: userData),
-                        ));
-                      },
-                    ),
 
-                  // --- NOTIFICAÇÕES (NOVO) ---
+                  // --- NOTIFICAÇÕES ---
                   StreamBuilder<int>(
                     stream: SupabaseService()
                         .getUnreadNotificationsCountStream(userData.uid),
@@ -170,7 +157,7 @@ class DashboardSidebar extends StatelessWidget {
                             : Icons.notifications_none,
                         text: 'Notificações',
                         index: 96,
-                        badgeCount: count, // PASSA O BADGE
+                        badgeCount: count,
                         onTap: () {
                           if (MediaQuery.of(context).size.width >= 720) {
                             showDialog(
@@ -197,7 +184,6 @@ class DashboardSidebar extends StatelessWidget {
                     text: 'Configurações',
                     index: 98,
                     onTap: () {
-                      // Se for desktop (largura > 720), abre como Modal
                       if (MediaQuery.of(context).size.width >= 720) {
                         showDialog(
                           context: context,
@@ -205,7 +191,6 @@ class DashboardSidebar extends StatelessWidget {
                               SettingsScreen(userData: userData),
                         );
                       } else {
-                        // Se for mobile, navega para a tela
                         Navigator.of(context).push(MaterialPageRoute(
                           builder: (context) =>
                               SettingsScreen(userData: userData),
@@ -213,6 +198,21 @@ class DashboardSidebar extends StatelessWidget {
                       }
                     },
                   ),
+
+                  // Admin - apenas se for admin (penúltimo, acima do Sair)
+                  if (userData.isAdmin)
+                    _buildNavItem(
+                      context: context,
+                      icon: Icons.admin_panel_settings_outlined,
+                      text: 'Admin',
+                      index: 97,
+                      onTap: () {
+                        Navigator.of(context).push(MaterialPageRoute(
+                          builder: (context) => AdminScreen(userData: userData),
+                        ));
+                      },
+                    ),
+
                   _buildNavItem(
                     context: context,
                     icon: Icons.logout,
@@ -220,7 +220,6 @@ class DashboardSidebar extends StatelessWidget {
                     index: 99,
                     isLogout: true,
                     onTap: () async {
-                      // Confirmação simples antes de sair
                       final shouldLogout = await showDialog<bool>(
                         context: context,
                         builder: (ctx) => AlertDialog(
@@ -254,7 +253,6 @@ class DashboardSidebar extends StatelessWidget {
                       try {
                         await AuthRepository().signOut();
                         if (!context.mounted) return;
-                        // Limpa a pilha de rotas e leva para a tela de Login
                         Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(
                             builder: (_) => const LoginScreen(),
@@ -361,69 +359,62 @@ class _SidebarItemState extends State<_SidebarItem> {
             horizontal: 12) // Padding original quando expandido
         : EdgeInsets.zero; // Sem padding horizontal quando recolhido
 
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          height: 50,
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          // *** USA O PADDING CONDICIONAL ***
-          padding: itemPadding,
-          decoration: BoxDecoration(
-            color: widget.isSelected
-                ? const Color(0xff7c3aed) // Roxo se selecionado
-                : (_isHovered ? hoverBgColor : Colors.transparent),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          // Garante que o conteúdo (Row) também se centralize quando recolhido
-          alignment: Alignment.center, // <<< Adicionado alignment aqui
-          child: Row(
-            // Centraliza o ícone se estiver recolhido
-            mainAxisAlignment: widget.isExpanded
-                ? MainAxisAlignment.start
-                : MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize
-                .min, // <<< Adicionado para Row encolher ao redor do conteúdo
-            children: [
-              widget.badgeCount > 0
-                  ? Badge(
-                      label: Text('${widget.badgeCount}'),
-                      backgroundColor: Colors.redAccent,
-                      child: Icon(widget.icon,
-                          size: 20,
-                          color: _isHovered ? hoverTextColor : iconColor),
-                    )
-                  : Icon(widget.icon,
-                      size: 20, color: _isHovered ? hoverTextColor : iconColor),
-              // Mostra o texto apenas se estiver expandido
-              if (widget.isExpanded)
-                Expanded(
-                  // Mantém Expanded para overflow do texto
-                  child: AnimatedOpacity(
-                    duration: const Duration(milliseconds: 150),
-                    opacity: widget.isExpanded ? 1.0 : 0.0,
-                    child: Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0), // Padding só no texto
-                      child: Text(
-                        widget.text,
-                        style: TextStyle(
-                          color: _isHovered ? hoverTextColor : textColor,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        softWrap: false,
+    return InkWell(
+      onTap: widget.onTap,
+      onHover: (hovering) => setState(() => _isHovered = hovering),
+      hoverColor: Colors.transparent,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        height: 50,
+        margin: const EdgeInsets.symmetric(vertical: 4),
+        padding: itemPadding,
+        decoration: BoxDecoration(
+          color: widget.isSelected
+              ? const Color(0xff7c3aed)
+              : (_isHovered ? hoverBgColor : Colors.transparent),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        alignment: Alignment.center,
+        child: Row(
+          mainAxisAlignment: widget.isExpanded
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            widget.badgeCount > 0
+                ? Badge(
+                    label: Text('${widget.badgeCount}'),
+                    backgroundColor: Colors.redAccent,
+                    child: Icon(widget.icon,
+                        size: 20,
+                        color: _isHovered ? hoverTextColor : iconColor),
+                  )
+                : Icon(widget.icon,
+                    size: 20, color: _isHovered ? hoverTextColor : iconColor),
+            if (widget.isExpanded)
+              Expanded(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: widget.isExpanded ? 1.0 : 0.0,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0),
+                    child: Text(
+                      widget.text,
+                      style: TextStyle(
+                        color: _isHovered ? hoverTextColor : textColor,
+                        fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      softWrap: false,
                     ),
                   ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

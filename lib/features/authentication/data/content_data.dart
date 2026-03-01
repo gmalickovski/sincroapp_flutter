@@ -2163,4 +2163,49 @@ class ContentData {
             : segment[0].toUpperCase() + segment.substring(1))
         .join(', ');
   }
+
+  /// Informações descritivas para cada página principal do app.
+  /// Usadas pelo [showPageInfoModal] para exibir o significado e função da página.
+  static const Map<String, Map<String, String>> pageInfo = {
+    'dashboard': {
+      'title': 'Portal da Essência',
+      'subtitle': 'O Despertar',
+      'numerologia':
+          'É o seu ponto zero, onde você descobre sua frequência original através dos números de expressão e motivação.',
+      'noApp':
+          'Seu comando central. Aqui você acessa seu mapa numerológico e inicia o dia com o SincroFlow, o assistente que organiza suas prioridades com base na sua energia atual.',
+    },
+    'calendar': {
+      'title': 'Agenda de Sincronia',
+      'subtitle': 'O Ritmo do Tempo',
+      'numerologia':
+          'Representa os ciclos vibracionais. O tempo não é apenas um relógio, mas um ritmo de anos e meses pessoais.',
+      'noApp':
+          'Ferramenta de planejamento futuro. Organize seus compromissos fixos e ideias em harmonia com os ciclos temporais, garantindo que você planeje no momento certo.',
+    },
+    'journal': {
+      'title': 'Manuscritos',
+      'subtitle': 'A Voz do Plano',
+      'numerologia':
+          'Representa o poder da palavra e da escrita como o primeiro passo para a materialização no plano físico.',
+      'noApp':
+          'Seu banco de dados e diário de evolução. Um espaço para registrar mudanças, reflexões e estruturar o conhecimento que servirá de base para sua nova trajetória.',
+    },
+    'tasks': {
+      'title': 'Trilha de Ação',
+      'subtitle': 'A Caminhada Real',
+      'numerologia':
+          'É a execução do caminho de vida. Representa o movimento constante e o monitoramento da mudança no presente.',
+      'noApp':
+          'Central de tarefas inteligente. É onde você executa o passo a passo diário, com tarefas que fluem e se sincronizam automaticamente com o "hoje", mantendo o foco sem a pressão de atrasos.',
+    },
+    'goals': {
+      'title': 'Jornadas',
+      'subtitle': 'O Destino Manifesto',
+      'numerologia':
+          'Representa o seu número de destino — o propósito maior que você veio realizar nesta existência.',
+      'noApp':
+          'Painel de metas e marcos estratégicos. Monitore as grandes jornadas que você mesmo criou, celebrando cada marco alcançado em direção ao destino que você está construindo.',
+    },
+  };
 }

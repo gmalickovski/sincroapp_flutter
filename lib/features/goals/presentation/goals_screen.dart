@@ -14,6 +14,8 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
+import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart';
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
@@ -201,7 +203,8 @@ class _GoalsScreenState extends State<GoalsScreen> {
         });
         messenger.showSnackBar(
           SnackBar(
-            content: Text('$count jornada${count > 1 ? 's' : ''} excluída${count > 1 ? 's' : ''} com sucesso.'),
+            content: Text(
+                '$count jornada${count > 1 ? 's' : ''} excluída${count > 1 ? 's' : ''} com sucesso.'),
             backgroundColor: Colors.green,
           ),
         );
@@ -298,121 +301,129 @@ class _GoalsScreenState extends State<GoalsScreen> {
                 children: [
                   Expanded(
                     child: StreamBuilder<List<Goal>>(
-                        stream: _goalsStream,
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                                  ConnectionState.waiting &&
-                              !snapshot.hasData) {
-                            return const Center(child: CustomLoadingSpinner());
-                          }
-                          if (snapshot.hasError) {
-                            debugPrint(
-                                "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
-                            return Center(
-                                child: Text(
-                                    'Erro ao carregar jornadas: ${snapshot.error}',
-                                    style: const TextStyle(color: Colors.red)));
-                          }
-                          if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            if (_searchQuery.isEmpty) {
-                              return Column(
-                                children: [
-                                  _buildToolbar(isDesktop, []),
-                                  Expanded(child: _buildEmptyState()),
-                                ],
-                              );
-                            }
-                          }
-
-                          final allGoals = snapshot.data ?? [];
-
-                          // Filter by search query
-                          var goals = allGoals.where((g) {
-                            if (_searchQuery.isEmpty) return true;
-                            return g.title
-                                .toLowerCase()
-                                .contains(_searchQuery.toLowerCase());
-                          }).toList();
-
-                          // Apply Date filter (by targetDate)
-                          if (_filterStartDate != null || _filterEndDate != null || _selectedDate != null) {
-                            goals = goals.where((g) {
-                              final date = g.targetDate;
-                              if (date == null) return false;
-                              final d = DateTime(date.year, date.month, date.day);
-                              if (_filterStartDate != null && _filterEndDate != null) {
-                                final start = DateTime(_filterStartDate!.year, _filterStartDate!.month, _filterStartDate!.day);
-                                final end = DateTime(_filterEndDate!.year, _filterEndDate!.month, _filterEndDate!.day);
-                                return !d.isBefore(start) && !d.isAfter(end);
-                              } else if (_selectedDate != null) {
-                                final sel = DateTime(_selectedDate!.year, _selectedDate!.month, _selectedDate!.day);
-                                return d == sel;
-                              }
-                              return true;
-                            }).toList();
-                          }
-
-                          // Apply Sort
-                          if (_selectedSort != null) {
-                            goals.sort((a, b) {
-                              if (_selectedSort == 'alpha_asc') {
-                                return a.title
-                                    .toLowerCase()
-                                    .compareTo(b.title.toLowerCase());
-                              } else if (_selectedSort == 'alpha_desc') {
-                                return b.title
-                                    .toLowerCase()
-                                    .compareTo(a.title.toLowerCase());
-                              } else if (_selectedSort == 'date_desc') {
-                                final aDate = a.targetDate ?? a.createdAt;
-                                final bDate = b.targetDate ?? b.createdAt;
-                                return bDate.compareTo(aDate);
-                              } else if (_selectedSort == 'date_asc') {
-                                final aDate = a.targetDate ?? a.createdAt;
-                                final bDate = b.targetDate ?? b.createdAt;
-                                return aDate.compareTo(bDate);
-                              }
-                              return 0;
-                            });
-                          }
-
-                          if (goals.isEmpty && _searchQuery.isNotEmpty) {
+                      stream: _goalsStream,
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                                ConnectionState.waiting &&
+                            !snapshot.hasData) {
+                          return const Center(child: CustomLoadingSpinner());
+                        }
+                        if (snapshot.hasError) {
+                          debugPrint(
+                              "GoalsScreen: Erro no Stream de Metas: ${snapshot.error}");
+                          return Center(
+                              child: Text(
+                                  'Erro ao carregar jornadas: ${snapshot.error}',
+                                  style: const TextStyle(color: Colors.red)));
+                        }
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          if (_searchQuery.isEmpty) {
                             return Column(
                               children: [
-                                _buildToolbar(isDesktop, goals),
-                                const Expanded(
-                                  child: Center(
-                                      child: Text(
-                                          "Nenhuma meta encontrada para a busca.",
-                                          style: TextStyle(
-                                              color: AppColors.secondaryText))),
-                                ),
-                              ],
-                            );
-                          }
-
-                          if (goals.isEmpty && _searchQuery.isEmpty) {
-                            return Column(
-                              children: [
-                                _buildToolbar(isDesktop, goals),
+                                _buildToolbar(isDesktop, []),
                                 Expanded(child: _buildEmptyState()),
                               ],
                             );
                           }
+                        }
 
+                        final allGoals = snapshot.data ?? [];
+
+                        // Filter by search query
+                        var goals = allGoals.where((g) {
+                          if (_searchQuery.isEmpty) return true;
+                          return g.title
+                              .toLowerCase()
+                              .contains(_searchQuery.toLowerCase());
+                        }).toList();
+
+                        // Apply Date filter (by targetDate)
+                        if (_filterStartDate != null ||
+                            _filterEndDate != null ||
+                            _selectedDate != null) {
+                          goals = goals.where((g) {
+                            final date = g.targetDate;
+                            if (date == null) return false;
+                            final d = DateTime(date.year, date.month, date.day);
+                            if (_filterStartDate != null &&
+                                _filterEndDate != null) {
+                              final start = DateTime(
+                                  _filterStartDate!.year,
+                                  _filterStartDate!.month,
+                                  _filterStartDate!.day);
+                              final end = DateTime(_filterEndDate!.year,
+                                  _filterEndDate!.month, _filterEndDate!.day);
+                              return !d.isBefore(start) && !d.isAfter(end);
+                            } else if (_selectedDate != null) {
+                              final sel = DateTime(_selectedDate!.year,
+                                  _selectedDate!.month, _selectedDate!.day);
+                              return d == sel;
+                            }
+                            return true;
+                          }).toList();
+                        }
+
+                        // Apply Sort
+                        if (_selectedSort != null) {
+                          goals.sort((a, b) {
+                            if (_selectedSort == 'alpha_asc') {
+                              return a.title
+                                  .toLowerCase()
+                                  .compareTo(b.title.toLowerCase());
+                            } else if (_selectedSort == 'alpha_desc') {
+                              return b.title
+                                  .toLowerCase()
+                                  .compareTo(a.title.toLowerCase());
+                            } else if (_selectedSort == 'date_desc') {
+                              final aDate = a.targetDate ?? a.createdAt;
+                              final bDate = b.targetDate ?? b.createdAt;
+                              return bDate.compareTo(aDate);
+                            } else if (_selectedSort == 'date_asc') {
+                              final aDate = a.targetDate ?? a.createdAt;
+                              final bDate = b.targetDate ?? b.createdAt;
+                              return aDate.compareTo(bDate);
+                            }
+                            return 0;
+                          });
+                        }
+
+                        if (goals.isEmpty && _searchQuery.isNotEmpty) {
                           return Column(
                             children: [
                               _buildToolbar(isDesktop, goals),
-                              Expanded(
-                                child: isDesktop
-                                    ? _buildDesktopGrid(constraints, goals)
-                                    : _buildMobileList(goals),
+                              const Expanded(
+                                child: Center(
+                                    child: Text(
+                                        "Nenhuma meta encontrada para a busca.",
+                                        style: TextStyle(
+                                            color: AppColors.secondaryText))),
                               ),
                             ],
                           );
-                        },
-                      ),
+                        }
+
+                        if (goals.isEmpty && _searchQuery.isEmpty) {
+                          return Column(
+                            children: [
+                              _buildToolbar(isDesktop, goals),
+                              Expanded(child: _buildEmptyState()),
+                            ],
+                          );
+                        }
+
+                        return Column(
+                          children: [
+                            _buildToolbar(isDesktop, goals),
+                            Expanded(
+                              child: isDesktop
+                                  ? _buildDesktopGrid(constraints, goals)
+                                  : _buildMobileList(goals),
+                            ),
+                          ],
+                        );
+                      },
                     ),
+                  ),
                 ],
               );
             },
@@ -437,33 +448,39 @@ class _GoalsScreenState extends State<GoalsScreen> {
   Widget _buildToolbar(bool isDesktop, List<Goal> goals) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: SincroToolbar(
-        title: 'Metas',
-        forceDesktop: isDesktop,
-        filters: _buildFilterItems(isDesktop),
-        isSelectionMode: _isSelectionMode,
-        isAllSelected: _selectedGoalIds.length == goals.length && goals.isNotEmpty,
-        selectedCount: _selectedGoalIds.length,
-        onToggleSelectionMode: _toggleSelectionMode,
-        onToggleSelectAll: () {
-          setState(() {
-            if (_selectedGoalIds.length == goals.length) {
-              _selectedGoalIds.clear();
-            } else {
-              _selectedGoalIds.addAll(goals.map((g) => g.id));
-            }
-          });
-        },
-        onDeleteSelected: () => _handleDeleteSelectedGoals(goals),
-        onSearchChanged: (val) => setState(() => _searchQuery = val),
-        onClearFilters: () {
-          setState(() {
-            _selectedSort = null;
-            _filterStartDate = null;
-            _filterEndDate = null;
-            _selectedDate = null;
-          });
-        },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          PageTitleRow(title: 'Jornadas', pageKey: 'goals', forceDesktop: isDesktop),
+          SincroToolbar(
+            forceDesktop: isDesktop,
+            filters: _buildFilterItems(isDesktop),
+            isSelectionMode: _isSelectionMode,
+            isAllSelected:
+                _selectedGoalIds.length == goals.length && goals.isNotEmpty,
+            selectedCount: _selectedGoalIds.length,
+            onToggleSelectionMode: _toggleSelectionMode,
+            onToggleSelectAll: () {
+              setState(() {
+                if (_selectedGoalIds.length == goals.length) {
+                  _selectedGoalIds.clear();
+                } else {
+                  _selectedGoalIds.addAll(goals.map((g) => g.id));
+                }
+              });
+            },
+            onDeleteSelected: () => _handleDeleteSelectedGoals(goals),
+            onSearchChanged: (val) => setState(() => _searchQuery = val),
+            onClearFilters: () {
+              setState(() {
+                _selectedSort = null;
+                _filterStartDate = null;
+                _filterEndDate = null;
+                _selectedDate = null;
+              });
+            },
+          ),
+        ],
       ),
     );
   }
@@ -540,14 +557,18 @@ class _GoalsScreenState extends State<GoalsScreen> {
 
     // 2. Date Filter (rich label como FocoDoDia)
     String dateLabel = 'Data';
-    bool isDateActive = _filterStartDate != null || _filterEndDate != null || _selectedDate != null;
+    bool isDateActive = _filterStartDate != null ||
+        _filterEndDate != null ||
+        _selectedDate != null;
     if (isDateActive) {
       if (_filterStartDate != null && _filterEndDate != null) {
         if (isSameDay(_filterStartDate!, _filterEndDate!)) {
           dateLabel = 'Dia ${DateFormat('dd/MM').format(_filterStartDate!)}';
         } else {
           final isFullMonth = _filterStartDate!.day == 1 &&
-              _filterEndDate!.day == DateTime(_filterEndDate!.year, _filterEndDate!.month + 1, 0).day;
+              _filterEndDate!.day ==
+                  DateTime(_filterEndDate!.year, _filterEndDate!.month + 1, 0)
+                      .day;
           final isFullYear = _filterStartDate!.month == 1 &&
               _filterStartDate!.day == 1 &&
               _filterEndDate!.month == 12 &&
@@ -555,13 +576,16 @@ class _GoalsScreenState extends State<GoalsScreen> {
           if (isFullYear) {
             dateLabel = 'Ano ${_filterStartDate!.year}';
           } else if (isFullMonth) {
-            dateLabel = 'Mês ${DateFormat('MMM', 'pt_BR').format(_filterStartDate!)}';
+            dateLabel =
+                'Mês ${DateFormat('MMM', 'pt_BR').format(_filterStartDate!)}';
           } else {
-            dateLabel = '${DateFormat('dd/MM').format(_filterStartDate!)} - ${DateFormat('dd/MM').format(_filterEndDate!)}';
+            dateLabel =
+                '${DateFormat('dd/MM').format(_filterStartDate!)} - ${DateFormat('dd/MM').format(_filterEndDate!)}';
           }
         }
       } else if (_filterStartDate != null) {
-        dateLabel = 'A partir de ${DateFormat('dd/MM').format(_filterStartDate!)}';
+        dateLabel =
+            'A partir de ${DateFormat('dd/MM').format(_filterStartDate!)}';
       } else if (_selectedDate != null) {
         dateLabel = 'Dia ${DateFormat('dd/MM').format(_selectedDate!)}';
       }

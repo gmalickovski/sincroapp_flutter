@@ -5,6 +5,7 @@ import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/inline_month_year_selector.dart';
 
 class CustomEndDatePickerBottomSheet extends StatefulWidget {
   final DateTime initialDate;
@@ -126,19 +127,31 @@ class _CustomEndDatePickerBottomSheetState
     final headerText = DateFormat('MMMM yyyy', 'pt_BR').format(_focusedDay);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_left, color: Colors.white),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month - 1)),
-            )
-          else
-            const SizedBox(width: 48), // Spacer to keep title centered
-
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                )
+              else
+                const SizedBox(width: 48),
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                )
+              else
+                const SizedBox(width: 48),
+            ],
+          ),
           GestureDetector(
             onTap: () {
               setState(() {
@@ -162,32 +175,54 @@ class _CustomEndDatePickerBottomSheetState
                       ? Icons.arrow_drop_up
                       : Icons.arrow_drop_down,
                   color: AppColors.primary,
+                  size: 24,
                 ),
+                if (!_isSelectingYearMonth) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        final now = DateTime.now();
+                        _focusedDay = now;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "Hoje",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.white),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month + 1)),
-            )
-          else
-            const SizedBox(width: 48),
         ],
       ),
     );
   }
 
   Widget _buildMonthYearSelector() {
-    return _MonthYearSelectorInline(
-      focusedDay: _focusedDay,
-      onDateChanged: (newDate) {
-        setState(() {
-          _focusedDay = newDate;
-        });
-      },
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: InlineMonthYearSelector(
+        focusedDay: _focusedDay,
+        onDateChanged: (newDate) {
+          setState(() {
+            _focusedDay = newDate;
+          });
+        },
+      ),
     );
   }
 
@@ -226,9 +261,10 @@ class _CustomEndDatePickerBottomSheetState
         rowHeight: 54,
         calendarStyle: const CalendarStyle(
           outsideDaysVisible: true,
-          defaultTextStyle: TextStyle(color: Colors.white, fontFamily: 'Poppins'),
-          weekendTextStyle: TextStyle(
-              color: AppColors.secondaryText, fontFamily: 'Poppins'),
+          defaultTextStyle:
+              TextStyle(color: Colors.white, fontFamily: 'Poppins'),
+          weekendTextStyle:
+              TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins'),
         ),
         calendarBuilders: CalendarBuilders(
           defaultBuilder: (context, day, focusedDay) {
@@ -309,7 +345,8 @@ class _CustomEndDatePickerBottomSheetState
       borderWidth = 2.0;
     } else if (isToday && isEnabled) {
       cellFillColor = AppColors.primary.withValues(alpha: 0.25);
-    } else if (!isEnabled || isOutside) { // Consider outside as practically disabled visually here
+    } else if (!isEnabled || isOutside) {
+      // Consider outside as practically disabled visually here
       cellFillColor = Colors.white.withValues(alpha: 0.02);
     } else {
       cellFillColor = Colors.white.withValues(alpha: 0.05);
@@ -326,8 +363,9 @@ class _CustomEndDatePickerBottomSheetState
       baseDayTextColor = AppColors.secondaryText;
     }
 
-    Color dayTextColor =
-        isEnabled && !isOutside ? baseDayTextColor : baseDayTextColor.withValues(alpha: 0.4);
+    Color dayTextColor = isEnabled && !isOutside
+        ? baseDayTextColor
+        : baseDayTextColor.withValues(alpha: 0.4);
 
     FontWeight dayFontWeight = FontWeight.normal;
     if ((isToday || isSelected) && isEnabled) {
@@ -481,10 +519,12 @@ class _CustomEndDatePickerBottomSheetState
                         (states) => AppColors.primary),
                     foregroundColor: WidgetStateProperty.resolveWith<Color>(
                         (states) => Colors.white),
-                    elevation: WidgetStateProperty.resolveWith<double>(
-                        (states) => 0),
-                    padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
-                        (states) => const EdgeInsets.symmetric(vertical: 12)),
+                    elevation:
+                        WidgetStateProperty.resolveWith<double>((states) => 0),
+                    padding:
+                        WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                            (states) =>
+                                const EdgeInsets.symmetric(vertical: 12)),
                     shape: WidgetStateProperty.resolveWith<OutlinedBorder>(
                         (states) {
                       if (states.contains(WidgetState.hovered)) {
@@ -505,169 +545,6 @@ class _CustomEndDatePickerBottomSheetState
                           fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
                 ),
               ),
-      ),
-    );
-  }
-}
-
-// ----------------------------------------------------
-// O Seletor de Mês e Ano In-line
-// Lógica adaptada do mobile_filter_sheet
-// ----------------------------------------------------
-
-class _MonthYearSelectorInline extends StatefulWidget {
-  final DateTime focusedDay;
-  final ValueChanged<DateTime> onDateChanged;
-
-  const _MonthYearSelectorInline({
-    required this.focusedDay,
-    required this.onDateChanged,
-  });
-
-  @override
-  State<_MonthYearSelectorInline> createState() =>
-      _MonthYearSelectorInlineState();
-}
-
-class _MonthYearSelectorInlineState extends State<_MonthYearSelectorInline> {
-  late FixedExtentScrollController _monthController;
-  late FixedExtentScrollController _yearController;
-
-  final List<String> _months = [
-    "JANEIRO",
-    "FEVEREIRO",
-    "MARÇO",
-    "ABRIL",
-    "MAIO",
-    "JUNHO",
-    "JULHO",
-    "AGOSTO",
-    "SETEMBRO",
-    "OUTUBRO",
-    "NOVEMBRO",
-    "DEZEMBRO"
-  ];
-
-  late List<int> _years;
-
-  @override
-  void initState() {
-    super.initState();
-    final currentYear = DateTime.now().year;
-    _years = List.generate(41, (index) => currentYear - 20 + index);
-
-    _monthController =
-        FixedExtentScrollController(initialItem: widget.focusedDay.month - 1);
-
-    int yearIndex = _years.indexOf(widget.focusedDay.year);
-    if (yearIndex == -1) yearIndex = 20;
-
-    _yearController = FixedExtentScrollController(initialItem: yearIndex);
-  }
-
-  @override
-  void didUpdateWidget(_MonthYearSelectorInline oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.focusedDay != oldWidget.focusedDay) {
-      final targetMonthIndex = widget.focusedDay.month - 1;
-      if (_monthController.selectedItem != targetMonthIndex) {
-        _monthController.jumpToItem(targetMonthIndex);
-      }
-
-      final targetYearIndex = _years.indexOf(widget.focusedDay.year);
-      if (targetYearIndex != -1 &&
-          _yearController.selectedItem != targetYearIndex) {
-        _yearController.jumpToItem(targetYearIndex);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _monthController.dispose();
-    _yearController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 250, // Altura que não estica a bottom sheet demais
-      child: Row(
-        children: [
-          // Scroll de Mês
-          Expanded(
-            child: ListWheelScrollView.useDelegate(
-              itemExtent: 40,
-              perspective: 0.005,
-              physics: const FixedExtentScrollPhysics(),
-              controller: _monthController,
-              onSelectedItemChanged: (index) {
-                final newMonth = index + 1;
-                if (newMonth != widget.focusedDay.month) {
-                  widget.onDateChanged(
-                      DateTime(widget.focusedDay.year, newMonth));
-                }
-              },
-              childDelegate: ListWheelChildBuilderDelegate(
-                childCount: _months.length,
-                builder: (context, index) {
-                  final isSelected = (index + 1) == widget.focusedDay.month;
-                  return Center(
-                    child: Text(
-                      _months[index],
-                      style: TextStyle(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.secondaryText,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: isSelected ? 18 : 16,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-          // Scroll de Ano
-          Expanded(
-            child: ListWheelScrollView.useDelegate(
-              itemExtent: 40,
-              perspective: 0.005,
-              physics: const FixedExtentScrollPhysics(),
-              controller: _yearController,
-              onSelectedItemChanged: (index) {
-                final newYear = _years[index];
-                if (newYear != widget.focusedDay.year) {
-                  widget.onDateChanged(
-                      DateTime(newYear, widget.focusedDay.month));
-                }
-              },
-              childDelegate: ListWheelChildBuilderDelegate(
-                childCount: _years.length,
-                builder: (context, index) {
-                  final isSelected = _years[index] == widget.focusedDay.year;
-                  return Center(
-                    child: Text(
-                      _years[index].toString(),
-                      style: TextStyle(
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.secondaryText,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: isSelected ? 18 : 16,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -436,8 +436,9 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
           "Selecione o horário",
           style: TextStyle(
             color: AppColors.primaryText,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            fontFamily: 'Poppins',
           ),
         ),
       ),
@@ -502,8 +503,8 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
                     WidgetStateProperty.resolveWith<double>((states) => 0),
                 padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
                     (states) => const EdgeInsets.symmetric(vertical: 12)),
-                shape: WidgetStateProperty.resolveWith<OutlinedBorder>(
-                    (states) {
+                shape:
+                    WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
                   return RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   );

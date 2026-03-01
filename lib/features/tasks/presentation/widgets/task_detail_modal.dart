@@ -24,7 +24,6 @@ import 'package:sincro_app_flutter/common/parser/parser_text_controller.dart';
 import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
 
-
 class TaskDetailModal extends StatefulWidget {
   final TaskModel task;
   final UserModel userData;
@@ -56,11 +55,17 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   late int _personalDay;
   bool _hasChanges = false;
   bool _isLoading = false;
+  bool _isFocus = false;
   bool _isLoadingGoal = false;
-  
+
   // Tags properties
   List<String> _availableTags = [];
   String? _journalTitle;
+
+  // Parser tracking
+  Set<String> _tagsInText = {};
+  Set<String> _contactsInText = {};
+  bool _goalInText = false;
 
   // Estados originais para comparação
   late String _originalText;
@@ -68,6 +73,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   late List<String> _originalTags;
   late DateTime? _originalDateTime;
   late RecurrenceRule _originalRecurrenceRule;
+  late bool _originalIsFocus;
 
   late List<int>? _originalReminderOffsets;
   late List<String> _originalSharedWith; // NOVO
@@ -130,9 +136,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           widget.userData.uid, journalId);
       if (mounted && entry != null) {
         setState(() {
-          _journalTitle = entry.title?.isNotEmpty == true
-              ? entry.title
-              : 'Anotação';
+          _journalTitle =
+              entry.title?.isNotEmpty == true ? entry.title : 'Anotação';
         });
       }
     } catch (_) {
@@ -142,7 +147,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   void _initializeState() {
     _textController = ParserTextEditingController(text: widget.task.text);
+    _textController.mentionEnabled = widget.task.dueDate != null;
     _currentTags = List.from(widget.task.tags);
+    _isFocus = widget.task.isFocus;
+    _originalIsFocus = widget.task.isFocus;
 
     if (widget.task.dueDate != null) {
       final date = widget.task.dueDate!.toLocal();
@@ -155,7 +163,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     // Calcula offset inicial do lembrete
-    if (widget.task.reminderOffsets != null && widget.task.reminderOffsets!.isNotEmpty) {
+    if (widget.task.reminderOffsets != null &&
+        widget.task.reminderOffsets!.isNotEmpty) {
       _reminderOffsets = List.from(widget.task.reminderOffsets!);
     } else if (widget.task.reminderAt != null && widget.task.dueDate != null) {
       // Recurso de legado para tarefas antigas sem reminderOffsets
@@ -182,8 +191,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       endDate: widget.task.recurrenceEndDate?.toLocal(),
     );
 
-    _personalDay =
-        _calculatePersonalDayForDate(_selectedDateTime ?? widget.task.effectiveDate);
+    _personalDay = _calculatePersonalDayForDate(
+        _selectedDateTime ?? widget.task.effectiveDate);
 
     _originalText = widget.task.text;
     _originalGoalId = widget.task.journeyId;
@@ -192,7 +201,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _currentSharedWith = List.from(widget.task.sharedWith);
     _originalDateTime = _selectedDateTime;
     _originalRecurrenceRule = _recurrenceRule.copyWith();
-    _originalReminderOffsets = _reminderOffsets != null ? List.from(_reminderOffsets!) : null;
+    _originalReminderOffsets =
+        _reminderOffsets != null ? List.from(_reminderOffsets!) : null;
+
+    final parsedT = TaskParser.parse(widget.task.text);
+    _tagsInText = parsedT.tags.map((t) => t.toLowerCase()).toSet();
+    _contactsInText = parsedT.sharedWith.map((m) => m.toLowerCase()).toSet();
+    _goalInText = parsedT.goals.isNotEmpty;
 
     // Listeners are added here, but check if controller was just replaced
     // Since we created a new controller above, we need to add the listener again.
@@ -240,7 +255,13 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       if (mounted) {
         setState(() {
           _selectedGoal = goal;
+          // Limpa contatos ao carregar meta
+          for (final username in _currentSharedWith) {
+            _removeParserTextFromInput('@', username);
+          }
+          _currentSharedWith.clear();
           _isLoadingGoal = false;
+          _updateParserFlags();
           _checkForChanges();
         });
       }
@@ -250,7 +271,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
     }
   }
-
 
   int _calculatePersonalDayForDate(DateTime date) {
     final localDate = date.toLocal();
@@ -269,6 +289,62 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   void _checkForChanges() {
+    final currentParsed = TaskParser.parse(_textController.text);
+    bool parsedChanged = false;
+
+    // 1. Tags Sync
+    final currentTextTags = currentParsed.tags.map((t) => t.toLowerCase()).toSet();
+    final tagsToRemove = _tagsInText.where((t) => !currentTextTags.contains(t)).toList();
+    for (var t in tagsToRemove) {
+      _currentTags.removeWhere((st) => st.toLowerCase() == t);
+      parsedChanged = true;
+    }
+    _tagsInText = _currentTags
+        .map((st) => st.toLowerCase())
+        .where((t) => currentTextTags.contains(t))
+        .toSet();
+
+    // 2. Mentions Sync
+    final currentTextMentions = currentParsed.sharedWith.map((m) => m.toLowerCase()).toSet();
+    final mentionsToRemove = _contactsInText.where((m) => !currentTextMentions.contains(m)).toList();
+    for (var m in mentionsToRemove) {
+      _currentSharedWith.removeWhere((sm) => sm.toLowerCase() == m);
+      parsedChanged = true;
+    }
+    _contactsInText = _currentSharedWith
+        .map((sm) => sm.toLowerCase())
+        .where((m) => currentTextMentions.contains(m))
+        .toSet();
+
+    // 3. Goal Sync
+    final currentTextGoals = currentParsed.goals.map((g) => TaskParser.normalizeParserKey(g, ParserKeyType.goal)).toSet();
+    if (_selectedGoal != null) {
+      final normalizedGoalTitle = TaskParser.normalizeParserKey(_selectedGoal!.title, ParserKeyType.goal);
+      if (_goalInText) {
+        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        if (!found) {
+          _selectedGoal = null;
+          _goalInText = false;
+          parsedChanged = true;
+        }
+      } else {
+        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        if (found) {
+          _goalInText = true;
+        }
+      }
+    } else {
+      _goalInText = false;
+    }
+
+    if (parsedChanged) {
+      _updateParserFlags();
+      // Wait for next frame if we are currently building, else setState normally
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() {});
+      });
+    }
+
     final currentGoalId = _selectedGoal?.id;
     bool textChanged = _textController.text != _originalText;
     // Fix: Don't flag goal changes while still loading the goal details
@@ -279,11 +355,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         !_compareDateTimes(_selectedDateTime, _originalDateTime);
     bool recurrenceChanged = _recurrenceRule != _originalRecurrenceRule;
     bool reminderChanged = !_listEquality.equals(
-      (_reminderOffsets != null ? List<int>.from(_reminderOffsets!) : <int>[])..sort(),
-      (_originalReminderOffsets != null ? List<int>.from(_originalReminderOffsets!) : <int>[])..sort()
-    );
+        (_reminderOffsets != null ? List<int>.from(_reminderOffsets!) : <int>[])
+          ..sort(),
+        (_originalReminderOffsets != null
+            ? List<int>.from(_originalReminderOffsets!)
+            : <int>[])
+          ..sort());
     bool sharedWithChanged = !_listEquality.equals(
         _currentSharedWith..sort(), _originalSharedWith..sort()); // NOVO
+
+    bool focusChanged = _isFocus != _originalIsFocus;
 
     bool changes = textChanged ||
         goalChanged ||
@@ -291,7 +372,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         dateTimeChanged ||
         recurrenceChanged ||
         reminderChanged ||
-        sharedWithChanged; // NOVO
+        sharedWithChanged ||
+        focusChanged;
 
     if (changes != _hasChanges && mounted) {
       setState(() {
@@ -326,6 +408,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     // REGRA: Meta e contatos são mutuamente exclusivos
     if (type == ParserKeyType.mention && _selectedGoal != null) return [];
     if (type == ParserKeyType.goal && _currentSharedWith.isNotEmpty) return [];
+    // REGRA: Menção de contato só funciona com due date
+    if (type == ParserKeyType.mention && _selectedDateTime == null) return [];
 
     final normalizedQuery =
         TaskParser.normalizeParserKey(query, type).toLowerCase();
@@ -333,7 +417,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (type == ParserKeyType.mention) {
       if (_cachedContacts == null) {
         try {
-          _cachedContacts = await _supabaseService.getContacts(widget.userData.uid);
+          _cachedContacts =
+              await _supabaseService.getContacts(widget.userData.uid);
         } catch (e) {
           debugPrint("Erro ao carregar contatos para parser: $e");
           return [];
@@ -346,8 +431,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             TaskParser.normalizeParserKey(c.username, type).toLowerCase();
         return uname.contains(normalizedQuery);
       }).map((c) {
-        final normalizedLabel =
-            TaskParser.normalizeParserKey(c.username, type);
+        final normalizedLabel = TaskParser.normalizeParserKey(c.username, type);
         return ParserSuggestion(
           id: c.userId,
           label: normalizedLabel,
@@ -370,8 +454,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }).toList();
     } else if (type == ParserKeyType.goal) {
       try {
-        final goalsStream =
-            _supabaseService.getGoalStream(widget.userData.uid);
+        final goalsStream = _supabaseService.getGoalStream(widget.userData.uid);
         final goalsList = await goalsStream.first;
         return goalsList.where((g) {
           final gNorm =
@@ -403,9 +486,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           !_currentTags.contains(suggestion.label)) {
         _currentTags.add(suggestion.label);
       } else if (type == ParserKeyType.goal) {
-        // Load goal details
+        // Load goal details, limpa contatos no callback _loadGoalDetails
         _loadGoalDetails(suggestion.id);
       }
+      _updateParserFlags();
       _checkForChanges();
     });
   }
@@ -420,6 +504,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _textController.selection = TextSelection.fromPosition(
       TextPosition(offset: cleaned.length),
     );
+  }
+
+  /// Atualiza os flags mentionEnabled e goalEnabled do controller
+  /// baseado no estado atual de data, meta e contatos.
+  void _updateParserFlags() {
+    // Menção habilitada somente se: tem due date E não tem meta selecionada
+    _textController.mentionEnabled =
+        _selectedDateTime != null && _selectedGoal == null;
+    // Meta habilitada somente se: não tem contatos compartilhados
+    _textController.goalEnabled = _currentSharedWith.isEmpty;
   }
 
   Future<void> _duplicateTask() async {
@@ -438,9 +532,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     // Calcula reminderAt para a nova tarefa
     DateTime? reminderAt;
-    if (finalDueDate != null && _reminderOffsets != null && _reminderOffsets!.isNotEmpty) {
+    if (finalDueDate != null &&
+        _reminderOffsets != null &&
+        _reminderOffsets!.isNotEmpty) {
       // finalDueDate já é UTC e contém a hora completa se definida
-      reminderAt = finalDueDate.subtract(Duration(minutes: _reminderOffsets!.first));
+      reminderAt =
+          finalDueDate.subtract(Duration(minutes: _reminderOffsets!.first));
     }
 
     final duplicatedTask = TaskModel(
@@ -591,11 +688,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     DateTime? reminderAt;
-    if (finalDueDateUtc != null && _reminderOffsets != null && _reminderOffsets!.isNotEmpty) {
+    if (finalDueDateUtc != null &&
+        _reminderOffsets != null &&
+        _reminderOffsets!.isNotEmpty) {
       DateTime base =
           _selectedDateTime!.toLocal(); // Usa selecionada com hora (se houver)
       // Calcula usando o primeiro lembrete apenas para manter compatibilidade com antigos campos se necessário
-      reminderAt = base.subtract(Duration(minutes: _reminderOffsets!.first)).toUtc();
+      reminderAt =
+          base.subtract(Duration(minutes: _reminderOffsets!.first)).toUtc();
     }
 
     final Map<String, dynamic> updates = {
@@ -615,6 +715,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       'recurrenceDaysOfWeek': _recurrenceRule.daysOfWeek,
       'recurrenceEndDate': _recurrenceRule.endDate?.toUtc(),
       'sharedWith': _currentSharedWith, // NOVO
+      'is_focus': _isFocus,
     };
 
     String? originalGoalId = _originalGoalId;
@@ -771,18 +872,32 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           result.dateTime?.toLocal(), _selectedDateTime?.toLocal());
       bool recurrenceChanged = result.recurrenceRule != _recurrenceRule;
       final newOffsets = result.reminderOffsets;
-      bool reminderChanged = !_listEquality.equals(newOffsets?..sort(), _reminderOffsets?..sort());
+      bool reminderChanged =
+          !_listEquality.equals(newOffsets?..sort(), _reminderOffsets?..sort());
 
       if (dateTimeChanged || recurrenceChanged || reminderChanged) {
         setState(() {
           _selectedDateTime = result.dateTime?.toLocal();
+          _textController.mentionEnabled = _selectedDateTime != null;
           _recurrenceRule = result.recurrenceRule;
           _reminderOffsets = newOffsets; // Atualiza offset
+
+          // Limpa contatos e @menções quando data muda ou é removida
+          if (dateTimeChanged) {
+            for (final username in _currentSharedWith) {
+              _removeParserTextFromInput('@', username);
+            }
+            _currentSharedWith.clear();
+          }
+
           if (_selectedDateTime != null) {
             _personalDay = _calculatePersonalDayForDate(_selectedDateTime!);
+            // Quando define data, desativa foco (botão vai sumir)
+            _isFocus = false;
           } else {
             _personalDay = _calculatePersonalDayForDate(DateTime.now());
           }
+          _updateParserFlags();
           _checkForChanges();
         });
       }
@@ -866,8 +981,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (result is Goal) {
       setState(() {
         _selectedGoal = result;
-        _currentSharedWith =
-            []; // Limpa contatos ao selecionar meta (Exclusividade)
+        // Limpa contatos ao selecionar meta (Exclusividade)
+        for (final username in _currentSharedWith) {
+          _removeParserTextFromInput('@', username);
+        }
+        _currentSharedWith = [];
+        _updateParserFlags();
         _checkForChanges();
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
@@ -886,7 +1005,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       // Simplification: logic to reload goals usually happens via stream in GoalSelectionModal
     }
   }
-
 
   void _confirmDelete() {
     showDialog(
@@ -912,101 +1030,115 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             ),
           ],
         );
-      },
+      }
     );
   }
 
   Widget _buildBottomActions() {
-    // Se não houver alterações (e não for nova tarefa), mostra "Fechar" full-width
-    if (!_hasChanges && !widget.isNew) {
-      return SizedBox(
-        width: double.infinity,
-        height: 48,
-        child: OutlinedButton(
-          onPressed: _handleClose,
-          style: OutlinedButton.styleFrom(
-            backgroundColor: AppColors.cardBackground,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            side: const BorderSide(color: AppColors.border),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text('Fechar',
-              style: TextStyle(
-                  fontFamily: 'Poppins',
-                  color: AppColors.secondaryText,
-                  fontWeight: FontWeight.normal)),
-        ),
-      );
-    }
+    // Para nova tarefa: mostra ação somente quando tem texto digitado
+    // Para tarefa existente: mostra ação somente quando há alterações
+    final bool showActionButtons = widget.isNew
+        ? _textController.text.trim().isNotEmpty
+        : _hasChanges;
 
-    // Se houver alterações ou for nova tarefa, mostra "Cancelar" e "Salvar"
-    return Row(
-      children: [
-        Expanded(
-          child: SizedBox(
-            height: 48,
-            child: OutlinedButton(
-              onPressed: _handleClose,
-              style: OutlinedButton.styleFrom(
-                backgroundColor: AppColors.cardBackground,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: const BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(scale: animation, child: child),
+        );
+      },
+      child: showActionButtons
+          ? Row(
+              key: const ValueKey('actionButtons'),
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: OutlinedButton(
+                      onPressed: _handleClose,
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: AppColors.cardBackground,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('Cancelar',
+                          style: TextStyle(
+                              fontFamily: 'Poppins',
+                              color: AppColors.secondaryText,
+                              fontWeight: FontWeight.normal)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _saveChanges,
+                      style: ButtonStyle(
+                        backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (states) => AppColors.primary),
+                        foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (states) => Colors.white),
+                        elevation:
+                            WidgetStateProperty.resolveWith<double>((states) => 0),
+                        padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                            (states) => const EdgeInsets.symmetric(vertical: 12)),
+                        shape:
+                            WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+                          return RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side:
+                                  const BorderSide(color: AppColors.primary, width: 2));
+                        }),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : Text(widget.isNew ? 'Criar Tarefa' : 'Salvar',
+                              style: const TextStyle(
+                                  fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          : SizedBox(
+              key: const ValueKey('closeButton'),
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _handleClose,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.cardBackground,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Fechar',
+                    style: TextStyle(
+                        fontFamily: 'Poppins',
+                        color: AppColors.secondaryText,
+                        fontWeight: FontWeight.normal)),
               ),
-              child: const Text('Cancelar',
-                  style: TextStyle(
-                      fontFamily: 'Poppins',
-                      color: AppColors.secondaryText,
-                      fontWeight: FontWeight.normal)),
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: SizedBox(
-            height: 48,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _saveChanges,
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                    (states) => AppColors.primary),
-                foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                    (states) => Colors.white),
-                elevation: WidgetStateProperty.resolveWith<double>(
-                    (states) => 0),
-                padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
-                    (states) => const EdgeInsets.symmetric(vertical: 12)),
-                shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
-                  return RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: AppColors.primary, width: 2));
-                }),
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          color: Colors.white, strokeWidth: 2))
-                  : Text(widget.isNew ? 'Criar Tarefa' : 'Salvar',
-                      style: const TextStyle(
-                          fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
-            ),
-          ),
-        ),
-      ],
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    final int currentPersonalDay =
-        _calculatePersonalDayForDate(_selectedDateTime ?? widget.task.effectiveDate);
+    final int currentPersonalDay = _calculatePersonalDayForDate(
+        _selectedDateTime ?? widget.task.effectiveDate);
 
     if (currentPersonalDay != _personalDay && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1020,7 +1152,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
 
     final bool showGoal = _currentSharedWith.isEmpty;
-    final bool showContact = _selectedGoal == null;
+    final bool showContact = _selectedGoal == null && _selectedDateTime != null;
 
     Widget contentBody = GestureDetector(
       onTap: () {
@@ -1041,6 +1173,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 disabledTriggers: [
                   if (_currentSharedWith.isNotEmpty) ParserKeyType.goal,
                   if (_selectedGoal != null) ParserKeyType.mention,
+                  if (_selectedDateTime == null) ParserKeyType.mention,
                 ],
                 onSubmitted: (_) {},
                 hintText: 'Digite aqui sua tarefa...',
@@ -1087,8 +1220,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               trailingAction: (_selectedDateTime != null ||
                       _recurrenceRule.type != RecurrenceType.none)
                   ? IconButton(
-                      icon: const Icon(Icons.close_rounded,
-                          size: 20),
+                      icon: const Icon(Icons.close_rounded, size: 20),
                       tooltip: 'Remover agendamento',
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -1097,11 +1229,18 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                         if (mounted) {
                           setState(() {
                             _selectedDateTime = null;
+                            _textController.mentionEnabled = false;
                             _recurrenceRule = RecurrenceRule();
                             _reminderOffsets = null;
+                            // Remove @menções do texto antes de limpar contatos
+                            for (final username in _currentSharedWith) {
+                              _removeParserTextFromInput('@', username);
+                            }
+                            _currentSharedWith.clear();
                             _personalDay =
                                 _calculatePersonalDayForDate(DateTime.now());
-                            // _updateVibrationInfo removed
+                            // Quando remove data, reseta foco para desativado
+                            _isFocus = false;
                             _checkForChanges();
                           });
                         }
@@ -1110,12 +1249,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   : null,
             ),
             const SizedBox(height: 8),
-
             if (showGoal) ...[
               _buildDetailRow(
                 icon: Icons.flag_outlined,
-                iconColor:
-                    _selectedGoal != null ? Colors.cyan : AppColors.secondaryText,
+                iconColor: _selectedGoal != null
+                    ? Colors.cyan
+                    : AppColors.secondaryText,
                 valueWidget: _isLoadingGoal
                     ? const Align(
                         alignment: Alignment.centerLeft,
@@ -1130,8 +1269,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     : AppColors.secondaryText,
                 trailingAction: _selectedGoal != null
                     ? IconButton(
-                        icon: const Icon(Icons.close_rounded,
-                            size: 20),
+                        icon: const Icon(Icons.close_rounded, size: 20),
                         tooltip: 'Desvincular meta',
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -1145,6 +1283,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                             }
                             setState(() {
                               _selectedGoal = null;
+                              _updateParserFlags();
                               _checkForChanges();
                             });
                           }
@@ -1154,12 +1293,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ),
               const SizedBox(height: 8),
             ],
-
             if (showContact) ...[
               _buildSharedWithSection(),
             ],
             const Divider(color: AppColors.border, height: 24),
-
             if (widget.task.sourceJournalId != null &&
                 widget.task.sourceJournalId!.isNotEmpty) ...[
               _buildDetailRow(
@@ -1169,16 +1306,24 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 valueWidget: Wrap(
                   children: [
                     ActionChip(
-                      avatar: const Icon(Icons.auto_stories, size: 14, color: Colors.white),
+                      avatar: const Icon(Icons.auto_stories,
+                          size: 14, color: Colors.white),
                       label: Text(
                         _journalTitle ?? 'Anotação',
-                        style: const TextStyle(fontFamily: 'Poppins', color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+                        style: const TextStyle(
+                            fontFamily: 'Poppins',
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500),
                         overflow: TextOverflow.ellipsis,
                       ),
-                      backgroundColor: AppColors.journalMarker.withValues(alpha: 0.85),
+                      backgroundColor:
+                          AppColors.journalMarker.withValues(alpha: 0.85),
                       side: BorderSide.none,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 0),
                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       onPressed: () {
                         _navigateToJournal(widget.task.sourceJournalId!);
@@ -1190,7 +1335,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ),
               const Divider(color: AppColors.border, height: 24),
             ],
-
             _buildTagsSection(),
           ],
         ),
@@ -1215,11 +1359,46 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             )
           else
             const SizedBox.shrink(),
-          // Right side: delete + duplicate buttons (only for existing tasks)
+          // Right side: focus + delete + duplicate buttons (only for existing tasks)
           if (!widget.isNew)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // Botão Foco do dia — só aparece quando não há dueDate
+                if (_selectedDateTime == null)
+                  Tooltip(
+                    message: _isFocus ? 'Remover do Foco do dia' : 'Foco do dia',
+                    child: SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: Material(
+                        color: Colors.transparent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          onTap: () {
+                            if (mounted) {
+                              setState(() {
+                                _isFocus = !_isFocus;
+                                _checkForChanges();
+                              });
+                            }
+                          },
+                          customBorder: const CircleBorder(),
+                          hoverColor: Colors.amber.withValues(alpha: 0.15),
+                          splashColor: Colors.amber.withValues(alpha: 0.25),
+                          child: Center(
+                            child: Icon(
+                              Icons.bolt,
+                              color: _isFocus
+                                  ? Colors.amber
+                                  : AppColors.secondaryText.withValues(alpha: 0.4),
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 Tooltip(
                   message: 'Excluir Tarefa',
                   child: SizedBox(
@@ -1326,7 +1505,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final vibrationColor = getColorsForVibration(currentPersonalDay).background;
     return Dialog(
       backgroundColor: Colors.transparent,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+      insetPadding:
+          const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 700),
         child: ClipRRect(
@@ -1336,8 +1516,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 color: AppColors.cardBackground,
                 borderRadius: BorderRadius.circular(24.0),
                 border: Border.all(
-                    color: vibrationColor.withValues(alpha: 0.6),
-                    width: 1.5)),
+                    color: vibrationColor.withValues(alpha: 0.6), width: 1.5)),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -1420,7 +1599,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   Widget _buildDateTimeRecurrenceSummaryWidget() {
     final bool hasDateTime = _selectedDateTime != null;
     final bool hasRecurrence = _recurrenceRule.type != RecurrenceType.none;
-    final bool hasReminder = _reminderOffsets != null && _reminderOffsets!.isNotEmpty;
+    final bool hasReminder =
+        _reminderOffsets != null && _reminderOffsets!.isNotEmpty;
 
     final Color color = (hasDateTime || hasRecurrence || hasReminder)
         ? AppColors.primaryText
@@ -1572,7 +1752,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     // Build sorted tag list: selected tags first, then unselected available tags
     final List<String> sortedTags = [
       ..._currentTags, // selected tags first
-      ..._availableTags.where((t) => !_currentTags.contains(t)), // then the rest
+      ..._availableTags
+          .where((t) => !_currentTags.contains(t)), // then the rest
     ];
     // Also include any current tags not in availableTags (e.g. newly created)
     final List<String> extraTags =
@@ -1615,7 +1796,9 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     });
                   },
                   icon: Icon(
-                    _isTagInputVisible ? Icons.close_rounded : Icons.add_rounded,
+                    _isTagInputVisible
+                        ? Icons.close_rounded
+                        : Icons.add_rounded,
                     size: 18,
                   ),
                   label: Text(
@@ -1632,7 +1815,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     overlayColor: WidgetStateProperty.all(Colors.transparent),
                     splashFactory: NoSplash.splashFactory,
-                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                    foregroundColor:
+                        WidgetStateProperty.resolveWith<Color>((states) {
                       if (states.contains(WidgetState.hovered)) {
                         return AppColors.primary;
                       }
@@ -1650,7 +1834,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           curve: Curves.easeInOut,
           child: _isTagInputVisible
               ? Padding(
-                  padding: const EdgeInsets.only(left: 34, right: 4, top: 4, bottom: 4),
+                  padding: const EdgeInsets.only(
+                      left: 34, right: 4, top: 4, bottom: 4),
                   child: Row(
                     children: [
                       Expanded(
@@ -1664,7 +1849,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                               color: AppColors.primaryText,
                               fontSize: 14),
                           inputFormatters: [
-                            FilteringTextInputFormatter.deny(RegExp(r'\s')), // no spaces
+                            FilteringTextInputFormatter.deny(
+                                RegExp(r'\s')), // no spaces
                             TextInputFormatter.withFunction(
                               (oldValue, newValue) => newValue.copyWith(
                                 text: newValue.text.toLowerCase(),
@@ -1680,12 +1866,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                             filled: false,
                             border: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.5),
+                                  color:
+                                      AppColors.border.withValues(alpha: 0.5),
                                   width: 1),
                             ),
                             enabledBorder: UnderlineInputBorder(
                               borderSide: BorderSide(
-                                  color: AppColors.border.withValues(alpha: 0.5),
+                                  color:
+                                      AppColors.border.withValues(alpha: 0.5),
                                   width: 1),
                             ),
                             focusedBorder: const UnderlineInputBorder(
@@ -1697,7 +1885,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                                 const EdgeInsets.symmetric(vertical: 8),
                           ),
                           enabled: _currentTags.length < 5,
-                          onChanged: (_) => setState(() {}), // rebuild to show/hide confirm
+                          onChanged: (_) =>
+                              setState(() {}), // rebuild to show/hide confirm
                           onSubmitted: (_) {
                             _addTag();
                             setState(() => _isTagInputVisible = false);
@@ -1708,8 +1897,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       if (_tagInputController.text.trim().isNotEmpty) ...[
                         const SizedBox(width: 8),
                         IconButton(
-                          icon: const Icon(Icons.check_rounded,
-                              size: 22),
+                          icon: const Icon(Icons.check_rounded, size: 22),
                           onPressed: () {
                             _addTag();
                             setState(() => _isTagInputVisible = false);
@@ -1793,7 +1981,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-
   bool _isLoadingShared = false;
 
   /// Lightweight hover: only changes icon/text color, no background or border.
@@ -1834,6 +2021,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             onSelectionChanged: (selectedUsernames) {
               setState(() {
                 _currentSharedWith = selectedUsernames;
+                _updateParserFlags();
                 _checkForChanges();
               });
             },
@@ -1895,6 +2083,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                         _removeParserTextFromInput('@', username);
                         setState(() {
                           _currentSharedWith.remove(username);
+                          _updateParserFlags();
                           _checkForChanges();
                         });
                       },
@@ -1921,11 +2110,11 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     );
   }
 
-
   void _navigateToJournal(String journalId) async {
     if (!mounted) return;
     try {
-      final entry = await _supabaseService.getJournalEntryById(widget.userData.uid, journalId);
+      final entry = await _supabaseService.getJournalEntryById(
+          widget.userData.uid, journalId);
       if (entry != null && mounted) {
         Navigator.push(
           context,
@@ -1934,20 +2123,25 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               userData: widget.userData,
               entry: entry,
             ),
-            fullscreenDialog: true, // Also fullscreen on mobile as defined in other parts
+            fullscreenDialog:
+                true, // Also fullscreen on mobile as defined in other parts
           ),
         );
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Anotação não encontrada'), backgroundColor: Colors.red),
+            const SnackBar(
+                content: Text('Anotação não encontrada'),
+                backgroundColor: Colors.red),
           );
         }
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erro ao buscar anotação: $e'), backgroundColor: Colors.red),
+          SnackBar(
+              content: Text('Erro ao buscar anotação: $e'),
+              backgroundColor: Colors.red),
         );
       }
     }

@@ -24,6 +24,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
   final _newTagController = TextEditingController();
   bool _isCreatingNewTag = false;
   bool _isLoadingCreate = false;
+  String? _tempSelectedTag;
 
   @override
   void initState() {
@@ -81,15 +82,15 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
         Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: AppColors.harmonyPink.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              splashColor: AppColors.primary.withValues(alpha: 0.2),
-              hoverColor: AppColors.primary.withValues(alpha: 0.1),
+              splashColor: AppColors.harmonyPink.withValues(alpha: 0.2),
+              hoverColor: AppColors.harmonyPink.withValues(alpha: 0.1),
               onTap: () {
                 setState(() {
                   _isCreatingNewTag = true;
@@ -99,13 +100,13 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    Icon(Icons.add_circle_outline, color: AppColors.primary),
+                    Icon(Icons.add_circle_outline, color: AppColors.harmonyPink),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Criar nova Tag',
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: AppColors.harmonyPink,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -124,7 +125,7 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(
-                  child: CircularProgressIndicator(color: AppColors.primary));
+                  child: CircularProgressIndicator(color: AppColors.harmonyPink));
             }
             if (snapshot.hasError ||
                 !snapshot.hasData ||
@@ -149,35 +150,44 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final tagName = tags[index];
+                final isSelected = _tempSelectedTag == tagName;
+
                 return Container(
                   decoration: BoxDecoration(
-                    color: AppColors.background.withValues(alpha: 0.5),
+                    color: isSelected
+                        ? AppColors.harmonyPink.withValues(alpha: 0.2)
+                        : AppColors.background.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
+                    border: isSelected
+                        ? Border.all(color: AppColors.harmonyPink, width: 2)
+                        : Border.all(color: Colors.transparent, width: 2),
                   ),
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
                       borderRadius: BorderRadius.circular(12),
-                      splashColor: AppColors.primary.withValues(alpha: 0.2),
-                      hoverColor: AppColors.primary.withValues(alpha: 0.1),
+                      splashColor: AppColors.harmonyPink.withValues(alpha: 0.2),
+                      hoverColor: AppColors.harmonyPink.withValues(alpha: 0.1),
                       onTap: () {
-                        // Retorna a tag via pop
-                        Navigator.of(context).pop(tagName);
+                        setState(() {
+                          _tempSelectedTag = _tempSelectedTag == tagName ? null : tagName;
+                        });
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.label_outline, // Ícone de Tag
-                                color: AppColors.secondaryText),
+                            Icon(Icons.label_outline,
+                                color: isSelected ? AppColors.harmonyPink : AppColors.secondaryText),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 tagName,
-                                style: const TextStyle(
-                                  color: AppColors.primaryText,
+                                style: TextStyle(
+                                  color: isSelected ? AppColors.harmonyPink : AppColors.primaryText,
                                   fontSize: 16,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -228,54 +238,159 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              borderSide: const BorderSide(color: AppColors.harmonyPink, width: 2),
             ),
           ),
         ),
         const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+      ],
+    );
+  }
+
+
+  Widget _buildFooter() {
+    if (_isCreatingNewTag) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
           children: [
-            TextButton(
-              onPressed: _isLoadingCreate
-                  ? null
-                  : () {
-                      setState(() {
-                        _isCreatingNewTag = false;
-                        _newTagController.clear();
-                      });
-                    },
-              child: const Text(
-                'Cancelar',
-                style: TextStyle(color: AppColors.secondaryText),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: _isLoadingCreate
+                      ? null
+                      : () {
+                          setState(() {
+                            _isCreatingNewTag = false;
+                            _newTagController.clear();
+                          });
+                        },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Voltar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
               ),
             ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _isLoadingCreate ? null : _handleCreateTag,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: _isLoadingCreate ? null : _handleCreateTag,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.harmonyPink,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: _isLoadingCreate
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text("Salvar Tag",
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins')),
                 ),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
-              child: _isLoadingCreate
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Colors.white,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : const Text('Salvar Tag'),
             ),
           ],
         ),
-      ],
+      );
+    }
+
+    if (_tempSelectedTag != null) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _tempSelectedTag = null;
+                    });
+                    Navigator.of(context).pop(null);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Limpar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(_tempSelectedTag);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.harmonyPink,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  child: const Text("Confirmar",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default "Fechar" state
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Fechar",
+              style: TextStyle(
+                  color: AppColors.secondaryText, fontFamily: 'Poppins')),
+        ),
+      ),
     );
   }
 
@@ -285,8 +400,6 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
-      padding: EdgeInsets.fromLTRB(
-          16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.only(
@@ -300,33 +413,25 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
         children: [
           // 1. Header (Standardized)
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close,
-                      color: AppColors.secondaryText, size: 24),
-                  tooltip: 'Cancelar',
+            padding: const EdgeInsets.only(
+                top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
+            child: Center(
+              child: Text(
+                _isCreatingNewTag ? 'Nova Tag' : 'Selecionar Tag',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
                 ),
-                Expanded(
-                  child: Text(
-                    _isCreatingNewTag ? 'Nova Tag' : 'Selecionar Tag',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.primaryText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                // Empty icon for balance
-                const SizedBox(width: 48),
-              ],
+              ),
             ),
           ),
           Flexible(
-            child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SingleChildScrollView(
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 transitionBuilder: (Widget child, Animation<double> animation) {
@@ -335,8 +440,10 @@ class _TagSelectionModalState extends State<TagSelectionModal> {
                 child:
                     _isCreatingNewTag ? _buildCreateTagForm() : _buildTagList(),
               ),
+              ),
             ),
           ),
+          _buildFooter(),
         ],
       ),
     );

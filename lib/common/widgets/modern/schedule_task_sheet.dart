@@ -133,12 +133,40 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   Future<void> _pickReminderTime() async {
     final now = TimeOfDay.now();
-    final TimeOfDay? picked = await showDialog<TimeOfDay>(
-      context: context,
-      builder: (context) => CustomTimePickerDialog(initialTime: now),
-    );
+    final bool isDesktop = MediaQuery.of(context).size.width > 800;
 
-    if (picked != null) {
+    final TimePickerResult? result = isDesktop
+        ? await showDialog<TimePickerResult>(
+            context: context,
+            builder: (context) => CustomTimePickerDialog(initialTime: now),
+          )
+        : await showModalBottomSheet<TimePickerResult>(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            useSafeArea: true,
+            builder: (context) => Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                ),
+                child: SafeArea(
+                  child: CustomTimePickerWidget(
+                    initialTime: now,
+                    onConfirm: (res) => Navigator.pop(context, res),
+                    onCancel: () => Navigator.pop(context),
+                  ),
+                ),
+              ),
+            ),
+          );
+
+    if (result != null) {
+      final picked = result.time;
       setState(() {
         // Calculate offset from base time
         final baseHour = _selectedTime?.hour ?? 0;
@@ -218,6 +246,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       _selectedReminderOffsets.clear();
       _showReminder = false;
       _selectedDuration = null;
+      _focusedDay = DateTime.now();
+      _isSelectingYearMonth = false;
     });
   }
 
@@ -225,19 +255,31 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     final headerText = DateFormat('MMMM yyyy', 'pt_BR').format(_focusedDay);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_left, color: AppColors.primaryText),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month - 1)),
-            )
-          else
-            const SizedBox(width: 48),
-
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                )
+              else
+                const SizedBox(width: 48),
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                )
+              else
+                const SizedBox(width: 48),
+            ],
+          ),
           GestureDetector(
             onTap: () {
               setState(() {
@@ -248,33 +290,53 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  _capitalize(headerText),
+                  _capitalize(headerText).toUpperCase(),
                   style: const TextStyle(
-                      color: AppColors.primaryText,
+                      color: Colors.white,
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                       fontFamily: 'Poppins'),
                 ),
                 const SizedBox(width: 4),
                 Icon(
                   _isSelectingYearMonth
-                      ? Icons.keyboard_arrow_up
-                      : Icons.unfold_more_rounded,
-                  color: AppColors.secondaryText,
-                  size: 20,
+                      ? Icons.arrow_drop_up
+                      : Icons.arrow_drop_down,
+                  color: AppColors.primary,
+                  size: 24,
                 ),
+                if (!_isSelectingYearMonth) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        final now = DateTime.now();
+                        _focusedDay = now;
+                        _selectedDay = now;
+                        _selectedDuration = null;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "Hoje",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_right, color: AppColors.primaryText),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month + 1)),
-            )
-          else
-            const SizedBox(width: 48),
         ],
       ),
     );
@@ -434,6 +496,68 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         _selectedTime != null ||
         _recurrenceRule.type != RecurrenceType.none;
 
+    // Show special footer for Year/Month Selector
+    if (_isSelectingYearMonth) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          key: const ValueKey('YearMonthButtons'),
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isSelectingYearMonth = false;
+                    });
+                  },
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: AppColors.cardBackground,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Voltar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _isSelectingYearMonth = false;
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Confirmar",
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default Footer
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: AnimatedSwitcher(
@@ -631,9 +755,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 ),
                 Switch(
                   value: !_isAllDay,
-                  activeThumbColor: AppColors.primary,
-                  overlayColor: WidgetStateProperty.all(Colors.transparent),
                   onChanged: (val) => _toggleAllDay(!val),
+                  overlayColor: WidgetStateProperty.all(Colors.transparent),
+                  trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return !_isAllDay ? Colors.white : AppColors.primary;
+                    }
+                    return Colors.transparent;
+                  }),
+                  trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppColors.primary;
+                    }
+                    return AppColors.border; // Cor para chave desligada
+                  }),
+                  thumbColor: WidgetStateProperty.all(Colors.white),
                 ),
               ],
             ),
@@ -693,8 +829,20 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 const SizedBox(width: 12),
                 Switch(
                   value: _showRecurrence,
-                  activeThumbColor: AppColors.primary,
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
+                  trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return _showRecurrence ? Colors.white : AppColors.primary;
+                    }
+                    return Colors.transparent;
+                  }),
+                  trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+                    if (states.contains(WidgetState.selected)) {
+                      return AppColors.primary;
+                    }
+                    return AppColors.border; // Cor para chave desligada
+                  }),
+                  thumbColor: WidgetStateProperty.all(Colors.white),
                   onChanged: !_canUseRecurrence
                       ? null
                       : (val) {
@@ -704,9 +852,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                               _recurrenceRule =
                                   RecurrenceRule(type: RecurrenceType.none);
                             } else {
-                              // Allow "No Selection" state - implicit RecurrenceType.none until user picks
-                              // OR default to Daily as user convenience?
-                              // User requested "sem seleção". So we keep it as none until they pick.
                               if (_recurrenceRule.type == RecurrenceType.none) {
                                 // Ensure it's none.
                               }
@@ -926,7 +1071,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 _selectedReminderOffsets.clear();
               } else {
                 // If turning on, and no reminder is set, default to "Na hora"
-                if (_selectedReminderOffsets.isEmpty) _selectedReminderOffsets.add(0);
+                if (_selectedReminderOffsets.isEmpty)
+                  _selectedReminderOffsets.add(0);
               }
             });
           },
@@ -987,7 +1133,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   const SizedBox(width: 12),
                   Switch(
                     value: _showReminder,
-                    activeThumbColor: AppColors.primary,
                     overlayColor: WidgetStateProperty.all(Colors.transparent),
                     onChanged: !_canUseReminders
                         ? null
@@ -998,7 +1143,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                                 _selectedReminderOffsets.clear();
                               } else {
                                 // If turning on, and no reminder is set, default to "Na hora"
-                                if (_selectedReminderOffsets.isEmpty) _selectedReminderOffsets.add(0);
+                                if (_selectedReminderOffsets.isEmpty)
+                                  _selectedReminderOffsets.add(0);
                               }
                             });
                           },
@@ -1020,25 +1166,26 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     children: [
                       _buildReminderChip("Na hora", 0),
                       const SizedBox(width: 8),
-                      _buildReminderChip(
-                          "10 min antes", 10),
+                      _buildReminderChip("10 min antes", 10),
                       const SizedBox(width: 8),
-                      _buildReminderChip(
-                          "30 min antes", 30),
+                      _buildReminderChip("30 min antes", 30),
                       const SizedBox(width: 8),
                       _buildReminderChip("1 h antes", 60),
                       const SizedBox(width: 8),
-                      _buildReminderChip(
-                          "1 dia antes", 24 * 60),
+                      _buildReminderChip("1 dia antes", 24 * 60),
                       const SizedBox(width: 8),
                       ActionChip(
                         label: const Text("Definir horário"),
                         onPressed: _pickReminderTime,
                         backgroundColor: AppColors.background,
-                        labelStyle: const TextStyle(color: AppColors.primary),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        labelStyle: const TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins',
+                        ),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                          side: const BorderSide(color: AppColors.primary),
+                          borderRadius: BorderRadius.circular(12),
+                          side: const BorderSide(color: AppColors.border),
                         ),
                       ),
                     ],
@@ -1052,8 +1199,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   String _getReminderSummary() {
     if (_selectedReminderOffsets.isEmpty) return "Sem lembrete";
-    if (_selectedReminderOffsets.length > 1) return "${_selectedReminderOffsets.length} lembretes";
-    
+    if (_selectedReminderOffsets.length > 1)
+      return "${_selectedReminderOffsets.length} lembretes";
+
     final minutes = _selectedReminderOffsets.first;
     if (minutes == 0) return "Na hora";
     if (minutes < 60) return "$minutes min antes";
@@ -1070,9 +1218,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       onSelected: (val) {
         setState(() {
           if (val) {
-             _selectedReminderOffsets.add(offsetMinutes);
+            _selectedReminderOffsets.add(offsetMinutes);
           } else {
-             _selectedReminderOffsets.remove(offsetMinutes);
+            _selectedReminderOffsets.remove(offsetMinutes);
           }
         });
       },
@@ -1116,8 +1264,10 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               // --- Styles ---
               headerVisible: false, // Hide native header
               daysOfWeekStyle: const DaysOfWeekStyle(
-                weekdayStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
-                weekendStyle: TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                weekdayStyle:
+                    TextStyle(color: AppColors.secondaryText, fontSize: 12),
+                weekendStyle:
+                    TextStyle(color: AppColors.secondaryText, fontSize: 12),
               ),
               rowHeight: 54,
               calendarStyle: const CalendarStyle(

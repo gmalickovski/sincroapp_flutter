@@ -3,20 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-// REMOVIDO: Sanitizer não é mais necessário aqui
-// REMOVIDO: Tela de criação não é mais chamada daqui
 
 class GoalSelectionModal extends StatefulWidget {
   final String userId;
 
-  // --- INÍCIO DA MUDANÇA ---
-  // onGoalSelected foi removido. O modal retornará o valor via pop().
-  // --- FIM DA MUDANÇA ---
-
   const GoalSelectionModal({
     super.key,
     required this.userId,
-    // required this.onGoalSelected, // Removido
   });
 
   @override
@@ -27,9 +20,8 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
   late Future<List<Goal>> _goalsFuture;
   final SupabaseService _supabaseService = SupabaseService();
 
-  // --- REMOVIDO: Toda a lógica de criação de meta foi removida daqui ---
-  // bool _isCreatingNewGoal = false;
-  // ... etc ...
+  Goal? _tempSelectedGoal;
+  bool _createNewSelected = false;
 
   @override
   void initState() {
@@ -41,43 +33,46 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
     _goalsFuture = _supabaseService.getActiveGoals(widget.userId);
   }
 
-  // --- REMOVIDO: dispose, _handleCreateGoal ---
-
   Widget _buildGoalList() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Item para Criar Nova Jornada (Atualizado) ---
+        // --- Item para Criar Nova Jornada ---
         Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
+            color: _createNewSelected
+                ? AppColors.goalTaskMarker.withValues(alpha: 0.2)
+                : AppColors.goalTaskMarker.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(12),
+            border: _createNewSelected
+                ? Border.all(color: AppColors.goalTaskMarker, width: 2)
+                : Border.all(color: Colors.transparent, width: 2),
           ),
           child: Material(
             color: Colors.transparent,
             child: InkWell(
               borderRadius: BorderRadius.circular(12),
-              splashColor: AppColors.primary.withValues(alpha: 0.2),
-              hoverColor: AppColors.primary.withValues(alpha: 0.1),
+              splashColor: AppColors.goalTaskMarker.withValues(alpha: 0.2),
+              hoverColor: AppColors.goalTaskMarker.withValues(alpha: 0.1),
               onTap: () {
-                // --- INÍCIO DA MUDANÇA ---
-                // Retorna uma string especial para sinalizar a criação
-                Navigator.of(context).pop('_CREATE_NEW_GOAL_');
-                // --- FIM DA MUDANÇA ---
+                setState(() {
+                  _createNewSelected = true;
+                  _tempSelectedGoal = null;
+                });
               },
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
-                    Icon(Icons.add_circle_outline, color: AppColors.primary),
+                    Icon(Icons.add_circle_outline, color: AppColors.goalTaskMarker),
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Criar nova Jornada',
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: AppColors.goalTaskMarker,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -121,10 +116,17 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
               separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final goal = goals[index];
+                final isSelected = _tempSelectedGoal?.id == goal.id;
+
                 return Container(
                   decoration: BoxDecoration(
-                    color: AppColors.background.withValues(alpha: 0.5),
+                    color: isSelected
+                        ? AppColors.goalTaskMarker.withValues(alpha: 0.2)
+                        : AppColors.background.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(12),
+                    border: isSelected
+                        ? Border.all(color: AppColors.goalTaskMarker, width: 2)
+                        : Border.all(color: Colors.transparent, width: 2),
                   ),
                   child: Material(
                     color: Colors.transparent,
@@ -133,25 +135,30 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
                       splashColor: AppColors.primary.withValues(alpha: 0.2),
                       hoverColor: AppColors.primary.withValues(alpha: 0.1),
                       onTap: () {
-                        // --- INÍCIO DA MUDANÇA ---
-                        // Retorna o objeto Goal completo
-                        Navigator.of(context).pop(goal);
-                        // --- FIM DA MUDANÇA ---
+                        setState(() {
+                          if (_tempSelectedGoal?.id == goal.id) {
+                            _tempSelectedGoal = null;
+                          } else {
+                            _tempSelectedGoal = goal;
+                          }
+                          _createNewSelected = false;
+                        });
                       },
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 12),
                         child: Row(
                           children: [
-                            const Icon(Icons.flag_outlined,
-                                color: AppColors.secondaryText),
+                            Icon(Icons.flag_outlined,
+                                color: isSelected ? AppColors.goalTaskMarker : AppColors.secondaryText),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 goal.title, // Exibe o título original
-                                style: const TextStyle(
-                                  color: AppColors.primaryText,
+                                style: TextStyle(
+                                  color: isSelected ? AppColors.goalTaskMarker : AppColors.primaryText,
                                   fontSize: 16,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
                               ),
                             ),
@@ -169,7 +176,105 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
     );
   }
 
-  // --- REMOVIDO: _buildCreateGoalForm ---
+  Widget _buildFooter() {
+    if (_tempSelectedGoal != null || _createNewSelected) {
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _tempSelectedGoal = null;
+                      _createNewSelected = false;
+                    });
+                    Navigator.of(context).pop(null);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text("Limpar",
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: (_tempSelectedGoal != null || _createNewSelected)
+                      ? () {
+                          if (_createNewSelected) {
+                            Navigator.of(context).pop('_CREATE_NEW_GOAL_');
+                          } else {
+                            Navigator.of(context).pop(_tempSelectedGoal);
+                          }
+                        }
+                      : null,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.disabled)) {
+                        return AppColors.border;
+                      }
+                      return AppColors.goalTaskMarker;
+                    }),
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.disabled)) {
+                        return AppColors.secondaryText;
+                      }
+                      return Colors.white;
+                    }),
+                    elevation: WidgetStateProperty.resolveWith<double>((states) => 0),
+                    padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                        (states) => const EdgeInsets.symmetric(vertical: 12)),
+                    shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+                      return RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      );
+                    }),
+                  ),
+                  child: const Text("Confirmar",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Default "Fechar" state
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Fechar",
+              style: TextStyle(
+                  color: AppColors.secondaryText, fontFamily: 'Poppins')),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,8 +282,6 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
-      padding: EdgeInsets.fromLTRB(
-          16, 8, 16, 16 + MediaQuery.of(context).viewInsets.bottom),
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.only(
@@ -191,41 +294,36 @@ class _GoalSelectionModalState extends State<GoalSelectionModal> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 1. Header (Standardized)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-            child: Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close,
-                      color: AppColors.secondaryText, size: 24),
-                  tooltip: 'Cancelar',
+          const Padding(
+            padding: EdgeInsets.only(
+                top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
+            child: Center(
+              child: Text(
+                'Selecionar Jornada',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Poppins',
                 ),
-                const Expanded(
-                  child: Text(
-                    'Selecionar Jornada',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.primaryText,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                // Empty icon for balance
-                const SizedBox(width: 48),
-              ],
+              ),
             ),
           ),
           // Conteúdo rolável
           Flexible(
-            child: SingleChildScrollView(
-              // --- REMOVIDO: AnimatedSwitcher ---
-              child: _buildGoalList(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: SingleChildScrollView(
+                child: _buildGoalList(),
+              ),
             ),
           ),
+          // Footer dinamico
+          _buildFooter(),
         ],
       ),
     );
   }
 }
+

@@ -257,9 +257,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               reminderAt: parsedTask.reminderAt,
             );
 
-            _supabaseService
-                .addTask(widget.userData.uid, newTask)
-                .then((_) {}, onError: (error) {
+            _supabaseService.addTask(widget.userData.uid, newTask).then((_) {},
+                onError: (error) {
               if (mounted) {
                 messenger.showSnackBar(
                   SnackBar(
@@ -409,10 +408,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         child: Padding(
           padding: const EdgeInsets.all(8.0), // Adds a nice generous hit area
           child: AnimatedRotation(
-            turns: _isMilestonesExpanded ? 0.0 : 0.5, // 0 = original icon orientation, 0.5 = 180 deg flip
+            turns: _isMilestonesExpanded
+                ? 0.0
+                : 0.5, // 0 = original icon orientation, 0.5 = 180 deg flip
             duration: const Duration(milliseconds: 300),
             child: const Icon(
-              Icons.expand_more, // When true (expanded), it points down (expand_more). When false (collapsed) it flips 180 deg to point up (expand_less)
+              Icons
+                  .expand_more, // When true (expanded), it points down (expand_more). When false (collapsed) it flips 180 deg to point up (expand_less)
               color: AppColors.secondaryText,
               size: 28,
             ),
@@ -457,7 +459,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     }
 
     final focoItem = SincroFilterItem(
-      label: 'Foco',
+      label: 'Foco do Dia',
       icon: Icons.bolt,
       isSelected: _activeFilter == 'foco',
       activeColor: const Color(0xFFFF6D3F),
@@ -498,14 +500,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     // 2. Date (rich label como FocoDoDia)
     String dateLabel = 'Data';
-    bool isDateActive = _filterStartDate != null || _filterEndDate != null || _selectedDate != null;
+    bool isDateActive = _filterStartDate != null ||
+        _filterEndDate != null ||
+        _selectedDate != null;
     if (isDateActive) {
       if (_filterStartDate != null && _filterEndDate != null) {
         if (isSameDay(_filterStartDate!, _filterEndDate!)) {
           dateLabel = 'Dia ${DateFormat('dd/MM').format(_filterStartDate!)}';
         } else {
           final isFullMonth = _filterStartDate!.day == 1 &&
-              _filterEndDate!.day == DateTime(_filterEndDate!.year, _filterEndDate!.month + 1, 0).day;
+              _filterEndDate!.day ==
+                  DateTime(_filterEndDate!.year, _filterEndDate!.month + 1, 0)
+                      .day;
           final isFullYear = _filterStartDate!.month == 1 &&
               _filterStartDate!.day == 1 &&
               _filterEndDate!.month == 12 &&
@@ -513,13 +519,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           if (isFullYear) {
             dateLabel = 'Ano ${_filterStartDate!.year}';
           } else if (isFullMonth) {
-            dateLabel = 'Mês ${DateFormat('MMM', 'pt_BR').format(_filterStartDate!)}';
+            dateLabel =
+                'Mês ${DateFormat('MMM', 'pt_BR').format(_filterStartDate!)}';
           } else {
-            dateLabel = '${DateFormat('dd/MM').format(_filterStartDate!)} - ${DateFormat('dd/MM').format(_filterEndDate!)}';
+            dateLabel =
+                '${DateFormat('dd/MM').format(_filterStartDate!)} - ${DateFormat('dd/MM').format(_filterEndDate!)}';
           }
         }
       } else if (_filterStartDate != null) {
-        dateLabel = 'A partir de ${DateFormat('dd/MM').format(_filterStartDate!)}';
+        dateLabel =
+            'A partir de ${DateFormat('dd/MM').format(_filterStartDate!)}';
       } else if (_selectedDate != null) {
         dateLabel = 'Dia ${DateFormat('dd/MM').format(_selectedDate!)}';
       }
@@ -542,8 +551,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
 
     final vibrationItem = SincroFilterItem(
       key: _vibrationFilterKey,
-      label: _filterVibration != null ? 'Vibração $_filterVibration' : 'Vibração',
-      icon: Icons.waves,
+      label:
+          _filterVibration != null ? 'Vibração $_filterVibration' : 'Vibração',
+      icon: Icons.sunny,
       isSelected: _filterVibration != null,
       activeColor: vibrationColor,
       onTap: isDesktop
@@ -580,10 +590,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
           : () => _showMobileSortFilter(),
     );
 
-    return [focoItem, tarefasItem, agendamentoItem, concluidasItem, atrasadasItem, tagItem, vibrationItem, sortItem, dateItem];
+    return [
+      focoItem,
+      tarefasItem,
+      agendamentoItem,
+      concluidasItem,
+      atrasadasItem,
+      tagItem,
+      vibrationItem,
+      sortItem,
+      dateItem
+    ];
   }
-
-
 
   void _showMobileDateFilter() {
     showModalBottomSheet(
@@ -864,7 +882,9 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
     if (!task.hasDeadline) {
       try {
         await _supabaseService.updateTaskFields(
-          widget.userData.uid, task.id, {'is_focus': !task.isFocus},
+          widget.userData.uid,
+          task.id,
+          {'is_focus': !task.isFocus},
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -966,17 +986,23 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   if (t.isOverdue) return true;
                   if (t.hasDeadline) {
                     final taskDateLocal = t.dueDate!.toLocal();
-                    final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
-                    return !taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart);
+                    final taskDateOnly = DateTime(taskDateLocal.year,
+                        taskDateLocal.month, taskDateLocal.day);
+                    return !taskDateOnly.isBefore(todayStart) &&
+                        taskDateOnly.isBefore(tomorrowStart);
                   }
                   return false;
                 }).toList();
                 break;
               case 'tarefas':
-                milestones = milestones.where((t) => !t.completed && !t.hasDeadline).toList();
+                milestones = milestones
+                    .where((t) => !t.completed && !t.hasDeadline)
+                    .toList();
                 break;
               case 'agendamentos':
-                milestones = milestones.where((t) => !t.completed && t.hasDeadline).toList();
+                milestones = milestones
+                    .where((t) => !t.completed && t.hasDeadline)
+                    .toList();
                 break;
               case 'concluidas':
                 milestones = milestones.where((t) => t.completed).toList();
@@ -988,7 +1014,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   if (t.completed) return false;
                   if (!t.hasDeadline) return false;
                   final taskDateLocal = t.dueDate!.toLocal();
-                  final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+                  final taskDateOnly = DateTime(taskDateLocal.year,
+                      taskDateLocal.month, taskDateLocal.day);
                   return taskDateOnly.isBefore(todayStart);
                 }).toList();
                 break;
@@ -998,13 +1025,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
             }
 
             // Date Filter (supports single date and range) — usa effectiveDate
-            if (_filterStartDate != null || _filterEndDate != null || _selectedDate != null) {
+            if (_filterStartDate != null ||
+                _filterEndDate != null ||
+                _selectedDate != null) {
               milestones = milestones.where((t) {
                 final effectiveLocal = t.effectiveDate.toLocal();
-                final taskDate = DateTime(effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
+                final taskDate = DateTime(effectiveLocal.year,
+                    effectiveLocal.month, effectiveLocal.day);
                 if (_filterStartDate != null && _filterEndDate != null) {
-                  final start = DateTime(_filterStartDate!.year, _filterStartDate!.month, _filterStartDate!.day);
-                  final end = DateTime(_filterEndDate!.year, _filterEndDate!.month, _filterEndDate!.day);
+                  final start = DateTime(_filterStartDate!.year,
+                      _filterStartDate!.month, _filterStartDate!.day);
+                  final end = DateTime(_filterEndDate!.year,
+                      _filterEndDate!.month, _filterEndDate!.day);
                   return !taskDate.isBefore(start) && !taskDate.isAfter(end);
                 } else if (_selectedDate != null) {
                   return isSameDay(effectiveLocal, _selectedDate!);
@@ -1025,7 +1057,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     dataNascimento: widget.userData.dataNasc,
                   );
                   final effectiveLocal = t.effectiveDate.toLocal();
-                  final dateForCalc = DateTime.utc(effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
+                  final dateForCalc = DateTime.utc(effectiveLocal.year,
+                      effectiveLocal.month, effectiveLocal.day);
                   pd = engine.calculatePersonalDayForDate(dateForCalc);
                 }
                 return pd == _filterVibration;
@@ -1079,7 +1112,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                   userData: widget.userData,
                   activeContext: 'Goal Detail: ${currentGoal.title}',
                   onClose: () {
-                    if (MediaQuery.of(context).size.width >= kDesktopBreakpoint) {
+                    if (MediaQuery.of(context).size.width >=
+                        kDesktopBreakpoint) {
                       setState(() => _isAiSidebarOpen = false);
                     } else {
                       _assistantLayoutKey.currentState?.closeAssistant();
@@ -1114,13 +1148,15 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                     backgroundColor: AppColors.background,
                                     elevation: 0,
                                     titleSpacing: 0,
-                                    leading: const BackButton(color: AppColors.primary),
-                                    title: const Text('Metas',
+                                    leading: const BackButton(
+                                        color: AppColors.primary),
+                                    title: const Text('Jornadas',
                                         style: TextStyle(
                                             color: Colors.white, fontSize: 18)),
                                     actions: [
                                       Padding(
-                                        padding: const EdgeInsets.only(right: 8.0),
+                                        padding:
+                                            const EdgeInsets.only(right: 8.0),
                                         child: SizedBox(
                                           width: 40,
                                           height: 40,
@@ -1128,7 +1164,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                             onTap: () {
                                               _assistantLayoutKey.currentState
                                                   ?.openAssistant();
-                                              setState(() {}); // For visual update if needed
+                                              setState(
+                                                  () {}); // For visual update if needed
                                             },
                                             child: const AgentStarIcon(
                                               size: 28,
@@ -1166,9 +1203,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                                     vertical: 8.0),
                                                 child: GoalImageCard(
                                                   goal: currentGoal,
-                                                  onTap: () =>
-                                                      _handleImageTap(
-                                                          currentGoal),
+                                                  onTap: () => _handleImageTap(
+                                                      currentGoal),
                                                 ),
                                               ),
                                               // 2. Info Card (Second)
@@ -1177,13 +1213,11 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                                     horizontal:
                                                         horizontalPadding,
                                                     vertical: 8.0),
-                                                child:
-                                                    _CollapsibleGoalInfoCard(
+                                                child: _CollapsibleGoalInfoCard(
                                                   goal: currentGoal,
                                                   progress: progress,
-                                                  onEdit: () =>
-                                                      _handleEditGoal(
-                                                          currentGoal),
+                                                  onEdit: () => _handleEditGoal(
+                                                      currentGoal),
                                                   onDelete: () =>
                                                       _handleDeleteGoal(
                                                           currentGoal),
@@ -1198,8 +1232,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
-                                            _buildIndicatorIcon(
-                                                0, Icons.image),
+                                            _buildIndicatorIcon(0, Icons.image),
                                             const SizedBox(width: 16),
                                             _buildIndicatorIcon(
                                                 1, Icons.bar_chart_rounded),
@@ -1211,20 +1244,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                     crossFadeState: _isMilestonesExpanded
                                         ? CrossFadeState.showSecond
                                         : CrossFadeState.showFirst,
-                                    duration:
-                                        const Duration(milliseconds: 300),
+                                    duration: const Duration(milliseconds: 300),
                                     sizeCurve: Curves.easeInOut,
                                   ),
 
                                   // ─── FIXED: Toolbar ───
-                                  _buildToolbar(false, milestones,
-                                      allTags),
+                                  _buildToolbar(false, milestones, allTags),
 
                                   // ─── SCROLLABLE: Milestones List ───
                                   Expanded(
                                     child: _buildMilestonesListWidget(
                                         milestones: milestones,
-                                        horizontalPadding: listHorizontalPadding),
+                                        horizontalPadding:
+                                            listHorizontalPadding),
                                   ),
                                 ],
                               ),
@@ -1240,17 +1272,16 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                     ),
                   ),
                   floatingActionButton: TransparentFabWrapper(
-                          controller: _fabOpacityController,
-                          child: FloatingActionButton(
-                            onPressed: () => _addMilestone(currentGoal),
-                            backgroundColor: AppColors.primary,
-                            tooltip: 'Novo Marco',
-                            heroTag: 'fab_goal_detail',
-                            shape: const CircleBorder(),
-                            child: const Icon(Icons.add,
-                                color: Colors.white),
-                          ),
-                        ),
+                    controller: _fabOpacityController,
+                    child: FloatingActionButton(
+                      onPressed: () => _addMilestone(currentGoal),
+                      backgroundColor: AppColors.primary,
+                      tooltip: 'Novo Marco',
+                      heroTag: 'fab_goal_detail',
+                      shape: const CircleBorder(),
+                      child: const Icon(Icons.add, color: Colors.white),
+                    ),
+                  ),
                 ));
           },
         );
@@ -1382,7 +1413,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: const BackButton(color: AppColors.primary),
-        title: const Text('Metas',
+        title: const Text('Jornadas',
             style: TextStyle(color: Colors.white, fontSize: 18)),
       ),
       body: Center(

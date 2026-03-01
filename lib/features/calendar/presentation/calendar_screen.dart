@@ -18,6 +18,8 @@ import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'widgets/calendar_header.dart';
+import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'widgets/day_detail_panel.dart';
 
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
@@ -479,15 +481,34 @@ class _CalendarScreenState extends State<CalendarScreen> {
             'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
+                style: TextStyle(
+                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+              foregroundColor: Colors.redAccent,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              ),
+            ),
             child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -522,6 +543,27 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   Future<bool?> _handleRescheduleTask(TaskModel task) async {
+    // Tarefas sem data: toggle foco do dia
+    if (!task.hasDeadline) {
+      try {
+        await _supabaseService.updateTaskFields(
+          widget.userData.uid,
+          task.id,
+          {'is_focus': !task.isFocus},
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(task.isFocus ? 'Foco removido' : 'Em foco ⚡'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    // Tarefas com data: reagendar
     final newDate = await _taskActionService.rescheduleTask(
       context,
       task,
@@ -529,8 +571,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     );
 
     // Se a data mudou, precisamos atualizar a UI.
-    // O stream de tarefas já deve cuidar disso, mas podemos retornar true
-    // se quisermos remover visualmente da lista do dia atual (se a nova data for diferente).
     if (newDate != null) {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -578,7 +618,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       createdAt: DateTime.now(),
       dueDate: localDate,
     );
-    
+
     final isDesktopLayout = MediaQuery.of(context).size.width > 600;
     if (isDesktopLayout) {
       showDialog(
@@ -639,22 +679,23 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
         ),
       ),
-      floatingActionButton: MediaQuery.of(context).size.width >= kTabletBreakpoint
-          ? null
-          : TransparentFabWrapper(
-              controller: _fabOpacityController,
-              child: FloatingActionButton(
-                onPressed: _openNewTaskDetail,
-                backgroundColor: AppColors.primary,
-                tooltip: 'Nova Tarefa',
-                heroTag: 'calendar_fab',
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(28),
+      floatingActionButton:
+          MediaQuery.of(context).size.width >= kTabletBreakpoint
+              ? null
+              : TransparentFabWrapper(
+                  controller: _fabOpacityController,
+                  child: FloatingActionButton(
+                    onPressed: _openNewTaskDetail,
+                    backgroundColor: AppColors.primary,
+                    tooltip: 'Nova Tarefa',
+                    heroTag: 'calendar_fab',
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white),
+                  ),
                 ),
-                child: const Icon(Icons.add, color: Colors.white),
-              ),
-            ),
     );
   }
 
@@ -746,22 +787,12 @@ class _CalendarScreenState extends State<CalendarScreen> {
       return Column(
         children: [
           // Page Title
-          const Padding(
-            padding: EdgeInsets.only(
-                left: 16.0, right: 16.0, top: 0.0, bottom: 8.0),
-            child: Row(
-              children: [
-                Text(
-                  'Agenda',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20, // Realigned with SincroToolbar
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
+          const PageTitleRow(
+            title: 'Agenda de Sincronia',
+            pageKey: 'calendar',
+            forceDesktop: false,
           ),
+          const SizedBox(height: 8),
           // 1. Calendário (Animado)
           AnimatedCrossFade(
             firstChild: Container(
@@ -877,13 +908,10 @@ class _CalendarScreenState extends State<CalendarScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Page Title (Desktop)
-                const Text(
-                  'Agenda',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24, // Realigned with SincroToolbar
-                    fontWeight: FontWeight.bold,
-                  ),
+                const PageTitleRow(
+                  title: 'Agenda de Sincronia',
+                  pageKey: 'calendar',
+                  forceDesktop: true,
                 ),
                 const SizedBox(height: 16),
                 CalendarHeader(

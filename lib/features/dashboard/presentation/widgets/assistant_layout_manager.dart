@@ -115,7 +115,6 @@ class AssistantLayoutManagerState extends State<AssistantLayoutManager> {
             ],
           ),
         ),
-
       ],
     );
   }

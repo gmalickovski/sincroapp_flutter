@@ -427,7 +427,7 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
       _originalTitle = widget.goalToEdit!.title;
       _originalDesc = widget.goalToEdit!.description;
       _originalDate = widget.goalToEdit!.targetDate;
-      
+
       _titleController.text = _originalTitle;
       _descriptionController.text = _originalDesc;
       _targetDate = _originalDate;
@@ -451,8 +451,8 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
 
   bool get _hasEdits {
     return _titleController.text.trim() != _originalTitle ||
-           _descriptionController.text.trim() != _originalDesc ||
-           _targetDate != _originalDate;
+        _descriptionController.text.trim() != _originalDesc ||
+        _targetDate != _originalDate;
   }
 
   Future<void> _pickDate() async {
@@ -480,7 +480,9 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
 
   Future<void> _handleSave() async {
     FocusScope.of(context).unfocus();
-    if (!_formKey.currentState!.validate() || _isSaving || _targetDate == null) {
+    if (!_formKey.currentState!.validate() ||
+        _isSaving ||
+        _targetDate == null) {
       if (_targetDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -699,7 +701,8 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24), // Extra bottom padding for scrolling logic
+                    const SizedBox(
+                        height: 24), // Extra bottom padding for scrolling logic
                   ],
                 ),
               ),
@@ -714,7 +717,9 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 150),
                 transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(opacity: animation, child: ScaleTransition(scale: animation, child: child));
+                  return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(scale: animation, child: child));
                 },
                 child: _hasEdits
                     ? Row(
@@ -724,14 +729,20 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
                             child: SizedBox(
                               height: 48,
                               child: OutlinedButton(
-                                onPressed: () => Navigator.of(context).pop(), // Cancel simply pops
+                                onPressed: () => Navigator.of(context)
+                                    .pop(), // Cancel simply pops
                                 style: OutlinedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  side: const BorderSide(color: AppColors.border),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding:
+                                      const EdgeInsets.symmetric(vertical: 12),
+                                  side:
+                                      const BorderSide(color: AppColors.border),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12)),
                                 ),
                                 child: const Text("Cancelar",
-                                    style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                                    style: TextStyle(
+                                        color: AppColors.secondaryText,
+                                        fontFamily: 'Poppins')),
                               ),
                             ),
                           ),
@@ -742,21 +753,32 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
                               child: ElevatedButton(
                                 onPressed: _isSaving ? null : _handleSave,
                                 style: ButtonStyle(
-                                  backgroundColor: WidgetStateProperty.resolveWith<Color>((states) => AppColors.primary),
-                                  foregroundColor: WidgetStateProperty.resolveWith<Color>((states) => Colors.white),
-                                  elevation: WidgetStateProperty.resolveWith<double>((states) => 0),
-                                  padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
-                                      (states) => const EdgeInsets.symmetric(vertical: 12)),
-                                  shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+                                  backgroundColor:
+                                      WidgetStateProperty.resolveWith<Color>(
+                                          (states) => AppColors.primary),
+                                  foregroundColor:
+                                      WidgetStateProperty.resolveWith<Color>(
+                                          (states) => Colors.white),
+                                  elevation:
+                                      WidgetStateProperty.resolveWith<double>(
+                                          (states) => 0),
+                                  padding: WidgetStateProperty.resolveWith<
+                                          EdgeInsetsGeometry>(
+                                      (states) => const EdgeInsets.symmetric(
+                                          vertical: 12)),
+                                  shape: WidgetStateProperty.resolveWith<
+                                      OutlinedBorder>((states) {
                                     if (states.contains(WidgetState.hovered)) {
                                       return RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
-                                        side: const BorderSide(color: Colors.white, width: 2), 
+                                        side: const BorderSide(
+                                            color: Colors.white, width: 2),
                                       );
                                     }
                                     return RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      side: const BorderSide(color: AppColors.primary, width: 2),
+                                      side: const BorderSide(
+                                          color: AppColors.primary, width: 2),
                                     );
                                   }),
                                 ),
@@ -764,10 +786,16 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
                                     ? const SizedBox(
                                         width: 20,
                                         height: 20,
-                                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                        child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 2))
                                     : Text(
-                                        widget.goalToEdit != null ? "Atualizar" : "Salvar",
-                                        style: const TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                                        widget.goalToEdit != null
+                                            ? "Atualizar"
+                                            : "Salvar",
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Poppins')),
                               ),
                             ),
                           ),
@@ -783,10 +811,13 @@ class _GoalFormBottomSheetState extends State<_GoalFormBottomSheet> {
                             backgroundColor: AppColors.cardBackground,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                           child: const Text("Fechar",
-                              style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                              style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontFamily: 'Poppins')),
                         ),
                       ),
               ),

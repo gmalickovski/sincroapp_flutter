@@ -20,7 +20,8 @@ class TaskModel {
   final List<int> recurrenceDaysOfWeek; // Dias da semana (1-7)
   final DateTime? recurrenceEndDate; // Data final da recorrência
   final TimeOfDay? reminderTime; // Horário do lembrete (hora/minuto)
-  final List<int>? reminderOffsets; // Array de offsets em minutos p/ multiplos lembretes
+  final List<int>?
+      reminderOffsets; // Array de offsets em minutos p/ multiplos lembretes
 
   final String? recurrenceId; // ID para agrupar tarefas recorrentes geradas
   final String? goalId; // ID da meta vinculada (Marco)
@@ -276,7 +277,9 @@ class TaskModel {
     final localDate = dueDate!.toLocal();
 
     // Se tiver dueDate com horário definido (não meia-noite) ou reminderTime, considera horário exato
-    if (dueDate != null && ((localDate.hour != 0 || localDate.minute != 0) || reminderTime != null)) {
+    if (dueDate != null &&
+        ((localDate.hour != 0 || localDate.minute != 0) ||
+            reminderTime != null)) {
       if (durationMinutes != null) {
         final end = localDate.add(Duration(minutes: durationMinutes!));
         return end.isBefore(now);
@@ -286,7 +289,8 @@ class TaskModel {
 
     // Senão, compara apenas data (tarefa de dia inteiro)
     final today = DateTime(now.year, now.month, now.day);
-    final localDateOnly = DateTime(localDate.year, localDate.month, localDate.day);
+    final localDateOnly =
+        DateTime(localDate.year, localDate.month, localDate.day);
 
     return localDateOnly.isBefore(today);
   }

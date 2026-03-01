@@ -93,7 +93,8 @@ class TasksListView extends StatelessWidget {
       );
     } else {
       content = ListView.builder(
-        padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 80),
+        padding:
+            EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 80),
         physics: const AlwaysScrollableScrollPhysics(),
         itemCount: tasks.length,
         itemBuilder: (context, index) {

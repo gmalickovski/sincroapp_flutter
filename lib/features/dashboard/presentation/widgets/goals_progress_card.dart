@@ -56,10 +56,11 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
 
   @override
   Widget build(BuildContext context) {
+    const Color goalCyan = Color(0xFF22D3EE); // cyan-400
     final bool isDesktop = MediaQuery.of(context).size.width >= 768.0;
     final Color borderColor = _isHovered
         ? AppColors.primary.withValues(alpha: 0.8)
-        : AppColors.border.withValues(alpha: 0.7);
+        : goalCyan.withValues(alpha: 0.45);
     final double borderWidth = _isHovered ? 1.5 : 1.0;
 
     return MouseRegion(
@@ -83,7 +84,13 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
                       blurRadius: 8,
                     )
                   ]
-                : [],
+                : [
+                    BoxShadow(
+                      color: goalCyan.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    )
+                  ],
           ),
           child: Stack(
             children: [
@@ -201,7 +208,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(Icons.flag_outlined, color: AppColors.primary, size: 20),
+          Icon(Icons.flag_outlined, color: Color(0xFF22D3EE), size: 20),
           SizedBox(width: 8),
           Flexible(
             child: Text(
@@ -305,7 +312,7 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
             width: _currentPage == index ? 24 : 8,
             decoration: BoxDecoration(
               color: _currentPage == index
-                  ? AppColors.primary
+                  ? const Color(0xFF22D3EE)
                   : AppColors.secondaryText.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(4),
             ),
@@ -329,15 +336,15 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.15),
+                color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3), width: 1),
+                    color: const Color(0xFF22D3EE).withValues(alpha: 0.3), width: 1),
               ),
               child: const Text(
                 'Ver todas',
                 style: TextStyle(
-                  color: AppColors.primary,
+                  color: Color(0xFF22D3EE),
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                 ),
@@ -356,12 +363,12 @@ class _GoalsProgressCardState extends State<GoalsProgressCard> {
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.1),
+                  color: const Color(0xFF22D3EE).withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
                   Icons.add,
-                  color: AppColors.primary,
+                  color: Color(0xFF22D3EE),
                   size: 20,
                 ),
               ),
@@ -540,7 +547,7 @@ class _FullWidthGoalProgress extends StatelessWidget {
                 strokeWidth: 12,
                 backgroundColor: AppColors.border.withValues(alpha: 0.35),
                 valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    const AlwaysStoppedAnimation<Color>(Color(0xFF22D3EE)),
               ),
             ),
           ),
@@ -579,7 +586,7 @@ class _FullWidthGoalProgress extends StatelessWidget {
                       const Icon(
                         Icons.flag,
                         size: 16,
-                        color: Color(0xFF8B5CF6), // Purple accent
+                        color: Color(0xFF22D3EE), // Cyan accent
                       ),
                       const SizedBox(width: 8),
                       Text(

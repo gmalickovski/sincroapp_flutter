@@ -28,6 +28,8 @@ import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 2): Adicionado 'concluidas' ---
 import 'package:sincro_app_flutter/features/tasks/models/task_view_scope.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
+import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 
@@ -459,17 +461,37 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         title: const Text('Excluir Tarefas',
             style: TextStyle(color: Colors.white)),
         content: Text(
-            'VocÃª tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
+            'Você tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
             style: const TextStyle(color: AppColors.secondaryText)),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child:
-                const Text('Cancelar', style: TextStyle(color: Colors.white)),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Cancelar',
+                style: TextStyle(
+                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+              foregroundColor: Colors.redAccent,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              ),
+            ),
+            child: const Text('Excluir',
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -523,17 +545,23 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           // Tarefas agendadas para hoje
           if (task.hasDeadline) {
             final taskDateLocal = task.dueDate!.toLocal();
-            final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
-            return !taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart);
+            final taskDateOnly = DateTime(
+                taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+            return !taskDateOnly.isBefore(todayStart) &&
+                taskDateOnly.isBefore(tomorrowStart);
           }
           return false;
         }).toList();
         break;
       case 'tarefas':
-        filteredTasks = allTasks.where((task) => !task.completed && !task.hasDeadline).toList();
+        filteredTasks = allTasks
+            .where((task) => !task.completed && !task.hasDeadline)
+            .toList();
         break;
       case 'agendamentos':
-        filteredTasks = allTasks.where((task) => !task.completed && task.hasDeadline).toList();
+        filteredTasks = allTasks
+            .where((task) => !task.completed && task.hasDeadline)
+            .toList();
         break;
       case 'concluidas':
         filteredTasks = allTasks.where((task) => task.completed).toList();
@@ -545,7 +573,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           if (task.completed) return false;
           if (!task.hasDeadline) return false;
           final taskDateLocal = task.dueDate!.toLocal();
-          final taskDateOnly = DateTime(taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+          final taskDateOnly = DateTime(
+              taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
           return taskDateOnly.isBefore(todayStart);
         }).toList();
         break;
@@ -557,13 +586,18 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // 2. REFINEMENT FILTERING (Refinar por...)
 
     // Date Filter (supports single date and range) — usa effectiveDate
-    if (_startDateFilter != null || _endDateFilter != null || _selectedDate != null) {
+    if (_startDateFilter != null ||
+        _endDateFilter != null ||
+        _selectedDate != null) {
       filteredTasks = filteredTasks.where((task) {
         final effectiveLocal = task.effectiveDate.toLocal();
-        final taskDate = DateTime(effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
+        final taskDate = DateTime(
+            effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
         if (_startDateFilter != null && _endDateFilter != null) {
-          final start = DateTime(_startDateFilter!.year, _startDateFilter!.month, _startDateFilter!.day);
-          final end = DateTime(_endDateFilter!.year, _endDateFilter!.month, _endDateFilter!.day);
+          final start = DateTime(_startDateFilter!.year,
+              _startDateFilter!.month, _startDateFilter!.day);
+          final end = DateTime(
+              _endDateFilter!.year, _endDateFilter!.month, _endDateFilter!.day);
           return !taskDate.isBefore(start) && !taskDate.isAfter(end);
         } else if (_selectedDate != null) {
           return isSameDay(effectiveLocal, _selectedDate!);
@@ -588,7 +622,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             );
             // Calcula PD pela data efetiva (dueDate ?? createdAt)
             final effectiveLocal = task.effectiveDate.toLocal();
-            final dateForCalc = DateTime.utc(effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
+            final dateForCalc = DateTime.utc(
+                effectiveLocal.year, effectiveLocal.month, effectiveLocal.day);
             pd = engine.calculatePersonalDayForDate(dateForCalc);
           }
           return pd == _selectedVibrationNumber;
@@ -680,18 +715,37 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         title: const Text('Excluir Tarefa?',
             style: TextStyle(color: Colors.white)),
         content: const Text(
-            'Tem certeza que deseja excluir esta tarefa? Esta aÃ§Ã£o nÃ£o pode ser desfeita.',
+            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
+                style: TextStyle(
+                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+              foregroundColor: Colors.redAccent,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              ),
+            ),
             child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -703,7 +757,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Tarefa excluÃ­da com sucesso'),
+              content: Text('Tarefa excluída com sucesso'),
               backgroundColor: AppColors.success,
             ),
           );
@@ -733,7 +787,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     if (!task.hasDeadline) {
       try {
         await _supabaseService.updateTaskFields(
-          _userId, task.id, {'is_focus': !task.isFocus},
+          _userId,
+          task.id,
+          {'is_focus': !task.isFocus},
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -824,8 +880,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         _selectedContactId != null ||
         _searchQuery.isNotEmpty;
   }
-
-
 
   void _showDesktopDateFilter() {
     showSmartPopup(
@@ -966,7 +1020,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   Widget _buildToolbar(
       bool isDesktop, List<String> allTags, List<TaskModel> tasksToShow) {
     return SincroToolbar(
-      title: "Tarefas",
       forceDesktop: isDesktop,
       filters: _buildFilterItems(isDesktop, allTags),
       isSelectionMode: _isSelectionMode,
@@ -1007,7 +1060,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     }
 
     final focoItem = SincroFilterItem(
-      label: 'Foco',
+      label: 'Foco do Dia',
       icon: Icons.bolt,
       isSelected: _activeFilter == 'foco',
       activeColor: const Color(0xFFFF6D3F),
@@ -1048,14 +1101,18 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     // 2. Date Filter (with rich label like Journal)
     String dateLabel = 'Data';
-    bool isDateActive = _startDateFilter != null || _endDateFilter != null || _selectedDate != null;
+    bool isDateActive = _startDateFilter != null ||
+        _endDateFilter != null ||
+        _selectedDate != null;
     if (isDateActive) {
       if (_startDateFilter != null && _endDateFilter != null) {
         if (isSameDay(_startDateFilter!, _endDateFilter!)) {
           dateLabel = 'Dia ${DateFormat('dd/MM').format(_startDateFilter!)}';
         } else {
           final isFullMonth = _startDateFilter!.day == 1 &&
-              _endDateFilter!.day == DateTime(_endDateFilter!.year, _endDateFilter!.month + 1, 0).day;
+              _endDateFilter!.day ==
+                  DateTime(_endDateFilter!.year, _endDateFilter!.month + 1, 0)
+                      .day;
           final isFullYear = _startDateFilter!.month == 1 &&
               _startDateFilter!.day == 1 &&
               _endDateFilter!.month == 12 &&
@@ -1063,13 +1120,16 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           if (isFullYear) {
             dateLabel = 'Ano ${_startDateFilter!.year}';
           } else if (isFullMonth) {
-            dateLabel = 'Mês ${DateFormat('MMM', 'pt_BR').format(_startDateFilter!)}';
+            dateLabel =
+                'Mês ${DateFormat('MMM', 'pt_BR').format(_startDateFilter!)}';
           } else {
-            dateLabel = '${DateFormat('dd/MM').format(_startDateFilter!)} - ${DateFormat('dd/MM').format(_endDateFilter!)}';
+            dateLabel =
+                '${DateFormat('dd/MM').format(_startDateFilter!)} - ${DateFormat('dd/MM').format(_endDateFilter!)}';
           }
         }
       } else if (_startDateFilter != null) {
-        dateLabel = 'A partir de ${DateFormat('dd/MM').format(_startDateFilter!)}';
+        dateLabel =
+            'A partir de ${DateFormat('dd/MM').format(_startDateFilter!)}';
       } else if (_selectedDate != null) {
         dateLabel = 'Dia ${DateFormat('dd/MM').format(_selectedDate!)}';
       }
@@ -1101,7 +1161,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       label: _selectedVibrationNumber != null
           ? 'Vibração $_selectedVibrationNumber'
           : 'Vibração',
-      icon: Icons.waves, // Updated icon
+      icon: Icons.sunny, // Vibração / Dia Pessoal
       isSelected: _selectedVibrationNumber != null,
       activeColor: vibrationColor,
       onTap: () {
@@ -1236,8 +1296,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       dateItem,
     ];
   }
-
-
 
   void _showMobileDateFilter() {
     showModalBottomSheet(
@@ -1420,6 +1478,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         return Column(
           children: [
             if (isMobile) ...[
+              const PageTitleRow(title: 'Trilha de Ação', pageKey: 'tasks'),
               _buildToolbar(false, allTags, tasksToShow),
               Expanded(
                 child: TasksListView(
@@ -1483,7 +1542,13 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                           children: [
                             Padding(
                               padding: const EdgeInsets.only(bottom: 16.0),
-                              child: _buildToolbar(true, allTags, tasksToShow),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const PageTitleRow(title: 'Trilha de Ação', pageKey: 'tasks', forceDesktop: true),
+                                  _buildToolbar(true, allTags, tasksToShow),
+                                ],
+                              ),
                             ),
                             Expanded(
                               child: TasksListView(

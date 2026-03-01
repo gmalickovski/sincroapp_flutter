@@ -102,7 +102,7 @@ class TaskItem extends StatelessWidget {
       // Aplica estilo dependendo se é menção, tag ou meta
       final isMention = matchText.startsWith('@');
       final isGoal = matchText.startsWith('!');
-      
+
       TextStyle matchStyle;
       if (isMention) {
         matchStyle = mentionStyle;
@@ -208,8 +208,8 @@ class TaskItem extends StatelessWidget {
         task.journeyTitle!.isNotEmpty;
     // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
-    // Usa effectiveDate (dueDate ?? createdAt) para ícone de data
-    final bool shouldShowDateIcon = _isNotToday(task.effectiveDate) &&
+    // Usa hasDeadline em vez de _isNotToday para que sempre apareça o ícone se tiver data de vencimento
+    final bool shouldShowDateIcon = task.hasDeadline &&
         !isRecurrent; // Só mostra data se NÃO for recorrente
     final bool shouldShowPill = showVibrationPillFlag &&
         task.personalDay != null &&
@@ -329,7 +329,7 @@ class TaskItem extends StatelessWidget {
                       fontFamily: 'Poppins',
                     ),
                     tagStyle: TextStyle(
-                      color: AppColors.secondaryAccent, // Purple for tags
+                      color: AppColors.harmonyPink, // Pink for tags
                       fontWeight: FontWeight.w600,
                       decoration: task.completed
                           ? TextDecoration.lineThrough
@@ -440,8 +440,6 @@ class TaskItem extends StatelessWidget {
                     ],
                   ),
                 ),
-
-
             ],
           ),
         ),

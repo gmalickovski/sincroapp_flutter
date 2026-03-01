@@ -20,6 +20,8 @@ import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_view_scope.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
+import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
+import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 // New Generic Filter Popup
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_filter_selector.dart'; // Unified Selector
@@ -67,7 +69,6 @@ class _JournalScreenState extends State<JournalScreen>
     );
     return engine.calculatePersonalDayForDate(date);
   }
-
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
@@ -377,7 +378,6 @@ class _JournalScreenState extends State<JournalScreen>
   // ─── Selection Mode Logic ───
   // Methods are defined below in the class
 
-
   // ─── Cards ───
 
   Widget _buildNewNoteCard(BuildContext context) {
@@ -649,7 +649,7 @@ class _JournalScreenState extends State<JournalScreen>
       ),
       // Vibration Filter
       SincroFilterItem(
-        icon: Icons.waves,
+        icon: Icons.sunny,
         label: _vibrationFilter != null
             ? "Vibração $_vibrationFilter"
             : "Vibração",
@@ -695,8 +695,12 @@ class _JournalScreenState extends State<JournalScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              PageTitleRow(
+                title: 'Manuscritos',
+                pageKey: 'journal',
+                forceDesktop: isDesktop,
+              ),
               SincroToolbar(
-                title: "Diário de Bordo",
                 forceDesktop: isDesktop,
                 filters: filters,
                 isSelectionMode: _isSelectionMode,

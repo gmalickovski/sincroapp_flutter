@@ -196,6 +196,35 @@ class AppTheme {
         elevation: 4,
       ),
 
+      // Switch Theme
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.white;
+          }
+          return AppColors.secondaryText;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.primary;
+          }
+          return AppColors.background; 
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.hovered)) {
+            if (states.contains(WidgetState.selected)) {
+              return Colors.white; // White border when active and hovered
+            }
+            return AppColors.primary; // Purple border when inactive and hovered
+          }
+          if (!states.contains(WidgetState.selected)) {
+            return AppColors.border; // Grey border when inactive and not hovered
+          }
+          return Colors.transparent; // No border when active and not hovered
+        }),
+        trackOutlineWidth: WidgetStateProperty.all(1.5),
+      ),
+      
       // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.cardBackground,

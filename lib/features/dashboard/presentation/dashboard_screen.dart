@@ -39,12 +39,12 @@ import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/reord
 import 'package:sincro_app_flutter/common/widgets/numerology_detail_modal.dart';
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_detail_modal.dart';
 import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/presentation/widgets/strategy_card.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_recommendation.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/features/harmony/presentation/widgets/love_compatibility_modal.dart';
-import 'package:sincro_app_flutter/features/harmony/presentation/widgets/professional_aptitude_modal.dart';
 import 'package:sincro_app_flutter/services/check_update_service.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/assistant_layout_manager.dart'; // NEW IMPORT
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/agent_star_icon.dart'; // IMPORT AGENT ICON
@@ -390,7 +390,48 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
   }
 
-  void _handleTaskTap(TaskModel task) {}
+  void _handleTaskTap(TaskModel task) {
+    if (_userData == null) return;
+
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isDesktopLayout = screenWidth > 600;
+
+    if (isDesktopLayout) {
+      showDialog(
+        context: context,
+        builder: (BuildContext dialogContext) {
+          return TaskDetailModal(
+            task: task,
+            userData: _userData!,
+            onReschedule: (date) async {
+              await _supabaseService.updateTaskFields(
+                _userData!.uid,
+                task.id,
+                {'due_date': date.toUtc().toIso8601String()},
+              );
+            },
+          );
+        },
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => TaskDetailModal(
+          task: task,
+          userData: _userData!,
+          onReschedule: (date) async {
+            await _supabaseService.updateTaskFields(
+              _userData!.uid,
+              task.id,
+              {'due_date': date.toUtc().toIso8601String()},
+            );
+          },
+        ),
+      );
+    }
+  }
 
   Future<bool?> _handleDeleteTask(TaskModel task) async {
     final confirmed = await showDialog<bool>(
@@ -403,15 +444,34 @@ class _DashboardScreenState extends State<DashboardScreen>
             'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              side: const BorderSide(color: AppColors.border),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
             child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
+                style: TextStyle(
+                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+              foregroundColor: Colors.redAccent,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              ),
+            ),
             child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+                style: TextStyle(
+                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
           ),
         ],
       ),
@@ -448,6 +508,27 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<bool?> _handleRescheduleTask(TaskModel task) async {
     if (_userData == null) return false;
 
+    // Tarefas sem data: toggle foco do dia
+    if (!task.hasDeadline) {
+      try {
+        await _supabaseService.updateTaskFields(
+          _userData!.uid,
+          task.id,
+          {'is_focus': !task.isFocus},
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(task.isFocus ? 'Foco removido' : 'Em foco ⚡'),
+              duration: const Duration(seconds: 1),
+            ),
+          );
+        }
+      } catch (_) {}
+      return false;
+    }
+
+    // Tarefas com data: reagendar
     final newDate = await _taskActionService.rescheduleTask(
       context,
       task,
@@ -1053,48 +1134,6 @@ class _DashboardScreenState extends State<DashboardScreen>
               dragHandle: _isEditMode
                   ? _buildDragHandle('aptidoesProfissionais')
                   : null,
-              bottomAction: _isEditMode
-                  ? null
-                  : (
-                      // AI Analysis button - Only for Sinergia (premium) plan
-                      _userData?.subscription.plan == SubscriptionPlan.premium
-                          ? SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () {
-                                  if (MediaQuery.of(context).size.width > 600) {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) =>
-                                          ProfessionalAptitudeModal(
-                                              currentUser: _userData!),
-                                    );
-                                  } else {
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            ProfessionalAptitudeModal(
-                                                currentUser: _userData!),
-                                        fullscreenDialog: true,
-                                      ),
-                                    );
-                                  }
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.cyan.shade400,
-                                  foregroundColor: Colors.white,
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 12),
-                                  shape: const StadiumBorder(),
-                                  elevation: 0,
-                                ),
-                                child: const Text('Analisar Profissão com IA',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold)),
-                              ),
-                            )
-                          : null // No AI button for free and plus plans
-                  ),
               onTap: () => _showNumerologyDetail(
                     title: "Aptidões Profissionais",
                     number:
@@ -2319,46 +2358,69 @@ class _DashboardScreenState extends State<DashboardScreen>
     final BuildContext currentContext = context;
     setState(() => _isEditMode = true);
 
-    showDialog<void>(
-      context: currentContext,
-      barrierColor: Colors.black54,
-      builder: (modalContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding:
-            const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
-        child: ReorderDashboardModal(
-          userId: _userData!.uid,
-          initialOrder: List<String>.from(_userData!.dashboardCardOrder),
-          initialHidden: _userData!.dashboardHiddenCards,
-          scrollController: null, // Dialog não usa scroll controller externo
-          onSaveComplete: (bool success) async {
-            if (!mounted) return;
-            try {
-              Navigator.of(currentContext).pop();
-            } catch (e) {
-              debugPrint("Erro ao fechar modal: $e");
-            }
-            await Future.delayed(const Duration(milliseconds: 50));
-            if (!mounted) return;
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
 
-            if (success) {
-              setState(() => _isUpdatingLayout = true);
-              await _reloadDataNonStream(rebuildCards: true);
-              await Future.delayed(const Duration(milliseconds: 100));
-              if (mounted) {
-                setState(() {
-                  _masonryGridKey = UniqueKey();
-                  _isUpdatingLayout = false;
-                  _isEditMode = false;
-                });
-              }
-            } else {
-              if (mounted) setState(() => _isEditMode = false);
+    Widget buildModalContent(BuildContext modalContext) {
+      return ReorderDashboardModal(
+        userId: _userData!.uid,
+        initialOrder: List<String>.from(_userData!.dashboardCardOrder),
+        initialHidden: _userData!.dashboardHiddenCards,
+        scrollController: null,
+        onSaveComplete: (bool success) async {
+          if (!mounted) return;
+          try {
+            Navigator.of(currentContext).pop();
+          } catch (e) {
+            debugPrint("Erro ao fechar modal: \$e");
+          }
+          await Future.delayed(const Duration(milliseconds: 50));
+          if (!mounted) return;
+
+          if (success) {
+            setState(() => _isUpdatingLayout = true);
+            await _reloadDataNonStream(rebuildCards: true);
+            await Future.delayed(const Duration(milliseconds: 100));
+            if (mounted) {
+              setState(() {
+                _masonryGridKey = UniqueKey();
+                _isUpdatingLayout = false;
+                _isEditMode = false;
+              });
             }
-          },
-        ),
-      ),
-    ).whenComplete(() {
+          } else {
+            if (mounted) setState(() => _isEditMode = false);
+          }
+        },
+      );
+    }
+
+    Future<void> showModal() async {
+      if (isDesktop) {
+        await showDialog<void>(
+          context: currentContext,
+          barrierColor: Colors.black54,
+          builder: (modalContext) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
+            child: buildModalContent(modalContext),
+          ),
+        );
+      } else {
+        await showModalBottomSheet<void>(
+          context: currentContext,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (modalContext) => Padding(
+            padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom),
+            child: buildModalContent(modalContext),
+          ),
+        );
+      }
+    }
+
+    showModal().whenComplete(() {
       if (mounted && (_isEditMode || _isUpdatingLayout)) {
         setState(() {
           _isEditMode = false;
@@ -2371,17 +2433,17 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _getPageName(int index) {
     switch (index) {
       case 0:
-        return 'Dashboard';
+        return 'Portal da Essência';
       case 1:
-        return 'Calendar';
+        return 'Agenda de Sincronia';
       case 2:
-        return 'Journal';
+        return 'Manuscritos';
       case 3:
-        return 'Tarefas';
+        return 'Trilha de Ação';
       case 4:
-        return 'Metas';
+        return 'Jornadas';
       default:
-        return 'Dashboard';
+        return 'Portal da Essência';
     }
   }
 
@@ -2519,7 +2581,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                   numerologyData: _numerologyData,
                   activeContext: _getPageName(_sidebarIndex),
                   isFullScreen: true,
-                  onClose: () => _assistantLayoutKey.currentState?.closeAssistant(),
+                  onClose: () =>
+                      _assistantLayoutKey.currentState?.closeAssistant(),
                 )
               : const SizedBox.shrink(),
           child: Stack(
@@ -2541,7 +2604,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                           color: Colors.transparent,
                           shape: const CircleBorder(),
                           child: InkWell(
-                            onTap: () => _assistantLayoutKey.currentState?.openAssistant(),
+                            onTap: () => _assistantLayoutKey.currentState
+                                ?.openAssistant(),
                             customBorder: const CircleBorder(),
                             hoverColor:
                                 AppColors.primary.withValues(alpha: 0.1),

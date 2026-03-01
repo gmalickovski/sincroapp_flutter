@@ -137,15 +137,18 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
                 color: Colors.transparent, // Ensures hit testing works
               ),
             ),
-      leading: IconButton(
-        icon: AnimatedIcon(
-          icon: AnimatedIcons.menu_close,
-          progress: widget.menuAnimationController,
-          color: AppColors.secondaryText,
-        ),
-        onPressed: widget.onMenuPressed,
-        tooltip: 'Menu',
-      ),
+      leading: (_isSearchOpen && !isDesktop)
+          ? const SizedBox.shrink()
+          : IconButton(
+              icon: AnimatedIcon(
+                icon: AnimatedIcons.menu_close,
+                progress: widget.menuAnimationController,
+                color: AppColors.secondaryText,
+              ),
+              onPressed: widget.onMenuPressed,
+              tooltip: 'Menu',
+            ),
+      leadingWidth: (_isSearchOpen && !isDesktop) ? 0.0 : 56.0,
       title:
           (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
       centerTitle: true,
@@ -166,11 +169,7 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
             ),
           ),
 
-        if (widget.assistantIcon != null)
-          Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: widget.assistantIcon!,
-          ),
+        if (widget.assistantIcon != null) widget.assistantIcon!,
 
         if (widget.userData != null && isDesktop)
           Padding(
@@ -244,7 +243,7 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
   Widget _buildUnifiedSearch(BuildContext context, {required bool isDesktop}) {
     final isOpen = _isSearchOpen;
     final screenWidth = MediaQuery.of(context).size.width;
-    final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth * 0.70;
+    final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth - 76.0;
     Color borderColor = Colors.transparent;
     Color bgColor = Colors.transparent;
 
@@ -292,10 +291,9 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
                     enabledBorder: InputBorder.none,
                     errorBorder: InputBorder.none,
                     disabledBorder: InputBorder.none,
-                    isDense: true,
-                    filled: false,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    isCollapsed: true,
+                    contentPadding: EdgeInsets.only(
+                        left: 16, right: 48, top: 14, bottom: 14),
                   ),
                   onChanged: widget.onSearchChanged,
                   onTapOutside: (event) {

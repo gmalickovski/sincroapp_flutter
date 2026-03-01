@@ -28,10 +28,10 @@ class _StrategyCardState extends State<StrategyCard> {
   Widget build(BuildContext context) {
     final mode = widget.recommendation.mode;
 
-    // Use mode color for border on hover or active state
+    // Always show mode color border (like Foco do Dia card)
     final Color borderColor = (_isHovered && !widget.isEditMode)
-        ? mode.color.withValues(alpha: 0.8)
-        : AppColors.border.withValues(alpha: 0.7);
+        ? mode.color.withValues(alpha: 0.9)
+        : mode.color.withValues(alpha: 0.5);
     final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
 
     final cardContent = AnimatedContainer(

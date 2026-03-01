@@ -54,8 +54,7 @@ class TaskInputModal extends StatefulWidget {
 
 class _TaskInputModalState extends State<TaskInputModal> {
   // --- INÍCIO DA MUDANÇA: Controller Padrão ---
-  late ParserTextEditingController
-      _textController; // Controller com Highlight
+  late ParserTextEditingController _textController; // Controller com Highlight
   final SupabaseService _supabaseService =
       SupabaseService(); // Service para buscar contatos
   Set<String> _validUsernames =
@@ -164,7 +163,11 @@ class _TaskInputModalState extends State<TaskInputModal> {
       // --- FIM DA CORREÇÃO ---
     }
 
-    // --- REMOVIDO: _textController.addListener(_onTextChanged) ---
+    // Listener para controlar visibilidade do botão de envio
+    _textController.addListener(_onTextChangedForButton);
+
+    // Atualiza flags do parser após toda inicialização
+    _updateParserFlags();
 
     // Define a data para a pílula de vibração (usa data selecionada ou a data inicial)
     _selectedDateForPill = _selectedDate ?? initialDateForPill;
@@ -182,6 +185,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
   List<ContactModel>? _cachedContacts; // Cache for picker
   bool _isLoadingContacts = false; // Loading state for button
+
+  Set<String> _tagsInText = {};
+  Set<String> _contactsInText = {};
+  bool _goalInText = false;
 
   // ...
 
@@ -217,7 +224,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ParserKeyType type, String query) async {
     // REGRA: Meta e contatos são mutuamente exclusivos
     if (type == ParserKeyType.mention && _selectedGoalId != null) return [];
-    if (type == ParserKeyType.goal && _sharedWithUsernames.isNotEmpty) return [];
+    if (type == ParserKeyType.goal && _sharedWithUsernames.isNotEmpty)
+      return [];
+    // REGRA: Menção de contato só funciona com due date
+    if (type == ParserKeyType.mention && _selectedDate == null) return [];
 
     final normalizedQuery =
         TaskParser.normalizeParserKey(query, type).toLowerCase();
@@ -233,8 +243,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
             TaskParser.normalizeParserKey(c.username, type).toLowerCase();
         return uname.contains(normalizedQuery);
       }).map((c) {
-        final normalizedLabel =
-            TaskParser.normalizeParserKey(c.username, type);
+        final normalizedLabel = TaskParser.normalizeParserKey(c.username, type);
         return ParserSuggestion(
           id: c.userId,
           label: normalizedLabel,
@@ -286,14 +295,21 @@ class _TaskInputModalState extends State<TaskInputModal> {
     setState(() {
       if (type == ParserKeyType.mention &&
           !_sharedWithUsernames.contains(suggestion.label)) {
-        _sharedWithUsernames.add(suggestion.label); // label is already normalized
+        _sharedWithUsernames
+            .add(suggestion.label); // label is already normalized
       } else if (type == ParserKeyType.tag &&
           !_selectedTags.contains(suggestion.label)) {
         _selectedTags.add(suggestion.label);
       } else if (type == ParserKeyType.goal) {
         _selectedGoalId = suggestion.id;
         _selectedGoalTitle = suggestion.description ?? suggestion.label;
+        // Limpa contatos ao selecionar meta via parser
+        for (final username in _sharedWithUsernames) {
+          _removeParserTextFromInput('@', username);
+        }
+        _sharedWithUsernames.clear();
       }
+      _updateParserFlags();
     });
   }
 
@@ -309,6 +325,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
     _textController.selection = TextSelection.fromPosition(
       TextPosition(offset: cleaned.length),
     );
+  }
+
+  /// Atualiza os flags mentionEnabled e goalEnabled do controller
+  /// baseado no estado atual de data, meta e contatos.
+  void _updateParserFlags() {
+    // Menção habilitada somente se: tem due date E não tem meta selecionada
+    _textController.mentionEnabled =
+        _selectedDate != null && _selectedGoalId == null;
+    // Meta habilitada somente se: não tem contatos compartilhados
+    _textController.goalEnabled = _sharedWithUsernames.isEmpty;
   }
 
   void _updateVibrationForDate(DateTime date) {
@@ -371,8 +397,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
         _selectedGoalTitle = result.title;
         _selectedGoalDeadline =
             result.targetDate; // Captura deadline da seleção
-        _sharedWithUsernames =
-            []; // Limpa contatos ao selecionar meta (Exclusividade)
+        // Limpa contatos e @menções ao selecionar meta (Exclusividade)
+        for (final username in _sharedWithUsernames) {
+          _removeParserTextFromInput('@', username);
+        }
+        _sharedWithUsernames = [];
+        _updateParserFlags();
       });
     } else if (result == '_CREATE_NEW_GOAL_') {
       _openCreateGoalWidget();
@@ -455,11 +485,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => ScheduleTaskSheet(
-        initialDate: initialPickerDate,
+        initialDate: _selectedDate,
         initialTime: _selectedTime,
         initialRecurrence: ruleToPass,
         userData: widget.userData!,
         goalDeadline: _selectedGoalDeadline,
+        initialReminderOffsets: _selectedReminderOffsets,
       ),
     ).then((result) {
       if (result != null) {
@@ -473,6 +504,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
           setState(() {
             _selectedDate = selectedDateMidnight;
 
+            // Limpa contatos e @menções ao alterar data
+            for (final username in _sharedWithUsernames) {
+              _removeParserTextFromInput('@', username);
+            }
+            _sharedWithUsernames.clear();
+
             if (result.hasTime) {
               _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
             } else {
@@ -481,14 +518,21 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
             _selectedRecurrenceRule = result.recurrenceRule;
             _selectedReminderOffsets = result.reminderOffsets;
+            _updateParserFlags();
           });
         } else {
-            setState(() {
-                _selectedDate = null;
-                _selectedTime = null;
-                _selectedRecurrenceRule = result.recurrenceRule;
-                _selectedReminderOffsets = result.reminderOffsets;
-            });
+          setState(() {
+            _selectedDate = null;
+            _selectedTime = null;
+            // Remove @menções do texto antes de limpar contatos
+            for (final username in _sharedWithUsernames) {
+              _removeParserTextFromInput('@', username);
+            }
+            _sharedWithUsernames.clear(); // Limpa contatos ao remover data
+            _selectedRecurrenceRule = result.recurrenceRule;
+            _selectedReminderOffsets = result.reminderOffsets;
+            _updateParserFlags();
+          });
         }
       }
     });
@@ -520,28 +564,29 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     final ParsedTask finalParsedTask = textParseResult
         .copyWith(
-      dueDate: _selectedDate,
-      reminderTime: _selectedTime,
-      recurrenceRule: _selectedRecurrenceRule,
-      tags: mergedTags.toList(),
-      sharedWith: mergedSharedWith.toList(),
-      journeyId: _selectedGoalId,
-      journeyTitle: _selectedGoalTitle,
-    )
+          dueDate: _selectedDate,
+          reminderTime: _selectedTime,
+          recurrenceRule: _selectedRecurrenceRule,
+          tags: mergedTags.toList(),
+          sharedWith: mergedSharedWith.toList(),
+          journeyId: _selectedGoalId,
+          journeyTitle: _selectedGoalTitle,
+        )
         .copyWith(
-          reminderOffsets: _selectedReminderOffsets,
-          reminderAt: () {
-            if (_selectedDate == null) return null;
-            if (_selectedReminderOffsets == null || _selectedReminderOffsets!.isEmpty) return null;
+            reminderOffsets: _selectedReminderOffsets,
+            reminderAt: () {
+              if (_selectedDate == null) return null;
+              if (_selectedReminderOffsets == null ||
+                  _selectedReminderOffsets!.isEmpty) return null;
 
-            DateTime base = _selectedDate!;
-            if (_selectedTime != null) {
-              base = DateTime(base.year, base.month, base.day, _selectedTime!.hour,
-                  _selectedTime!.minute);
-            }
-            return base.subtract(Duration(minutes: _selectedReminderOffsets!.first));
-          }()
-        );
+              DateTime base = _selectedDate!;
+              if (_selectedTime != null) {
+                base = DateTime(base.year, base.month, base.day,
+                    _selectedTime!.hour, _selectedTime!.minute);
+              }
+              return base
+                  .subtract(Duration(minutes: _selectedReminderOffsets!.first));
+            }());
 
     widget.onAddTask(finalParsedTask);
 
@@ -575,6 +620,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
           onSelectionChanged: (selectedUsernames) {
             setState(() {
               _sharedWithUsernames = selectedUsernames;
+              _updateParserFlags();
             });
           },
           onDateChanged: (newDate) {
@@ -611,9 +657,73 @@ class _TaskInputModalState extends State<TaskInputModal> {
     }
   }
 
+  void _syncParserWithText() {
+    final currentParsed = TaskParser.parse(_textController.text);
+    bool changed = false;
+
+    // 1. Tags
+    final currentTextTags = currentParsed.tags.map((t) => t.toLowerCase()).toSet();
+    final tagsToRemove = _tagsInText.where((t) => !currentTextTags.contains(t)).toList();
+    for (var t in tagsToRemove) {
+      _selectedTags.removeWhere((st) => st.toLowerCase() == t);
+      changed = true;
+    }
+    _tagsInText = _selectedTags
+        .map((st) => st.toLowerCase())
+        .where((t) => currentTextTags.contains(t))
+        .toSet();
+
+    // 2. Mentions
+    final currentTextMentions = currentParsed.sharedWith.map((m) => m.toLowerCase()).toSet();
+    final mentionsToRemove = _contactsInText.where((m) => !currentTextMentions.contains(m)).toList();
+    for (var m in mentionsToRemove) {
+      _sharedWithUsernames.removeWhere((sm) => sm.toLowerCase() == m);
+      changed = true;
+    }
+    _contactsInText = _sharedWithUsernames
+        .map((sm) => sm.toLowerCase())
+        .where((m) => currentTextMentions.contains(m))
+        .toSet();
+
+    // 3. Goal
+    final currentTextGoals = currentParsed.goals.map((g) => TaskParser.normalizeParserKey(g, ParserKeyType.goal)).toSet();
+    if (_selectedGoalId != null && _selectedGoalTitle != null) {
+      final normalizedGoalTitle = TaskParser.normalizeParserKey(_selectedGoalTitle!, ParserKeyType.goal);
+      
+      if (_goalInText) {
+        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        if (!found) {
+          _selectedGoalId = null;
+          _selectedGoalTitle = null;
+          _selectedGoalDeadline = null;
+          _goalInText = false;
+          changed = true;
+        }
+      } else {
+        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        if (found) {
+          _goalInText = true;
+        }
+      }
+    } else {
+      _goalInText = false;
+    }
+
+    if (changed) {
+      _updateParserFlags();
+      if (mounted) setState(() {});
+    }
+  }
+
+  void _onTextChangedForButton() {
+    _syncParserWithText();
+    // Triggers rebuild to show/hide submit button based on text content
+    if (mounted) setState(() {});
+  }
+
   @override
   void dispose() {
-    // _textController.removeListener(_onTextChanged); // Removido
+    _textController.removeListener(_onTextChangedForButton);
     _textController.dispose();
     _textFieldFocusNode.dispose();
     super.dispose();
@@ -659,6 +769,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 disabledTriggers: [
                   if (_sharedWithUsernames.isNotEmpty) ParserKeyType.goal,
                   if (_selectedGoalId != null) ParserKeyType.mention,
+                  if (_selectedDate == null) ParserKeyType.mention,
                 ],
                 onSubmitted: (_) => _submit(), // Chama o submit atualizado
                 hintText: _selectedGoalId != null
@@ -709,6 +820,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                                   _selectedGoalId = null;
                                   _selectedGoalTitle = null;
                                   _selectedGoalDeadline = null;
+                                  _updateParserFlags();
                                 });
                               },
                       ),
@@ -722,11 +834,17 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         onDeleted: () {
                           setState(() {
                             _selectedDate = null;
-                            _selectedTime = null; // Reseta a hora tamb├®m
+                            _selectedTime = null; // Reseta a hora também
+                            // Remove @menções do texto antes de limpar contatos
+                            for (final username in _sharedWithUsernames) {
+                              _removeParserTextFromInput('@', username);
+                            }
+                            _sharedWithUsernames.clear(); // Limpa contatos ao remover data
                             _selectedRecurrenceRule =
-                                RecurrenceRule(); // Reseta recorr├¬ncia
+                                RecurrenceRule(); // Reseta recorrência
                             _updateVibrationForDate(DateTime
-                                .now()); // Atualiza p├¡lula de vibra├º├úo
+                                .now()); // Atualiza pílula de vibração
+                            _updateParserFlags();
                           });
                         },
                       ),
@@ -756,6 +874,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                           _removeParserTextFromInput('@', username);
                           setState(() {
                             _sharedWithUsernames.remove(username);
+                            _updateParserFlags();
                           });
                         },
                       ),
@@ -780,8 +899,13 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   if (widget.preselectedGoal == null)
                     _buildActionButton(
                       icon: Icons.flag_outlined,
-                      onTap: _selectGoal,
-                      color: _selectedGoalId != null ? Colors.cyanAccent : null,
+                      onTap: _sharedWithUsernames.isNotEmpty
+                          ? null
+                          : _selectGoal, // Desativa se tiver contatos
+                      color: _sharedWithUsernames.isNotEmpty
+                          ? AppColors.tertiaryText
+                              .withValues(alpha: 0.3)
+                          : (_selectedGoalId != null ? Colors.cyanAccent : null),
                     ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
@@ -791,7 +915,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
                   if (widget.userData != null &&
                       widget.userData!.subscription.plan !=
-                          SubscriptionPlan.free)
+                          SubscriptionPlan.free &&
+                      _selectedDate != null)
                     _buildActionButton(
                       icon: Icons.person_outline,
                       onTap: _selectedGoalId != null
@@ -816,23 +941,41 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         },
                       ),
                     ),
-                  Padding(
-                    padding:
-                        EdgeInsets.only(left: _personalDay > 0 ? 8.0 : 0.0),
-                    child: ElevatedButton(
-                      onPressed: _submit, // Chama o submit atualizado
-                      style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          shape: const CircleBorder(), // Bot├úo circular
-                          padding: const EdgeInsets.all(12), // Padding uniforme
-                          minimumSize: const Size(
-                              44, 44)), // Quadrado perfeito para c├¡rculo
-                      child: Icon(
-                        _isEditing ? Icons.check : Icons.arrow_upward,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 250),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: animation,
+                          alignment: Alignment.centerRight,
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _textController.text.trim().isNotEmpty
+                        ? Padding(
+                            key: const ValueKey('submitButton'),
+                            padding: EdgeInsets.only(left: _personalDay > 0 ? 8.0 : 0.0),
+                            child: ElevatedButton(
+                              onPressed: _submit,
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.all(12),
+                                  minimumSize: const Size(44, 44)),
+                              child: Icon(
+                                _isEditing ? Icons.check : Icons.arrow_upward,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(key: ValueKey('emptySubmit')),
                   )
                 ],
               )
@@ -896,11 +1039,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
   // Formata data de forma leg├¡vel: "12 de Dezembro" ou "12 de Dezembro de 2026"
   // Inclui hor├írio se _selectedTime estiver definido
   String _formatDateReadable(DateTime date) {
-    final now = DateTime.now();
     final months = [
       'Janeiro',
       'Fevereiro',
-      'Mar├ºo',
+      'Março',
       'Abril',
       'Maio',
       'Junho',
@@ -916,17 +1058,16 @@ class _TaskInputModalState extends State<TaskInputModal> {
     final month = months[date.month - 1];
 
     String dateStr;
-    if (date.year == now.year) {
+    if (date.year == DateTime.now().year) {
       dateStr = '$day de $month';
     } else {
       dateStr = '$day de $month de ${date.year}';
     }
 
-    // Adiciona hor├írio se houver (e se n├úo for nulo)
     if (_selectedTime != null) {
       final hh = _selectedTime!.hour.toString().padLeft(2, '0');
       final mm = _selectedTime!.minute.toString().padLeft(2, '0');
-      dateStr += ' ├ás $hh:$mm';
+      dateStr += ' às $hh:$mm';
     }
 
     return dateStr;

@@ -1351,9 +1351,7 @@ class SupabaseService {
         .eq('user_id', uid) // Filtro server-side vital para não dar TimeOut
         .order('created_at', ascending: false)
         .map((data) {
-          return data
-              .map((item) => _mapGoalFromSupabase(item))
-              .toList();
+          return data.map((item) => _mapGoalFromSupabase(item)).toList();
         });
   }
 
@@ -1467,6 +1465,12 @@ class SupabaseService {
           : null,
       durationMinutes: data['duration_minutes'],
       sourceJournalId: data['source_journal_id'], // Map source_journal_id
+      isFocus: data['is_focus'] ?? false,
+      sharedWith:
+          List<String>.from(data['shared_with'] ?? []),
+      reminderOffsets: data['reminder_offsets'] != null
+          ? List<int>.from(data['reminder_offsets'])
+          : null,
     );
   }
 
@@ -1526,9 +1530,7 @@ class SupabaseService {
         .eq('user_id', uid) // Filtro server-side vital para evitar TimeOut
         .order('created_at', ascending: false)
         .map((data) {
-          return data
-              .map((item) => _mapGoalFromSupabase(item))
-              .toList();
+          return data.map((item) => _mapGoalFromSupabase(item)).toList();
         });
   }
 

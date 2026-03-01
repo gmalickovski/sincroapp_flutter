@@ -363,12 +363,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             const ColorAttribute('#E040FB')); // purpleAccent
       }
 
-      // 3. Apply Mentions (@) — sempre colore durante digitação
-      final mentionMatches = TaskParser.mentionPattern.allMatches(text);
-      for (final match in mentionMatches) {
-        _controller.formatText(match.start, match.end - match.start,
-            const ColorAttribute('#40C4FF')); // lightBlueAccent
-      }
+      // Mention (@) highlighting removido — parser de contato desativado no journal
 
       // 4. Apply Goals (!) — sempre colore
       final goalMatches = TaskParser.goalPattern.allMatches(text);
@@ -432,7 +427,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     final selection = _controller.selection;
     if (!selection.isValid || !selection.isCollapsed) {
       Future.delayed(const Duration(milliseconds: 250), () {
-        if (mounted && !_isApplyingSuggestion && !_controller.selection.isValid) {
+        if (mounted &&
+            !_isApplyingSuggestion &&
+            !_controller.selection.isValid) {
           _hideSuggestionOverlay();
         }
       });
@@ -475,12 +472,14 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
       // RELAXED CHECK: Show suggestions even if query is empty (e.g. just "@" or "#")
       if (trigger != null) {
-        // ENFORCE EXCLUSIVITY: A line cannot have both a goal (!) and a contact (@)
-        if (trigger.type == ParserKeyType.mention && TaskParser.goalPattern.hasMatch(lineText)) {
+        // ENFORCE: @mention desativado no journal — somente #tags e !goals
+        if (trigger.type == ParserKeyType.mention) {
           _hideSuggestionOverlay();
           return;
         }
-        if (trigger.type == ParserKeyType.goal && TaskParser.mentionPattern.hasMatch(lineText)) {
+        // ENFORCE EXCLUSIVITY: A line cannot have both a goal (!) and a contact (@)
+        if (trigger.type == ParserKeyType.goal &&
+            TaskParser.mentionPattern.hasMatch(lineText)) {
           _hideSuggestionOverlay();
           return;
         }
@@ -588,17 +587,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     List<ParserSuggestion> results = [];
 
     if (trigger.type == ParserKeyType.mention) {
-      results = _cachedContacts
-          .where((c) =>
-              c.displayName.toLowerCase().contains(query) ||
-              c.username.toLowerCase().contains(query))
-          .map((c) => ParserSuggestion(
-                id: c.userId,
-                label: c.username.isNotEmpty ? c.username : c.displayName,
-                type: ParserKeyType.mention,
-                description: c.displayName,
-              ))
-          .toList();
+      // Parser de contato desativado no journal
+      return;
     } else if (trigger.type == ParserKeyType.tag) {
       // Tags: Show existing tags that match query
       results = _cachedTags
@@ -612,12 +602,15 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     } else if (trigger.type == ParserKeyType.goal) {
       results = _cachedGoals
           .where((g) {
-            final gNorm = TaskParser.normalizeParserKey(g.title, ParserKeyType.goal).toLowerCase();
+            final gNorm =
+                TaskParser.normalizeParserKey(g.title, ParserKeyType.goal)
+                    .toLowerCase();
             return gNorm.contains(query);
           })
           .map((g) => ParserSuggestion(
                 id: g.id,
-                label: TaskParser.normalizeParserKey(g.title, ParserKeyType.goal),
+                label:
+                    TaskParser.normalizeParserKey(g.title, ParserKeyType.goal),
                 type: ParserKeyType.goal,
                 description: g.title,
               ))
@@ -657,7 +650,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       _suggestionsOverlay = OverlayEntry(
         builder: (ctx) {
           final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-          final effectiveBottom = bottomInset > 0 ? bottomInset : keyboardHeight;
+          final effectiveBottom =
+              bottomInset > 0 ? bottomInset : keyboardHeight;
           return Positioned(
             left: 0,
             right: 0,
@@ -1003,14 +997,12 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
             targetTask ??= await _supabaseService.getTaskById(taskId);
 
             if (targetTask != null) {
-              final mergedSharedWith =
-                  {...targetTask.sharedWith, ...parsed.sharedWith}.toList();
               final updatedTask = targetTask.copyWith(
                 text: parsed.cleanText,
                 completed: isCompleted,
                 tags: parsed.tags,
-                sharedWith: mergedSharedWith,
-                goalId: goalId ?? targetTask.goalId,
+                sharedWith: parsed.sharedWith,
+                goalId: goalId ?? '', // Use empty string to reset if parsed goal is missing
                 completedAt: isCompleted
                     ? (targetTask.completedAt ?? DateTime.now())
                     : null,

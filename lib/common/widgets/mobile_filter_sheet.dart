@@ -8,6 +8,7 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
+import 'package:sincro_app_flutter/common/widgets/modern/inline_month_year_selector.dart';
 
 /// A Generic "Select" Option helper
 class MobileFilterOption {
@@ -248,16 +249,33 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
         children: [
           // Year Selector Header with interactive toggle
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                if (!_isSelectingYearInMonthView)
-                  IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Colors.white),
-                    onPressed: () => setState(
-                        () => _focusedDay = DateTime(_focusedDay.year - 1)),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (!_isSelectingYearInMonthView)
+                      IconButton(
+                        icon: const Icon(Icons.chevron_left,
+                            color: AppColors.secondaryText),
+                        onPressed: () => setState(
+                            () => _focusedDay = DateTime(_focusedDay.year - 1)),
+                      )
+                    else
+                      const SizedBox(width: 48),
+                    if (!_isSelectingYearInMonthView)
+                      IconButton(
+                        icon: const Icon(Icons.chevron_right,
+                            color: AppColors.secondaryText),
+                        onPressed: () => setState(
+                            () => _focusedDay = DateTime(_focusedDay.year + 1)),
+                      )
+                    else
+                      const SizedBox(width: 48),
+                  ],
+                ),
                 GestureDetector(
                   onTap: () {
                     setState(() {
@@ -271,7 +289,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                       Text(
                         "${_focusedDay.year}",
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.primaryText,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Poppins',
@@ -283,16 +301,39 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                             ? Icons.arrow_drop_up
                             : Icons.arrow_drop_down,
                         color: AppColors.primary,
+                        size: 24,
                       ),
+                      if (!_isSelectingYearInMonthView) ...[
+                        const SizedBox(width: 12),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              final now = DateTime.now();
+                              _focusedDay = DateTime(
+                                  now.year, _focusedDay.month, _focusedDay.day);
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Text(
+                              "Hoje",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
-                if (!_isSelectingYearInMonthView)
-                  IconButton(
-                    icon: const Icon(Icons.chevron_right, color: Colors.white),
-                    onPressed: () => setState(
-                        () => _focusedDay = DateTime(_focusedDay.year + 1)),
-                  ),
               ],
             ),
           ),
@@ -303,6 +344,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                 ? CrossFadeState.showSecond
                 : CrossFadeState.showFirst,
             firstChild: GridView.builder(
+              key: const ValueKey('MonthGrid'),
               shrinkWrap: true, // Key for fitting content
               physics:
                   const NeverScrollableScrollPhysics(), // Scroll handled by parent
@@ -360,74 +402,27 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                       style: TextStyle(
                         color:
                             isSelected ? Colors.white : AppColors.secondaryText,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14, // Standardized font size
+                        fontWeight: FontWeight.w600,
+                        fontFamily: 'Poppins',
                       ),
                     ),
                   ),
                 );
               },
             ),
-            secondChild: SizedBox(
-              // Reuse the Year View logic but handled locally for the month view context
-              // We can reuse the _buildYearView content logic but we need to ensure it updates _focusedDay
-              // instead of setting the full date range directly if we want it to just change the year.
-              // BUT the user likely wants to select the year and Go BACK to month view.
-              height: 300, // Fixed height for year selector inside month view
-              child: _buildYearSelectorForMonthView(),
+            secondChild: Padding(
+              key: const ValueKey('YearSelector'),
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: InlineMonthYearSelector(
+                focusedDay: _focusedDay,
+                onDateChanged: (newDate) {
+                  setState(() => _focusedDay = newDate);
+                },
+              ),
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildYearSelectorForMonthView() {
-    final currentYear = DateTime.now().year;
-    final years = List.generate(41, (index) => currentYear - 20 + index);
-
-    return GridView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        childAspectRatio: 2.5,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 8,
-      ),
-      itemCount: years.length,
-      itemBuilder: (context, index) {
-        final year = years[index];
-        final isSelected = _focusedDay.year == year;
-
-        return InkWell(
-          onTap: () {
-            setState(() {
-              _focusedDay = DateTime(year, _focusedDay.month, _focusedDay.day);
-              _isSelectingYearInMonthView = false; // Switch back to month view
-            });
-          },
-          borderRadius: BorderRadius.circular(8),
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.transparent,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: isSelected
-                      ? AppColors.primary
-                      : AppColors.border.withValues(alpha: 0.5)),
-            ),
-            child: Text(
-              "$year",
-              style: TextStyle(
-                color: isSelected ? Colors.white : AppColors.secondaryText,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-              ),
-            ),
-          ),
-        );
-      },
     );
   }
 
@@ -594,8 +589,25 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
     if (_hasCleared) return false;
 
     if (widget.type == MobileFilterType.date) {
-      return !isSameDay(_tempStartDate, widget.selectedStartDate) ||
-          !isSameDay(_tempEndDate, widget.selectedEndDate);
+      bool startChanged = false;
+      if (_tempStartDate == null && widget.selectedStartDate == null) {
+        startChanged = false;
+      } else if (_tempStartDate == null || widget.selectedStartDate == null) {
+        startChanged = true;
+      } else {
+        startChanged = !isSameDay(_tempStartDate, widget.selectedStartDate);
+      }
+      
+      bool endChanged = false;
+      if (_tempEndDate == null && widget.selectedEndDate == null) {
+        endChanged = false;
+      } else if (_tempEndDate == null || widget.selectedEndDate == null) {
+        endChanged = true;
+      } else {
+        endChanged = !isSameDay(_tempEndDate, widget.selectedEndDate);
+      }
+
+      return startChanged || endChanged;
     } else if (widget.type == MobileFilterType.mood) {
       return _tempMood != widget.selectedMood;
     } else if (widget.type == MobileFilterType.vibration) {
@@ -614,7 +626,8 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
 
   Widget _buildFooter() {
     // Quando o seletor de mês/ano está aberto, mostra botões Voltar/Confirmar
-    final bool showSelectorButtons = _isSelectingYearMonth || _isSelectingYearInMonthView;
+    final bool showSelectorButtons =
+        _isSelectingYearMonth || _isSelectingYearInMonthView;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -636,7 +649,8 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                         onPressed: () {
                           setState(() {
                             // Cancelar: restaurar posição anterior
-                            if (_isSelectingYearMonth && _preSelectorFocusedDay != null) {
+                            if (_isSelectingYearMonth &&
+                                _preSelectorFocusedDay != null) {
                               _focusedDay = _preSelectorFocusedDay!;
                             }
                             _isSelectingYearMonth = false;
@@ -741,20 +755,19 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                               foregroundColor:
                                   WidgetStateProperty.resolveWith<Color>(
                                       (states) => Colors.white),
-                              elevation: WidgetStateProperty.resolveWith<double>(
-                                  (states) => 0),
+                              elevation:
+                                  WidgetStateProperty.resolveWith<double>(
+                                      (states) => 0),
                               padding: WidgetStateProperty
                                   .resolveWith<EdgeInsetsGeometry>((states) =>
                                       const EdgeInsets.symmetric(vertical: 12)),
-                              shape:
-                                  WidgetStateProperty.resolveWith<OutlinedBorder>(
-                                      (states) {
+                              shape: WidgetStateProperty.resolveWith<
+                                  OutlinedBorder>((states) {
                                 if (states.contains(WidgetState.hovered)) {
                                   return RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     side: const BorderSide(
-                                        color: Colors.white,
-                                        width: 2),
+                                        color: Colors.white, width: 2),
                                   );
                                 }
                                 return RoundedRectangleBorder(
@@ -880,19 +893,31 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
     final headerText = DateFormat('MMMM yyyy', 'pt_BR').format(_focusedDay);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_left, color: Colors.white),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month - 1)),
-            )
-          else
-            const SizedBox(width: 48), // Spacer to keep title centered
-
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_left, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month - 1)),
+                )
+              else
+                const SizedBox(width: 48),
+              if (!_isSelectingYearMonth)
+                IconButton(
+                  icon: const Icon(Icons.chevron_right, color: Colors.white),
+                  onPressed: () => setState(() => _focusedDay =
+                      DateTime(_focusedDay.year, _focusedDay.month + 1)),
+                )
+              else
+                const SizedBox(width: 48),
+            ],
+          ),
           GestureDetector(
             onTap: () {
               setState(() {
@@ -906,8 +931,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  headerText
-                      .toUpperCase(), // Capitalize first letter logic handled by styles/formatting usually, but generic uppercase works
+                  headerText.toUpperCase(),
                   style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
@@ -920,32 +944,54 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                       ? Icons.arrow_drop_up
                       : Icons.arrow_drop_down,
                   color: AppColors.primary,
+                  size: 24,
                 ),
+                if (!_isSelectingYearMonth) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        final now = DateTime.now();
+                        _focusedDay = now;
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "Hoje",
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-
-          if (!_isSelectingYearMonth)
-            IconButton(
-              icon: const Icon(Icons.chevron_right, color: Colors.white),
-              onPressed: () => setState(() => _focusedDay =
-                  DateTime(_focusedDay.year, _focusedDay.month + 1)),
-            )
-          else
-            const SizedBox(width: 48),
         ],
       ),
     );
   }
 
   Widget _buildMonthYearSelector() {
-    return _MonthYearSelector(
-      focusedDay: _focusedDay,
-      onDateChanged: (newDate) {
-        setState(() {
-          _focusedDay = newDate;
-        });
-      },
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: InlineMonthYearSelector(
+        focusedDay: _focusedDay,
+        onDateChanged: (newDate) {
+          setState(() {
+            _focusedDay = newDate;
+          });
+        },
+      ),
     );
   }
 

@@ -386,6 +386,19 @@ class AssistantService {
     return const Uuid().v4();
   }
 
+  static Future<void> deleteConversation(String conversationId) async {
+    try {
+      await Supabase.instance.client
+          .schema('sincroapp')
+          .from('assistant_messages') // The view is view_conversations, but the actual data is likely in assistant_messages or we need to delete the messages first if there's a conversation table. Wait, looking at the code, there's `assistant_messages` with `conversation_id`. We can delete all messages with that id.
+          .delete()
+          .eq('conversation_id', conversationId);
+    } catch (e) {
+      debugPrint('Erro ao deletar conversa: $e');
+      rethrow;
+    }
+  }
+
   static Future<List<AssistantConversation>> fetchConversations(
       String userId) async {
     try {

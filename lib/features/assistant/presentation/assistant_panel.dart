@@ -600,118 +600,176 @@ class _AssistantPanelState extends State<AssistantPanel>
         // Ensure it doesn't clip on notches
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.center, // Center items vertically
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // 1. Floating Animated Star
-              const AgentStarIcon(
-                size: 50,
-                mode: AgentStarMode.dashboard,
-                isStatic: false,
-                isHollow: false,
-                slowAnimation: true,
-              ),
+              Row(
+                crossAxisAlignment:
+                    CrossAxisAlignment.center, // Center items vertically
+                children: [
+                  // 1. Floating Animated Star
+                  const AgentStarIcon(
+                    size: 50,
+                    mode: AgentStarMode.dashboard,
+                    isStatic: false,
+                    isHollow: false,
+                    slowAnimation: true,
+                  ),
 
-              const SizedBox(width: 8),
+                  const SizedBox(width: 8),
 
-              // 2. Dynamic Bubble (Flexible)
-              Flexible(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 500),
-                  layoutBuilder:
-                      (Widget? currentChild, List<Widget> previousChildren) {
-                    return Stack(
-                      alignment: Alignment.centerLeft,
-                      children: <Widget>[
-                        ...previousChildren,
-                        if (currentChild != null) currentChild,
-                      ],
-                    );
-                  },
-                  transitionBuilder:
-                      (Widget child, Animation<double> animation) {
-                    return FadeTransition(opacity: animation, child: child);
-                  },
-                  child: (_messages.isEmpty && !_isSending)
-                      ? Container(
-                          key: const ValueKey('idle_greeting'),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(12).copyWith(
-                              bottomLeft: const Radius.circular(0),
-                            ),
-                            border: Border.all(
-                                color: AppColors.primary, width: 1.5),
-                          ),
-                          child: const Text(
-                            "Olá, eu sou o Sincro IA, como posso te ajudar hoje?",
-                            style: TextStyle(
-                              color: AppColors.secondaryText,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            softWrap: true, // Allow wrapping
-                          ),
-                        )
-                      : ConstrainedBox(
-                          key: const ValueKey('active_title'),
-                          constraints: const BoxConstraints(minHeight: 48),
-                          child: const Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              "Sincro IA",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
+                  // 2. Dynamic Bubble (Flexible)
+                  Flexible(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 500),
+                      layoutBuilder:
+                          (Widget? currentChild, List<Widget> previousChildren) {
+                        return Stack(
+                          alignment: Alignment.centerLeft,
+                          children: <Widget>[
+                            ...previousChildren,
+                            if (currentChild != null) currentChild,
+                          ],
+                        );
+                      },
+                      transitionBuilder:
+                          (Widget child, Animation<double> animation) {
+                        return FadeTransition(opacity: animation, child: child);
+                      },
+                      child: (_messages.isEmpty && !_isSending)
+                          ? Container(
+                              key: const ValueKey('idle_greeting'),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(12).copyWith(
+                                  bottomLeft: const Radius.circular(0),
+                                ),
+                                border: Border.all(
+                                    color: AppColors.primary, width: 1.5),
+                              ),
+                              child: const Text(
+                                "Olá, eu sou o Sincro IA, como posso te ajudar hoje?",
+                                style: TextStyle(
+                                  color: AppColors.secondaryText,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                softWrap: true, // Allow wrapping
+                              ),
+                            )
+                          : ConstrainedBox(
+                              key: const ValueKey('active_title'),
+                              constraints: const BoxConstraints(minHeight: 48),
+                              child: const Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "Sincro IA",
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ),
-                ),
-              ),
-
-              const SizedBox(width: 16), // Gap between bubble and buttons
-
-              // 3. Right Controls
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.add_comment_rounded,
-                        color: AppColors.secondaryText),
-                    onPressed: () {
-                      if (!_isSending) {
-                        setState(() {
-                          _messages.clear();
-                          _animatedMessageIds.clear();
-                          _currentConversationId = null; // Start Fresh
-                        });
-                      }
-                    },
-                    tooltip: 'Nova Conversa',
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.history_rounded,
-                        color: AppColors.secondaryText),
-                    onPressed: _showHistory,
-                    tooltip: 'Histórico',
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: const Icon(Icons.arrow_forward_rounded,
-                        color: AppColors.secondaryText),
-                    onPressed: widget.onClose ??
-                        () => Navigator.of(context, rootNavigator: true).pop(),
-                    tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
+
+                  const SizedBox(width: 16), // Gap between bubble and buttons
+
+                  // 3. Right Controls (Top Line)
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOutBack,
+                    child: (!(_messages.isEmpty && !_isSending))
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.add_comment_rounded,
+                                    color: AppColors.secondaryText),
+                                onPressed: () {
+                                  if (!_isSending) {
+                                    setState(() {
+                                      _messages.clear();
+                                      _animatedMessageIds.clear();
+                                      _currentConversationId = null; // Start Fresh
+                                    });
+                                  }
+                                },
+                                tooltip: 'Nova Conversa',
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.history_rounded,
+                                    color: AppColors.secondaryText),
+                                onPressed: _showHistory,
+                                tooltip: 'Histórico',
+                              ),
+                              const SizedBox(width: 4),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_forward_rounded,
+                                    color: AppColors.secondaryText),
+                                onPressed: widget.onClose ??
+                                    () => Navigator.of(context, rootNavigator: true).pop(),
+                                tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
+                              ),
+                            ],
+                          )
+                        : const SizedBox.shrink(),
                   ),
                 ],
+              ),
+              
+              // 4. Action Buttons (Bottom Line, when Idle)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOutBack,
+                alignment: Alignment.topRight,
+                child: (_messages.isEmpty && !_isSending)
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 8.0, right: 0.0),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.add_comment_rounded,
+                                  color: AppColors.secondaryText),
+                              onPressed: () {
+                                if (!_isSending) {
+                                  setState(() {
+                                    _messages.clear();
+                                    _animatedMessageIds.clear();
+                                    _currentConversationId = null; // Start Fresh
+                                  });
+                                }
+                              },
+                              tooltip: 'Nova Conversa',
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.history_rounded,
+                                  color: AppColors.secondaryText),
+                              onPressed: _showHistory,
+                              tooltip: 'Histórico',
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.arrow_forward_rounded,
+                                  color: AppColors.secondaryText),
+                              onPressed: widget.onClose ??
+                                  () => Navigator.of(context, rootNavigator: true).pop(),
+                              tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),
@@ -721,129 +779,61 @@ class _AssistantPanelState extends State<AssistantPanel>
   }
 
   void _showHistory() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: AppColors.background,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        child: Container(
-          width: 500,
-          constraints: const BoxConstraints(maxHeight: 600),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Histórico de Conversas",
-                    style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  IconButton(
-                    icon:
-                        const Icon(Icons.close, color: AppColors.secondaryText),
-                    onPressed: () => Navigator.pop(context),
-                  )
-                ],
-              ),
-              const SizedBox(height: 16),
-              Flexible(
-                fit: FlexFit.tight,
-                child: FutureBuilder<List<AssistantConversation>>(
-                  future:
-                      AssistantService.fetchConversations(widget.userData.uid),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                          child: CircularProgressIndicator(
-                              color: AppColors.primary));
-                    }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return const Center(
-                        child: Text("Nenhuma conversa recente.",
-                            style: TextStyle(color: AppColors.secondaryText)),
-                      );
-                    }
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
 
-                    final conversations = snapshot.data!;
-
-                    return ListView.separated(
-                      itemCount: conversations.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final conv = conversations[index];
-                        final formattedDate =
-                            DateFormat('dd/MM HH:mm').format(conv.createdAt);
-                        final isSelected = conv.id == _currentConversationId;
-
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? AppColors.primary.withValues(alpha: 0.2)
-                                : AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : Colors.white.withValues(alpha: 0.05)),
-                          ),
-                          child: ListTile(
-                            leading: Icon(Icons.chat_bubble_outline,
-                                color: isSelected
-                                    ? AppColors.primary
-                                    : AppColors.secondaryText,
-                                size: 20),
-                            title: Text(
-                              conv.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: Colors.white, fontSize: 14),
-                            ),
-                            subtitle: Text(
-                              formattedDate,
-                              style: const TextStyle(
-                                  color: AppColors.secondaryText, fontSize: 12),
-                            ),
-                            onTap: () async {
-                              Navigator.pop(context); // Close dialog
-                              if (conv.id == _currentConversationId) return;
-
-                              setState(() {
-                                _isLoading = true;
-                                _currentConversationId = conv.id;
-                              });
-
-                              try {
-                                final msgs =
-                                    await AssistantService.fetchMessages(
-                                        widget.userData.uid, conv.id);
-                                if (mounted) {
-                                  setState(() {
-                                    _messages = msgs;
-                                    _isLoading = false;
-                                  });
-                                }
-                              } catch (e) {
-                                if (mounted) setState(() => _isLoading = false);
-                              }
-                            },
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
+    if (isDesktop) {
+      showDialog(
+        context: context,
+        builder: (context) => _AssistantHistorySheet(
+          userData: widget.userData,
+          currentConversationId: _currentConversationId,
+          onConversationSelected: (id, msgs) {
+            if (mounted) {
+              setState(() {
+                _currentConversationId = id;
+                _messages = msgs;
+              });
+            }
+          },
+          onConversationDeleted: (id) {
+            if (id == _currentConversationId && mounted) {
+              setState(() {
+                _messages.clear();
+                _animatedMessageIds.clear();
+                _currentConversationId = null;
+              });
+            }
+          },
         ),
-      ),
-    );
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => _AssistantHistorySheet(
+          userData: widget.userData,
+          currentConversationId: _currentConversationId,
+          onConversationSelected: (id, msgs) {
+            if (mounted) {
+              setState(() {
+                _currentConversationId = id;
+                _messages = msgs;
+              });
+            }
+          },
+          onConversationDeleted: (id) {
+            if (id == _currentConversationId && mounted) {
+              setState(() {
+                _messages.clear();
+                _animatedMessageIds.clear();
+                _currentConversationId = null;
+              });
+            }
+          },
+        ),
+      );
+    }
   }
 
   Widget _buildTypingIndicator() {
@@ -1116,7 +1106,7 @@ class ChatMessageItem extends StatelessWidget {
                 p: const TextStyle(
                     color: Colors.white, fontSize: 15, height: 1.4),
                 strong: const TextStyle(
-                    color: AppColors.primaryAccent,
+                    color: Color(0xFF06B6D4), // Cyan for better readability
                     fontWeight: FontWeight.bold),
               ),
             ),
@@ -1493,6 +1483,273 @@ class ChatMessageItem extends StatelessWidget {
       builder: (ctx) => TaskDetailModal(
         task: task,
         userData: userData!,
+      ),
+    );
+  }
+}
+
+class _AssistantHistorySheet extends StatefulWidget {
+  final UserModel userData;
+  final String? currentConversationId;
+  final Function(String, List<AssistantMessage>) onConversationSelected;
+  final Function(String) onConversationDeleted;
+
+  const _AssistantHistorySheet({
+    required this.userData,
+    this.currentConversationId,
+    required this.onConversationSelected,
+    required this.onConversationDeleted,
+  });
+
+  @override
+  State<_AssistantHistorySheet> createState() => _AssistantHistorySheetState();
+}
+
+class _AssistantHistorySheetState extends State<_AssistantHistorySheet> {
+  late Future<List<AssistantConversation>> _futureConversations;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  void _loadConversations() {
+    _futureConversations =
+        AssistantService.fetchConversations(widget.userData.uid);
+  }
+
+  Future<void> _deleteConversation(String id) async {
+    try {
+      await AssistantService.deleteConversation(id);
+      widget.onConversationDeleted(id);
+      if (mounted) {
+        setState(() {
+          _loadConversations();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erro ao deletar conversa')),
+        );
+      }
+    }
+  }
+
+  Widget _buildList() {
+    return FutureBuilder<List<AssistantConversation>>(
+      future: _futureConversations,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppColors.primary));
+        }
+        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(
+            child: Text("Nenhuma conversa recente.",
+                style: TextStyle(color: AppColors.secondaryText)),
+          );
+        }
+
+        final conversations = snapshot.data!;
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: conversations.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final conv = conversations[index];
+            final formattedDate =
+                DateFormat('dd/MM HH:mm').format(conv.createdAt);
+            final isSelected = conv.id == widget.currentConversationId;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppColors.primary.withValues(alpha: 0.2)
+                    : AppColors.cardBackground,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: isSelected
+                        ? AppColors.primary
+                        : Colors.white.withValues(alpha: 0.05)),
+              ),
+              child: ListTile(
+                leading: Icon(Icons.chat_bubble_outline,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.secondaryText,
+                    size: 20),
+                title: Text(
+                  conv.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                ),
+                subtitle: Text(
+                  formattedDate,
+                  style: const TextStyle(
+                      color: AppColors.secondaryText, fontSize: 12),
+                ),
+                trailing: IconButton(
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent, size: 20),
+                  onPressed: () => _deleteConversation(conv.id),
+                ),
+                onTap: () async {
+                  if (conv.id == widget.currentConversationId) {
+                    Navigator.pop(context);
+                    return;
+                  }
+
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => const Center(
+                        child:
+                            CircularProgressIndicator(color: AppColors.primary)),
+                  );
+
+                  try {
+                    final msgs = await AssistantService.fetchMessages(
+                        widget.userData.uid, conv.id);
+                    if (mounted) {
+                      Navigator.pop(context); // close loader
+                      Navigator.pop(context); // close sheet
+                      widget.onConversationSelected(conv.id, msgs);
+                    }
+                  } catch (e) {
+                    if (mounted) Navigator.pop(context); // close loader
+                  }
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDesktop = MediaQuery.of(context).size.width >= 800;
+
+    if (isDesktop) {
+      return Dialog(
+        backgroundColor: AppColors.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 500,
+          constraints: const BoxConstraints(maxHeight: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    "Histórico de Conversas",
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _buildList(),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppColors.border),
+                            foregroundColor: AppColors.primaryText,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          child: const Text('Fechar',
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w500)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      constraints:
+          BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
+      decoration: const BoxDecoration(
+        color: AppColors.background,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Center(
+              child: Text(
+                "Histórico de Conversas",
+                style: TextStyle(
+                    color: AppColors.primaryText,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          const Divider(color: AppColors.border, height: 1),
+          Flexible(
+            child: _buildList(),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SafeArea(
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: AppColors.border),
+                        foregroundColor: AppColors.primaryText,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Fechar',
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w500)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
