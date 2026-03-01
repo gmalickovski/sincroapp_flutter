@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.2...v1.6.3) (2026-03-01)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** implement StrategyN8NService to fetch strategy recommendations from N8N. ([8872f23](https://github.com/gmalickovski/sincroapp_flutter/commit/8872f23cacb26275fc9eba10efc52b28459aa495))
+
 ### [1.6.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.1...v1.6.2) (2026-03-01)
 
 
