@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.4](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.3...v1.6.4) (2026-03-02)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** implement core application structure including dashboard, authentication, task, goal, and journal features with Supabase and Firebase integration. ([dce7255](https://github.com/gmalickovski/sincroapp_flutter/commit/dce7255b6482b4e48f901f0c8609e6cd4ceacef9))
+
 ### [1.6.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.2...v1.6.3) (2026-03-01)
 
 
