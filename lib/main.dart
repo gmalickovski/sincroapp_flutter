@@ -24,6 +24,17 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // Restore Supabase imp
 import 'package:sincro_app_flutter/services/supabase_service.dart'; // Restore Service import
 import 'package:sincro_app_flutter/core/theme/app_theme.dart';
 import 'package:sincro_app_flutter/core/services/navigation_service.dart'; // 🚀 Navigation Service
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: \${message.messageId}");
+}
+
 // ... other imports
 
 // --- WORKMANAGER CALLBACK (Must be top-level or static) ---
@@ -54,12 +65,33 @@ void callbackDispatcher() {
 
     try {
       await NotificationService.instance.init();
-      // Example: Check for unread notifications if we had the User ID
-      // For now, let's just log or perform a simple "Alive" check.
-      // Ideally:
-      // final prefs = await SharedPreferences.getInstance();
-      // final userId = prefs.getString('userId');
-      // if (userId != null) await NotificationService.instance.checkForUnread(userId);
+      
+      // Restaura a sessão do Supabase (supabase_flutter cuida do SharedPreferences por padrão)
+      final session = Supabase.instance.client.auth.currentSession;
+      if (session != null) {
+        final prefs = await SharedPreferences.getInstance();
+        final lastResetStr = prefs.getString('lastFocusResetDate');
+        final now = DateTime.now();
+        // String de hoje
+        final todayStr = "${now.year}-${now.month}-${now.day}";
+
+        if (lastResetStr != todayStr) {
+           final userId = session.user.id;
+           try {
+             await Supabase.instance.client
+                .schema('sincroapp')
+                .from('tasks')
+                .update({'is_focus': false})
+                .eq('user_id', userId)
+                .eq('is_focus', true);
+             
+             await prefs.setString('lastFocusResetDate', todayStr);
+             debugPrint("Workmanager: Foco do dia resetado com sucesso para o usuário $userId");
+           } catch (dbError) {
+             debugPrint("Workmanager: Falha ao resetar foo do dia: $dbError");
+           }
+        }
+      }
 
       debugPrint("Workmanager: Background Sync Executed!");
     } catch (e) {
@@ -73,6 +105,28 @@ void callbackDispatcher() {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('pt_BR', null);
+
+  // Inicializa o Firebase (necessário para o Push Notification FCM funcionar)
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      
+      // Request permission (mostly impacts iOS, but good practice)
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+      await messaging.requestPermission(
+        alert: true,
+        announcement: false,
+        badge: true,
+        carPlay: false,
+        criticalAlert: false,
+        provisional: false,
+        sound: true,
+      );
+    } catch (e) {
+      debugPrint('⚠️ Erro ao inicializar Firebase: $e');
+    }
+  }
 
   // 🚀 Carrega o arquivo .env
   try {
@@ -254,21 +308,7 @@ class _AuthCheckState extends State<AuthCheck> {
     super.dispose();
   }
 
-  void _navigateToScreen(Widget screen, String screenName) {
-    if (_hasNavigated) {
-      return;
-    }
-
-    _hasNavigated = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => screen),
-        );
-      }
-    });
-  }
+  // Remove _navigateToScreen as we will build the screen directly
 
   @override
   Widget build(BuildContext context) {
@@ -302,29 +342,12 @@ class _AuthCheckState extends State<AuthCheck> {
           );
         }
         if (snapshot.hasError) {
-          _navigateToScreen(const DashboardScreen(), 'DashboardScreen (error)');
-          return const Scaffold(
-            key: ValueKey('navigating'),
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CustomLoadingSpinner(),
-            ),
-          );
+          return const DashboardScreen(key: ValueKey('dashboard-error'));
         }
 
         final userModel = snapshot.data;
         if (userModel == null) {
-          _navigateToScreen(
-            UserDetailsScreen(user: _user!),
-            'UserDetailsScreen (null)',
-          );
-          return const Scaffold(
-            key: ValueKey('navigating'),
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CustomLoadingSpinner(),
-            ),
-          );
+          return UserDetailsScreen(key: const ValueKey('user-details-null'), user: _user!);
         }
 
         final String nomeAnalise = (userModel.nomeAnalise).trim();
@@ -334,28 +357,10 @@ class _AuthCheckState extends State<AuthCheck> {
                 RegExp(r'^\d{2}/\d{2}/\d{4}$').hasMatch(dataNasc);
 
         if (nomeAnalise.isEmpty || dataNasc.isEmpty || !dataValida) {
-          _navigateToScreen(
-            UserDetailsScreen(user: _user!),
-            'UserDetailsScreen (missing-or-invalid)',
-          );
-          return const Scaffold(
-            key: ValueKey('navigating'),
-            backgroundColor: AppColors.background,
-            body: Center(
-              child: CustomLoadingSpinner(),
-            ),
-          );
+          return UserDetailsScreen(key: const ValueKey('user-details-invalid'), user: _user!);
         }
 
-        _navigateToScreen(const DashboardScreen(), 'DashboardScreen');
-
-        return const Scaffold(
-          key: ValueKey('navigating'),
-          backgroundColor: AppColors.background,
-          body: Center(
-            child: CustomLoadingSpinner(),
-          ),
-        );
+        return const DashboardScreen(key: ValueKey('dashboard'));
       },
     );
   }

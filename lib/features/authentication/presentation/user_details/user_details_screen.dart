@@ -11,6 +11,7 @@ import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
 import 'package:sincro_app_flutter/common/utils/username_validator.dart'; // NOVO: Validador
 import 'dart:async'; // Para Timer
+import 'package:sincro_app_flutter/main.dart'; // For AuthCheck
 
 class UserDetailsScreen extends StatefulWidget {
   final User user;
@@ -480,7 +481,10 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
                 // Cancel registration -> Sign out
                 await Supabase.instance.client.auth.signOut();
                 if (context.mounted) {
-                  Navigator.of(context).pushReplacementNamed(AppRoutes.login);
+                  Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AuthCheck()),
+                    (route) => false,
+                  );
                 }
               },
               child: const Text("Cancelar",

@@ -228,10 +228,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!kIsWeb) {
         NotificationService.instance
             .listenToRealtimeNotifications(currentUser.id);
-        if (userData != null && userData.dataNasc.isNotEmpty) {
-          NotificationService.instance
-              .initializeDailyIncentives(currentUser.id, userData.dataNasc);
-        }
 
         // Tenta abrir modal pendente (deep link)
         if (_pendingFavorableDayModal && mounted) {
@@ -264,17 +260,6 @@ class _DashboardScreenState extends State<DashboardScreen>
         if (mounted) {
           setState(() {
             _currentTodayTasks = tasks;
-
-            // Sincroniza notificações com os dados mais recentes
-            if (_userData != null &&
-                _userData!.dataNasc.isNotEmpty &&
-                !kIsWeb) {
-              NotificationService.instance.syncDailyNotifications(
-                  userId: _userData!.uid,
-                  userName: _userData!.nomeAnalise,
-                  birthDate: _userData!.dataNasc,
-                  todayTasks: tasks);
-            }
 
             if (_isLoading) {
               _isLoading = false;

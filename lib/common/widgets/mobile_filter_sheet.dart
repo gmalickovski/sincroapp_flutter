@@ -472,7 +472,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
         title = "Filtrar por Tag";
         break;
       case MobileFilterType.goal:
-        title = "Filtrar por Meta";
+        title = "Filtrar por Jornada";
         break;
       case MobileFilterType.contact:
         title = "Filtrar por Contato";
@@ -586,42 +586,14 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
   }
 
   bool get _shouldShowActionButtons {
-    if (_hasCleared) return false;
-
-    if (widget.type == MobileFilterType.date) {
-      bool startChanged = false;
-      if (_tempStartDate == null && widget.selectedStartDate == null) {
-        startChanged = false;
-      } else if (_tempStartDate == null || widget.selectedStartDate == null) {
-        startChanged = true;
-      } else {
-        startChanged = !isSameDay(_tempStartDate, widget.selectedStartDate);
-      }
-      
-      bool endChanged = false;
-      if (_tempEndDate == null && widget.selectedEndDate == null) {
-        endChanged = false;
-      } else if (_tempEndDate == null || widget.selectedEndDate == null) {
-        endChanged = true;
-      } else {
-        endChanged = !isSameDay(_tempEndDate, widget.selectedEndDate);
-      }
-
-      return startChanged || endChanged;
-    } else if (widget.type == MobileFilterType.mood) {
-      return _tempMood != widget.selectedMood;
-    } else if (widget.type == MobileFilterType.vibration) {
-      return _tempVibration != widget.selectedVibration;
-    } else if (widget.type == MobileFilterType.select) {
-      return _tempSelectedOption != widget.selectedOption;
-    } else if (widget.type == MobileFilterType.tag) {
-      return _tempSelectedTag != widget.selectedTag;
-    } else if (widget.type == MobileFilterType.goal ||
-        widget.type == MobileFilterType.contact ||
-        widget.type == MobileFilterType.sort) {
-      return _tempSelectedOption != widget.selectedOption;
-    }
-    return false;
+    // If user clicked Limpar (and it actually cleared something that was previously selected), 
+    // we need to show applying to save the clear. But Wait, user said:
+    // "se eu clico em limpar onde limpa todas as seleções ... deveria voltar a aparecer o botão Fechar"
+    // Does Fechar apply the changes in this app? Usually clicking outside or Fechar doesn't apply filters unless explicitly handled, 
+    // but the user's explicit business rule is:
+    // If >= 1 selection -> "Limpar e Aplicar"
+    // If == 0 selection -> "Fechar"
+    return _hasActiveSelection;
   }
 
   Widget _buildFooter() {
@@ -1684,7 +1656,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Text("Selecione uma Meta",
+                  const Text("Selecione uma Jornada",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -1695,7 +1667,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
             if (widget.goals == null || widget.goals!.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text("Nenhuma meta encontrada.",
+                child: Text("Nenhuma jornada encontrada.",
                     style: TextStyle(color: AppColors.secondaryText)),
               )
             else
@@ -1744,7 +1716,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
       );
     }
 
-    // Default View: Todas vs Selecionar Meta
+    // Default View: Todas vs Selecionar Jornada
     final bool isAllSelected = _tempSelectedOption == 'all';
     final bool isSpecificSelected =
         _tempSelectedOption != null && _tempSelectedOption != 'all';
@@ -1787,7 +1759,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                   const Icon(Icons.list, color: Colors.white, size: 24),
                   const SizedBox(width: 12),
                   const Expanded(
-                      child: Text("Todas as Metas",
+                      child: Text("Todas as Jornadas",
                           style: TextStyle(color: Colors.white, fontSize: 14))),
                   if (isAllSelected)
                     const Icon(Icons.check_circle,
@@ -1798,7 +1770,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
 
             const SizedBox(height: 8),
 
-            // Option 2: Selecionar Meta >
+            // Option 2: Selecionar Jornada >
             _HoverableOptionTile(
               isSelected: isSpecificSelected,
               padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -1814,8 +1786,8 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                   Expanded(
                       child: Text(
                           isSpecificSelected
-                              ? "Meta Selecionada"
-                              : "Selecionar Meta",
+                              ? "Jornada Selecionada"
+                              : "Selecionar Jornada",
                           style: const TextStyle(
                               color: Colors.white, fontSize: 14))),
                   const Icon(Icons.chevron_right,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/app/routs/app_router.dart';
+import 'package:sincro_app_flutter/main.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   final String? token;
@@ -115,8 +116,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               ),
               const SizedBox(height: 24),
               ElevatedButton(
-                onPressed: () =>
-                    Navigator.of(context).pushReplacementNamed(AppRoutes.login),
+                onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+                    MaterialPageRoute(builder: (_) => const AuthCheck()),
+                    (route) => false),
                 child: const Text('Ir para Login'),
               ),
             ],
@@ -285,8 +287,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
         ),
         const SizedBox(height: 32),
         ElevatedButton(
-          onPressed: () =>
-              Navigator.of(context).pushReplacementNamed(AppRoutes.login),
+          onPressed: () => Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const AuthCheck()),
+              (route) => false),
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
             backgroundColor: AppColors.primary,

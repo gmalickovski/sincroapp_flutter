@@ -463,35 +463,46 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         content: Text(
             'Você tem certeza que deseja excluir permanentemente $count ${count == 1 ? 'tarefa' : 'tarefas'}?',
             style: const TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              side: const BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                ),
               ),
-            ),
-            child: const Text('Cancelar',
-                style: TextStyle(
-                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-              foregroundColor: Colors.redAccent,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                ),
               ),
-            ),
-            child: const Text('Excluir',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            ],
           ),
         ],
       ),
@@ -717,35 +728,46 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         content: const Text(
             'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: OutlinedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              side: const BorderSide(color: AppColors.border),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                ),
               ),
-            ),
-            child: const Text('Cancelar',
-                style: TextStyle(
-                    color: AppColors.secondaryText, fontFamily: 'Poppins')),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-              foregroundColor: Colors.redAccent,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: const BorderSide(color: Colors.redAccent, width: 1.5),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                ),
               ),
-            ),
-            child: const Text('Excluir',
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            ],
           ),
         ],
       ),
@@ -761,8 +783,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
               backgroundColor: AppColors.success,
             ),
           );
+          setState(() {}); // Força rebuild da lista via stream
         }
-        return true; // Confirma a exclusÃ£o visual
       } catch (e) {
         debugPrint("Erro ao excluir tarefa: $e");
         if (mounted) {
@@ -773,9 +795,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             ),
           );
         }
-        return false;
       }
     }
+    // Sempre retorna false — o Dismissible nunca remove o widget sozinho.
+    // A remoção acontece via rebuild do stream após deleteTask.
     return false;
   }
 

@@ -175,16 +175,50 @@ class _GoalsScreenState extends State<GoalsScreen> {
           content: Text(
               'Tem certeza que deseja excluir $count jornada${count > 1 ? 's' : ''} selecionada${count > 1 ? 's' : ''}? Esta ação não pode ser desfeita.',
               style: const TextStyle(color: AppColors.secondaryText)),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            TextButton(
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppColors.secondaryText)),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-            ),
-            TextButton(
-              child:
-                  Text('Excluir', style: TextStyle(color: Colors.red.shade400)),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancelar',
+                        style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.redAccent.withValues(alpha: 0.1),
+                      foregroundColor: Colors.redAccent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(
+                            color: Colors.redAccent, width: 1.5),
+                      ),
+                    ),
+                    child: const Text('Excluir',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -233,16 +267,50 @@ class _GoalsScreenState extends State<GoalsScreen> {
           content: Text(
               'Tem certeza que deseja excluir a jornada "${goal.title}"? Esta ação não pode ser desfeita.',
               style: const TextStyle(color: AppColors.secondaryText)),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
-            TextButton(
-              child: const Text('Cancelar',
-                  style: TextStyle(color: AppColors.secondaryText)),
-              onPressed: () => Navigator.of(dialogContext).pop(false),
-            ),
-            TextButton(
-              child:
-                  Text('Excluir', style: TextStyle(color: Colors.red.shade400)),
-              onPressed: () => Navigator.of(dialogContext).pop(true),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(false),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancelar',
+                        style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.redAccent.withValues(alpha: 0.1),
+                      foregroundColor: Colors.redAccent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(
+                            color: Colors.redAccent, width: 1.5),
+                      ),
+                    ),
+                    child: const Text('Excluir',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+              ],
             ),
           ],
         );

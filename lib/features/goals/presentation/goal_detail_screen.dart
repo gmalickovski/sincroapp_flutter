@@ -165,16 +165,50 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         content: const Text(
             'Tem certeza que deseja excluir esta jornada? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -341,16 +375,50 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         content: const Text(
             'Tem certeza que deseja excluir os marcos selecionados? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -835,16 +903,50 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
         content: const Text(
             'Tem certeza que deseja excluir este marco? Esta ação não pode ser desfeita.',
             style: TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancelar',
-                style: TextStyle(color: AppColors.secondaryText)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -1167,11 +1269,13 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                                               setState(
                                                   () {}); // For visual update if needed
                                             },
-                                            child: const AgentStarIcon(
-                                              size: 28,
-                                              isStatic: true,
-                                              isHollow: false,
-                                              isWhiteFilled: true,
+                                            child: const Center(
+                                              child: AgentStarIcon(
+                                                size: 20,
+                                                isStatic: true,
+                                                isHollow: false,
+                                                isWhiteFilled: true,
+                                              ),
                                             ),
                                           ),
                                         ),

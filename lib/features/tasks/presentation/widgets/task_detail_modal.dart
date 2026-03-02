@@ -602,16 +602,51 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         content: const Text('Tem certeza que deseja excluir esta tarefa?',
             style: TextStyle(
                 fontFamily: 'Poppins', color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar',
-                  style: TextStyle(
-                      fontFamily: 'Poppins', color: AppColors.secondaryText))),
-          TextButton(
-              style: TextButton.styleFrom(foregroundColor: Colors.redAccent),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Excluir')),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.redAccent.withValues(alpha: 0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -994,12 +1029,25 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     }
   }
 
-  // Opens the dialog to create a new goal
+  // Opens the dialog/bottom sheet to create a new goal
   void _openCreateGoalWidget() async {
-    final result = await showDialog(
-      context: context,
-      builder: (context) => CreateGoalDialog(userData: widget.userData),
-    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    bool? result;
+
+    if (isMobile) {
+      result = await CreateGoalDialog.showAsBottomSheet(
+        context,
+        userData: widget.userData,
+      );
+    } else {
+      result = await showDialog<bool>(
+        context: context,
+        builder: (context) => CreateGoalDialog(userData: widget.userData),
+      );
+    }
+
     if (result == true && mounted) {
       // Refresh or handle new goal
       // Simplification: logic to reload goals usually happens via stream in GoalSelectionModal
@@ -1013,20 +1061,55 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         return AlertDialog(
           title: const Text('Confirmar Exclusão'),
           content: const Text('Tem certeza que deseja excluir esta tarefa?'),
+          actionsAlignment: MainAxisAlignment.center,
+          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: <Widget>[
-            TextButton(
-              child: const Text('Cancelar'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('Excluir',
-                  style: TextStyle(fontFamily: 'Poppins', color: Colors.red)),
-              onPressed: () {
-                Navigator.of(context).pop();
-                _deleteTask();
-              },
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                    },
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      side: const BorderSide(color: AppColors.border),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Cancelar',
+                        style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      _deleteTask();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          Colors.redAccent.withValues(alpha: 0.1),
+                      foregroundColor: Colors.redAccent,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(
+                            color: Colors.redAccent, width: 1.5),
+                      ),
+                    ),
+                    child: const Text('Excluir',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Poppins')),
+                  ),
+                ),
+              ],
             ),
           ],
         );
@@ -1464,7 +1547,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               header,
               Flexible(child: contentBody),
               Padding(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
                 child: _buildBottomActions(),
               ),
             ],

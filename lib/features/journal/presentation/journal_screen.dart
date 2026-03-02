@@ -107,17 +107,56 @@ class _JournalScreenState extends State<JournalScreen>
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Excluir Anotações'),
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Anotações',
+            style: TextStyle(color: Colors.white)),
         content: Text(
-            'Tem certeza que deseja excluir ${_selectedEntryIds.length} anotações?'),
+            'Tem certeza que deseja excluir ${_selectedEntryIds.length} anotações?',
+            style: const TextStyle(color: AppColors.secondaryText)),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Excluir', style: TextStyle(color: Colors.red)),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Cancelar',
+                      style: TextStyle(
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        Colors.redAccent.withOpacity(0.1),
+                    foregroundColor: Colors.redAccent,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: Colors.redAccent, width: 1.5),
+                    ),
+                  ),
+                  child: const Text('Excluir',
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Poppins')),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -731,6 +770,7 @@ class _JournalScreenState extends State<JournalScreen>
                 hasActiveFilters: _isFilterActive,
                 selectedCount: _selectedEntryIds.length,
               ),
+              const SizedBox(height: 8),
               Expanded(
                 child: StreamBuilder<List<JournalEntry>>(
                   stream: _entriesStream,
@@ -797,7 +837,7 @@ class _JournalScreenState extends State<JournalScreen>
                     if (isDesktop) {
                       return MasonryGridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 40.0)
-                            .copyWith(bottom: 100),
+                            .copyWith(top: 8, bottom: 100),
                         gridDelegate:
                             const SliverSimpleGridDelegateWithMaxCrossAxisExtent(
                           maxCrossAxisExtent: 300,
@@ -869,7 +909,7 @@ class _JournalScreenState extends State<JournalScreen>
                       // MOBILE: Masonry Grid (Visual Parity) but NO "New Note" card (uses FAB)
                       return MasonryGridView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0)
-                            .copyWith(bottom: 100),
+                            .copyWith(top: 8, bottom: 100),
                         // Mobile typically expects 2 columns.
                         // maxCrossAxisExtent 200 allows 2 cols on screens > 400px width,
                         // or 1 col on very small screens.

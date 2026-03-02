@@ -2304,6 +2304,18 @@ class SupabaseService {
     }).toList();
   }
 
+  Future<List<TaskModel>> getUncompletedTasks(String uid) async {
+    final response = await _supabase
+        .schema('sincroapp')
+        .from('tasks')
+        .select()
+        .eq('user_id', uid)
+        .eq('completed', false);
+
+    final List<dynamic> data = response;
+    return data.map<TaskModel>((item) => _mapTaskFromSupabase(item)).toList();
+  }
+
   /// Fetches release notes for a specific version from Supabase
   Future<Map<String, dynamic>?> getAppVersionDetails(String version) async {
     try {

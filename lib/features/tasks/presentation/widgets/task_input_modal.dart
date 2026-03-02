@@ -5,7 +5,7 @@ import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/models/date_picker_result.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
+
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/goal_selection_modal.dart';
@@ -418,11 +418,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
     bool? creationSuccess;
 
     if (isMobile) {
-      creationSuccess = await Navigator.of(context).push<bool>(
-        MaterialPageRoute(
-          builder: (context) => CreateGoalScreen(userData: widget.userData!),
-          fullscreenDialog: true,
-        ),
+      creationSuccess = await CreateGoalDialog.showAsBottomSheet(
+        context,
+        userData: widget.userData!,
       );
     } else {
       creationSuccess = await showDialog<bool>(

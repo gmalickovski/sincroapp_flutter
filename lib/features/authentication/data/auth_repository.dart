@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:sincro_app_flutter/common/constants/api_constants.dart';
+import 'package:sincro_app_flutter/services/notification_service.dart';
 
 class AuthRepository {
   final GoTrueClient _auth = Supabase.instance.client.auth;
@@ -28,7 +29,12 @@ class AuthRepository {
         email: email.trim(),
         password: password.trim(),
       );
-      // debugPrint('[AuthRepository] signIn concluído. currentUser=${response.user?.id}');
+      // Salva o token FCM para push notifications se houver sucesso
+      if (response.user != null) {
+        // Run in background so it doesn't block login UI
+        NotificationService.instance.saveDeviceFCMToken(response.user!.id);
+      }
+      // debugPrint('[AuthRepository] signIn concluído. currentUser=\${response.user?.id}');
       return response;
     } catch (e) {
       debugPrint('[AuthRepository] Erro no signIn: $e');
@@ -57,6 +63,10 @@ class AuthRepository {
       // if (response.user != null) {
       //   _notifySignup(...)
       // }
+
+      if (response.user != null) {
+        await NotificationService.instance.saveDeviceFCMToken(response.user!.id);
+      }
 
       return response;
     } catch (e) {

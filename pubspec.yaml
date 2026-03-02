@@ -100,6 +100,8 @@ dependencies:
   window_manager: ^0.5.1
   firebase_auth: any
   local_notifier: ^0.1.6
+  firebase_core: ^4.4.0
+  firebase_messaging: ^16.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

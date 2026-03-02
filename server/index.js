@@ -959,6 +959,65 @@ app.get('/api/version', async (req, res) => {
     }
 });
 
+// ====== FIREBASE PUSH & CRON JOBS ======
+const { initCronJobs } = require('./jobs/cron_jobs');
+const firebaseAdmin = require('./config/firebase_admin');
+
+initCronJobs(supabase);
+
+// Webhook for Realtime Push Notifications
+// (Triggered by Supabase DB Webhooks on `notifications` table INSERT)
+app.post('/api/webhooks/push', async (req, res) => {
+    try {
+        const payload = req.body;
+        // payload from Supabase
+        const notificationRecord = payload.record;
+
+        if (!notificationRecord || !notificationRecord.user_id) {
+            return res.status(400).json({ error: 'Payload inválido ou sem user_id' });
+        }
+
+        const userId = notificationRecord.user_id;
+        const title = notificationRecord.title || 'Nova Notificação';
+        const body = notificationRecord.body || 'Você tem uma nova atualização no SincroApp.';
+
+        // Fetch devices (FCM Tokens)
+        const { data: tokensData, error } = await supabase.schema('sincroapp')
+            .from('user_push_tokens')
+            .select('fcm_token')
+            .eq('user_id', userId);
+
+        if (error) {
+            console.error('[WEBHOOK_PUSH] Erro ao buscar tokens:', error.message);
+            return res.status(500).json({ error: 'DB Fetch failed' });
+        }
+
+        const tokens = tokensData ? tokensData.map(t => t.fcm_token) : [];
+
+        if (tokens.length > 0 && firebaseAdmin.apps.length > 0) {
+            const message = {
+                notification: { title, body },
+                data: {
+                    action: 'VIEW_NOTIFICATIONS',
+                    notification_id: String(notificationRecord.id || ''),
+                    type: String(notificationRecord.type || 'SYSTEM'),
+                },
+                tokens: tokens
+            };
+
+            const response = await firebaseAdmin.messaging().sendEachForMulticast(message);
+            console.log(`[WEBHOOK_PUSH] Enviado para ${tokens.length} tokens do usuário ${userId}. Falhas: ${response.failureCount}`);
+        } else {
+            console.log(`[WEBHOOK_PUSH] User ${userId} não possui tokens ou Firebase não instanciado. Push ignorada.`);
+        }
+
+        res.status(200).json({ success: true, message: 'Push processada.' });
+    } catch (err) {
+        console.error('[WEBHOOK_PUSH] Erro fatal:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
