@@ -120,6 +120,7 @@ class TasksListView extends StatelessWidget {
               isActive: activeTaskId != null &&
                   task.id == activeTaskId, // Pass highlight state
               onRescheduleDate: onRescheduleDate, // Pass callback
+              userData: userData, // Para cálculo dinâmico do dia pessoal
             ),
           );
         },

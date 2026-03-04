@@ -212,16 +212,19 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
-      // Se tem data especÃ­fica, usa ela
-      final dateLocal = parsedTask.dueDate!.toLocal();
-      finalDueDateUtc =
-          DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
-      dateForPersonalDay = finalDueDateUtc;
+      if (parsedTask.dueDate!.isUtc) {
+        // Já é UTC (date-only, vindo do TaskInputModal corrigido)
+        finalDueDateUtc = parsedTask.dueDate;
+      } else {
+        // DateTime local com horário — converte para UTC
+        finalDueDateUtc = parsedTask.dueDate!.toUtc();
+      }
+      dateForPersonalDay = finalDueDateUtc!;
     } else {
-      // Se nÃ£o tem data especÃ­fica, usa a data atual (nÃ£o a de amanhÃ£)
+      // Se não tem data específica, usa a data atual (não a de amanhã)
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-      // NÃƒO define finalDueDateUtc - deixa null para tarefas sem data especÃ­fica
+      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
     }
 
     // Calcula o dia pessoal usando a data determinada
@@ -519,9 +522,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                 backgroundColor: Colors.green),
           );
           _clearSelection();
-          setState(() {
-            _tasksStream = _supabaseService.getTasksStream(_userId);
-          });
+          setState(() {});
         }
       } catch (e) {
         _showErrorSnackbar("Erro ao excluir tarefas: $e");
@@ -1452,11 +1453,34 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       stream: _tasksStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(
-              child: Text('Erro ao carregar tarefas: ${snapshot.error}'));
+          debugPrint('Erro no Stream de Tarefas na FocoDoDiaScreen: ${snapshot.error}');
+          if (!snapshot.hasData || (snapshot.data as List).isEmpty) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.cloud_off, size: 48, color: AppColors.secondaryText),
+                    SizedBox(height: 16),
+                    Text(
+                      'Sem Conexão',
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Não foi possível carregar as tarefas no momento. Verifique sua conexão com a internet e tente novamente.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (snapshot.connectionState == ConnectionState.waiting && (!snapshot.hasData || (snapshot.data as List).isEmpty)) {
           return const Center(child: CustomLoadingSpinner());
         }
 

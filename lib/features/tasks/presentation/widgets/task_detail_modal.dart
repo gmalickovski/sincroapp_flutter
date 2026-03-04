@@ -29,6 +29,7 @@ class TaskDetailModal extends StatefulWidget {
   final UserModel userData;
 
   final bool isNew; // NOVO
+  final bool isMilestoneMode; // NOVO
   final VoidCallback? onClose; // Callback para modo embedado (Desktop)
   final Function(DateTime)? onReschedule; // NOVO: Callback para reagendamento
 
@@ -37,6 +38,7 @@ class TaskDetailModal extends StatefulWidget {
     required this.task,
     required this.userData,
     this.isNew = false, // Default false
+    this.isMilestoneMode = false,
     this.onClose,
     this.onReschedule,
   });
@@ -82,6 +84,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   late DateTime? _selectedDateTime;
   late RecurrenceRule _recurrenceRule;
   List<int>? _reminderOffsets;
+  bool _hasExplicitTime = false; // Rastreia se o usuário selecionou horário explícito
   List<String> _currentSharedWith = []; // NOVO
 
   final TextEditingController _tagInputController = TextEditingController();
@@ -158,8 +161,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           widget.task.reminderTime ?? const TimeOfDay(hour: 0, minute: 0);
       _selectedDateTime =
           DateTime(date.year, date.month, date.day, time.hour, time.minute);
+      // Se a tarefa já tem reminderTime definido e não é meia-noite, tem horário explícito
+      _hasExplicitTime = widget.task.reminderTime != null &&
+          (widget.task.reminderTime!.hour != 0 || widget.task.reminderTime!.minute != 0);
     } else {
       _selectedDateTime = null;
+      _hasExplicitTime = false;
     }
 
     // Calcula offset inicial do lembrete
@@ -710,7 +717,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     setState(() => _isLoading = true);
 
     int? newPersonalDay = widget.task.personalDay;
-    if (!_compareDateTimes(_selectedDateTime, _originalDateTime)) {
+    if (widget.isNew || !_compareDateTimes(_selectedDateTime, _originalDateTime)) {
       final dateForCalc = _selectedDateTime ?? widget.task.effectiveDate;
       newPersonalDay = _calculatePersonalDayForDate(dateForCalc);
       if (newPersonalDay == 0) newPersonalDay = null;
@@ -718,8 +725,17 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     DateTime? finalDueDateUtc;
     if (_selectedDateTime != null) {
-      // Salva o Datetime completo com hora, convertido para UTC
-      finalDueDateUtc = _selectedDateTime!.toUtc();
+      if (_hasExplicitTime) {
+        // Com horário explícito: converte normalmente para UTC
+        finalDueDateUtc = _selectedDateTime!.toUtc();
+      } else {
+        // Sem horário: salva como meia-noite UTC (sem offset de timezone)
+        finalDueDateUtc = DateTime.utc(
+          _selectedDateTime!.year,
+          _selectedDateTime!.month,
+          _selectedDateTime!.day,
+        );
+      }
     }
 
     DateTime? reminderAt;
@@ -846,59 +862,21 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     Future<DatePickerResult?> resultFuture;
 
-    if (isDesktop) {
-      resultFuture = showDialog<DatePickerResult>(
-        context: context,
-        builder: (modalContext) {
-          final bool isMidnight = _selectedDateTime != null &&
-              _selectedDateTime!.hour == 0 &&
-              _selectedDateTime!.minute == 0;
+    final bool isMidnight = _selectedDateTime != null &&
+        _selectedDateTime!.hour == 0 &&
+        _selectedDateTime!.minute == 0;
 
-          return Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: ScheduleTaskSheet(
-                initialDate: initialPickerDate,
-                initialRecurrence: _recurrenceRule,
-                initialTime: (_selectedDateTime != null && !isMidnight)
-                    ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
-                    : null,
-                initialReminderOffsets: _reminderOffsets,
-                userData: widget.userData,
-                goalDeadline: _selectedGoal?.targetDate,
-                isDesktop: true,
-              ),
-            ),
-          );
-        },
-      );
-    } else {
-      resultFuture = showModalBottomSheet<DatePickerResult>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (modalContext) {
-          final bool isMidnight = _selectedDateTime != null &&
-              _selectedDateTime!.hour == 0 &&
-              _selectedDateTime!.minute == 0;
-
-          return ScheduleTaskSheet(
-            initialDate: initialPickerDate,
-            initialRecurrence: _recurrenceRule,
-            initialTime: (_selectedDateTime != null && !isMidnight)
-                ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
-                : null,
-            initialReminderOffsets: _reminderOffsets,
-            userData: widget.userData,
-            goalDeadline: _selectedGoal?.targetDate,
-            isDesktop: false,
-          );
-        },
-      );
-    }
+    resultFuture = ScheduleTaskSheet.show(
+      context,
+      initialDate: initialPickerDate,
+      initialTime: (_selectedDateTime != null && !isMidnight)
+          ? TimeOfDay.fromDateTime(_selectedDateTime!.toLocal())
+          : null,
+      initialRecurrence: _recurrenceRule,
+      initialReminderOffsets: _reminderOffsets,
+      goalDeadline: _selectedGoal?.targetDate,
+      userData: widget.userData,
+    );
 
     final DatePickerResult? result = await resultFuture;
 
@@ -913,6 +891,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       if (dateTimeChanged || recurrenceChanged || reminderChanged) {
         setState(() {
           _selectedDateTime = result.dateTime?.toLocal();
+          _hasExplicitTime = result.hasTime; // Rastreia se o usuário selecionou horário
           _textController.mentionEnabled = _selectedDateTime != null;
           _recurrenceRule = result.recurrenceRule;
           _reminderOffsets = newOffsets; // Atualiza offset
@@ -1186,10 +1165,17 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : Text(widget.isNew ? 'Criar Tarefa' : 'Salvar',
+                                  strokeWidth: 2, color: Colors.white),
+                            )
+                          : Text(
+                              widget.isMilestoneMode
+                                  ? (widget.isNew ? 'Criar Marco' : 'Salvar Marco')
+                                  : (widget.isNew ? 'Criar Tarefa' : 'Salvar Tarefa'),
                               style: const TextStyle(
-                                  fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white),
+                            ),
                     ),
                   ),
                 ),
@@ -1220,8 +1206,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   @override
   Widget build(BuildContext context) {
-    final int currentPersonalDay = _calculatePersonalDayForDate(
-        _selectedDateTime ?? widget.task.effectiveDate);
+    DateTime dateForPersonalDay = widget.task.effectiveDate;
+    if (_selectedDateTime != null && !widget.isMilestoneMode) {
+      dateForPersonalDay = _selectedDateTime!;
+    } else if (widget.isMilestoneMode && widget.task.dueDate != null) {
+      dateForPersonalDay = widget.task.dueDate!;
+    }
+
+    final int currentPersonalDay = _calculatePersonalDayForDate(dateForPersonalDay);
 
     if (currentPersonalDay != _personalDay && mounted) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1233,9 +1225,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         }
       });
     }
-
-    final bool showGoal = _currentSharedWith.isEmpty;
-    final bool showContact = _selectedGoal == null && _selectedDateTime != null;
+    final bool showGoal = _currentSharedWith.isEmpty && !widget.isMilestoneMode;
+    final bool showContact = _selectedGoal == null && _selectedDateTime != null && !widget.isMilestoneMode;
 
     Widget contentBody = GestureDetector(
       onTap: () {

@@ -1,0 +1,526 @@
+﻿diff --git a/lib/features/goals/presentation/goal_detail_screen.dart b/lib/features/goals/presentation/goal_detail_screen.dart
+index 3761611..a98597e 100644
+--- a/lib/features/goals/presentation/goal_detail_screen.dart
++++ b/lib/features/goals/presentation/goal_detail_screen.dart
+@@ -21,6 +21,7 @@ import 'package:sincro_app_flutter/features/tasks/services/task_action_service.d
+ import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart';
+ import 'package:sincro_app_flutter/features/goals/presentation/widgets/image_upload_dialog.dart';
+ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_panel.dart';
++import 'package:sincro_app_flutter/features/goals/presentation/widgets/first_milestone_modal.dart';
+ 
+ import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
+ import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
+@@ -62,7 +63,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+   static const double kMaxContentWidth = 1200.0;
+ 
+   // Filter States
+-  String? _activeFilter = 'foco';
++  String? _activeFilter;
+   DateTime? _filterStartDate;
+   DateTime? _filterEndDate;
+   DateTime? _selectedDate; // Single-date filter (alinhado com FocoDoDia)
+@@ -239,6 +240,30 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+     }
+   }
+ 
++  void _showDesktopMilestoneModal(Goal goal) {
++    if (widget.userData.uid.isEmpty) return;
++
++    final newTask = TaskModel(
++      id: '',
++      text: '',
++      createdAt: DateTime.now().toUtc(),
++      journeyId: goal.id,
++      journeyTitle: goal.title,
++    );
++
++    showDialog(
++      context: context,
++      builder: (BuildContext dialogContext) {
++        return TaskDetailModal(
++          task: newTask,
++          userData: widget.userData,
++          isNew: true,
++          isMilestoneMode: true,
++        );
++      },
++    );
++  }
++
+   // Fun├º├úo para adicionar novo marco
+   void _addMilestone(Goal goal) {
+     if (widget.userData.uid.isEmpty) {
+@@ -465,30 +490,23 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+       List<String> availableTags) {
+     return SincroToolbar(
+       contentPadding: isDesktop ? EdgeInsets.zero : null,
+-      title: widget.initialGoal.title,
+-      titleTrailing: GestureDetector(
+-        behavior: HitTestBehavior.opaque,
+-        onTap: () {
+-          setState(() {
+-            _isMilestonesExpanded = !_isMilestonesExpanded;
+-          });
+-        },
+-        child: Padding(
+-          padding: const EdgeInsets.all(8.0), // Adds a nice generous hit area
+-          child: AnimatedRotation(
+-            turns: _isMilestonesExpanded
+-                ? 0.0
+-                : 0.5, // 0 = original icon orientation, 0.5 = 180 deg flip
+-            duration: const Duration(milliseconds: 300),
+-            child: const Icon(
+-              Icons
+-                  .expand_more, // When true (expanded), it points down (expand_more). When false (collapsed) it flips 180 deg to point up (expand_less)
+-              color: AppColors.secondaryText,
+-              size: 28,
+-            ),
+-          ),
+-        ),
+-      ),
++      titleTrailing: isDesktop
++          ? Tooltip(
++              message: 'Criar Marco',
++              child: ElevatedButton.icon(
++                onPressed: () => _showDesktopMilestoneModal(widget.initialGoal),
++                icon: const Icon(Icons.add),
++                label: const Text('Criar Marco'),
++                style: ElevatedButton.styleFrom(
++                  backgroundColor: AppColors.primary,
++                  foregroundColor: Colors.white,
++                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
++                  shape: RoundedRectangleBorder(
++                      borderRadius: BorderRadius.circular(12)),
++                ),
++              ),
++            )
++          : null, // Removed chevron from here, moved to Card on Mobile
+       forceDesktop: isDesktop,
+       filters: _buildFilterItems(isDesktop, availableTags),
+       isSelectionMode: _isSelectionMode,
+@@ -1060,8 +1078,26 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+             // Auto-trigger milestone creation if goal has no milestones
+             if (allMilestones.isEmpty && !_hasTriggeredFirstMilestone) {
+               _hasTriggeredFirstMilestone = true;
+-              WidgetsBinding.instance.addPostFrameCallback((_) {
+-                if (mounted) _addMilestone(currentGoal);
++              WidgetsBinding.instance.addPostFrameCallback((_) async {
++                if (!mounted) return;
++                final result = await FirstMilestoneModal.show(
++                  context,
++                  userData: widget.userData,
++                  goal: currentGoal,
++                );
++                
++                // Check if still mounted after the modal closes.
++                // If result is NOT true, it means they didn't create a milestone.
++                if (mounted && result != true) {
++                  Navigator.of(context).pop();
++                } else if (mounted && result == true) {
++                  // User created a milestone.
++                  // Rest assured the stream will emit a new list where allMilestones.isEmpty is false.
++                  // We also reset the triggered flag just in case they later delete all milestones,
++                  // or we can leave it true so it doesn't bother them again if they delete everything.
++                  // Usually, it's better to reset it if they empty it out.
++                  _hasTriggeredFirstMilestone = false;
++                }
+               });
+             }
+ 
+@@ -1257,24 +1293,31 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+                                             color: Colors.white, fontSize: 18)),
+                                     actions: [
+                                       Padding(
+-                                        padding:
+-                                            const EdgeInsets.only(right: 8.0),
++                                        padding: const EdgeInsets.only(right: 8.0),
+                                         child: SizedBox(
+                                           width: 40,
+                                           height: 40,
+-                                          child: GestureDetector(
+-                                            onTap: () {
+-                                              _assistantLayoutKey.currentState
+-                                                  ?.openAssistant();
+-                                              setState(
+-                                                  () {}); // For visual update if needed
+-                                            },
+-                                            child: const Center(
+-                                              child: AgentStarIcon(
+-                                                size: 20,
+-                                                isStatic: true,
+-                                                isHollow: false,
+-                                                isWhiteFilled: true,
++                                          child: Material(
++                                            color: Colors.transparent,
++                                            shape: const CircleBorder(),
++                                            child: InkWell(
++                                              onTap: () {
++                                                _assistantLayoutKey.currentState
++                                                    ?.openAssistant();
++                                                setState(() {});
++                                              },
++                                              customBorder: const CircleBorder(),
++                                              hoverColor: AppColors.primary
++                                                  .withValues(alpha: 0.1),
++                                              splashColor: AppColors.primary
++                                                  .withValues(alpha: 0.2),
++                                              child: const Center(
++                                                child: AgentStarIcon(
++                                                  size: 28,
++                                                  isStatic: true,
++                                                  isHollow: false,
++                                                  isWhiteFilled: true,
++                                                ),
+                                               ),
+                                             ),
+                                           ),
+@@ -1325,6 +1368,12 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+                                                   onDelete: () =>
+                                                       _handleDeleteGoal(
+                                                           currentGoal),
++                                                  isExpanded: _isMilestonesExpanded,
++                                                  onToggleExpand: () {
++                                                    setState(() {
++                                                      _isMilestonesExpanded = !_isMilestonesExpanded;
++                                                    });
++                                                  },
+                                                 ),
+                                               ),
+                                             ],
+@@ -1352,15 +1401,113 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+                                     sizeCurve: Curves.easeInOut,
+                                   ),
+ 
+-                                  // ÔöÇÔöÇÔöÇ FIXED: Toolbar ÔöÇÔöÇÔöÇ
+-                                  _buildToolbar(false, milestones, allTags),
+-
+-                                  // ÔöÇÔöÇÔöÇ SCROLLABLE: Milestones List ÔöÇÔöÇÔöÇ
++                                  // ÔöÇÔöÇÔöÇ BOTTOM SECTION: Toolbar and List ÔöÇÔöÇÔöÇ
+                                   Expanded(
+-                                    child: _buildMilestonesListWidget(
+-                                        milestones: milestones,
+-                                        horizontalPadding:
+-                                            listHorizontalPadding),
++                                    child: NotificationListener<ScrollUpdateNotification>(
++                                      onNotification: (ScrollUpdateNotification notification) {
++                                        if (notification.dragDetails != null &&
++                                            notification.dragDetails!.primaryDelta != null) {
++                                          final delta = notification.dragDetails!.primaryDelta!;
++                                          // Swipe Up -> Expand
++                                          if (delta < -5 && !_isMilestonesExpanded) {
++                                            setState(() => _isMilestonesExpanded = true);
++                                          } else if (delta > 5 && _isMilestonesExpanded && notification.metrics.pixels <= 0) {
++                                            // Swipe Down -> Collapse when at the top of the list
++                                            setState(() => _isMilestonesExpanded = false);
++                                          }
++                                        }
++                                        return false; // let the scroll continue
++                                      },
++                                      child: Column(
++                                        children: [
++                                          // ÔöÇÔöÇÔöÇ FIXED: Toolbar ÔöÇÔöÇÔöÇ
++                                          Column(
++                                            crossAxisAlignment: CrossAxisAlignment.start,
++                                            children: [
++                                              Padding(
++                                                padding: EdgeInsets.only(
++                                                    left: listHorizontalPadding,
++                                                    right: listHorizontalPadding,
++                                                    top: 0.0,
++                                                    bottom: 4.0),
++                                                child: Row(
++                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
++                                                  children: [
++                                                    Flexible(
++                                                      child: Text(
++                                                        currentGoal.title,
++                                                        style: const TextStyle(
++                                                          color: Colors.white,
++                                                          fontSize: 20,
++                                                          fontWeight: FontWeight.bold,
++                                                        ),
++                                                        maxLines: 1,
++                                                        overflow: TextOverflow.ellipsis,
++                                                      ),
++                                                    ),
++                                                    if (MediaQuery.of(context).size.width < kDesktopBreakpoint)
++                                                      Material(
++                                                        color: Colors.transparent,
++                                                        child: InkWell(
++                                                          customBorder: const CircleBorder(),
++                                                          onTap: () {
++                                                            setState(() {
++                                                              _isMilestonesExpanded = !_isMilestonesExpanded;
++                                                            });
++                                                          },
++                                                          splashColor: Colors.transparent,
++                                                          highlightColor: Colors.transparent,
++                                                          hoverColor: AppColors.primary.withValues(alpha: 0.1),
++                                                          child: Padding(
++                                                            padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
++                                                            child: Icon(
++                                                              _isMilestonesExpanded ? Icons.expand_more : Icons.expand_less, 
++                                                              color: AppColors.secondaryText,
++                                                              size: 20,
++                                                            ),
++                                                          ),
++                                                        ),
++                                                      ),
++                                                    const Spacer(),
++                                                    TextButton.icon(
++                                                      onPressed: () => _addMilestone(currentGoal),
++                                                      icon: const Icon(Icons.add_circle_outline, size: 18),
++                                                      label: const Text('Criar Marco'),
++                                                      style: TextButton.styleFrom(
++                                                        foregroundColor: AppColors.primaryText,
++                                                        textStyle: const TextStyle(
++                                                          fontFamily: 'Poppins',
++                                                          fontSize: 14,
++                                                          fontWeight: FontWeight.w500,
++                                                        ),
++                                                      ),
++                                                    ),
++                                                  ],
++                                                ),
++                                              ),
++                                              GestureDetector(
++                                                behavior: HitTestBehavior.opaque,
++                                                onVerticalDragUpdate: (details) {
++                                                  if (details.primaryDelta! < -5 && !_isMilestonesExpanded) {
++                                                    setState(() => _isMilestonesExpanded = true);
++                                                  } else if (details.primaryDelta! > 5 && _isMilestonesExpanded) {
++                                                    setState(() => _isMilestonesExpanded = false);
++                                                  }
++                                                },
++                                                child: _buildToolbar(false, milestones, allTags),
++                                              ),
++                                            ],
++                                          ),
++                                          
++                                          // ÔöÇÔöÇÔöÇ SCROLLABLE: Milestones List ÔöÇÔöÇÔöÇ
++                                          Expanded(
++                                            child: _buildMilestonesListWidget(
++                                                milestones: milestones,
++                                                horizontalPadding: listHorizontalPadding),
++                                          ),
++                                        ],
++                                      ),
++                                    ),
+                                   ),
+                                 ],
+                               ),
+@@ -1375,17 +1522,19 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+                       ],
+                     ),
+                   ),
+-                  floatingActionButton: TransparentFabWrapper(
+-                    controller: _fabOpacityController,
+-                    child: FloatingActionButton(
+-                      onPressed: () => _addMilestone(currentGoal),
+-                      backgroundColor: AppColors.primary,
+-                      tooltip: 'Novo Marco',
+-                      heroTag: 'fab_goal_detail',
+-                      shape: const CircleBorder(),
+-                      child: const Icon(Icons.add, color: Colors.white),
+-                    ),
+-                  ),
++                  floatingActionButton: MediaQuery.of(context).size.width >= kDesktopBreakpoint
++                      ? null
++                      : TransparentFabWrapper(
++                          controller: _fabOpacityController,
++                          child: FloatingActionButton(
++                            onPressed: () => _addMilestone(currentGoal),
++                            backgroundColor: AppColors.primary,
++                            tooltip: 'Novo Marco',
++                            heroTag: 'fab_goal_detail',
++                            shape: const CircleBorder(),
++                            child: const Icon(Icons.add, color: Colors.white),
++                          ),
++                        ),
+                 ));
+           },
+         );
+@@ -1519,6 +1668,35 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
+         leading: const BackButton(color: AppColors.primary),
+         title: const Text('Jornadas',
+             style: TextStyle(color: Colors.white, fontSize: 18)),
++        actions: [
++          Padding(
++            padding: const EdgeInsets.only(right: 8.0),
++            child: SizedBox(
++              width: 40,
++              height: 40,
++              child: Material(
++                color: Colors.transparent,
++                shape: const CircleBorder(),
++                child: InkWell(
++                  onTap: () {
++                    setState(() => _isAiSidebarOpen = !_isAiSidebarOpen);
++                  },
++                  customBorder: const CircleBorder(),
++                  hoverColor: AppColors.primary.withValues(alpha: 0.1),
++                  splashColor: AppColors.primary.withValues(alpha: 0.2),
++                  child: const Center(
++                    child: AgentStarIcon(
++                      size: 28,
++                      isStatic: true,
++                      isHollow: false,
++                      isWhiteFilled: true,
++                    ),
++                  ),
++                ),
++              ),
++            ),
++          ),
++        ],
+       ),
+       body: Center(
+         child: ConstrainedBox(
+@@ -1652,10 +1830,12 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
+ 
+   @override
+   Widget build(BuildContext context) {
+-    return MouseRegion(
+-      onEnter: (_) => setState(() => _isHovering = true),
+-      onExit: (_) => setState(() => _isHovering = false),
+-      child: AnimatedContainer(
++    return GestureDetector(
++      onTap: widget.onEdit,
++      child: MouseRegion(
++        onEnter: (_) => setState(() => _isHovering = true),
++        onExit: (_) => setState(() => _isHovering = false),
++        child: AnimatedContainer(
+         duration: const Duration(milliseconds: 200),
+         padding: const EdgeInsets.all(24),
+         decoration: BoxDecoration(
+@@ -1782,44 +1962,11 @@ class _CircularGoalInfoCardState extends State<_CircularGoalInfoCard> {
+                 ),
+               ],
+             ),
+-            // Menu Button (Absolute Top Right)
+-            Positioned(
+-              top: -10, // Adjust to move higher
+-              right: -10, // Adjust to move right
+-              child: PopupMenuButton<String>(
+-                icon:
+-                    const Icon(Icons.more_vert, color: AppColors.secondaryText),
+-                color: AppColors.cardBackground,
+-                onSelected: (value) {
+-                  if (value == 'edit') widget.onEdit();
+-                  if (value == 'delete') widget.onDelete();
+-                },
+-                itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+-                  const PopupMenuItem<String>(
+-                    value: 'edit',
+-                    child: ListTile(
+-                      leading: Icon(Icons.edit, color: Colors.white),
+-                      title:
+-                          Text('Editar', style: TextStyle(color: Colors.white)),
+-                      contentPadding: EdgeInsets.zero,
+-                    ),
+-                  ),
+-                  const PopupMenuItem<String>(
+-                    value: 'delete',
+-                    child: ListTile(
+-                      leading: Icon(Icons.delete, color: Colors.redAccent),
+-                      title: Text('Excluir',
+-                          style: TextStyle(color: Colors.redAccent)),
+-                      contentPadding: EdgeInsets.zero,
+-                    ),
+-                  ),
+-                ],
+-              ),
+-            ),
+           ],
+         ),
+       ),
+-    );
++    ),
++  );
+   }
+ }
+ 
+@@ -1830,12 +1977,16 @@ class _CollapsibleGoalInfoCard extends StatefulWidget {
+   final int progress;
+   final VoidCallback onEdit;
+   final VoidCallback onDelete;
++  final bool isExpanded;
++  final VoidCallback onToggleExpand;
+ 
+   const _CollapsibleGoalInfoCard({
+     required this.goal,
+     required this.progress,
+     required this.onEdit,
+     required this.onDelete,
++    required this.isExpanded,
++    required this.onToggleExpand,
+   });
+ 
+   @override
+@@ -1884,36 +2035,43 @@ class _CollapsibleGoalInfoCardState extends State<_CollapsibleGoalInfoCard> {
+             mainAxisSize: MainAxisSize.max, // Fill parent
+             crossAxisAlignment: CrossAxisAlignment.start,
+             children: [
+-              // Header: Title
+-              Column(
++              // Header: Title + Chevron Button
++              Row(
+                 crossAxisAlignment: CrossAxisAlignment.start,
+                 children: [
+-                  Text(
+-                    widget.goal.title,
+-                    style: const TextStyle(
+-                      color: Colors.white,
+-                      fontSize: 16,
+-                      fontWeight: FontWeight.bold,
++                  Expanded(
++                    child: Column(
++                      crossAxisAlignment: CrossAxisAlignment.start,
++                      children: [
++                        Text(
++                          widget.goal.title,
++                          style: const TextStyle(
++                            color: Colors.white,
++                            fontSize: 16,
++                            fontWeight: FontWeight.bold,
++                          ),
++                          maxLines: 1,
++                          overflow: TextOverflow.ellipsis,
++                        ),
++                        if (widget.goal.description.isNotEmpty) ...[
++                          const SizedBox(height: 4),
++                          Text(
++                            widget.goal.description,
++                            style: const TextStyle(
++                              color: AppColors.secondaryText,
++                              fontSize: 13,
++                            ),
++                            maxLines: 1,
++                            overflow: TextOverflow.ellipsis,
++                          ),
++                        ],
++                      ],
+                     ),
+-                    maxLines: 1,
+-                    overflow: TextOverflow.ellipsis,
+                   ),
+-                  if (widget.goal.description.isNotEmpty) ...[
+-                    const SizedBox(height: 4),
+-                    Text(
+-                      widget.goal.description,
+-                      style: const TextStyle(
+-                        color: AppColors.secondaryText,
+-                        fontSize: 13,
+-                      ),
+-                      maxLines: 1,
+-                      overflow: TextOverflow.ellipsis,
+-                    ),
+-                  ],
+                 ],
+               ),
+ 
+-              const SizedBox(height: 32), // Spacer + more height
++              const Spacer(), // Pushes footer to the bottom
+ 
+               // Footer: Date + Percent + Progress Bar
+               Row(

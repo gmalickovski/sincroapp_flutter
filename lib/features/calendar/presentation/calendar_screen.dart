@@ -313,10 +313,14 @@ class _CalendarScreenState extends State<CalendarScreen> {
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
-      final dateLocal = parsedTask.dueDate!.toLocal();
-      finalDueDateUtc =
-          DateTime.utc(dateLocal.year, dateLocal.month, dateLocal.day);
-      dateForPersonalDay = finalDueDateUtc;
+      if (parsedTask.dueDate!.isUtc) {
+        // Já é UTC (date-only, vindo do TaskInputModal corrigido)
+        finalDueDateUtc = parsedTask.dueDate;
+      } else {
+        // DateTime local com horário — converte para UTC
+        finalDueDateUtc = parsedTask.dueDate!.toUtc();
+      }
+      dateForPersonalDay = finalDueDateUtc!;
     } else {
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);

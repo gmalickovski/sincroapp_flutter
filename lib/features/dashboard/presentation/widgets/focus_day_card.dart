@@ -212,6 +212,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
             // Callbacks de Swipe
             onSwipeLeft: widget.onDeleteTask,
             onSwipeRight: widget.onRescheduleTask,
+            userData: widget.userData,
           ),
         );
       }).toList(),

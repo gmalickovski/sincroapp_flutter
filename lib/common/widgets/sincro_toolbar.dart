@@ -155,7 +155,7 @@ class _SincroToolbarState extends State<SincroToolbar> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Flexible(
+                    Expanded(
                       child: Text(
                         widget.title!,
                         style: TextStyle(

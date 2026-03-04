@@ -34,6 +34,57 @@ class ScheduleTaskSheet extends StatefulWidget {
     this.isDesktop = false,
   });
 
+  static Future<DatePickerResult?> show(
+    BuildContext context, {
+    DateTime? initialDate,
+    TimeOfDay? initialTime,
+    RecurrenceRule? initialRecurrence,
+    DateTime? initialReminder,
+    List<int>? initialReminderOffsets,
+    DateTime? goalDeadline,
+    required UserModel userData,
+  }) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= 768;
+    if (isDesktop) {
+      return showDialog<DatePickerResult>(
+        context: context,
+        builder: (ctx) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: ScheduleTaskSheet(
+              initialDate: initialDate,
+              initialTime: initialTime,
+              initialRecurrence: initialRecurrence,
+              initialReminder: initialReminder,
+              initialReminderOffsets: initialReminderOffsets,
+              goalDeadline: goalDeadline,
+              userData: userData,
+              isDesktop: true,
+            ),
+          ),
+        ),
+      );
+    } else {
+      return showModalBottomSheet<DatePickerResult>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => ScheduleTaskSheet(
+          initialDate: initialDate,
+          initialTime: initialTime,
+          initialRecurrence: initialRecurrence,
+          initialReminder: initialReminder,
+          initialReminderOffsets: initialReminderOffsets,
+          goalDeadline: goalDeadline,
+          userData: userData,
+          isDesktop: false,
+        ),
+      );
+    }
+  }
+
   @override
   State<ScheduleTaskSheet> createState() => _ScheduleTaskSheetState();
 }

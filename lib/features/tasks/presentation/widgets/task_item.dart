@@ -3,6 +3,8 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
 class TaskItem extends StatelessWidget {
   final TaskModel task;
@@ -22,6 +24,7 @@ class TaskItem extends StatelessWidget {
   final bool isActive; // Novo parâmetro para indicar item ativo (desktop)
   final Function(TaskModel, DateTime)?
       onRescheduleDate; // NOVO: Callback para menu
+  final UserModel? userData; // Para cálculo dinâmico do dia pessoal em tarefas perpétuas
   // --- FIM DA MUDANÇA ---
 
   // Props de layout (mantidos por enquanto, mas isCompact pode ser obsoleto)
@@ -45,6 +48,7 @@ class TaskItem extends StatelessWidget {
     this.onTaskSelected, // Não é mais 'required'
     this.isActive = false, // Novo parâmetro
     this.onRescheduleDate, // Callback para ações do menu
+    this.userData, // Para cálculo dinâmico do dia pessoal
     // --- FIM DA MUDANÇA ---
     // Props de layout
     this.isCompact = false,
@@ -211,9 +215,26 @@ class TaskItem extends StatelessWidget {
     // Usa hasDeadline em vez de _isNotToday para que sempre apareça o ícone se tiver data de vencimento
     final bool shouldShowDateIcon = task.hasDeadline &&
         !isRecurrent; // Só mostra data se NÃO for recorrente
+    // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
+    int? effectivePersonalDay = task.personalDay;
+    if (task.dueDate == null && userData != null &&
+        userData!.nomeAnalise.isNotEmpty && userData!.dataNasc.isNotEmpty) {
+      // Tarefa perpétua: calcula dia pessoal baseado na data de hoje
+      try {
+        final engine = NumerologyEngine(
+          nomeCompleto: userData!.nomeAnalise,
+          dataNascimento: userData!.dataNasc,
+        );
+        final now = DateTime.now();
+        final todayUtc = DateTime.utc(now.year, now.month, now.day);
+        final day = engine.calculatePersonalDayForDate(todayUtc);
+        if (day > 0) effectivePersonalDay = day;
+      } catch (_) {}
+    }
+
     final bool shouldShowPill = showVibrationPillFlag &&
-        task.personalDay != null &&
-        task.personalDay! > 0;
+        effectivePersonalDay != null &&
+        effectivePersonalDay > 0;
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
     // Flag para ícone de foco (tarefas sem data marcadas como foco)
@@ -433,7 +454,7 @@ class TaskItem extends StatelessWidget {
                                 : 0,
                           ),
                           child: VibrationPill(
-                            vibrationNumber: task.personalDay!,
+                            vibrationNumber: effectivePersonalDay!,
                             type: VibrationPillType.compact,
                           ),
                         ),

@@ -478,18 +478,14 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     RecurrenceRule ruleToPass = _selectedRecurrenceRule;
 
-    showModalBottomSheet<DatePickerResult>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => ScheduleTaskSheet(
-        initialDate: _selectedDate,
-        initialTime: _selectedTime,
-        initialRecurrence: ruleToPass,
-        userData: widget.userData!,
-        goalDeadline: _selectedGoalDeadline,
-        initialReminderOffsets: _selectedReminderOffsets,
-      ),
+    ScheduleTaskSheet.show(
+      context,
+      initialDate: _selectedDate,
+      initialTime: _selectedTime,
+      initialRecurrence: ruleToPass,
+      userData: widget.userData!,
+      goalDeadline: _selectedGoalDeadline,
+      initialReminderOffsets: _selectedReminderOffsets,
     ).then((result) {
       if (result != null) {
         final selectedDateTime = result.dateTime;
@@ -560,9 +556,31 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ...textParseResult.sharedWith
     };
 
+    // Constrói dueDate correto: UTC midnight se sem horário, ou data+horário local se com horário
+    DateTime? finalDueDate;
+    if (_selectedDate != null) {
+      if (_selectedTime != null) {
+        // Com horário: cria DateTime local com data+hora (será convertido para UTC pelo consumer)
+        finalDueDate = DateTime(
+          _selectedDate!.year,
+          _selectedDate!.month,
+          _selectedDate!.day,
+          _selectedTime!.hour,
+          _selectedTime!.minute,
+        );
+      } else {
+        // Sem horário: UTC midnight direto (sem offset de timezone)
+        finalDueDate = DateTime.utc(
+          _selectedDate!.year,
+          _selectedDate!.month,
+          _selectedDate!.day,
+        );
+      }
+    }
+
     final ParsedTask finalParsedTask = textParseResult
         .copyWith(
-          dueDate: _selectedDate,
+          dueDate: finalDueDate,
           reminderTime: _selectedTime,
           recurrenceRule: _selectedRecurrenceRule,
           tags: mergedTags.toList(),

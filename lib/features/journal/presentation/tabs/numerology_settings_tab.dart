@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/firestore_service.dart';
+import 'package:sincro_app_flutter/services/supabase_service.dart';
 
 class NumerologySettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -15,7 +15,7 @@ class NumerologySettingsTab extends StatefulWidget {
 }
 
 class _NumerologySettingsTabState extends State<NumerologySettingsTab> {
-  final _firestoreService = FirestoreService();
+  final _firestoreService = SupabaseService();
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _analysisNameController;
   late TextEditingController _birthDateController;

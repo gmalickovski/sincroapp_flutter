@@ -12,6 +12,7 @@ class ParserInputField extends StatefulWidget {
   final String hintText;
   final Function(String) onSubmitted;
   final int? maxLines;
+  final int? minLines;
   final InputDecoration? decoration;
   final TextStyle? style;
   final TextCapitalization textCapitalization;
@@ -37,6 +38,7 @@ class ParserInputField extends StatefulWidget {
     this.hintText = '',
     required this.onSubmitted,
     this.maxLines = 1,
+    this.minLines,
     this.decoration,
     this.style,
     this.textCapitalization = TextCapitalization.none,
@@ -338,6 +340,7 @@ class _ParserInputFieldState extends State<ParserInputField> {
         focusNode: widget.focusNode,
         autofillHints: const [],
         maxLines: widget.maxLines,
+        minLines: widget.minLines,
         keyboardType: widget.keyboardType ??
             (widget.maxLines == 1
                 ? TextInputType.text
