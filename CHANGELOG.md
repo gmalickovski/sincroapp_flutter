@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.4...v1.6.5) (2026-03-04)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement comprehensive task and goal management with advanced input parsing, user mentions, and dedicated UI screens and modals. ([24057b3](https://github.com/gmalickovski/sincroapp_flutter/commit/24057b3d1c1cfc02a0a63cfbe980fb09c3e14fd5))
+
 ### [1.6.4](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.3...v1.6.4) (2026-03-02)
 
 
