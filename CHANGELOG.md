@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.6](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.5...v1.6.6) (2026-03-05)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement Journal, Goals, and Assistant features, including journal entry filtering, multi-selection, and deletion. ([538c964](https://github.com/gmalickovski/sincroapp_flutter/commit/538c964c22b050534a24308e64b6952c054892e6))
+
 ### [1.6.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.4...v1.6.5) (2026-03-04)
 
 
