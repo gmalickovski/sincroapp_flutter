@@ -2,16 +2,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
 import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
-import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:sincro_app_flutter/core/services/navigation_service.dart';
-import 'package:sincro_app_flutter/common/parser/task_parser.dart';
-import 'package:sincro_app_flutter/services/harmony_service.dart'; // 🚀 Import
+
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -81,177 +77,21 @@ class AssistantService {
   static Future<AssistantAnswer> ask({
     required String question,
     required UserModel user,
-    required NumerologyResult numerology,
-    required List<TaskModel> tasks,
-    required List<Goal> goals,
-    required List<JournalEntry> recentJournal,
     List<AssistantMessage> chatHistory = const [],
-    String? activeContext, // New parameter
   }) async {
-    final isFirstOfDay = _isFirstMessageOfDay();
-
-    // 1. Get Current Context (Page Awareness)
-    final currentRoute = NavigationService.currentRoute;
-    final routeArgs = NavigationService.routeArguments;
-
-    // 2. Parse Mentions using TaskParser
-    final parsed = TaskParser.parse(question);
-
-    // Construct Mentions list for N8n
-    // 3. Build Rich Context Data
-    final mentionsList = <Map<String, dynamic>>[];
-    final harmonyService = HarmonyService();
-    final dateFormat = DateFormat('dd/MM/yyyy');
-
-    // Process Contacts (@Mentions)
-    for (var contactName in parsed.sharedWith) {
-      final Map<String, dynamic> mentionData = {
-        'type': 'contact',
-        'id': contactName, // In real app, this would be a UUID
-        'label': '@$contactName',
-      };
-
-      try {
-        // TODO: Replace with real ContactService lookup
-        // Mocking birthdate for demonstration.
-        // In production, fetch: await contactService.getByName(contactName)
-        final contactBirthDate = DateTime(1990, 5, 20);
-
-        // Current User Date
-        DateTime? userBirthDate;
-        try {
-          userBirthDate = dateFormat.parse(user.dataNasc);
-        } catch (_) {}
-
-        if (userBirthDate != null) {
-          // Current User Profile
-          final userProfile =
-              numerology; // Already calculated and passed in args
-
-          // Contact Profile
-          final contactEngine = NumerologyEngine(
-              nomeCompleto: contactName,
-              dataNascimento: dateFormat.format(contactBirthDate));
-          final contactProfile = contactEngine.calculateProfile();
-
-          // 1. Calculate Synastry
-          final synastry = harmonyService.calculateSynastry(
-              profileA: userProfile, profileB: contactProfile);
-
-          // 2. Calculate Today's Compatibility
-          final todayScore = harmonyService.calculateCompatibilityScore(
-              date: DateTime.now(),
-              birthDateA: userBirthDate,
-              birthDateB: contactBirthDate);
-
-          // 3. Find Next Best Dates
-          final nextDates = harmonyService.findNextCompatibleDates(
-              startDate: DateTime.now().add(const Duration(days: 1)),
-              birthDateA: userBirthDate,
-              birthDateB: contactBirthDate,
-              limit: 3);
-
-          mentionData['compatibility'] = {
-            'synastryScore': synastry['score'],
-            'status': synastry['status'],
-            'description': synastry['description'],
-            'todayScore': double.parse(todayScore.toStringAsFixed(2)),
-            'isFavorableToday': todayScore > 0.6,
-            'nextBestDates': nextDates
-                .map((d) => DateFormat('yyyy-MM-dd').format(d))
-                .toList(),
-          };
-        }
-      } catch (e) {
-        debugPrint('Error calculating compatibility for @$contactName: $e');
-      }
-      mentionsList.add(mentionData);
-    }
-
-    // Process Goals (!Mentions)
-    for (var goal in parsed.goals) {
-      mentionsList.add({'type': 'goal', 'id': goal, 'label': '!$goal'});
-    }
-
-    // Calculate Personal Year/Day manually to ensure it's in the payload
-    int anoPessoalVal = 0;
-    int diaPessoalVal = 0;
-    try {
-      final dob = dateFormat.parse(user.dataNasc);
-      final today = DateTime.now();
-
-      // Personal Day (using static helper)
-      diaPessoalVal =
-          NumerologyEngine.calculatePersonalDay(today, user.dataNasc);
-
-      // Personal Year (Logic replicated to ensure availability)
-      final anniversaryCurrentYear = DateTime(today.year, dob.month, dob.day);
-      final calcYear =
-          today.isBefore(anniversaryCurrentYear) ? today.year - 1 : today.year;
-
-      // Simple reduce function
-      int reduce(int n) {
-        n = n.abs();
-        if (n == 0) return 0;
-        while (n > 9) {
-          int sum = 0;
-          while (n > 0) {
-            sum += n % 10; // Sum digits
-            n ~/= 10;
-          }
-          n = sum;
-        }
-        return n;
-      }
-
-      anoPessoalVal = reduce(dob.day + dob.month + calcYear);
-    } catch (e) {
-      debugPrint('Error calculating personal dates for payload: $e');
-    }
-
-    // 3. Compact Context Payload (Optimized for Llama 3.1 & Token Usage)
-    final compactNumerology = {
-      'numeros':
-          numerology.numeros, // Key numbers (Life Path, Expression, etc.)
-      'listas': {
-        'diasFavoraveis': numerology.listas['diasFavoraveis'],
-        'licoesCarmicas': numerology.listas['licoesCarmicas'],
-        'debitosCarmicos': numerology.listas['debitosCarmicos'],
-        'tendenciasOcultas': numerology.listas['tendenciasOcultas'],
-      },
-      'estruturas': {
-        'anoPessoal': anoPessoalVal,
-        'diaPessoal': diaPessoalVal,
-      }
-    };
-
+    // Build simplified context payload
+    final now = DateTime.now();
     final contextData = {
       'user': {
         'primeiroNome': user.primeiroNome,
-        'sobrenome': user.sobrenome,
+        'gender': user.gender,
         'dataNasc': user.dataNasc,
-        'plan': user
-            .subscription.plan.name, // Fix: Use .name for Enum serialization
-        'gender': user.gender, // 📌 Added Gender
       },
-      'currentDate': DateTime.now().toLocal().toIso8601String(),
-      'currentTime': DateFormat('HH:mm').format(DateTime.now()),
-      'currentWeekDay': DateFormat('EEEE', 'pt_BR').format(DateTime.now()),
-      'numerology': compactNumerology, // 🚀 Optimized Payload
-      'tasks': tasks
-          .map((t) => {
-                'id': t.id,
-                'title': t.text,
-                'date': t.dueDate?.toIso8601String(),
-                'status': t.completed ? 'done' : 'pending'
-              })
-          .toList(),
-      'goals': goals.map((g) => {'id': g.id, 'title': g.title}).toList(),
-      'mentions': mentionsList,
-      // 🚀 CTX: Chat History for Conversational Awareness
+      'currentDate': now.toUtc().toIso8601String(),
+      'currentWeekDay': DateFormat('EEEE', 'pt_BR').format(now),
+      'currentTime': DateFormat('HH:mm').format(now),
       'previous_messages': chatHistory
-          .take(
-              6) // Limit to last 6 messages to save tokens but keep immediate context
+          .take(6)
           .map((m) => {
                 'role': m.role,
                 'content': m.content,
@@ -259,7 +99,6 @@ class AssistantService {
           .toList(),
     };
 
-    // 4. Serialize (Clean Map)
     final payload = {
       'question': question,
       'context': contextData,
@@ -349,29 +188,6 @@ class AssistantService {
           actions: []);
     }
 
-    // 🚀 FIX: Auto-Create Action if suggestedDates exist but actions is empty
-    if (data['suggestedDates'] is List &&
-        (data['suggestedDates'] as List).isNotEmpty) {
-      final hasActions =
-          data['actions'] is List && (data['actions'] as List).isNotEmpty;
-
-      if (!hasActions) {
-        // Create synthetic action
-        final syntheticAction = {
-          'type': 'create_task',
-          'title': 'Agendar Sugestão',
-          'needsUserInput': true,
-          'suggestedDates': data['suggestedDates'],
-          'data': {'isSynthetic': true}
-        };
-
-        if (data['actions'] == null) {
-          data['actions'] = [syntheticAction];
-        } else {
-          (data['actions'] as List).add(syntheticAction);
-        }
-      }
-    }
 
     return AssistantAnswer.fromJson(data);
   }

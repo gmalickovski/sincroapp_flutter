@@ -9,7 +9,7 @@ import 'package:sincro_app_flutter/common/parser/parser_popup.dart';
 import 'package:sincro_app_flutter/features/assistant/presentation/widgets/action_proposal_bubble.dart'; // Action Bubble
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // NEW: For direct Supabase calls
-import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
+
 import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
@@ -85,7 +85,6 @@ class _AssistantPanelState extends State<AssistantPanel>
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
   final _supabase = SupabaseService();
-  final _speechService = SpeechService();
   final _harmonyService = HarmonyService();
   final _inputFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {};
@@ -95,9 +94,9 @@ class _AssistantPanelState extends State<AssistantPanel>
   List<AssistantMessage> _messages = [];
   bool _isLoading = false;
   bool _isSending = false;
-  bool _isListening = false;
   bool _isInputEmpty = true;
-  String _textBeforeListening = '';
+  bool _isInputHovered = false;
+  bool _isSendHovered = false;
 
   // Mentions State
   OverlayEntry? _mentionsOverlay;
@@ -117,7 +116,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     _sheetController =
         DraggableScrollableController(); // Fix: Initialize to prevent late error on dispose
     _loadHistory();
-    _speechService.init();
 
     _controller.addListener(_updateInputState); // Existing listener
     _controller.addListener(_checkMentions); // 🚀 New Listener for Mentions
@@ -356,17 +354,6 @@ class _AssistantPanelState extends State<AssistantPanel>
       final answer = await AssistantService.ask(
         question: text,
         user: widget.userData,
-        numerology: widget.numerologyData ??
-            NumerologyEngine(
-                    nomeCompleto: widget.userData.nomeAnalise.isNotEmpty
-                        ? widget.userData.nomeAnalise
-                        : "${widget.userData.primeiroNome} ${widget.userData.sobrenome}",
-                    dataNascimento: widget.userData.dataNasc)
-                .calculateProfile(),
-        tasks: [], // TODO: Inject TaskProvider or similar
-        goals: [], // TODO: Inject GoalProvider
-        recentJournal: [], // TODO: Inject JournalProvider
-        activeContext: widget.activeContext, // Pass context
       );
 
       final assistantMsg = AssistantMessage(
@@ -486,38 +473,7 @@ class _AssistantPanelState extends State<AssistantPanel>
     }
   }
 
-  // --- Speech Logic ---
-  void _onMicPressed() async {
-    if (!_isListening) {
-      bool available = await _speechService.init();
-      if (available) {
-        setState(() {
-          _isListening = true;
-          _textBeforeListening = _controller.text;
-        });
-        _speechService.start(
-          onResult: (text) {
-            if (mounted) {
-              _controller.text = "$_textBeforeListening $text"; // Append
-            }
-          },
-        );
-      } else {
-        // Show error
-      }
-    } else {
-      _stopListening();
-    }
-  }
 
-  void _stopListening() async {
-    await _speechService.stop();
-    if (mounted) {
-      setState(() {
-        _isListening = false;
-      });
-    }
-  }
 
   @override
   @override
@@ -876,30 +832,24 @@ class _AssistantPanelState extends State<AssistantPanel>
       ),
       child: SafeArea(
         top: false,
-        child: IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // --- Text Field (expands to fill available width) ---
+            Expanded(
+              child: MouseRegion(
+                onEnter: (_) => setState(() => _isInputHovered = true),
+                onExit: (_) => setState(() => _isInputHovered = false),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     color: AppColors.cardBackground,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: _inputFocusNode.hasFocus
-                            ? AppColors.primary.withValues(alpha: 0.2)
-                            : Colors.black.withValues(alpha: 0.2),
-                        blurRadius: _inputFocusNode.hasFocus ? 16 : 10,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
                     border: Border.all(
-                      color: _inputFocusNode.hasFocus
+                      color: (_inputFocusNode.hasFocus || _isInputHovered)
                           ? AppColors.primary.withValues(alpha: 0.8)
                           : Colors.white.withValues(alpha: 0.1),
-                      width: _inputFocusNode.hasFocus ? 1.5 : 1.0,
+                      width: (_inputFocusNode.hasFocus || _isInputHovered) ? 1.5 : 1.0,
                     ),
                   ),
                   child: Row(
@@ -916,7 +866,7 @@ class _AssistantPanelState extends State<AssistantPanel>
                           obscureText: false,
                           enableSuggestions: true,
                           autocorrect: true,
-                          autofillHints: const [], // Prevent browser password save prompt
+                          autofillHints: const [],
                           style: const TextStyle(
                               color: Colors.white, fontSize: 15),
                           decoration: const InputDecoration(
@@ -934,57 +884,71 @@ class _AssistantPanelState extends State<AssistantPanel>
                           onSubmitted: (_) => _send(),
                         ),
                       ),
+                      const SizedBox(width: 12),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              GestureDetector(
-                onTap:
-                    _isInputEmpty ? _onMicPressed : (_isSending ? null : _send),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  width: 48,
-                  constraints: const BoxConstraints(minHeight: 48),
-                  decoration: BoxDecoration(
-                    gradient: _isListening
-                        ? const LinearGradient(
-                            colors: [Colors.redAccent, Colors.red])
-                        : const LinearGradient(colors: [
-                            AppColors.primary,
-                            AppColors.primaryAccent
-                          ]),
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: (_isListening
-                                ? Colors.red
-                                : AppColors.primaryAccent)
-                            .withValues(alpha: 0.4),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
-                      )
-                    ],
-                  ),
-                  child: Center(
-                    child: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                                color: Colors.white, strokeWidth: 2))
-                        : Icon(
-                            _isInputEmpty
-                                ? (_isListening ? Icons.stop : Icons.mic)
-                                : Icons.arrow_upward_rounded,
-                            color: Colors.white,
-                            size: 24,
+            ),
+
+            // --- Animated Send Button ---
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: Alignment.centerRight,
+              child: _isInputEmpty && !_isSending
+                  ? const SizedBox.shrink()
+                  : Padding(
+                      padding: const EdgeInsets.only(left: 12),
+                      child: MouseRegion(
+                        onEnter: (_) => setState(() => _isSendHovered = true),
+                        onExit: (_) => setState(() => _isSendHovered = false),
+                        child: GestureDetector(
+                          onTap: _isSending ? null : _send,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [
+                                AppColors.primary,
+                                AppColors.primaryAccent,
+                              ]),
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.primaryAccent.withValues(
+                                      alpha: _isSendHovered ? 0.6 : 0.3),
+                                  blurRadius: _isSendHovered ? 14 : 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: _isSending
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2))
+                                  : AnimatedScale(
+                                      scale: _isSendHovered ? 1.15 : 1.0,
+                                      duration:
+                                          const Duration(milliseconds: 150),
+                                      child: const Icon(
+                                        Icons.arrow_upward_rounded,
+                                        color: Colors.white,
+                                        size: 24,
+                                      ),
+                                    ),
+                            ),
                           ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+                        ),
+                      ),
+                    ),
+            ),
+          ],
         ),
       ),
     );
@@ -1252,12 +1216,20 @@ class ChatMessageItem extends StatelessWidget {
   // Item de tarefa inline no chat (simplificado do TaskItem)
   Widget _buildInlineTaskItem(
       BuildContext context, Map<String, dynamic> taskData) {
-    final text = taskData['text'] ?? 'Sem título';
+    final text = taskData['text'] ?? taskData['title'] ?? 'Sem título';
     final personalDay = taskData['personal_day'];
     final journeyTitle = taskData['journey_title'];
     final isOverdue = taskData['is_overdue'] == true;
     final completed = taskData['completed'] == true;
-    final dateFormatted = taskData['date_formatted'] ?? '';
+
+    // Generate date_formatted from due_date if not provided
+    String dateFormatted = taskData['date_formatted'] ?? '';
+    if (dateFormatted.isEmpty && taskData['due_date'] != null) {
+      final dueDate = DateTime.tryParse(taskData['due_date'].toString());
+      if (dueDate != null) {
+        dateFormatted = DateFormat('dd/MM', 'pt_BR').format(dueDate);
+      }
+    }
     final recurrenceType =
         taskData['recurrence_type']?.toString().toLowerCase() ?? 'none';
     // [FIX] Strict check for recurrence to avoid showing icon for 'none', 'null' or empty

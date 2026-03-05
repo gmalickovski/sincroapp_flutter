@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/features/assistant/services/speech_service.dart';
+
 
 class ExpandingAssistantFab extends StatefulWidget {
   final VoidCallback?
@@ -43,9 +43,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
 
-  // Speech
-  final SpeechService _speechService = SpeechService();
-  bool _isListening = false;
+
 
   bool _expanded = false;
   bool _isSimpleButton = false;
@@ -70,16 +68,13 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     );
 
     _focusNode.addListener(() {
-      // Se perder o foco, estiver vazio e NÃO estiver ouvindo, fecha.
       if (!_focusNode.hasFocus &&
           _isInputMode &&
-          _textController.text.isEmpty &&
-          !_isListening) {
+          _textController.text.isEmpty) {
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted &&
               !_focusNode.hasFocus &&
-              _isInputMode &&
-              !_isListening) {
+              _isInputMode) {
             _closeInputMode();
           }
         });
@@ -139,7 +134,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     _controller.dispose();
     _textController.dispose();
     _focusNode.dispose();
-    _speechService.stop();
+
     super.dispose();
   }
 
@@ -177,7 +172,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
   void _closeInputMode() async {
     _textController.clear();
     _focusNode.unfocus();
-    _stopListening();
+
 
     // Reverse animation first
     await _controller.reverse();
@@ -199,48 +194,7 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
     }
   }
 
-  Future<void> _toggleListening() async {
-    if (_isListening) {
-      await _stopListening();
-    } else {
-      await _startListening();
-    }
-  }
 
-  Future<void> _startListening() async {
-    final available = await _speechService.init();
-    if (!available) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Reconhecimento de voz indisponível.'),
-            backgroundColor: Colors.redAccent));
-      }
-      return;
-    }
-
-    setState(() => _isListening = true);
-
-    await _speechService.start(onResult: (text) {
-      if (mounted) {
-        setState(() {
-          _textController.text = text;
-          _textController.selection = TextSelection.fromPosition(
-              TextPosition(offset: _textController.text.length));
-        });
-      }
-    }, onDone: () {
-      if (mounted && _isListening) {
-        _stopListening();
-      }
-    });
-  }
-
-  Future<void> _stopListening() async {
-    await _speechService.stop();
-    if (mounted) {
-      setState(() => _isListening = false);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -353,19 +307,12 @@ class _ExpandingAssistantFabState extends State<ExpandingAssistantFab>
             final hasText = value.text.trim().isNotEmpty;
 
             return IconButton(
-              onPressed: hasText ? _handleSend : _toggleListening,
+              onPressed: hasText ? _handleSend : null,
               icon: Icon(
-                hasText ? Icons.send : Icons.mic,
-                color:
-                    (hasText || _isListening) ? Colors.white : Colors.white70,
+                Icons.send,
+                color: hasText ? Colors.white : Colors.white38,
               ),
-              style: _isListening && !hasText
-                  ? IconButton.styleFrom(
-                      backgroundColor: Colors.redAccent.withValues(alpha: 0.8),
-                      hoverColor: Colors.redAccent,
-                    )
-                  : null,
-              tooltip: hasText ? 'Enviar' : (_isListening ? 'Parar' : 'Falar'),
+              tooltip: 'Enviar',
             );
           },
         ),

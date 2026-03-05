@@ -385,13 +385,15 @@ class _GoalsScreenState extends State<GoalsScreen> {
                                   style: const TextStyle(color: Colors.red)));
                         }
                         if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          if (_searchQuery.isEmpty) {
-                            return Column(
-                              children: [
-                                _buildToolbar(isDesktop, []),
-                                Expanded(child: _buildEmptyState()),
-                              ],
-                            );
+                          if (!isDesktop) {
+                            if (_searchQuery.isEmpty) {
+                              return Column(
+                                children: [
+                                  _buildToolbar(isDesktop, []),
+                                  Expanded(child: _buildEmptyState()),
+                                ],
+                              );
+                            }
                           }
                         }
 
@@ -455,7 +457,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           });
                         }
 
-                        if (goals.isEmpty && _searchQuery.isNotEmpty) {
+                        if (!isDesktop && goals.isEmpty && _searchQuery.isNotEmpty) {
                           return Column(
                             children: [
                               _buildToolbar(isDesktop, goals),
@@ -470,7 +472,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
                           );
                         }
 
-                        if (goals.isEmpty && _searchQuery.isEmpty) {
+                        if (!isDesktop && goals.isEmpty && _searchQuery.isEmpty) {
                           return Column(
                             children: [
                               _buildToolbar(isDesktop, goals),
@@ -498,17 +500,24 @@ class _GoalsScreenState extends State<GoalsScreen> {
           ),
         ),
       ), // This closes ScreenInteractionListener
-      floatingActionButton: TransparentFabWrapper(
-        controller: _fabOpacityController,
-        child: FloatingActionButton(
-          onPressed: _navigateToCreateGoal,
-          backgroundColor: AppColors.primary,
-          tooltip: 'Nova Jornada',
-          heroTag: 'fab_goals_screen',
-          elevation: 4,
-          shape: const CircleBorder(),
-          child: const Icon(Icons.add, color: Colors.white),
-        ),
+      floatingActionButton: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;
+          if (isDesktop) return const SizedBox.shrink();
+
+          return TransparentFabWrapper(
+            controller: _fabOpacityController,
+            child: FloatingActionButton(
+              onPressed: _navigateToCreateGoal,
+              backgroundColor: AppColors.primary,
+              tooltip: 'Nova Jornada',
+              heroTag: 'fab_goals_screen',
+              elevation: 4,
+              shape: const CircleBorder(),
+              child: const Icon(Icons.add, color: Colors.white),
+            ),
+          );
+        },
       ),
     );
   }
@@ -519,7 +528,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          PageTitleRow(title: 'Jornadas', pageKey: 'goals', forceDesktop: isDesktop),
+          PageTitleRow(
+            title: 'Jornadas',
+            pageKey: 'goals',
+            forceDesktop: isDesktop,
+            trailing: null,
+          ),
           SincroToolbar(
             forceDesktop: isDesktop,
             filters: _buildFilterItems(isDesktop),
@@ -553,6 +567,50 @@ class _GoalsScreenState extends State<GoalsScreen> {
     );
   }
 
+  Widget _buildNewGoalCard(BuildContext context) {
+    return InkWell(
+      onTap: _navigateToCreateGoal,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 180),
+        decoration: BoxDecoration(
+          color: AppColors.cardBackground.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.5),
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.add,
+                color: AppColors.primary,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              "Criar Jornada",
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildDesktopGrid(BoxConstraints constraints, List<Goal> goals) {
     final int columns = constraints.maxWidth >= 1200 ? 3 : 2;
     return MasonryGridView.count(
@@ -560,9 +618,12 @@ class _GoalsScreenState extends State<GoalsScreen> {
       crossAxisCount: columns,
       mainAxisSpacing: 16,
       crossAxisSpacing: 16,
-      itemCount: goals.length,
+      itemCount: goals.length + 1, // +1 for the fake 'Nova Jornada' card
       itemBuilder: (context, index) {
-        final goal = goals[index];
+        if (index == 0) {
+          return _buildNewGoalCard(context);
+        }
+        final goal = goals[index - 1];
         return GoalCard(
           goal: goal,
           userId: _userId,

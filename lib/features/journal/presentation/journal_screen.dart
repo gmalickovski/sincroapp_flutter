@@ -203,10 +203,18 @@ class _JournalScreenState extends State<JournalScreen>
     _rebuildStream();
   }
 
+  DateTime? _lastResumeTime;
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // App resumed from background/standby
+      // Cooldown de 2s para evitar múltiplos rebuilds seguidos
+      final now = DateTime.now();
+      if (_lastResumeTime != null &&
+          now.difference(_lastResumeTime!).inSeconds < 2) {
+        return;
+      }
+      _lastResumeTime = now;
       debugPrint("🔄 [JournalScreen] App resumed. Refreshing stream...");
       setState(() {
         _rebuildStream();
@@ -783,7 +791,9 @@ class _JournalScreenState extends State<JournalScreen>
                           child: Text("Erro ao carregar anotações.",
                               style: TextStyle(color: Colors.red.shade300)));
                     }
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    var entries = snapshot.data ?? [];
+                    
+                    if (entries.isEmpty && !isDesktop) {
                       return Center(
                         child: Text(
                           _isFilterActive
@@ -797,7 +807,6 @@ class _JournalScreenState extends State<JournalScreen>
                     }
 
                     // Apply local search filtering
-                    var entries = snapshot.data!;
                     if (_searchQuery.isNotEmpty) {
                       entries = entries
                           .where((e) =>

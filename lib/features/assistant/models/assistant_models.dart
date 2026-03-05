@@ -164,29 +164,57 @@ class AssistantAnswer {
   factory AssistantAnswer.fromJson(Map<String, dynamic> json) {
     final answer = (json['answer'] ?? '').toString();
     final actions = <AssistantAction>[];
+
+    // Handle actions as List OR single Map
     if (json['actions'] is List) {
       for (final item in (json['actions'] as List)) {
         if (item is Map) actions.add(AssistantAction.fromJson(Map.from(item)));
       }
+    } else if (json['actions'] is Map &&
+        (json['actions'] as Map).isNotEmpty) {
+      actions.add(AssistantAction.fromJson(Map.from(json['actions'])));
     }
 
-    // NOVO: Parsear tasks[] - buscar no nível raiz OU dentro de actions[].tasks
+    // If no actions but root-level suggestedDates exists, create synthetic action
+    if (actions.isEmpty &&
+        json['suggestedDates'] is List &&
+        (json['suggestedDates'] as List).isNotEmpty) {
+      actions.add(AssistantAction.fromJson({
+        'type': 'create_task',
+        'title': 'Agendar Sugestão',
+        'needsUserInput': true,
+        'suggestedDates': json['suggestedDates'],
+      }));
+    }
+
+    // Parse embedded tasks from root level or inside actions
     final embeddedTasks = <Map<String, dynamic>>[];
 
-    // 1. Tentar buscar no nível raiz primeiro
     if (json['tasks'] is List) {
       for (final item in (json['tasks'] as List)) {
         if (item is Map) embeddedTasks.add(Map<String, dynamic>.from(item));
       }
     }
 
-    // 2. Se não encontrou, buscar dentro de actions[].tasks (formato N8n atual)
     if (embeddedTasks.isEmpty && json['actions'] is List) {
       for (final action in (json['actions'] as List)) {
         if (action is Map && action['tasks'] is List) {
           for (final task in (action['tasks'] as List)) {
-            if (task is Map) embeddedTasks.add(Map<String, dynamic>.from(task));
+            if (task is Map) {
+              embeddedTasks.add(Map<String, dynamic>.from(task));
+            }
           }
+        }
+      }
+    }
+
+    // Also check single-object actions for embedded tasks
+    if (embeddedTasks.isEmpty &&
+        json['actions'] is Map &&
+        (json['actions'] as Map)['tasks'] is List) {
+      for (final task in ((json['actions'] as Map)['tasks'] as List)) {
+        if (task is Map) {
+          embeddedTasks.add(Map<String, dynamic>.from(task));
         }
       }
     }

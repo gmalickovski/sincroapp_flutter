@@ -8,17 +8,19 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:sincro_app_flutter/common/widgets/modern/inline_month_year_selector.dart';
 
 class CustomEndDatePickerBottomSheet extends StatefulWidget {
-  final DateTime initialDate;
+  final DateTime? initialDate;
   final DateTime firstDate;
   final DateTime lastDate;
   final UserModel userData;
+  final bool isDesktop;
 
   const CustomEndDatePickerBottomSheet({
     super.key,
-    required this.initialDate,
+    this.initialDate,
     required this.firstDate,
     required this.lastDate,
     required this.userData,
+    this.isDesktop = false,
   });
 
   @override
@@ -28,7 +30,7 @@ class CustomEndDatePickerBottomSheet extends StatefulWidget {
 
 class _CustomEndDatePickerBottomSheetState
     extends State<CustomEndDatePickerBottomSheet> {
-  late DateTime _selectedDate;
+  DateTime? _selectedDate;
   late DateTime _focusedDay;
   late DateTime _todayMidnight;
   late NumerologyEngine _engine;
@@ -41,15 +43,19 @@ class _CustomEndDatePickerBottomSheetState
     final now = DateTime.now();
     _todayMidnight = DateTime(now.year, now.month, now.day);
 
-    _selectedDate = DateTime(
-      widget.initialDate.year,
-      widget.initialDate.month,
-      widget.initialDate.day,
-    );
+    _selectedDate = widget.initialDate != null
+        ? DateTime(
+            widget.initialDate!.year,
+            widget.initialDate!.month,
+            widget.initialDate!.day,
+          )
+        : null;
+
+    final baseDate = widget.initialDate ?? now;
     _focusedDay = DateTime(
-      widget.initialDate.year,
-      widget.initialDate.month,
-      widget.initialDate.day,
+      baseDate.year,
+      baseDate.month,
+      baseDate.day,
     );
 
     if (widget.userData.nomeAnalise.isNotEmpty &&
@@ -66,7 +72,8 @@ class _CustomEndDatePickerBottomSheetState
     }
   }
 
-  bool _isSameDay(DateTime a, DateTime b) {
+  bool _isSameDay(DateTime a, DateTime? b) {
+    if (b == null) return false;
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
@@ -77,9 +84,11 @@ class _CustomEndDatePickerBottomSheetState
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.cardBackground,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+        borderRadius: widget.isDesktop 
+            ? BorderRadius.circular(16.0) 
+            : const BorderRadius.vertical(top: Radius.circular(24.0)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min, // Ocupar o tamanho mínimo necessário
@@ -242,7 +251,11 @@ class _CustomEndDatePickerBottomSheetState
           if (_isSelectingYearMonth) return;
 
           setState(() {
-            _selectedDate = selectedDay;
+            if (_isSameDay(selectedDay, _selectedDate)) {
+              _selectedDate = null;
+            } else {
+              _selectedDate = selectedDay;
+            }
             _focusedDay = focusedDay;
           });
         },
@@ -505,46 +518,93 @@ class _CustomEndDatePickerBottomSheetState
                   ),
                 ],
               )
-            : SizedBox(
-                width: double.infinity,
-                height: 48,
-                key: const ValueKey('DefineButton'),
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Quando "Definir", retorna a data selecionada para a tela anterior
-                    Navigator.of(context).pop(_selectedDate);
-                  },
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => AppColors.primary),
-                    foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                        (states) => Colors.white),
-                    elevation:
-                        WidgetStateProperty.resolveWith<double>((states) => 0),
-                    padding:
-                        WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
-                            (states) =>
-                                const EdgeInsets.symmetric(vertical: 12)),
-                    shape: WidgetStateProperty.resolveWith<OutlinedBorder>(
-                        (states) {
-                      if (states.contains(WidgetState.hovered)) {
-                        return RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: Colors.white, width: 2),
-                        );
-                      }
-                      return RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(
-                            color: AppColors.primary, width: 2),
-                      );
-                    }),
+            : _selectedDate != null
+                ? Row(
+                    key: const ValueKey('ActionButtons'),
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: OutlinedButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedDate = null;
+                              });
+                            },
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: AppColors.border),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text("Limpar",
+                                style: TextStyle(
+                                    color: AppColors.secondaryText,
+                                    fontFamily: 'Poppins')),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop(_selectedDate);
+                            },
+                            style: ButtonStyle(
+                              backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                                  (states) => AppColors.primary),
+                              foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                                  (states) => Colors.white),
+                              elevation:
+                                  WidgetStateProperty.resolveWith<double>((states) => 0),
+                              padding:
+                                  WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                                      (states) => const EdgeInsets.symmetric(vertical: 12)),
+                              shape: WidgetStateProperty.resolveWith<OutlinedBorder>(
+                                  (states) {
+                                if (states.contains(WidgetState.hovered)) {
+                                  return RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(color: Colors.white, width: 2),
+                                  );
+                                }
+                                return RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: const BorderSide(
+                                      color: AppColors.primary, width: 2),
+                                );
+                              }),
+                            ),
+                            child: const Text("Aplicar",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+                          ),
+                        ),
+                      ),
+                    ],
+                  )
+                : SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    key: const ValueKey('CloseButton'),
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      style: OutlinedButton.styleFrom(
+                        backgroundColor: AppColors.cardBackground,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: const BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text("Fechar",
+                          style: TextStyle(
+                              color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                    ),
                   ),
-                  child: const Text("Definir Data",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
-                ),
-              ),
       ),
     );
   }
