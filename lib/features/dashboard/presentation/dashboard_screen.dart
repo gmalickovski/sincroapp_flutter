@@ -228,6 +228,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       if (!kIsWeb) {
         NotificationService.instance
             .listenToRealtimeNotifications(currentUser.id);
+            
+        // Save FCM token on dashboard load to keep it updated
+        NotificationService.instance.saveDeviceFCMToken(currentUser.id);
 
         // Tenta abrir modal pendente (deep link)
         if (_pendingFavorableDayModal && mounted) {

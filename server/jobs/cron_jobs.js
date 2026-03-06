@@ -57,19 +57,19 @@ function initCronJobs(supabase) {
     // "30 08 * * *" -> Everyday at 08:30 server time
     cron.schedule('30 08 * * *', async () => {
         console.log('[CRON] Rodando Job Matinal de Numerologia (08:30)');
-        // This assumes server timezone matches user's targeted timezone or was requested as 08:30 host local.
+        // This assumes server timezone matches user's targeted timezone ou was requested as 08:30 host local.
         // Opcional: you can loop over unique users and compute Numerology.
         try {
-            const { data: users, error } = await db.from('users').select('id, data_nascimento');
+            const { data: users, error } = await db.from('users').select('uid, data_nascimento');
             if (error) throw error;
 
             for (const u of users) {
                 // Envia notificação matinal simples pra cada (a Numerologia poderia ser calculada aqui)
-                await sendPushToUser(u.id, 'Bom dia! ☀️', 'Confira como as energias de hoje podem te guiar e veja suas tarefas para o dia.', {
+                await sendPushToUser(u.uid, 'Bom dia! ☀️', 'Confira como as energias de hoje podem te guiar e veja suas tarefas para o dia.', {
                     action: 'VIEW_DASHBOARD'
                 });
             }
-            console.log(`[CRON] Push Matinal enviada para \${users.length} usuários.`);
+            console.log(`[CRON] Push Matinal enviada para ${users.length} usuários.`);
         } catch (err) {
             console.error('[CRON] Erro no job Matinal:', err.message);
         }
@@ -80,19 +80,19 @@ function initCronJobs(supabase) {
     cron.schedule('00 20 * * *', async () => {
         console.log('[CRON] Rodando Job Noturno (20:00)');
         try {
-            const { data: users, error } = await db.from('users').select('id');
+            const { data: users, error } = await db.from('users').select('uid');
             if (error) throw error;
 
             for (const u of users) {
                 // Verifica se há tarefas pendentes hoje
                 const { data: tasks } = await db.from('tasks')
                     .select('id')
-                    .eq('owner_id', u.id)
+                    .eq('user_id', u.uid)
                     .eq('status', 'Pendente')
                     .eq('is_deleted', false);
 
                 if (tasks && tasks.length > 0) {
-                    await sendPushToUser(u.id, 'Fim de dia 🌙', `Você tem \${tasks.length} tarefas pendentes para hoje. Que tal revisá-las?`, {
+                    await sendPushToUser(u.uid, 'Fim de dia 🌙', `Você tem ${tasks.length} tarefas pendentes para hoje. Que tal revisá-las?`, {
                         action: 'VIEW_TASKS'
                     });
                 }
@@ -111,7 +111,7 @@ function initCronJobs(supabase) {
 
             // Pega tarefas q acabaram de vencer nas últimas horas e não estão deletadas e estão pendentes
             const { data: overdueTasks, error } = await db.from('tasks')
-                .select('id, title, owner_id')
+                .select('id, title, user_id')
                 .eq('status', 'Pendente')
                 .eq('is_deleted', false)
                 .lt('due_date', nowUtc)
@@ -124,21 +124,22 @@ function initCronJobs(supabase) {
             // Group by user
             const usersToNotify = {};
             overdueTasks.forEach(task => {
-                if (!usersToNotify[task.owner_id]) usersToNotify[task.owner_id] = [];
-                usersToNotify[task.owner_id].push(task);
+                if (!usersToNotify[task.user_id]) usersToNotify[task.user_id] = [];
+                usersToNotify[task.user_id].push(task);
             });
 
             for (const [userId, tasks] of Object.entries(usersToNotify)) {
                 if (tasks.length === 1) {
-                    await sendPushToUser(userId, 'Tarefa Atrasada 🚨', `A tarefa "\${tasks[0].title}" está atrasada.`, { action: 'VIEW_TASK', taskId: tasks[0].id });
+                    await sendPushToUser(userId, 'Tarefa Atrasada 🚨', `A tarefa "${tasks[0].title}" está atrasada.`, { action: 'VIEW_TASK', taskId: tasks[0].id });
                 } else {
-                    await sendPushToUser(userId, 'Tarefas Atrasadas 🚨', `Você tem \${tasks.length} tarefas que acabaram de atrasar.`, { action: 'VIEW_TASKS' });
+                    await sendPushToUser(userId, 'Tarefas Atrasadas 🚨', `Você tem ${tasks.length} tarefas que acabaram de atrasar.`, { action: 'VIEW_TASKS' });
                 }
             }
         } catch (err) {
             console.error('[CRON] Erro no job de Atrasadas:', err.message);
         }
     });
+
 
     console.log('[CRON] Jobs de Notificação agendados com sucesso.');
 }
