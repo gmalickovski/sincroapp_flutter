@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.10](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.9...v1.6.10) (2026-03-06)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement core application features including a Supabase service for data management and initial UI screens for dashboard, calendar, goals, and tasks. ([b070224](https://github.com/gmalickovski/sincroapp_flutter/commit/b0702242711a11ce2f483d45ccc3e6243a7e31f7))
+
 ### [1.6.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.8...v1.6.9) (2026-03-06)
 
 
