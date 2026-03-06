@@ -726,15 +726,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     DateTime? finalDueDateUtc;
     if (_selectedDateTime != null) {
       if (_hasExplicitTime) {
-        // Com horário explícito: converte normalmente para UTC
+        // Com horário: converte para UTC
         finalDueDateUtc = _selectedDateTime!.toUtc();
       } else {
-        // Sem horário: salva como meia-noite UTC (sem offset de timezone)
-        finalDueDateUtc = DateTime.utc(
+        // Sem horário: Local midnight convertido para UTC
+        finalDueDateUtc = DateTime(
           _selectedDateTime!.year,
           _selectedDateTime!.month,
           _selectedDateTime!.day,
-        );
+        ).toUtc();
       }
     }
 

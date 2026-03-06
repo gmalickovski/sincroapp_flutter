@@ -556,11 +556,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ...textParseResult.sharedWith
     };
 
-    // Constrói dueDate correto: UTC midnight se sem horário, ou data+horário local se com horário
     DateTime? finalDueDate;
     if (_selectedDate != null) {
       if (_selectedTime != null) {
-        // Com horário: cria DateTime local com data+hora (será convertido para UTC pelo consumer)
+        // Com horário: cria DateTime local com data+hora
         finalDueDate = DateTime(
           _selectedDate!.year,
           _selectedDate!.month,
@@ -569,8 +568,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
           _selectedTime!.minute,
         );
       } else {
-        // Sem horário: UTC midnight direto (sem offset de timezone)
-        finalDueDate = DateTime.utc(
+        // Sem horário: Local midnight
+        finalDueDate = DateTime(
           _selectedDate!.year,
           _selectedDate!.month,
           _selectedDate!.day,
@@ -600,8 +599,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
                 base = DateTime(base.year, base.month, base.day,
                     _selectedTime!.hour, _selectedTime!.minute);
               }
-              return base
-                  .subtract(Duration(minutes: _selectedReminderOffsets!.first));
+              // Calculate reminderAt and ensure UTC for saving
+              return base.subtract(Duration(minutes: _selectedReminderOffsets!.first)).toUtc();
             }());
 
     widget.onAddTask(finalParsedTask);
