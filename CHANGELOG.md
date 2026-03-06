@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.8...v1.6.9) (2026-03-06)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement `TaskDetailModal` and `TaskInputModal` for task creation and detailed management. ([60ba42d](https://github.com/gmalickovski/sincroapp_flutter/commit/60ba42d7a5faf1d4bbfd8b39c99971b7dac89f13))
+
 ### [1.6.8](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.7...v1.6.8) (2026-03-06)
 
 
