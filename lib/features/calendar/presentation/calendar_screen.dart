@@ -338,6 +338,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
       tags: parsedTask.tags,
       reminderTime: parsedTask.reminderTime,
       reminderAt: parsedTask.reminderAt,
+      reminderOffsets: parsedTask.reminderOffsets,
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),

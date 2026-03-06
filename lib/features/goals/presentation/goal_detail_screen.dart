@@ -321,6 +321,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               // Reminder Mapping
               reminderTime: parsedTask.reminderTime,
               reminderAt: parsedTask.reminderAt,
+      reminderOffsets: parsedTask.reminderOffsets,
             );
 
             _supabaseService.addTask(widget.userData.uid, newTask).then((_) {},

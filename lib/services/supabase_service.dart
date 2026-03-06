@@ -726,37 +726,14 @@ class SupabaseService {
 
   Future<TaskModel?> addTask(String uid, TaskModel task) async {
     try {
-      final taskData = {
-        'user_id': uid,
-        'text': task.text,
-        'completed': task.completed,
-        'created_at': task.createdAt.toIso8601String(),
-        'due_date': task.dueDate?.toIso8601String(),
-        'tags': task.tags, // Supabase suporta array de strings
-        'journey_id': task.journeyId,
-        'journey_title': task.journeyTitle,
-        'personal_day': task.personalDay,
-        'recurrence_type': task.recurrenceType.toString(),
-        'recurrence_days_of_week': task.recurrenceDaysOfWeek,
-        'recurrence_end_date': task.recurrenceEndDate?.toIso8601String(),
-        'reminder_hour': task.reminderTime?.hour,
-        'reminder_minute': task.reminderTime?.minute,
-        'reminder_at': task.reminderAt?.toIso8601String(),
-        'recurrence_id': task.recurrenceId,
-        'goal_id': task.goalId,
-        'completed_at': task.completedAt?.toIso8601String(),
-        'shared_with': <String>{
+      final taskData = task.toMap();
+      taskData['user_id'] = uid;
+      
+      // Keep sharedWith mention parsing logic
+      taskData['shared_with'] = <String>{
           ...task.sharedWith,
           ...UsernameValidator.extractMentionsFromText(task.text)
-        }.toList(), // NOVO: Parse mentions + explicit shared
-        'task_type': (task.reminderTime != null ||
-                (task.dueDate != null &&
-                    (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
-            ? 'appointment'
-            : 'task',
-        'duration_minutes': task.durationMinutes,
-        'source_journal_id': task.sourceJournalId, // Added source_journal_id
-      };
+        }.toList();
 
       final response = await _supabase
           .schema('sincroapp')
@@ -875,31 +852,13 @@ class SupabaseService {
           .single();
       final currentTask = _mapTaskFromSupabase(currentTaskRes);
 
-      final taskData = {
-        'text': task.text,
-        'completed': task.completed,
-        'due_date': task.dueDate?.toIso8601String(),
-        'tags': task.tags,
-        'recurrence_type': task.recurrenceType.toString(),
-        'recurrence_days_of_week': task.recurrenceDaysOfWeek,
-        'recurrence_end_date': task.recurrenceEndDate?.toIso8601String(),
-        'reminder_hour': task.reminderTime?.hour,
-        'reminder_minute': task.reminderTime?.minute,
-        'reminder_at': task.reminderAt?.toIso8601String(),
-        'personal_day': task.personalDay,
-        'completed_at': task.completedAt?.toIso8601String(),
-        'shared_with': <String>{
+      final taskData = task.toMap();
+      
+      // Preserve the specific logic for updates
+      taskData['shared_with'] = <String>{
           ...task.sharedWith,
           ...UsernameValidator.extractMentionsFromText(task.text)
-        }.toList(),
-        'task_type': (task.reminderTime != null ||
-                (task.dueDate != null &&
-                    (task.dueDate!.hour != 0 || task.dueDate!.minute != 0)))
-            ? 'appointment'
-            : 'task',
-        'duration_minutes': task.durationMinutes,
-        'source_journal_id': task.sourceJournalId, // Added source_journal_id
-      };
+        }.toList();
 
       await _supabase
           .schema('sincroapp')

@@ -208,8 +208,8 @@ class TaskModel {
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
       createdAt:
-          _parseDate(data['created_at'] ?? data['createdAt']) ?? DateTime.now(),
-      dueDate: _parseDate(data['due_date'] ?? data['dueDate']),
+          _parseDate(data['created_at'] ?? data['createdAt'])?.toLocal() ?? DateTime.now(),
+      dueDate: _parseDate(data['due_date'] ?? data['dueDate'])?.toLocal(),
       tags: List<String>.from(data['tags'] ?? []),
       sharedWith:
           List<String>.from(data['shared_with'] ?? data['sharedWith'] ?? []),
@@ -220,14 +220,14 @@ class TaskModel {
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
       recurrenceEndDate:
-          _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate']),
+          _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate'])?.toLocal(),
       reminderTime: reminder,
       reminderOffsets: remOffsets,
       recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
       goalId: data['goal_id'] ?? data['goalId'],
       sourceJournalId: data['source_journal_id'] ?? data['sourceJournalId'],
-      completedAt: _parseDate(data['completed_at'] ?? data['completedAt']),
-      reminderAt: _parseDate(data['reminder_at']),
+      completedAt: _parseDate(data['completed_at'] ?? data['completedAt'])?.toLocal(),
+      reminderAt: _parseDate(data['reminder_at'])?.toLocal(),
       taskType: data['task_type'] ?? data['taskType'],
       durationMinutes: data['duration_minutes'] ?? data['durationMinutes'],
       isFocus: data['is_focus'] ?? false,
