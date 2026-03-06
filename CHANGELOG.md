@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.8](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.7...v1.6.8) (2026-03-06)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** create TaskModel to define task structure, including recurrence, reminders, and completion tracking. ([76c7e39](https://github.com/gmalickovski/sincroapp_flutter/commit/76c7e3944d1b23a81a61e7c7b955b551fa4d8cd1))
+
 ### [1.6.7](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.6...v1.6.7) (2026-03-06)
 
 
