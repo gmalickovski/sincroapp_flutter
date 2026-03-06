@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.7](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.6...v1.6.7) (2026-03-06)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Add new dashboard screen with notification and AI strategy features, and introduce server-side cron jobs. ([b5a0095](https://github.com/gmalickovski/sincroapp_flutter/commit/b5a0095caf73afa34597cadbb51e0eed42253289))
+
 ### [1.6.6](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.5...v1.6.6) (2026-03-05)
 
 
