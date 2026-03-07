@@ -1097,14 +1097,15 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   Widget _buildReminderRow() {
-    if (_isAllDay || _selectedTime == null) {
-      return const SizedBox.shrink(); // Hide entirely if no time
+    // Hide only if no date is selected at all
+    if (_selectedDay == null) {
+      return const SizedBox.shrink();
     }
 
     final String summary = _getReminderSummary();
 
-    // Opacity logic: If AllDay, reduce opacity of Icon/Title.
-    final double contentOpacity = _isAllDay ? 0.5 : 1.0;
+    // Full opacity always — reminders work for both timed and all-day tasks.
+    const double contentOpacity = 1.0;
 
     return Column(
       children: [
@@ -1114,7 +1115,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               _showUpgradeDialog("Lembretes");
               return;
             }
-            if (_isAllDay) return;
 
             setState(() {
               _showReminder = !_showReminder; // Toggle the visibility state
@@ -1158,14 +1158,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 const Spacer(),
 
                 // Trailing Content Logic
-                if (_isAllDay)
-                  Text(
-                    "Defina um horário",
-                    style: TextStyle(
-                        color: AppColors.secondaryText.withValues(alpha: 0.6),
-                        fontSize: 14),
-                  )
-                else ...[
+                ...[
                   // Normal or Premium-locked State
                   if (!_canUseReminders)
                     Text(
@@ -1210,7 +1203,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          child: _showReminder && !_isAllDay // Use decoupled state
+          child: _showReminder // Use decoupled state
               ? Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: ScrollableChipsRow(
