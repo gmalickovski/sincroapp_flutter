@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.13](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.10...v1.6.13) (2026-03-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement a push notification system using Supabase Edge Functions, Firebase Cloud Messaging, and pg_cron for scheduled reminders. ([3a8e947](https://github.com/gmalickovski/sincroapp_flutter/commit/3a8e94788ecc95dbe91b61e5cbd608a8ed01075e))
+
 ### [1.6.12](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.11...v1.6.12) (2026-03-07)
 
 
