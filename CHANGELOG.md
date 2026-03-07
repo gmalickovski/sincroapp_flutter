@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.12](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.11...v1.6.12) (2026-03-07)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** delete Firebase Admin SDK service account key file. ([ef985b5](https://github.com/gmalickovski/sincroapp_flutter/commit/ef985b5d0d991ab75a28b7ef06b1467e552749f4))
+
 ### [1.6.11](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.10...v1.6.11) (2026-03-07)
 
 

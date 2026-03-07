@@ -123,3 +123,6 @@ parse_errors.dart
 replace_opacity.dart
 update_detail_modal.py
 git_status_output.txt
+
+# === Firebase Service Account (NEVER commit private keys) ===
+*-firebase-adminsdk-*.json
