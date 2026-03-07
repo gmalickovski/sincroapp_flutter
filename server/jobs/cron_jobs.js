@@ -1,6 +1,5 @@
 const cron = require('node-cron');
 const admin = require('../config/firebase_admin');
-const { isBefore, startOfDay, endOfDay, format } = require('date-fns');
 
 function initCronJobs(supabase) {
     if (!supabase) {
@@ -22,7 +21,7 @@ function initCronJobs(supabase) {
             if (error) throw error;
             return data ? data.map(d => d.fcm_token) : [];
         } catch (err) {
-            console.error(`[CRON] Erro ao buscar tokens para \${userId}:`, err.message);
+            console.error(`[CRON] Erro ao buscar tokens para ${userId}:`, err.message);
             return [];
         }
     }
@@ -44,12 +43,12 @@ function initCronJobs(supabase) {
             if (response.failureCount > 0) {
                 response.responses.forEach((resp, idx) => {
                     if (!resp.success) {
-                        console.error(`[FIREBASE] Push failed for token \${tokens[idx]}:`, resp.error);
+                        console.error(`[FIREBASE] Push failed for token ${tokens[idx]}:`, resp.error);
                     }
                 });
             }
         } catch (err) {
-            console.error(`[FIREBASE] Escrita de Push falhou para user \${userId}:`, err);
+            console.error(`[FIREBASE] Escrita de Push falhou para user ${userId}:`, err);
         }
     }
 
@@ -57,14 +56,11 @@ function initCronJobs(supabase) {
     // "30 08 * * *" -> Everyday at 08:30 server time
     cron.schedule('30 08 * * *', async () => {
         console.log('[CRON] Rodando Job Matinal de Numerologia (08:30)');
-        // This assumes server timezone matches user's targeted timezone ou was requested as 08:30 host local.
-        // Opcional: you can loop over unique users and compute Numerology.
         try {
             const { data: users, error } = await db.from('users').select('uid, data_nascimento');
             if (error) throw error;
 
             for (const u of users) {
-                // Envia notificação matinal simples pra cada (a Numerologia poderia ser calculada aqui)
                 await sendPushToUser(u.uid, 'Bom dia! ☀️', 'Confira como as energias de hoje podem te guiar e veja suas tarefas para o dia.', {
                     action: 'VIEW_DASHBOARD'
                 });
@@ -84,12 +80,17 @@ function initCronJobs(supabase) {
             if (error) throw error;
 
             for (const u of users) {
-                // Verifica se há tarefas pendentes hoje
+                // Busca tarefas não completadas de hoje
+                const today = new Date();
+                const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+                const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+
                 const { data: tasks } = await db.from('tasks')
                     .select('id')
                     .eq('user_id', u.uid)
-                    .eq('status', 'Pendente')
-                    .eq('is_deleted', false);
+                    .eq('completed', false)
+                    .gte('due_date', startOfDay)
+                    .lt('due_date', endOfDay);
 
                 if (tasks && tasks.length > 0) {
                     await sendPushToUser(u.uid, 'Fim de dia 🌙', `Você tem ${tasks.length} tarefas pendentes para hoje. Que tal revisá-las?`, {
@@ -109,17 +110,15 @@ function initCronJobs(supabase) {
         try {
             const nowUtc = new Date().toISOString();
 
-            // Pega tarefas q acabaram de vencer nas últimas horas e não estão deletadas e estão pendentes
+            // Pega tarefas não completadas cujo due_date já passou
             const { data: overdueTasks, error } = await db.from('tasks')
-                .select('id, title, user_id')
-                .eq('status', 'Pendente')
-                .eq('is_deleted', false)
+                .select('id, text, user_id')
+                .eq('completed', false)
                 .lt('due_date', nowUtc)
-                // Adiciona um limite ou flag na DB depois pra não notificar a mesma tarefa múltiplas vezes.
-                // Simularemos pegando a lista basiquinha
                 .limit(50);
 
             if (error) throw error;
+            if (!overdueTasks || overdueTasks.length === 0) return;
 
             // Group by user
             const usersToNotify = {};
@@ -130,7 +129,7 @@ function initCronJobs(supabase) {
 
             for (const [userId, tasks] of Object.entries(usersToNotify)) {
                 if (tasks.length === 1) {
-                    await sendPushToUser(userId, 'Tarefa Atrasada 🚨', `A tarefa "${tasks[0].title}" está atrasada.`, { action: 'VIEW_TASK', taskId: tasks[0].id });
+                    await sendPushToUser(userId, 'Tarefa Atrasada 🚨', `A tarefa "${tasks[0].text}" está atrasada.`, { action: 'VIEW_TASK', taskId: tasks[0].id });
                 } else {
                     await sendPushToUser(userId, 'Tarefas Atrasadas 🚨', `Você tem ${tasks.length} tarefas que acabaram de atrasar.`, { action: 'VIEW_TASKS' });
                 }

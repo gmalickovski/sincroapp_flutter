@@ -181,13 +181,7 @@ class TaskModel {
     }
 
     TimeOfDay? reminder;
-    if (data['reminder_hour'] != null && data['reminder_minute'] != null) {
-      reminder = TimeOfDay(
-          hour: data['reminder_hour'], minute: data['reminder_minute']);
-    } else if (data['reminderHour'] != null && data['reminderMinute'] != null) {
-      reminder =
-          TimeOfDay(hour: data['reminderHour'], minute: data['reminderMinute']);
-    } else {
+    {
       DateTime? due = _parseDate(data['due_date'] ?? data['dueDate']);
       if (due != null) {
         final localDue = due.toLocal();
@@ -273,13 +267,12 @@ class TaskModel {
     // Tarefas sem vencimento nunca ficam atrasadas
     if (dueDate == null) return false;
     final now = DateTime.now();
-    // Usa dueDate diretamente (já sabemos que não é null)
-    final localDate = dueDate!.toLocal();
+    // dueDate ja esta em local (convertido no fromMap/_mapTaskFromSupabase)
+    final localDate = dueDate!;
 
-    // Se tiver dueDate com horário definido (não meia-noite) ou reminderTime, considera horário exato
-    if (dueDate != null &&
-        ((localDate.hour != 0 || localDate.minute != 0) ||
-            reminderTime != null)) {
+    // Se tiver dueDate com horario definido (nao meia-noite) ou reminderTime, considera horario exato
+    if ((localDate.hour != 0 || localDate.minute != 0) ||
+        reminderTime != null) {
       if (durationMinutes != null) {
         final end = localDate.add(Duration(minutes: durationMinutes!));
         return end.isBefore(now);
@@ -287,7 +280,7 @@ class TaskModel {
       return localDate.isBefore(now);
     }
 
-    // Senão, compara apenas data (tarefa de dia inteiro)
+    // Senao, compara apenas data (tarefa de dia inteiro)
     final today = DateTime(now.year, now.month, now.day);
     final localDateOnly =
         DateTime(localDate.year, localDate.month, localDate.day);

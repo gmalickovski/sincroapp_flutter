@@ -1334,30 +1334,23 @@ class SupabaseService {
 
   /// Helper para garantir que a data seja interpretada como DATA LOCAL (Dia/Mês/Ano)
   /// ignorando o deslocamento de fuso horário que pode vir do banco (UTC).
-  /// Ex: 2023-01-03T00:00:00Z -> Parse -> 2023-01-02 21:00 (Local) -> Fix -> 2023-01-03 00:00 (Local)
+  /// Para datas com horário (ex: 17:45), converte UTC -> Local preservando hora.
+  /// Para datas sem horário (meia-noite), preserva o dia literal.
   DateTime? _parseDateAsLocal(String? dateString) {
     if (dateString == null) return null;
     try {
-      // Parse original (pode vir com fuso Z)
       final parsed = DateTime.parse(dateString);
 
-      // Se a string original tinha "T", tentamos pegar a data antes dele para garantir o dia.
-      // Mas o DateTime.parse já ajusta para UTC se tiver Z.
-      // O problema é q queremos o ANO-MES-DIA literal da string ou ajustado?
-      // O Supabase salva como UTC 00:00.
-      // Se salvamos 03/01, vai ser 03/01 00:00 UTC.
-      // Ao ler aqui (Brasil -3), DateTime.parse("...Z").toLocal() vira 02/01 21:00.
-      // O widget de calendário vê 02/01.
-
-      // O que queremos: Se o banco diz 03/01 (UTC), queremos 03/01 (Local).
-      // Então pegamos os componentes do UTC e criamos um Local.
-
-      // Se o parse resultar em UTC (isUtc=true), usamos seus componentes para criar um Local.
-      if (parsed.isUtc) {
-        return DateTime(parsed.year, parsed.month, parsed.day);
-      } else {
-        return DateTime(parsed.year, parsed.month, parsed.day);
+      // Se tem horario definido (nao e meia-noite UTC), converte para local preservando o horario.
+      // Isso e necessario para agendamentos com hora especifica (ex: 17:45).
+      if (parsed.hour != 0 || parsed.minute != 0 || parsed.second != 0) {
+        return parsed.toLocal();
       }
+
+      // Para datas sem horario (meia-noite UTC = tarefa de dia inteiro),
+      // preserva o dia literal para evitar que o fuso horario mude o dia.
+      // Ex: 2026-03-06T00:00:00Z deve ser 06/03 local, nao 05/03.
+      return DateTime(parsed.year, parsed.month, parsed.day);
     } catch (e) {
       return null;
     }
@@ -1393,9 +1386,16 @@ class SupabaseService {
     }
 
     TimeOfDay? reminder;
-    if (data['reminder_hour'] != null && data['reminder_minute'] != null) {
-      reminder = TimeOfDay(
-          hour: data['reminder_hour'], minute: data['reminder_minute']);
+    {
+      // Derive reminderTime from dueDate if it has a non-midnight time
+      final dueDateStr = data['due_date'];
+      if (dueDateStr != null) {
+        final dueParsed = DateTime.tryParse(dueDateStr);
+        if (dueParsed != null && (dueParsed.hour != 0 || dueParsed.minute != 0)) {
+          final localDue = dueParsed.toLocal();
+          reminder = TimeOfDay(hour: localDue.hour, minute: localDue.minute);
+        }
+      }
     }
 
     return TaskModel(
@@ -1403,7 +1403,7 @@ class SupabaseService {
       taskType: data['task_type'], // Carrega o tipo do banco
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
-      createdAt: DateTime.tryParse(data['created_at'] ?? '') ?? DateTime.now(),
+      createdAt: (DateTime.tryParse(data['created_at'] ?? ''))?.toLocal() ?? DateTime.now(),
       dueDate: _parseDateAsLocal(data['due_date']), // FIX
       tags: List<String>.from(data['tags'] ?? []),
       journeyId: data['journey_id'],
@@ -1415,12 +1415,12 @@ class SupabaseService {
       recurrenceEndDate: _parseDateAsLocal(data['recurrence_end_date']), // FIX
       reminderTime: reminder,
       reminderAt: data['reminder_at'] != null
-          ? DateTime.tryParse(data['reminder_at'])
+          ? DateTime.tryParse(data['reminder_at'])?.toLocal()
           : null,
       recurrenceId: data['recurrence_id'],
       goalId: data['goal_id'],
       completedAt: data['completed_at'] != null
-          ? DateTime.tryParse(data['completed_at'])
+          ? DateTime.tryParse(data['completed_at'])?.toLocal()
           : null,
       durationMinutes: data['duration_minutes'],
       sourceJournalId: data['source_journal_id'], // Map source_journal_id
