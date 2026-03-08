@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.1...v1.7.2) (2026-03-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement notification center screen with update checking, notification model, and a new schedule task sheet. ([d151a3a](https://github.com/gmalickovski/sincroapp_flutter/commit/d151a3a3db333f0c9527357bd5cd4dcdf693e9de))
+
 ### [1.7.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.0...v1.7.1) (2026-03-08)
 
 ## [1.7.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.17...v1.7.0) (2026-03-08)
