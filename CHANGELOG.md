@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.15](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.14...v1.6.15) (2026-03-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement a comprehensive push notification system with FCM integration, a dedicated notification service, and related UI components. ([37910ef](https://github.com/gmalickovski/sincroapp_flutter/commit/37910ef9452ac7e2ef7883731bc8678dce164276))
+
 ### [1.6.14](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.13...v1.6.14) (2026-03-07)
 
 
