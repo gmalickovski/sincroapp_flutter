@@ -784,7 +784,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         height: 48,
         width: double.infinity,
         child: OutlinedButton(
-          onPressed: () => Navigator.pop(context),
+          onPressed: _hasChanges ? _onSave : () => Navigator.pop(context),
           style: OutlinedButton.styleFrom(
             backgroundColor: AppColors.cardBackground,
             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -816,6 +816,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   // --- Helpers ---
+
+  bool get _hasChanges {
+    // Basic change detection: if we had initial data and now we don't, that's a change
+    if (_hasInitialData && _selectedDay == null) return true;
+    
+    // Detailed change detection
+    if (_initialDay != _selectedDay) return true;
+    if (_initialTime != _selectedTime) return true;
+    if (_initialRecurrence.type != _recurrenceRule.type) return true;
+    // Reminders
+    if (_initialReminderOffsets.length != _selectedReminderOffsets.length) return true;
+    if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets)) return true;
+    
+    return false;
+  }
 
   bool get _isFreePlan {
     final plan = widget.userData.subscription.plan.name.toLowerCase();
