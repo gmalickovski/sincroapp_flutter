@@ -129,23 +129,9 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
         _endTime = newTime;
       }
     });
-    // Update text fields if they are not focused (i.e. change came from Dial)
-
-    if (_activeField == _TimeField.start) {
-      if (!_hourFocus.hasFocus) {
-        _hourController.text = newTime.hour.toString().padLeft(2, '0');
-      }
-      if (!_minuteFocus.hasFocus) {
-        _minuteController.text = newTime.minute.toString().padLeft(2, '0');
-      }
-    } else {
-      if (!_hourFocus.hasFocus) {
-        _hourController.text = newTime.hour.toString().padLeft(2, '0');
-      }
-      if (!_minuteFocus.hasFocus) {
-        _minuteController.text = newTime.minute.toString().padLeft(2, '0');
-      }
-    }
+    // Always update text fields when time changes from Dial
+    _hourController.text = newTime.hour.toString().padLeft(2, '0');
+    _minuteController.text = newTime.minute.toString().padLeft(2, '0');
   }
 
   void _handleModeChanged(_TimePickerMode mode) {
@@ -561,11 +547,11 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
         width: 80,
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         decoration: BoxDecoration(
-          color: AppColors.background, // Restored dark background
+          color: AppColors.background,
           borderRadius: BorderRadius.circular(12),
           border: isSelected
               ? Border.all(color: AppColors.primary, width: 2)
-              : Border.all(color: AppColors.border, width: 1),
+              : null,
         ),
         child: TextField(
           controller: controller,
@@ -573,6 +559,8 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
           autofillHints: const [],
           textAlign: TextAlign.center,
           keyboardType: TextInputType.number,
+          cursorColor: AppColors.primary,
+          enableInteractiveSelection: false,
           inputFormatters: [
             FilteringTextInputFormatter.digitsOnly,
             LengthLimitingTextInputFormatter(2),
@@ -585,6 +573,8 @@ class _CustomTimePickerWidgetState extends State<CustomTimePickerWidget> {
           ),
           decoration: const InputDecoration(
             border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
             isDense: true,
             contentPadding: EdgeInsets.zero,
           ),
