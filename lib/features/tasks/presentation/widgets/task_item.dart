@@ -183,7 +183,7 @@ class TaskItem extends StatelessWidget {
       // Alinha com a primeira linha do texto (ajustado para compensar padding interno do Checkbox)
       margin: const EdgeInsets.only(right: 6.0, top: 0.0),
       child: Transform.scale(
-        scale: 0.9, // Reduz ligeiramente para melhor proporção
+        scale: 0.8, // Ajustado para igualar o tamanho do círculo de conclusão
         child: Checkbox(
           value: isSelected,
           // Adiciona verificação nula

@@ -23,6 +23,7 @@ class TaskModel {
   final List<int>?
       reminderOffsets; // Array de offsets em minutos p/ multiplos lembretes
 
+  final String? recurrenceCategory; // 'commitment' ou 'flow'
   final String? recurrenceId; // ID para agrupar tarefas recorrentes geradas
   final String? goalId; // ID da meta vinculada (Marco)
   final String? sourceJournalId; // ID da anotação de origem (Journal Entry)
@@ -52,6 +53,7 @@ class TaskModel {
     this.recurrenceEndDate,
     this.reminderTime,
     this.reminderOffsets,
+    this.recurrenceCategory,
     this.recurrenceId,
     this.goalId,
     this.sourceJournalId,
@@ -94,6 +96,7 @@ class TaskModel {
     Object? recurrenceEndDate = const _Undefined(),
     Object? reminderTime = const _Undefined(),
     Object? reminderOffsets = const _Undefined(),
+    Object? recurrenceCategory = const _Undefined(),
     Object? recurrenceId = const _Undefined(),
     Object? goalId = const _Undefined(),
     Object? sourceJournalId = const _Undefined(),
@@ -130,6 +133,9 @@ class TaskModel {
       reminderOffsets: reminderOffsets is _Undefined
           ? this.reminderOffsets
           : reminderOffsets as List<int>?,
+      recurrenceCategory: recurrenceCategory is _Undefined
+          ? this.recurrenceCategory
+          : recurrenceCategory as String?,
       recurrenceId: recurrenceId is _Undefined
           ? this.recurrenceId
           : recurrenceId as String?,
@@ -217,6 +223,7 @@ class TaskModel {
           _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate'])?.toLocal(),
       reminderTime: reminder,
       reminderOffsets: remOffsets,
+      recurrenceCategory: data['recurrence_category'] ?? data['recurrenceCategory'],
       recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
       goalId: data['goal_id'] ?? data['goalId'],
       sourceJournalId: data['source_journal_id'] ?? data['sourceJournalId'],
@@ -249,6 +256,7 @@ class TaskModel {
       'recurrence_days_of_week': recurrenceDaysOfWeek,
       'recurrence_end_date': recurrenceEndDate?.toUtc().toIso8601String(),
       'reminder_offsets': reminderOffsets,
+      'recurrence_category': recurrenceCategory,
       'recurrence_id': recurrenceId,
       'goal_id': goalId,
       'source_journal_id': sourceJournalId,
@@ -264,6 +272,8 @@ class TaskModel {
 
   bool get isOverdue {
     if (completed) return false;
+    // Rituais fluídos (flow) nunca ficam atrasados
+    if (recurrenceCategory == 'flow') return false;
     // Tarefas sem vencimento nunca ficam atrasadas
     if (dueDate == null) return false;
     final now = DateTime.now();

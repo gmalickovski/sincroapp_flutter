@@ -7,11 +7,13 @@ class RecurrenceRule {
   final RecurrenceType type;
   final List<int> daysOfWeek;
   final DateTime? endDate;
+  final String recurrenceCategory; // 'commitment' ou 'flow'
 
   RecurrenceRule({
     this.type = RecurrenceType.none,
     this.daysOfWeek = const [],
     this.endDate,
+    this.recurrenceCategory = 'commitment',
   });
 
   RecurrenceRule copyWith({
@@ -19,11 +21,13 @@ class RecurrenceRule {
     List<int>? daysOfWeek,
     DateTime? endDate,
     bool clearEndDate = false,
+    String? recurrenceCategory,
   }) {
     return RecurrenceRule(
       type: type ?? this.type,
       daysOfWeek: daysOfWeek ?? List.from(this.daysOfWeek),
       endDate: clearEndDate ? null : (endDate ?? this.endDate),
+      recurrenceCategory: recurrenceCategory ?? this.recurrenceCategory,
     );
   }
 
@@ -88,12 +92,14 @@ class RecurrenceRule {
     return other is RecurrenceRule &&
         other.type == type &&
         listEquals(other.daysOfWeek, daysOfWeek) &&
-        other.endDate == endDate;
+        other.endDate == endDate &&
+        other.recurrenceCategory == recurrenceCategory;
   }
 
   @override
   int get hashCode =>
       type.hashCode ^
       const DeepCollectionEquality().hash(daysOfWeek) ^
-      endDate.hashCode;
+      endDate.hashCode ^
+      recurrenceCategory.hashCode;
 }

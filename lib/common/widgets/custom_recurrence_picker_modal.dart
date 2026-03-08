@@ -5,111 +5,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'custom_end_date_picker_dialog.dart';
 
-// --- Modelos de Dados para Recorr├¬ncia ---
-
-enum RecurrenceType { none, daily, weekly, monthly }
-
-class RecurrenceRule {
-  final RecurrenceType type;
-  final List<int> daysOfWeek;
-  final DateTime? endDate;
-
-  RecurrenceRule({
-    this.type = RecurrenceType.none,
-    this.daysOfWeek = const [],
-    this.endDate,
-  });
-
-  RecurrenceRule copyWith({
-    RecurrenceType? type,
-    List<int>? daysOfWeek,
-    DateTime? endDate,
-    bool clearEndDate = false,
-  }) {
-    return RecurrenceRule(
-      type: type ?? this.type,
-      daysOfWeek:
-          daysOfWeek ?? List.from(this.daysOfWeek), // Cria c├│pia da lista
-      endDate: clearEndDate ? null : (endDate ?? this.endDate),
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is RecurrenceRule &&
-          runtimeType == other.runtimeType &&
-          type == other.type &&
-          _listEquals(daysOfWeek..sort(), other.daysOfWeek..sort()) &&
-          endDate == other.endDate;
-
-  @override
-  int get hashCode => type.hashCode ^ daysOfWeek.hashCode ^ endDate.hashCode;
-
-  bool _listEquals<T>(List<T>? a, List<T>? b) {
-    if (a == null) return b == null;
-    if (b == null || a.length != b.length) return false;
-    for (int i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
-  // --- FIM Operador == e hashCode ---
-
-  String getSummaryText() {
-    String summary;
-    switch (type) {
-      case RecurrenceType.none:
-        return "Nunca";
-      case RecurrenceType.daily:
-        summary = "Diariamente";
-        break;
-      case RecurrenceType.weekly:
-        final Set<int> daysSet =
-            daysOfWeek.toSet(); // Usa Set internamente para facilitar
-        if (daysSet.isEmpty && type == RecurrenceType.weekly) {
-          summary = "Semanalmente";
-        } else if (daysSet.length == 7) {
-          summary = "Diariamente";
-        } else if (daysSet.length == 5 &&
-            !daysSet.contains(DateTime.saturday) &&
-            !daysSet.contains(DateTime.sunday)) {
-          summary = "Dias da semana";
-        } else if (daysSet.isNotEmpty) {
-          final sortedDays = List<int>.from(daysSet)
-            ..sort((a, b) {
-              if (a == DateTime.sunday) return 1;
-              if (b == DateTime.sunday) return -1;
-              return a.compareTo(b);
-            });
-          final dayNames =
-              sortedDays.map((d) => _getDayAbbreviation(d)).join(', ');
-          summary = "Semanal ($dayNames)";
-        } else {
-          summary = "Semanalmente"; // Fallback
-        }
-        break;
-      case RecurrenceType.monthly:
-        summary = "Mensalmente";
-        break;
-    }
-
-    if (endDate != null) {
-      final formattedDate = DateFormat.yMd('pt_BR').format(endDate!);
-      summary += ", at├® $formattedDate";
-    }
-
-    return summary;
-  }
-
-  static String _getDayAbbreviation(int day) {
-    DateTime refDate = DateTime.now();
-    while (refDate.weekday != day) {
-      refDate = refDate.add(const Duration(days: 1));
-    }
-    return DateFormat('E', 'pt_BR').format(refDate);
-  }
-}
 
 // --- Widget do Modal ---
 
@@ -135,6 +30,7 @@ class _CustomRecurrencePickerModalState
   late RecurrenceType _selectedType;
   late List<int> _selectedDays;
   DateTime? _endDate;
+  late String _selectedCategory;
 
   final Map<int, String> _weekDayNames = {
     DateTime.monday: "S",
@@ -161,6 +57,7 @@ class _CustomRecurrencePickerModalState
     _selectedType = widget.initialRule.type;
     _selectedDays = List<int>.from(widget.initialRule.daysOfWeek);
     _endDate = widget.initialRule.endDate;
+    _selectedCategory = widget.initialRule.recurrenceCategory;
   }
 
   Future<void> _showEndDatePicker() async {
@@ -219,6 +116,9 @@ class _CustomRecurrencePickerModalState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                children: [
+                  _buildNaturezaRow(),
+                  const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
                   _buildFrequencyOptions(),
                   AnimatedCrossFade(
                     firstChild:
@@ -539,6 +439,7 @@ class _CustomRecurrencePickerModalState
                         type: _selectedType,
                         daysOfWeek: finalDaysOfWeek,
                         endDate: finalEndDate,
+                        recurrenceCategory: _selectedCategory,
                       );
                       Navigator.pop(context, newRule);
                     },

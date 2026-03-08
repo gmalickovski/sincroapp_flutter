@@ -580,6 +580,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         _selectedTime?.minute != _initialTime?.minute) return true;
     // Compare recurrence type
     if (_recurrenceRule.type != (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
+    if (_recurrenceRule.recurrenceCategory != (_initialRecurrence?.recurrenceCategory ?? 'commitment')) return true;
     // Compare reminder offsets
     if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets)) return true;
     return false;
@@ -1047,6 +1048,18 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Category Chips (Flow vs Commitment)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: ScrollableChipsRow(
+                          children: [
+                            _buildCategoryChip("Fixar na Agenda", 'commitment', Icons.push_pin_outlined),
+                            const SizedBox(width: 8),
+                            _buildCategoryChip("Fluir na Trilha", 'flow', Icons.waves),
+                          ],
+                        ),
+                      ),
+
                       // Frequency Chips
                       ScrollableChipsRow(
                         children: [
@@ -1073,6 +1086,41 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               : const SizedBox.shrink(),
         ),
       ],
+    );
+  }
+
+  Widget _buildCategoryChip(String label, String value, IconData icon) {
+    final isSelected = _recurrenceRule.recurrenceCategory == value;
+    
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: isSelected ? Colors.white : AppColors.secondaryText),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      showCheckmark: false,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _recurrenceRule = _recurrenceRule.copyWith(recurrenceCategory: value);
+          });
+        }
+      },
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.secondaryText,
+        fontFamily: 'Poppins',
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+            color: isSelected ? AppColors.primary : AppColors.border),
+      ),
     );
   }
 
