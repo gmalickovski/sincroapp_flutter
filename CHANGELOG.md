@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.17](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.16...v1.6.17) (2026-03-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** add ScheduleTaskSheet widget for task scheduling with date, time, recurrence, and reminder options. ([2b402ec](https://github.com/gmalickovski/sincroapp_flutter/commit/2b402ec3bad29b3da14255887bec2836d4aadfb2))
+
 ### [1.6.16](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.15...v1.6.16) (2026-03-08)
 
 
