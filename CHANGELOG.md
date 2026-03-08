@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.7.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.17...v1.7.0) (2026-03-08)
+
+
+### Funcionalidades ✨
+
+* Implement ScheduleTaskSheet for comprehensive task scheduling with date, time, recurrence, and reminder options. ([ef84d75](https://github.com/gmalickovski/sincroapp_flutter/commit/ef84d75aceb33e58fbb12bc9a7be4468e4902e6d))
+
 ### [1.6.17](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.16...v1.6.17) (2026-03-08)
 
 
