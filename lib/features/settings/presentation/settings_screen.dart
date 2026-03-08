@@ -11,20 +11,22 @@ import 'tabs/about_settings_tab.dart'; // NOVO import
 
 class SettingsScreen extends StatefulWidget {
   final UserModel userData;
+  final int initialTab;
 
-  const SettingsScreen({super.key, required this.userData});
+  const SettingsScreen({super.key, required this.userData, this.initialTab = 0});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   late List<({IconData icon, String title, Widget page})> _settingsPages;
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialTab.clamp(0, 5);
     _settingsPages = [
       (
         icon: Icons.person_outline,
@@ -224,6 +226,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildMobileLayout(BuildContext context) {
     return DefaultTabController(
       length: _settingsPages.length,
+      initialIndex: widget.initialTab.clamp(0, _settingsPages.length - 1),
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(

@@ -94,6 +94,9 @@ void callbackDispatcher() {
       }
 
       debugPrint("Workmanager: Background Sync Executed!");
+
+      // Verifica se há atualização disponível do app
+      await NotificationService.instance.checkForAppUpdate();
     } catch (e) {
       debugPrint("Workmanager: Output error: $e");
     }

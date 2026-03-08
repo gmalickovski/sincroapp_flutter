@@ -113,6 +113,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   bool _isSelectingYearMonth = false;
 
+  // --- Initial State Snapshot (for reopened-with-data detection) ---
+  bool _hasInitialData = false;
+  DateTime? _initialDay;
+  TimeOfDay? _initialTime;
+  RecurrenceRule? _initialRecurrence;
+  Set<int> _initialReminderOffsets = {};
+
   // REMOVED ScrollControllers (managed internally by ScrollableChipsRow)
 
   @override
@@ -151,6 +158,22 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         dataNascimento: "01/01/2000",
       );
     }
+
+    // Snapshot initial state for edit-detection when reopened with data
+    _hasInitialData = widget.initialDate != null ||
+        widget.initialTime != null ||
+        (widget.initialRecurrence != null &&
+            widget.initialRecurrence!.type != RecurrenceType.none) ||
+        (widget.initialReminderOffsets != null &&
+            widget.initialReminderOffsets!.isNotEmpty);
+    _initialDay = _selectedDay;
+    _initialTime = _selectedTime;
+    _initialRecurrence = RecurrenceRule(
+      type: _recurrenceRule.type,
+      daysOfWeek: List<int>.from(_recurrenceRule.daysOfWeek),
+      endDate: _recurrenceRule.endDate,
+    );
+    _initialReminderOffsets = Set<int>.from(_selectedReminderOffsets);
   }
 
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
@@ -300,6 +323,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       _focusedDay = DateTime.now();
       _isSelectingYearMonth = false;
     });
+    // Immediately apply the cleared state
+    _onSave();
   }
 
   Widget _buildCustomHeader() {
@@ -542,6 +567,26 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     );
   }
 
+  // Detects if user modified anything from the initial snapshot
+  bool get _hasModifications {
+    if (!_hasInitialData) return false;
+    // Compare day
+    if (!_isSameDay(_selectedDay, _initialDay)) return true;
+    // Compare time
+    if (_selectedTime?.hour != _initialTime?.hour ||
+        _selectedTime?.minute != _initialTime?.minute) return true;
+    // Compare recurrence type
+    if (_recurrenceRule.type != (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
+    // Compare reminder offsets
+    if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets)) return true;
+    return false;
+  }
+
+  bool _setEquals(Set<int> a, Set<int> b) {
+    if (a.length != b.length) return false;
+    return a.containsAll(b);
+  }
+
   Widget _buildFooter() {
     bool hasAnySelection = _selectedDay != null ||
         _selectedTime != null ||
@@ -608,6 +653,150 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       );
     }
 
+    // --- 3-state footer logic ---
+    // State A: Reopened with data, NO modifications → "Fechar" + "Limpar"
+    // State B: Has modifications (or fresh selection) → "Limpar" + "Aplicar"
+    // State C: Nothing selected (cleared or fresh empty) → "Fechar" only
+
+    Widget footerContent;
+
+    if (_hasInitialData && hasAnySelection && !_hasModifications) {
+      // State A: Reopened with data, unchanged → Fechar + Limpar
+      footerContent = Row(
+        key: const ValueKey('CloseAndClearButtons'),
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.cardBackground,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Fechar",
+                    style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontFamily: 'Poppins')),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _onClear,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.cardBackground,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Limpar",
+                    style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontFamily: 'Poppins')),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else if (hasAnySelection) {
+      // State B: Has selection AND modifications → Limpar + Aplicar
+      footerContent = Row(
+        key: const ValueKey('ClearSaveButtons'),
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: OutlinedButton(
+                onPressed: _onClear,
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: AppColors.cardBackground,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text("Limpar",
+                    style: TextStyle(
+                        color: AppColors.secondaryText,
+                        fontFamily: 'Poppins')),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: ElevatedButton(
+                onPressed: _onSave,
+                style: ButtonStyle(
+                  backgroundColor:
+                      WidgetStateProperty.resolveWith<Color>(
+                          (states) => AppColors.primary),
+                  foregroundColor:
+                      WidgetStateProperty.resolveWith<Color>(
+                          (states) => Colors.white),
+                  elevation: WidgetStateProperty.resolveWith<double>(
+                      (states) => 0),
+                  padding: WidgetStateProperty
+                      .resolveWith<EdgeInsetsGeometry>((states) =>
+                          const EdgeInsets.symmetric(vertical: 12)),
+                  shape:
+                      WidgetStateProperty.resolveWith<OutlinedBorder>(
+                          (states) {
+                    if (states.contains(WidgetState.hovered)) {
+                      return RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: const BorderSide(
+                            color: Colors.white, width: 2),
+                      );
+                    }
+                    return RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(
+                          color: AppColors.primary, width: 2),
+                    );
+                  }),
+                ),
+                child: const Text("Aplicar",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Poppins')),
+              ),
+            ),
+          ),
+        ],
+      );
+    } else {
+      // State C: Nothing selected → Fechar only
+      footerContent = SizedBox(
+        key: const ValueKey('CloseButton'),
+        height: 48,
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Fechar",
+              style: TextStyle(
+                  color: AppColors.secondaryText,
+                  fontFamily: 'Poppins')),
+        ),
+      );
+    }
+
     // Default Footer
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -618,92 +807,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               opacity: animation,
               child: ScaleTransition(scale: animation, child: child));
         },
-        child: hasAnySelection
-            ? Row(
-                key: const ValueKey('ClearSaveButtons'),
-                children: [
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: OutlinedButton(
-                        onPressed: _onClear,
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: AppColors.cardBackground,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: const BorderSide(color: AppColors.border),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                        ),
-                        child: const Text("Limpar",
-                            style: TextStyle(
-                                color: AppColors.secondaryText,
-                                fontFamily: 'Poppins')),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: SizedBox(
-                      height: 48,
-                      child: ElevatedButton(
-                        onPressed: _onSave,
-                        style: ButtonStyle(
-                          backgroundColor:
-                              WidgetStateProperty.resolveWith<Color>(
-                                  (states) => AppColors.primary),
-                          foregroundColor:
-                              WidgetStateProperty.resolveWith<Color>(
-                                  (states) => Colors.white),
-                          elevation: WidgetStateProperty.resolveWith<double>(
-                              (states) => 0),
-                          padding: WidgetStateProperty
-                              .resolveWith<EdgeInsetsGeometry>((states) =>
-                                  const EdgeInsets.symmetric(vertical: 12)),
-                          shape:
-                              WidgetStateProperty.resolveWith<OutlinedBorder>(
-                                  (states) {
-                            if (states.contains(WidgetState.hovered)) {
-                              return RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(
-                                    color: Colors.white, width: 2),
-                              );
-                            }
-                            return RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              side: const BorderSide(
-                                  color: AppColors.primary, width: 2),
-                            );
-                          }),
-                        ),
-                        child: const Text("Aplicar",
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontFamily: 'Poppins')),
-                      ),
-                    ),
-                  ),
-                ],
-              )
-            : SizedBox(
-                key: const ValueKey('CloseButton'),
-                height: 48,
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: AppColors.cardBackground,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text("Fechar",
-                      style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontFamily: 'Poppins')),
-                ),
-              ),
+        child: footerContent,
       ),
     );
   }
@@ -1178,6 +1282,19 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   Switch(
                     value: _showReminder,
                     overlayColor: WidgetStateProperty.all(Colors.transparent),
+                    trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                      if (states.contains(WidgetState.hovered)) {
+                        return _showReminder ? Colors.white : AppColors.primary;
+                      }
+                      return Colors.transparent;
+                    }),
+                    trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+                      if (states.contains(WidgetState.selected)) {
+                        return AppColors.primary;
+                      }
+                      return AppColors.border; // Cor para chave desligada
+                    }),
+                    thumbColor: WidgetStateProperty.all(Colors.white),
                     onChanged: !_canUseReminders
                         ? null
                         : (val) {

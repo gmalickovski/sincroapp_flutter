@@ -97,6 +97,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   bool _isInputEmpty = true;
   bool _isInputHovered = false;
   bool _isSendHovered = false;
+  bool _isHistoryLoaded = false; // Prevents idle header flash on open
 
   // Mentions State
   OverlayEntry? _mentionsOverlay;
@@ -315,7 +316,10 @@ class _AssistantPanelState extends State<AssistantPanel>
     } catch (e) {
       debugPrint("Error loading history: $e");
     } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _isHistoryLoaded = true;
+      });
     }
   }
 
@@ -538,7 +542,16 @@ class _AssistantPanelState extends State<AssistantPanel>
     );
   }
 
+  // Helper: whether we're in "idle" (new conversation) mode
+  bool get _isIdle => _isHistoryLoaded && _messages.isEmpty && !_isSending;
+  // Helper: whether we're in "active" (has conversation) mode
+  bool get _isActive => _isHistoryLoaded && (_messages.isNotEmpty || _isSending);
+
   Widget _buildHeader(bool isModal, bool isDesktop) {
+    final closeAction = widget.onClose ??
+        () => Navigator.of(context, rootNavigator: true).pop();
+    final closeTooltip = isDesktop ? 'Recolher Painel' : 'Fechar';
+
     return Container(
       alignment: Alignment.center,
       decoration: BoxDecoration(
@@ -553,181 +566,169 @@ class _AssistantPanelState extends State<AssistantPanel>
         border: const Border(bottom: BorderSide(color: Colors.transparent)),
       ),
       child: SafeArea(
-        // Ensure it doesn't clip on notches
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Row(
-                crossAxisAlignment:
-                    CrossAxisAlignment.center, // Center items vertically
-                children: [
-                  // 1. Floating Animated Star
-                  const AgentStarIcon(
-                    size: 50,
-                    mode: AgentStarMode.dashboard,
-                    isStatic: false,
-                    isHollow: false,
-                    slowAnimation: true,
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  // 2. Dynamic Bubble (Flexible)
-                  Flexible(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 500),
-                      layoutBuilder:
-                          (Widget? currentChild, List<Widget> previousChildren) {
-                        return Stack(
-                          alignment: Alignment.centerLeft,
-                          children: <Widget>[
-                            ...previousChildren,
-                            if (currentChild != null) currentChild,
-                          ],
-                        );
-                      },
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                        return FadeTransition(opacity: animation, child: child);
-                      },
-                      child: (_messages.isEmpty && !_isSending)
-                          ? Container(
-                              key: const ValueKey('idle_greeting'),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.cardBackground,
-                                borderRadius: BorderRadius.circular(12).copyWith(
-                                  bottomLeft: const Radius.circular(0),
-                                ),
-                                border: Border.all(
-                                    color: AppColors.primary, width: 1.5),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: !_isHistoryLoaded
+                // --- Loading: show only star while history loads ---
+                ? Row(
+                    key: const ValueKey('header_loading'),
+                    children: [
+                      const AgentStarIcon(
+                        size: 50,
+                        mode: AgentStarMode.dashboard,
+                        isStatic: false,
+                        isHollow: false,
+                        slowAnimation: true,
+                      ),
+                      const Spacer(),
+                    ],
+                  )
+                : _isActive
+                    // --- Active conversation header ---
+                    ? Row(
+                        key: const ValueKey('header_active'),
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Left: Arrow back + Star + Title
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_rounded,
+                                color: AppColors.secondaryText),
+                            onPressed: closeAction,
+                            tooltip: closeTooltip,
+                          ),
+                          const AgentStarIcon(
+                            size: 50,
+                            mode: AgentStarMode.dashboard,
+                            isStatic: false,
+                            isHollow: false,
+                            slowAnimation: true,
+                          ),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              "Sincro IA",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
                               ),
-                              child: const Text(
-                                "Olá, eu sou o Sincro IA, como posso te ajudar hoje?",
-                                style: TextStyle(
-                                  color: AppColors.secondaryText,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                softWrap: true, // Allow wrapping
+                            ),
+                          ),
+                          // Right: New chat + History
+                          IconButton(
+                            icon: const Icon(Icons.add_comment_rounded,
+                                color: AppColors.secondaryText),
+                            onPressed: () {
+                              if (!_isSending) {
+                                setState(() {
+                                  _messages.clear();
+                                  _animatedMessageIds.clear();
+                                  _currentConversationId = null;
+                                });
+                              }
+                            },
+                            tooltip: 'Nova Conversa',
+                          ),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            icon: const Icon(Icons.history_rounded,
+                                color: AppColors.secondaryText),
+                            onPressed: _showHistory,
+                            tooltip: 'Histórico',
+                          ),
+                        ],
+                      )
+                    // --- Idle (new conversation) header ---
+                    : Column(
+                        key: const ValueKey('header_idle'),
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Top row: Star + Greeting bubble
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const AgentStarIcon(
+                                size: 50,
+                                mode: AgentStarMode.dashboard,
+                                isStatic: false,
+                                isHollow: false,
+                                slowAnimation: true,
                               ),
-                            )
-                          : ConstrainedBox(
-                              key: const ValueKey('active_title'),
-                              constraints: const BoxConstraints(minHeight: 48),
-                              child: const Align(
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  "Sincro IA",
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 0.5,
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.cardBackground,
+                                    borderRadius: BorderRadius.circular(12).copyWith(
+                                      bottomLeft: const Radius.circular(0),
+                                    ),
+                                    border: Border.all(
+                                        color: AppColors.primary, width: 1.5),
+                                  ),
+                                  child: const Text(
+                                    "Olá, eu sou o Sincro IA, como posso te ajudar hoje?",
+                                    style: TextStyle(
+                                      color: AppColors.secondaryText,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    softWrap: true,
                                   ),
                                 ),
                               ),
-                            ),
-                    ),
-                  ),
-
-                  const SizedBox(width: 16), // Gap between bubble and buttons
-
-                  // 3. Right Controls (Top Line)
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOutBack,
-                    child: (!(_messages.isEmpty && !_isSending))
-                        ? Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.add_comment_rounded,
-                                    color: AppColors.secondaryText),
-                                onPressed: () {
-                                  if (!_isSending) {
-                                    setState(() {
-                                      _messages.clear();
-                                      _animatedMessageIds.clear();
-                                      _currentConversationId = null; // Start Fresh
-                                    });
-                                  }
-                                },
-                                tooltip: 'Nova Conversa',
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: const Icon(Icons.history_rounded,
-                                    color: AppColors.secondaryText),
-                                onPressed: _showHistory,
-                                tooltip: 'Histórico',
-                              ),
-                              const SizedBox(width: 4),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward_rounded,
-                                    color: AppColors.secondaryText),
-                                onPressed: widget.onClose ??
-                                    () => Navigator.of(context, rootNavigator: true).pop(),
-                                tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
-                              ),
                             ],
-                          )
-                        : const SizedBox.shrink(),
-                  ),
-                ],
-              ),
-              
-              // 4. Action Buttons (Bottom Line, when Idle)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOutBack,
-                alignment: Alignment.topRight,
-                child: (_messages.isEmpty && !_isSending)
-                    ? Padding(
-                        padding: const EdgeInsets.only(top: 8.0, right: 0.0),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.add_comment_rounded,
-                                  color: AppColors.secondaryText),
-                              onPressed: () {
-                                if (!_isSending) {
-                                  setState(() {
-                                    _messages.clear();
-                                    _animatedMessageIds.clear();
-                                    _currentConversationId = null; // Start Fresh
-                                  });
-                                }
-                              },
-                              tooltip: 'Nova Conversa',
+                          ),
+                          // Bottom row: Buttons on the LEFT
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.arrow_back_rounded,
+                                      color: AppColors.secondaryText),
+                                  onPressed: closeAction,
+                                  tooltip: closeTooltip,
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.add_comment_rounded,
+                                      color: AppColors.secondaryText),
+                                  onPressed: () {
+                                    if (!_isSending) {
+                                      setState(() {
+                                        _messages.clear();
+                                        _animatedMessageIds.clear();
+                                        _currentConversationId = null;
+                                      });
+                                    }
+                                  },
+                                  tooltip: 'Nova Conversa',
+                                ),
+                                const SizedBox(width: 4),
+                                IconButton(
+                                  icon: const Icon(Icons.history_rounded,
+                                      color: AppColors.secondaryText),
+                                  onPressed: _showHistory,
+                                  tooltip: 'Histórico',
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(Icons.history_rounded,
-                                  color: AppColors.secondaryText),
-                              onPressed: _showHistory,
-                              tooltip: 'Histórico',
-                            ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              icon: const Icon(Icons.arrow_forward_rounded,
-                                  color: AppColors.secondaryText),
-                              onPressed: widget.onClose ??
-                                  () => Navigator.of(context, rootNavigator: true).pop(),
-                              tooltip: isDesktop ? 'Recolher Painel' : 'Fechar',
-                            ),
-                          ],
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-            ],
+                          ),
+                        ],
+                      ),
           ),
         ),
       ),

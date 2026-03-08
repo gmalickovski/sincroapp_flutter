@@ -95,6 +95,19 @@ class _NotificationDetailModalState extends State<NotificationDetailModal> {
         final fromUid = meta['from_uid'];
         await _supabaseService.respondToContactRequest(
             uid: currentUid, contactUid: fromUid, accept: accept);
+
+        // Marcar notificação como já respondida (action_taken)
+        final newMeta = Map<String, dynamic>.from(meta);
+        newMeta['action_taken'] = true;
+        try {
+          await Supabase.instance.client
+              .schema('sincroapp')
+              .from('notifications')
+              .update({'metadata': newMeta, 'is_read': true})
+              .eq('id', widget.notification.id);
+        } catch (e) {
+          debugPrint('⚠️ Erro ao atualizar action_taken: $e');
+        }
       } else if (type == NotificationType.taskInvite) {
         final taskId = meta['task_id'] as String?;
         final ownerId = meta['owner_id'] as String?;

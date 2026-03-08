@@ -297,7 +297,12 @@ class _GoalFormContentState extends State<_GoalFormContent> {
       children: [
         // ─── Header ───
         Padding(
-          padding: EdgeInsets.only(top: widget.isDesktop ? 32.0 : 24.0, bottom: 16.0),
+          padding: EdgeInsets.only(
+            top: widget.isDesktop ? 32.0 : 16.0,
+            left: 16.0,
+            right: 16.0,
+            bottom: 16.0,
+          ),
           child: Text(
             widget.goalToEdit != null ? 'Editar Jornada' : 'Criar Nova Jornada',
             textAlign: TextAlign.center,
@@ -396,7 +401,12 @@ class _GoalFormContentState extends State<_GoalFormContent> {
 
         // ─── Dynamic Footer Buttons ───
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: widget.isDesktop ? 32.0 : 16.0, vertical: widget.isDesktop ? 32.0 : 16.0).copyWith(top: 0),
+          padding: EdgeInsets.only(
+            left: widget.isDesktop ? 32.0 : 16.0,
+            right: widget.isDesktop ? 32.0 : 16.0,
+            bottom: widget.isDesktop ? 32.0 : 16.0,
+            top: 8.0,
+          ),
           child: SafeArea(
             top: false,
             child: AnimatedSwitcher(

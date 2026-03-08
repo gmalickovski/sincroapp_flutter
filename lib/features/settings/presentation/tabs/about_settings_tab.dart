@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../../../common/constants/app_colors.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../../services/supabase_service.dart';
 
 class AboutSettingsTab extends StatefulWidget {
   const AboutSettingsTab({super.key});
@@ -19,11 +20,14 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
     buildSignature: 'Unknown',
     installerStore: 'Unknown',
   );
+  bool _isOutdated = false;
+  String? _latestVersion;
 
   @override
   void initState() {
     super.initState();
     _initPackageInfo();
+    _checkForUpdate();
   }
 
   Future<void> _initPackageInfo() async {
@@ -31,6 +35,21 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
     setState(() {
       _packageInfo = info;
     });
+  }
+
+  Future<void> _checkForUpdate() async {
+    try {
+      final latest = await SupabaseService().getLatestAppVersion();
+      if (latest != null && mounted) {
+        final info = await PackageInfo.fromPlatform();
+        setState(() {
+          _latestVersion = latest;
+          _isOutdated = info.version != latest;
+        });
+      }
+    } catch (e) {
+      debugPrint('Erro ao verificar atualização: $e');
+    }
   }
 
   Future<void> _launchUrl(String url) async {
@@ -75,7 +94,7 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
               const Text(
                 'Sincro App',
                 style: TextStyle(
@@ -92,6 +111,49 @@ class _AboutSettingsTabState extends State<AboutSettingsTab> {
                   color: AppColors.tertiaryText,
                 ),
               ),
+              // Botão Atualizar (só aparece quando o app está desatualizado)
+              if (_isOutdated && _latestVersion != null) ...[
+                const SizedBox(height: 16),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Nesse momento o App só pode ser Atualizado pelo Administrador.',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          backgroundColor: AppColors.cardBackground,
+                          duration: Duration(seconds: 4),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.system_update, color: Colors.white, size: 20),
+                    label: Text(
+                      'Atualizar para v$_latestVersion',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

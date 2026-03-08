@@ -809,8 +809,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
               ),
 
               // --- IN├ìCIO: ├üREA DE "PILLS" ---
+              if (_selectedGoalTitle != null ||
+                  _selectedDate != null ||
+                  _selectedTags.isNotEmpty ||
+                  _sharedWithUsernames.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),
+                padding: const EdgeInsets.only(top: 6.0, bottom: 2.0),
                 child: Wrap(
                   spacing: 6.0, // Espa├ºo horizontal entre os pills
                   runSpacing: 4.0, // Espa├ºo vertical entre as linhas de pills
@@ -899,7 +903,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
               ),
               // --- FIM: ├üREA DE "PILLS" ---
 
-              const SizedBox(height: 12),
+              const SizedBox(height: 6),
               const Divider(color: AppColors.border, height: 1),
               const SizedBox(height: 4),
               Row(
@@ -946,14 +950,26 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     ),
                   const Spacer(),
                   if (_personalDay > 0)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: VibrationPill(
-                        vibrationNumber: _personalDay,
-                        onTap: () {
-                          showVibrationInfoModal(context,
-                              vibrationNumber: _personalDay);
-                        },
+                    Flexible(
+                      flex: 0,
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 6.0),
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            final screenWidth = MediaQuery.of(context).size.width;
+                            // On small screens (< 380px), use compact (circle) version
+                            return VibrationPill(
+                              vibrationNumber: _personalDay,
+                              type: screenWidth < 380
+                                  ? VibrationPillType.compact
+                                  : VibrationPillType.standard,
+                              onTap: () {
+                                showVibrationInfoModal(context,
+                                    vibrationNumber: _personalDay);
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                   AnimatedSwitcher(
@@ -973,7 +989,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     child: _textController.text.trim().isNotEmpty
                         ? Padding(
                             key: const ValueKey('submitButton'),
-                            padding: EdgeInsets.only(left: _personalDay > 0 ? 8.0 : 0.0),
+                            padding: EdgeInsets.only(left: _personalDay > 0 ? 6.0 : 0.0),
                             child: ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(
@@ -981,12 +997,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
-                                  padding: const EdgeInsets.all(12),
-                                  minimumSize: const Size(44, 44)),
+                                  padding: const EdgeInsets.all(10),
+                                  minimumSize: const Size(38, 38)),
                               child: Icon(
                                 _isEditing ? Icons.check : Icons.arrow_upward,
                                 color: Colors.white,
-                                size: 20,
+                                size: 18,
                               ),
                             ),
                           )

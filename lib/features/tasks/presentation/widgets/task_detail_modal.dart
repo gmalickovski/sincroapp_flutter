@@ -1034,66 +1034,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
   }
 
   void _confirmDelete() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Confirmar Exclusão'),
-          content: const Text('Tem certeza que deseja excluir esta tarefa?'),
-          actionsAlignment: MainAxisAlignment.center,
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: <Widget>[
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.border),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text('Cancelar',
-                        style: TextStyle(
-                            color: AppColors.secondaryText,
-                            fontFamily: 'Poppins')),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                      _deleteTask();
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          Colors.redAccent.withValues(alpha: 0.1),
-                      foregroundColor: Colors.redAccent,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(
-                            color: Colors.redAccent, width: 1.5),
-                      ),
-                    ),
-                    child: const Text('Excluir',
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Poppins')),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      }
-    );
+    // Calls _deleteTask directly — it already has its own confirmation dialog
+    _deleteTask();
   }
 
   Widget _buildBottomActions() {
@@ -1278,7 +1220,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 onSuggestionSelected: _onSuggestionSelected,
               ),
             ),
-            const Divider(color: AppColors.border, height: 24),
+            const Divider(color: AppColors.border, height: 16),
             _buildDetailRow(
               icon: Icons.calendar_month_outlined,
               iconColor: (_selectedDateTime != null ||
@@ -1322,7 +1264,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                     )
                   : null,
             ),
-            const SizedBox(height: 8),
+
             if (showGoal) ...[
               _buildDetailRow(
                 icon: Icons.flag_outlined,
@@ -1365,12 +1307,12 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                       )
                     : null,
               ),
-              const SizedBox(height: 8),
+
             ],
             if (showContact) ...[
               _buildSharedWithSection(),
             ],
-            const Divider(color: AppColors.border, height: 24),
+            const Divider(color: AppColors.border, height: 16),
             if (widget.task.sourceJournalId != null &&
                 widget.task.sourceJournalId!.isNotEmpty) ...[
               _buildDetailRow(
@@ -1407,7 +1349,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                 ),
                 onTap: null,
               ),
-              const Divider(color: AppColors.border, height: 24),
+              const Divider(color: AppColors.border, height: 16),
             ],
             _buildTagsSection(),
           ],
@@ -1538,7 +1480,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               header,
               Flexible(child: contentBody),
               Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
+                padding: const EdgeInsets.all(16.0),
                 child: _buildBottomActions(),
               ),
             ],
@@ -1809,14 +1751,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           borderRadius: BorderRadius.circular(8.0),
           child: Padding(
             padding:
-                const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
+                const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
             child: rowContent,
           ),
         ),
       );
     } else {
       return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 4.0),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
         child: rowContent,
       );
     }

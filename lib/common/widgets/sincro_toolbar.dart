@@ -474,7 +474,7 @@ class _SincroToolbarState extends State<SincroToolbar> {
                             focusedBorder: InputBorder.none,
                             filled: false,
                             isCollapsed: true,
-                            contentPadding: EdgeInsets.symmetric(vertical: 10),
+                            contentPadding: EdgeInsets.only(top: 12, bottom: 8),
                           ),
                           onChanged: widget.onSearchChanged,
                         ),

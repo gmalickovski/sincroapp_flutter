@@ -310,6 +310,25 @@ class SupabaseService {
         .map((data) => data.where((json) => json['is_read'] == false).length);
   }
 
+  /// Busca uma notificação pelo ID
+  Future<NotificationModel?> getNotificationById(String notificationId) async {
+    try {
+      final data = await _supabase
+          .schema('sincroapp')
+          .from('notifications')
+          .select()
+          .eq('id', notificationId)
+          .maybeSingle();
+      if (data != null) {
+        return NotificationModel.fromFirestore(data);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao buscar notificação: $e');
+      return null;
+    }
+  }
+
   Future<void> markNotificationAsRead(String notificationId) async {
     try {
       await _supabase
@@ -2287,6 +2306,23 @@ class SupabaseService {
       return response;
     } catch (e) {
       debugPrint('Error fetching app version details: $e');
+      return null;
+    }
+  }
+
+  /// Fetches the latest app version from the app_versions table
+  Future<String?> getLatestAppVersion() async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('app_versions')
+          .select('version')
+          .order('release_date', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return response?['version'] as String?;
+    } catch (e) {
+      debugPrint('Error fetching latest app version: $e');
       return null;
     }
   }

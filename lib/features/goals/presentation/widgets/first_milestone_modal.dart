@@ -102,8 +102,6 @@ class _FirstMilestoneModalState extends State<FirstMilestoneModal> {
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
     
-    // Future: implement schedule sheet for desktop.
-    // Right now using the existing bottom sheet.
     final result = await ScheduleTaskSheet.show(
       context,
       initialDate: _selectedDueDate ?? DateTime.now(),
@@ -112,7 +110,7 @@ class _FirstMilestoneModalState extends State<FirstMilestoneModal> {
 
     if (result != null) {
       setState(() {
-        _selectedDueDate = result.dateTime; // Use the returned date
+        _selectedDueDate = result.dateTime;
       });
     }
   }
@@ -210,29 +208,27 @@ class _FirstMilestoneModalState extends State<FirstMilestoneModal> {
     );
   }
 
-  Widget _buildContent() {
-    final hasText = (_currentParsedTask?.cleanText ?? _textController.text).trim().isNotEmpty;
-
-    return Padding(
-      padding: EdgeInsets.all(widget.isDesktop ? 32.0 : 20.0),
+  Widget _buildScrollableBody() {
+    return SingleChildScrollView(
+      padding: EdgeInsets.only(
+        top: widget.isDesktop ? 32.0 : 16.0,
+        left: widget.isDesktop ? 32.0 : 16.0,
+        right: widget.isDesktop ? 32.0 : 16.0,
+        bottom: 8.0,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Criar Primeiro Marco 🎯',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Poppins',
-                ),
-              ),
-            ],
+          const Text(
+            'Criar Primeiro Marco 🎯',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Poppins',
+            ),
           ),
           if (widget.isDesktop) const SizedBox(height: 8),
           const SizedBox(height: 12),
@@ -280,113 +276,120 @@ class _FirstMilestoneModalState extends State<FirstMilestoneModal> {
               ),
             ),
           ),
-          
-          const SizedBox(height: 32),
-
-          // Action Buttons
-          Row(
-            children: hasText
-                ? [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton(
-                          onPressed: () {
-                            _textController.clear();
-                            setState(() {
-                              _currentParsedTask = null;
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            "Limpar",
-                            style: TextStyle(
-                              color: AppColors.secondaryText,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: ElevatedButton(
-                          onPressed: !_isSaving ? _handleSave : null,
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) {
-                                if (states.contains(WidgetState.disabled)) {
-                                  return AppColors.border;
-                                }
-                                return AppColors.primary;
-                              },
-                            ),
-                            foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                              (states) {
-                                if (states.contains(WidgetState.disabled)) {
-                                  return AppColors.secondaryText;
-                                }
-                                return Colors.white;
-                              },
-                            ),
-                            elevation: WidgetStateProperty.resolveWith<double>((states) => 0),
-                            padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
-                              (states) => const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                            shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
-                              return RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              );
-                            }),
-                          ),
-                          child: _isSaving
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                                )
-                              : const Text(
-                                  "Criar Marco",
-                                  style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
-                                ),
-                        ),
-                      ),
-                    ),
-                  ]
-                : [
-                    Expanded(
-                      child: SizedBox(
-                        height: 48,
-                        child: OutlinedButton(
-                          onPressed: _handleCancel,
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            side: const BorderSide(color: AppColors.border),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: const Text(
-                            "Fechar",
-                            style: TextStyle(
-                              color: AppColors.secondaryText,
-                              fontFamily: 'Poppins',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFooterButtons() {
+    final hasText = (_currentParsedTask?.cleanText ?? _textController.text).trim().isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: hasText
+              ? [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          _textController.clear();
+                          setState(() {
+                            _currentParsedTask = null;
+                          });
+                        },
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Limpar",
+                          style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        onPressed: !_isSaving ? _handleSave : null,
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (states) {
+                              if (states.contains(WidgetState.disabled)) {
+                                return AppColors.border;
+                              }
+                              return AppColors.primary;
+                            },
+                          ),
+                          foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                            (states) {
+                              if (states.contains(WidgetState.disabled)) {
+                                return AppColors.secondaryText;
+                              }
+                              return Colors.white;
+                            },
+                          ),
+                          elevation: WidgetStateProperty.resolveWith<double>((states) => 0),
+                          padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                            (states) => const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                          shape: WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
+                            return RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            );
+                          }),
+                        ),
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text(
+                                "Criar Marco",
+                                style: TextStyle(fontFamily: 'Poppins', fontWeight: FontWeight.bold),
+                              ),
+                      ),
+                    ),
+                  ),
+                ]
+              : [
+                  Expanded(
+                    child: SizedBox(
+                      height: 48,
+                      child: OutlinedButton(
+                        onPressed: _handleCancel,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Fechar",
+                          style: TextStyle(
+                            color: AppColors.secondaryText,
+                            fontFamily: 'Poppins',
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+        ),
       ),
     );
   }
@@ -399,19 +402,34 @@ class _FirstMilestoneModalState extends State<FirstMilestoneModal> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 500),
-          child: _buildContent(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildScrollableBody(),
+              _buildFooterButtons(),
+            ],
+          ),
         ),
       );
     } else {
-      return Container(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
+      return SafeArea(
+        bottom: false,
+        child: Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.9,
+          ),
+          decoration: const BoxDecoration(
+            color: AppColors.cardBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: _buildScrollableBody()),
+              _buildFooterButtons(),
+            ],
+          ),
         ),
-        decoration: const BoxDecoration(
-          color: AppColors.cardBackground,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: _buildContent(),
       );
     }
   }

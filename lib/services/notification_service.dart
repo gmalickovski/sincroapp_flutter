@@ -7,7 +7,13 @@ import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:flutter/material.dart'; // Import Material for TimeOfDay, Colors
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
+import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
+import 'package:sincro_app_flutter/features/notifications/presentation/widgets/notification_detail_modal.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
+import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
+import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/core/services/navigation_service.dart';
 import 'dart:convert';
@@ -99,8 +105,8 @@ class NotificationService {
     // Quando o app está totalmente fechado e você clica na notificação do Android:
     FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
       if (message != null) {
-        // Redireciona de acordo com o payload custom do push
-        debugPrint("Push FCM clicado com o app morto: \${message.data}");
+        debugPrint("Push FCM clicado com o app morto: ${message.data}");
+        _handlePushNotificationTap(message.data);
       }
     });
 
@@ -119,9 +125,119 @@ class NotificationService {
 
     // Quando o app tá rodando minimizado (em background) e você clica na notificação
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      debugPrint("Push FCM clicado no background: \${message.data}");
-      // Tratar navegação
+      debugPrint("Push FCM clicado no background: ${message.data}");
+      _handlePushNotificationTap(message.data);
     });
+  }
+
+  /// Trata o toque em uma notificação push: rota baseada no tipo
+  Future<void> _handlePushNotificationTap(Map<String, dynamic> data) async {
+    final type = data['type'] as String?;
+    final notificationId = data['notificationId'] as String?;
+
+    // Task reminders → abrir foco do dia com filtro de atrasadas
+    if (type == 'TASK_REMINDER' || type == 'reminder') {
+      _navigateToOverdueTasks();
+      return;
+    }
+
+    // Para outros tipos, abrir modal de detalhes da notificação
+    if (notificationId == null || notificationId.isEmpty) return;
+
+    try {
+      final notification = await SupabaseService().getNotificationById(notificationId);
+      if (notification == null) return;
+
+      // Marcar como lida
+      await SupabaseService().markNotificationAsRead(notificationId);
+
+      // Abrir modal flutuante de detalhes
+      _openNotificationDetailModal(notification);
+    } catch (e) {
+      debugPrint('❌ Erro ao abrir notificação push: $e');
+    }
+  }
+
+  /// Abre o NotificationDetailModal usando o NavigatorKey global
+  void _openNotificationDetailModal(NotificationModel notification) {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => NotificationDetailModal(notification: notification),
+    );
+  }
+
+  /// Navega para FocoDoDia com filtro de tarefas atrasadas
+  void _navigateToOverdueTasks() {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/',
+      (route) => false,
+      arguments: {'view': 'tasks', 'filter': 'overdue'},
+    );
+  }
+
+  /// Navega para Settings → About tab
+  void _navigateToSettingsAbout() {
+    final context = NavigationService.navigatorKey.currentContext;
+    if (context == null) return;
+
+    // Get current user data for settings screen
+    final userId = AuthRepository().currentUser?.id;
+    if (userId == null) return;
+
+    SupabaseService().getUserData(userId).then((userData) {
+      if (userData == null) return;
+      final ctx = NavigationService.navigatorKey.currentContext;
+      if (ctx == null) return;
+
+      final isDesktop = MediaQuery.of(ctx).size.width >= 720;
+      if (isDesktop) {
+        showDialog(
+          context: ctx,
+          builder: (context) => SettingsScreen(userData: userData, initialTab: 5),
+        );
+      } else {
+        Navigator.of(ctx).push(
+          MaterialPageRoute(
+            builder: (context) => SettingsScreen(userData: userData, initialTab: 5),
+          ),
+        );
+      }
+    }).catchError((e) {
+      debugPrint('❌ Erro ao navegar para Settings About: $e');
+    });
+  }
+
+  /// Verifica se há atualização disponível do app (1x por dia)
+  Future<void> checkForAppUpdate() async {
+    if (kIsWeb) return;
+
+    try {
+      final latestVersion = await SupabaseService().getLatestAppVersion();
+      if (latestVersion == null) return;
+
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      if (currentVersion != latestVersion) {
+        debugPrint('📦 Atualização disponível: $currentVersion → $latestVersion');
+        showNotification(
+          id: 999999,
+          title: '🔄 Atualização Disponível',
+          body: 'Uma nova versão do Sincro App ($latestVersion) está disponível.',
+          payload: jsonEncode({'view': 'settings_about'}),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Erro ao verificar atualização do app: $e');
+    }
   }
 
   /// Salva o Token do Firebase no Supabase para podermos enviar push pra esse celular
@@ -270,7 +386,7 @@ class NotificationService {
         ?.createNotificationChannel(dailyChannel);
   }
 
-  /// Callback para quando uma notificação é tocada
+  /// Callback para quando uma notificação local é tocada
   static void _onNotificationResponse(fln.NotificationResponse response) {
     if (response.payload != null) {
       if (response.payload!.startsWith('{')) {
@@ -279,6 +395,28 @@ class NotificationService {
           final data = jsonDecode(response.payload!);
           final view = data['view'];
           final filter = data['filter'];
+          final type = data['type'];
+          final notificationId = data['notificationId'];
+
+          // Task reminder → navegar para tarefas atrasadas
+          if (type == 'TASK_REMINDER' || type == 'reminder') {
+            NotificationService.instance._navigateToOverdueTasks();
+            return;
+          }
+
+          // Settings about (app update notification)
+          if (view == 'settings_about') {
+            NotificationService.instance._navigateToSettingsAbout();
+            return;
+          }
+
+          // Se tiver notificationId, abre o modal de detalhes da notificação
+          if (notificationId != null && notificationId.toString().isNotEmpty) {
+            NotificationService.instance._handlePushNotificationTap(
+              Map<String, dynamic>.from(data),
+            );
+            return;
+          }
 
           if (view == 'tasks') {
             NavigationService.navigatorKey.currentState
@@ -288,9 +426,6 @@ class NotificationService {
         } catch (e) {
           debugPrint("Erro ao parsear payload da notificação: $e");
         }
-      } else {
-        // Payload antigo (apenas ID ou algo simples)
-        // Mantemos comportamento padrão ou ignoramos se não for relevante para navegação global
       }
     }
   }

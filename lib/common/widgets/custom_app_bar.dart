@@ -13,9 +13,10 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
   final AnimationController menuAnimationController;
   final bool isEditMode;
   final VoidCallback? onEditPressed;
-  final ValueChanged<String>? onSearchChanged;
-  final List<Widget>? actions;
+  final VoidCallback? onSearchToggle;
+  final bool isSearchActive;
   final bool showSearch;
+  final List<Widget>? actions;
   final Widget? assistantIcon;
 
   const CustomAppBar({
@@ -25,9 +26,10 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
     required this.menuAnimationController,
     this.isEditMode = false,
     this.onEditPressed,
-    this.onSearchChanged,
-    this.actions,
+    this.onSearchToggle,
+    this.isSearchActive = false,
     this.showSearch = true,
+    this.actions,
     this.assistantIcon,
   });
 
@@ -39,54 +41,16 @@ class CustomAppBar extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
-  bool _isSearchOpen = false;
-  bool _isSearchHovered = false;
-  bool _isCloseHovered = false;
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-
   @override
   void initState() {
     super.initState();
-    if (!kIsWeb) windowManager.addListener(this); // Add listener
-    _searchFocusNode.addListener(_onFocusChanged);
+    if (!kIsWeb) windowManager.addListener(this);
   }
 
   @override
   void dispose() {
-    if (!kIsWeb) windowManager.removeListener(this); // Remove listener
-    _searchFocusNode.removeListener(_onFocusChanged);
-    _searchController.dispose();
-    _searchFocusNode.dispose();
+    if (!kIsWeb) windowManager.removeListener(this);
     super.dispose();
-  }
-
-  void _onFocusChanged() {
-    setState(() {});
-  }
-
-  void _openSearch() {
-    if (!_isSearchOpen) {
-      setState(() {
-        _isSearchOpen = true;
-        _searchFocusNode.requestFocus();
-      });
-    }
-  }
-
-  void _closeSearch() {
-    if (_isSearchOpen) {
-      setState(() {
-        _isSearchOpen = false;
-        _searchFocusNode.unfocus();
-      });
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && !_isSearchOpen) {
-          _searchController.clear();
-          widget.onSearchChanged?.call('');
-        }
-      });
-    }
   }
 
   void _navigateToSettings(BuildContext context) {
@@ -137,26 +101,22 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
                 color: Colors.transparent, // Ensures hit testing works
               ),
             ),
-      leading: (_isSearchOpen && !isDesktop)
-          ? const SizedBox.shrink()
-          : IconButton(
-              icon: AnimatedIcon(
-                icon: AnimatedIcons.menu_close,
-                progress: widget.menuAnimationController,
-                color: AppColors.secondaryText,
-              ),
-              onPressed: widget.onMenuPressed,
-              tooltip: 'Menu',
-            ),
-      leadingWidth: (_isSearchOpen && !isDesktop) ? 0.0 : 56.0,
-      title:
-          (_isSearchOpen && !isDesktop) ? const SizedBox.shrink() : titleWidget,
+      leading: IconButton(
+        icon: AnimatedIcon(
+          icon: AnimatedIcons.menu_close,
+          progress: widget.menuAnimationController,
+          color: AppColors.secondaryText,
+        ),
+        onPressed: widget.onMenuPressed,
+        tooltip: 'Menu',
+      ),
+      title: titleWidget,
       centerTitle: true,
       actions: [
-        if (widget.showSearch)
+        if (widget.showSearch && widget.onSearchToggle != null)
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
-            child: _buildUnifiedSearch(context, isDesktop: isDesktop),
+            child: _buildSearchToggleButton(),
           ),
 
         if (isDesktop && widget.onEditPressed != null && !widget.isEditMode)
@@ -215,9 +175,7 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
             return _WindowButton(
               icon: isMaximized
                   ? Icons.crop_square
-                  : Icons.crop_din, // Placeholder capability
-              // Better icons: Icons.check_box_outline_blank (max) vs Icons.filter_none (restore)
-              // But standard Material icons are fine
+                  : Icons.crop_din,
               onPressed: () {
                 if (isMaximized) {
                   windowManager.unmaximize();
@@ -239,124 +197,32 @@ class _CustomAppBarState extends State<CustomAppBar> with WindowListener {
     );
   }
 
-  // ... _buildUnifiedSearch, _buildSearchButton, _buildCloseButton (kept as is)
-  Widget _buildUnifiedSearch(BuildContext context, {required bool isDesktop}) {
-    final isOpen = _isSearchOpen;
-    final screenWidth = MediaQuery.of(context).size.width;
-    final targetWidth = isDesktop ? screenWidth * 0.35 : screenWidth - 76.0;
-    Color borderColor = Colors.transparent;
-    Color bgColor = Colors.transparent;
+  /// Circular search toggle button — white border & icon when active, muted when inactive
+  Widget _buildSearchToggleButton() {
+    final isActive = widget.isSearchActive;
+    final Color iconColor = isActive ? Colors.white : AppColors.secondaryText;
+    final Color borderColor = isActive ? Colors.white : Colors.transparent;
 
-    if (isOpen) {
-      bgColor = AppColors.cardBackground.withValues(alpha: 0.5);
-      if (_searchFocusNode.hasFocus) {
-        borderColor = AppColors.primary;
-      } else if (_isSearchHovered) {
-        borderColor = AppColors.secondaryText;
-      } else {
-        borderColor = AppColors.border;
-      }
-    }
-
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      width: isOpen ? targetWidth : 48.0,
-      height: 42,
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderColor),
-      ),
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          if (isOpen)
-            Positioned.fill(
-              child: MouseRegion(
-                onEnter: (_) => setState(() => _isSearchHovered = true),
-                onExit: (_) => setState(() => _isSearchHovered = false),
-                child: TextField(
-                  controller: _searchController,
-                  focusNode: _searchFocusNode,
-                  autofillHints: const [],
-                  style: const TextStyle(color: Colors.white, fontSize: 14),
-                  textAlignVertical: TextAlignVertical.center,
-                  decoration: const InputDecoration(
-                    hintText: 'Pesquisar...',
-                    hintStyle:
-                        TextStyle(color: AppColors.tertiaryText, fontSize: 14),
-                    border: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    errorBorder: InputBorder.none,
-                    disabledBorder: InputBorder.none,
-                    isCollapsed: true,
-                    contentPadding: EdgeInsets.only(
-                        left: 16, right: 48, top: 14, bottom: 14),
-                  ),
-                  onChanged: widget.onSearchChanged,
-                  onTapOutside: (event) {
-                    if (_isSearchOpen) _closeSearch();
-                  },
-                ),
-              ),
-            ),
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: isOpen ? _buildCloseButton() : _buildSearchButton(),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSearchButton() {
     return Center(
       child: SizedBox(
         width: 40,
         height: 40,
         child: Material(
           color: Colors.transparent,
-          shape: const CircleBorder(),
+          shape: CircleBorder(
+            side: BorderSide(
+              color: borderColor,
+              width: 1.5,
+            ),
+          ),
           child: InkWell(
-            onTap: _openSearch,
+            onTap: widget.onSearchToggle,
             customBorder: const CircleBorder(),
             hoverColor: AppColors.primary.withValues(alpha: 0.1),
             splashColor: AppColors.primary.withValues(alpha: 0.2),
-            child: const Center(
-              child:
-                  Icon(Icons.search, color: AppColors.secondaryText, size: 24),
+            child: Center(
+              child: Icon(Icons.search, color: iconColor, size: 22),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCloseButton() {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isCloseHovered = true),
-      onExit: (_) => setState(() => _isCloseHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: _closeSearch,
-        child: Container(
-          width: 48,
-          height: 48,
-          alignment: Alignment.center,
-          color: Colors.transparent,
-          child: Icon(
-            Icons.close,
-            color:
-                _isCloseHovered ? AppColors.primary : AppColors.secondaryText,
-            size: 20,
           ),
         ),
       ),

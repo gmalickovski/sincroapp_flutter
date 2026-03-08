@@ -146,6 +146,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     });
   }
 
+  void _markNotificationAsRead(String id) async {
+    await _supabaseService.markNotificationAsRead(id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDesktop = MediaQuery.of(context).size.width >= 720;
@@ -156,7 +160,7 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         child: Column(
           children: [
             _buildHeader(context),
-            if (_updateAvailable) _buildUpdateBanner(), // NOVO BANNER
+            if (_updateAvailable) _buildUpdateBanner(),
             if (!_isSelectionMode) _buildFilterBar(),
             Expanded(
               child: StreamBuilder<List<NotificationModel>>(
@@ -166,15 +170,11 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    // Ignorar erros de conexão temporários (resume do app)
                     final errorMsg = snapshot.error.toString();
                     if (errorMsg.contains('RealtimeSubscribeException') ||
                         errorMsg.contains('WebSocket') ||
                         errorMsg.contains('Channel')) {
-                      // Se tiver dados anteriores, mantém. Se não, mostra "Conectando..."
                       if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                        // Mantém o fluxo normal, talvez mostrar um SnackBar aviso?
-                        // Por enquanto, apenas logar e não quebrar a UI
                         debugPrint(
                             '⚠️ [NotificationCenter] Erro de conexão silencioso: $errorMsg');
                       } else {
@@ -218,15 +218,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                     itemBuilder: (context, index) {
                       final notif = filtered[index];
 
-                      // Auto-marcar como lida se for notificação simples (sem ação de aceite)
-                      if (!notif.isRead && _isSimpleNotification(notif.type)) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) {
-                            _supabaseService.markNotificationAsRead(notif.id);
-                          }
-                        });
-                      }
-
                       return _NotificationTile(
                         notification: notif,
                         isSelected: _selectedIds.contains(notif.id),
@@ -239,15 +230,18 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                           }
                         },
                         onLongPress: () => _toggleSelectionMode(notif.id),
-                        onDelete: () =>
-                            _deleteNotification(notif.id), // New callback
+                        onDelete: () => _deleteNotification(notif.id),
+                        onMarkAsRead: () => _markNotificationAsRead(notif.id),
                       );
                     },
                   );
                 },
               ),
             ),
-            if (_isSelectionMode) _buildBottomActionBar(),
+            if (_isSelectionMode)
+              _buildBottomActionBar()
+            else
+              _buildCloseFooter(context),
           ],
         ),
       ),
@@ -286,13 +280,8 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                 _isSelectionMode = false;
                 _selectedIds.clear();
               }),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.close, color: AppColors.tertiaryText),
-              onPressed: () => Navigator.pop(context),
             ),
-          const SizedBox(width: 8),
+          if (_isSelectionMode) const SizedBox(width: 8),
           Text(
             _isSelectionMode
                 ? '${_selectedIds.length} selecionadas'
@@ -302,17 +291,28 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
           ),
           const Spacer(),
           if (!_isSelectionMode)
-            IconButton(
-              icon: const Icon(Icons.checklist_rounded,
-                  color: AppColors.secondaryText),
-              tooltip: 'Selecionar',
-              onPressed: () => _toggleSelectionMode(null),
+            GestureDetector(
+              onTap: () => _toggleSelectionMode(null),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white38,
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.checklist_rounded,
+                  color: Colors.white38,
+                  size: 20,
+                ),
+              ),
             )
           else
             TextButton(
               onPressed: () {
-                // Get all notification ids from current stream (would need to pass them)
-                // For now, this just toggles off
                 setState(() {
                   _isSelectionMode = false;
                   _selectedIds.clear();
@@ -322,6 +322,30 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                   style: TextStyle(color: Colors.white70)),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildCloseFooter(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SizedBox(
+        width: double.infinity,
+        height: 48,
+        child: OutlinedButton(
+          onPressed: () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text('Fechar',
+              style: TextStyle(
+                  color: AppColors.secondaryText,
+                  fontFamily: 'Poppins')),
+        ),
       ),
     );
   }
@@ -440,38 +464,19 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   void _handleNotificationTap(
       BuildContext context, NotificationModel notification) {
+    // Marcar como lida ao abrir
     if (!notification.isRead) {
       _supabaseService.markNotificationAsRead(notification.id);
     }
 
-    // Notificações informativas (não clicáveis) - apenas marcar como lida
-    if (notification.type == NotificationType.contactAccepted ||
-        notification.type == NotificationType.system) {
-      return; // Não abrir modal
-    }
-
-    // Notificações com ação
-    if (notification.type == NotificationType.contactRequest ||
-        notification.type == NotificationType.taskInvite ||
-        notification.type == NotificationType.taskUpdate ||
-        notification.type == NotificationType.sincroAlert) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (context) =>
-            NotificationDetailModal(notification: notification),
-      );
-    }
-  }
-
-  bool _isSimpleNotification(NotificationType type) {
-    return type == NotificationType.system ||
-        type == NotificationType.mention ||
-        type == NotificationType.share ||
-        type == NotificationType.contactAccepted ||
-        type == NotificationType.reminder ||
-        type == NotificationType.taskUpdate;
+    // Abrir modal de detalhes para TODAS as notificações
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          NotificationDetailModal(notification: notification),
+    );
   }
 
   Widget _buildUpdateBanner() {
@@ -556,7 +561,8 @@ class _NotificationTile extends StatelessWidget {
   final bool isSelectionMode;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
-  final VoidCallback onDelete; // New param
+  final VoidCallback onDelete;
+  final VoidCallback onMarkAsRead;
 
   const _NotificationTile({
     required this.notification,
@@ -564,14 +570,15 @@ class _NotificationTile extends StatelessWidget {
     required this.isSelectionMode,
     required this.onTap,
     required this.onLongPress,
-    required this.onDelete, // New param
+    required this.onDelete,
+    required this.onMarkAsRead,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = _getThemeForType(notification.type);
 
-    return GestureDetector(
+    final Widget content = GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
       child: AnimatedContainer(
@@ -597,111 +604,128 @@ class _NotificationTile extends StatelessWidget {
                   )
                 ],
         ),
-        child: Stack(
-          children: [
-            // Main content with padding
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (isSelectionMode)
-                    Padding(
-                      padding: const EdgeInsets.only(right: 12, top: 2),
-                      child: Icon(
-                        isSelected
-                            ? Icons.check_circle
-                            : Icons.radio_button_unchecked,
-                        color: isSelected
-                            ? AppColors.primary
-                            : AppColors.tertiaryText,
-                        size: 24,
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: theme.color.withValues(alpha: 0.15),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(theme.icon, color: theme.color, size: 24),
-                    ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (isSelectionMode)
+                Padding(
+                  padding: const EdgeInsets.only(right: 12, top: 2),
+                  child: Icon(
+                    isSelected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.tertiaryText,
+                    size: 24,
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.color.withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(theme.icon, color: theme.color, size: 24),
+                ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                    right: 24), // Space for delete icon
-                                child: Text(
-                                  notification.title,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: notification.isRead
-                                        ? FontWeight.w500
-                                        : FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
+                        Expanded(
+                          child: Text(
+                            notification.title,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: notification.isRead
+                                  ? FontWeight.w500
+                                  : FontWeight.bold,
+                              fontSize: 16,
                             ),
-                            if (!notification.isRead)
-                              Container(
-                                margin:
-                                    const EdgeInsets.only(left: 8, right: 24),
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.primary,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        RichText(
-                          text: _buildHighlightedNotificationText(
-                              notification.body),
-                          maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _formatTime(notification.createdAt),
-                          style: const TextStyle(
-                              color: AppColors.tertiaryText, fontSize: 12),
-                        ),
+                        if (!notification.isRead)
+                          Container(
+                            margin: const EdgeInsets.only(left: 8),
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Delete button at top-right
-            if (!isSelectionMode)
-              Positioned(
-                top: 4,
-                right: 4,
-                child: IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded,
-                      size: 20, color: AppColors.tertiaryText),
-                  tooltip: 'Excluir',
-                  splashRadius: 20,
-                  onPressed: onDelete,
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 32, minHeight: 32),
+                    const SizedBox(height: 6),
+                    RichText(
+                      text: _buildHighlightedNotificationText(
+                          notification.body),
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatTime(notification.createdAt),
+                      style: const TextStyle(
+                          color: AppColors.tertiaryText, fontSize: 12),
+                    ),
+                  ],
                 ),
               ),
-          ],
+            ],
+          ),
         ),
       ),
+    );
+
+    // Em modo de seleção, não permite swipe
+    if (isSelectionMode) {
+      return content;
+    }
+
+    // Swipe: esquerda = excluir, direita = marcar como lida
+    return Dismissible(
+      key: ValueKey('dismiss_notif_${notification.id}'),
+      direction: DismissDirection.horizontal,
+      // Swipe direita → marcar como lida (verde)
+      background: Container(
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20.0),
+        decoration: BoxDecoration(
+          color: Colors.green,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.mark_email_read_rounded, color: Colors.white),
+      ),
+      // Swipe esquerda → excluir (vermelho)
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20.0),
+        decoration: BoxDecoration(
+          color: Colors.red,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+      ),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          // Swipe Left → Excluir
+          onDelete();
+          return false;
+        } else if (direction == DismissDirection.startToEnd) {
+          // Swipe Right → Marcar como lida
+          onMarkAsRead();
+          return false;
+        }
+        return false;
+      },
+      child: content,
     );
   }
 

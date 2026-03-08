@@ -13,7 +13,7 @@ import 'package:sincro_app_flutter/features/authentication/data/auth_repository.
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/focus_day_card.dart';
 import 'package:sincro_app_flutter/features/dashboard/presentation/widgets/goals_progress_card.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart'; // IMPORT
+
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart'; // IMPORT
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 // ATUALIZADO: Importa ParsedTask
@@ -92,6 +92,9 @@ class _DashboardScreenState extends State<DashboardScreen>
   final FabOpacityController _fabOpacityController = FabOpacityController();
   StrategyRecommendation? _strategyRecommendation; // State for AI strategy
   String _searchQuery = ''; // Search state replacement
+  bool _isDashboardSearchOpen = false;
+  final TextEditingController _dashboardSearchController = TextEditingController();
+  final FocusNode _dashboardSearchFocus = FocusNode();
   String? _initialTaskFilter; // Filtro inicial para tarefas (via deep link)
   bool _pendingFavorableDayModal =
       false; // Flag para abrir modal de dias favoráveis após carregar dados
@@ -158,7 +161,99 @@ class _DashboardScreenState extends State<DashboardScreen>
     _cancelSubscriptions();
     _menuAnimationController.dispose();
     _fabOpacityController.dispose();
+    _dashboardSearchController.dispose();
+    _dashboardSearchFocus.dispose();
     super.dispose();
+  }
+
+  void _toggleDashboardSearch() {
+    setState(() {
+      _isDashboardSearchOpen = !_isDashboardSearchOpen;
+      if (_isDashboardSearchOpen) {
+        _dashboardSearchFocus.requestFocus();
+      } else {
+        _dashboardSearchController.clear();
+        _searchQuery = '';
+        _dashboardSearchFocus.unfocus();
+        _buildCardList();
+      }
+    });
+  }
+
+  Widget _buildDashboardSearchRow({required bool isDesktop}) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: _isDashboardSearchOpen
+          ? Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 24.0 : 16.0,
+                vertical: 8.0,
+              ),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: isDesktop ? 900.0 : double.infinity,
+                  ),
+                  child: Container(
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 1.5,
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.search, color: Colors.white, size: 18),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _dashboardSearchController,
+                        focusNode: _dashboardSearchFocus,
+                        autofocus: true,
+                        textAlignVertical: TextAlignVertical.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                        decoration: const InputDecoration(
+                          hintText: 'Pesquisar...',
+                          hintStyle: TextStyle(color: Colors.white70),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          filled: false,
+                          isCollapsed: true,
+                          contentPadding: EdgeInsets.only(top: 12, bottom: 8),
+                        ),
+                        onChanged: (query) {
+                          setState(() {
+                            _searchQuery = query;
+                            _buildCardList();
+                          });
+                        },
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: _toggleDashboardSearch,
+                      child: const Icon(Icons.close,
+                          color: Colors.white, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+                ),
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
   }
 
   Future<void> _cancelSubscriptions() async {
@@ -697,16 +792,21 @@ class _DashboardScreenState extends State<DashboardScreen>
         }
       });
     } else {
-      Navigator.of(context)
-          .push(MaterialPageRoute(
-        builder: (context) => CreateGoalScreen(
-          userData: _userData!,
-        ),
-        fullscreenDialog: true,
-      ))
-          .then((_) {
-        // Ao voltar, recarrega
-        if (mounted) _reloadDataNonStream();
+      // MOBILE: Bottom sheet igual à página de metas/jornadas
+      CreateGoalDialog.showAsBottomSheet(
+        context,
+        userData: _userData!,
+      ).then((result) {
+        if (result == true) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Nova jornada criada com sucesso!"),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+          _reloadDataNonStream();
+        }
       });
     }
   }
@@ -2475,6 +2575,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                 menuAnimationController: _menuAnimationController,
                 isEditMode: _isEditMode,
                 showSearch: _sidebarIndex == 0,
+                isSearchActive: _isDashboardSearchOpen,
+                onSearchToggle: _toggleDashboardSearch,
                 assistantIcon: !_isAiSidebarOpen
                     ? Padding(
                         padding: const EdgeInsets.only(right: 8.0),
@@ -2494,8 +2596,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                   AppColors.primary.withValues(alpha: 0.2),
                               child: const Center(
                                 child: AgentStarIcon(
-                                  size:
-                                      28, // Matches other icons better (24-34 range)
+                                  size: 28,
                                   isStatic: true,
                                   isHollow: false,
                                   isWhiteFilled: true,
@@ -2507,7 +2608,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                       )
                     : null,
                 actions: [
-                  if (_isEditMode) // Removed isDesktop since we are in _buildDesktopLayout
+                  if (_isEditMode)
                     IconButton(
                       icon: const Icon(Icons.check, color: AppColors.primary),
                       onPressed: () => setState(() => _isEditMode = false),
@@ -2518,12 +2619,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                     (_sidebarIndex == 0 && !_isLoading && !_isUpdatingLayout)
                         ? _openReorderModal
                         : null,
-                onSearchChanged: (query) {
-                  setState(() {
-                    _searchQuery = query;
-                    _buildCardList();
-                  });
-                },
                 onMenuPressed: () {
                   setState(() {
                     _isDesktopSidebarExpanded = !_isDesktopSidebarExpanded;
@@ -2545,7 +2640,15 @@ class _DashboardScreenState extends State<DashboardScreen>
                           isMobile: false,
                           onDestinationSelected: _navigateToPage),
                     Expanded(
-                      child: _buildCurrentPage(),
+                      child: Column(
+                        children: [
+                          if (_sidebarIndex == 0)
+                            _buildDashboardSearchRow(isDesktop: true),
+                          Expanded(
+                            child: _buildCurrentPage(),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -2586,8 +2689,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                     userData: _userData,
                     menuAnimationController: _menuAnimationController,
                     isEditMode: _isEditMode,
-                    showSearch:
-                        _sidebarIndex == 0, // Only show search on Dashboard tab
+                    showSearch: _sidebarIndex == 0,
+                    isSearchActive: _isDashboardSearchOpen,
+                    onSearchToggle: _toggleDashboardSearch,
                     assistantIcon: Padding(
                       padding: const EdgeInsets.only(right: 8.0),
                       child: SizedBox(
@@ -2621,12 +2725,6 @@ class _DashboardScreenState extends State<DashboardScreen>
                             !_isUpdatingLayout)
                         ? _openReorderModal
                         : null,
-                    onSearchChanged: (query) {
-                      setState(() {
-                        _searchQuery = query;
-                        _buildCardList();
-                      });
-                    },
                     onMenuPressed: () {
                       setState(() {
                         _isMobileDrawerOpen = !_isMobileDrawerOpen;
@@ -2636,6 +2734,8 @@ class _DashboardScreenState extends State<DashboardScreen>
                       });
                     },
                   ),
+                  if (_sidebarIndex == 0)
+                    _buildDashboardSearchRow(isDesktop: false),
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
