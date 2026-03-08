@@ -824,7 +824,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     // Detailed change detection
     if (_initialDay != _selectedDay) return true;
     if (_initialTime != _selectedTime) return true;
-    if (_initialRecurrence.type != _recurrenceRule.type) return true;
+    if (_initialRecurrence?.type != _recurrenceRule.type) return true;
     // Reminders
     if (_initialReminderOffsets.length != _selectedReminderOffsets.length) return true;
     if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets)) return true;

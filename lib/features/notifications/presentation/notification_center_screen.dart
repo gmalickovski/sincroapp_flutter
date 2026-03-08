@@ -29,6 +29,10 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
   String _selectedFilter = 'all'; // all, invites, tasks, system
   final Set<String> _selectedIds = {};
   bool _isSelectionMode = false;
+  
+  // Optimistic UI State
+  final Set<String> _optimisticallyDeletedIds = {};
+  final Set<String> _optimisticallyReadIds = {};
 
   // Update State
   bool _updateAvailable = false;
@@ -114,40 +118,53 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     });
   }
 
-  void _selectAll(List<String> allIds) {
+  // Removed duplicate _selectAll
+
+  void _selectAll(List<String> visibleIds) {
     setState(() {
-      if (_selectedIds.length == allIds.length) {
+      if (_selectedIds.length == visibleIds.length && visibleIds.isNotEmpty) {
+        // Se todos já estão selecionados, limpa a seleção
         _selectedIds.clear();
       } else {
-        _selectedIds.addAll(allIds);
+        // Seleciona todos os visíveis
+        _selectedIds.addAll(visibleIds);
       }
     });
   }
 
   void _deleteSelected() async {
     final ids = _selectedIds.toList();
-    await _supabaseService.deleteNotifications(ids);
     setState(() {
+      _optimisticallyDeletedIds.addAll(ids);
       _isSelectionMode = false;
       _selectedIds.clear();
     });
+    // Removemos do backend sem bloquear a UI
+    _supabaseService.deleteNotifications(ids);
   }
 
   void _deleteNotification(String id) async {
-    await _supabaseService.deleteNotifications([id]);
+    setState(() {
+      _optimisticallyDeletedIds.add(id);
+    });
+    _supabaseService.deleteNotifications([id]);
   }
 
   void _markSelectedAsRead() async {
     final ids = _selectedIds.toList();
-    await _supabaseService.markNotificationsAsRead(ids);
     setState(() {
+      _optimisticallyReadIds.addAll(ids);
       _isSelectionMode = false;
       _selectedIds.clear();
     });
+    _supabaseService.markNotificationsAsRead(ids);
   }
 
   void _markNotificationAsRead(String id) async {
-    await _supabaseService.markNotificationAsRead(id);
+    setState(() {
+      _optimisticallyReadIds.add(id);
+    });
+    _supabaseService.markNotificationAsRead(id);
   }
 
   @override
@@ -163,85 +180,104 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
             if (_updateAvailable) _buildUpdateBanner(),
             if (!_isSelectionMode) _buildFilterBar(),
             Expanded(
-              child: StreamBuilder<List<NotificationModel>>(
-                stream: _supabaseService.getNotificationsStream(widget.userId),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    final errorMsg = snapshot.error.toString();
-                    if (errorMsg.contains('RealtimeSubscribeException') ||
-                        errorMsg.contains('WebSocket') ||
-                        errorMsg.contains('Channel')) {
-                      if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                        debugPrint(
-                            '⚠️ [NotificationCenter] Erro de conexão silencioso: $errorMsg');
-                      } else {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.wifi_off_rounded,
-                                  size: 48, color: AppColors.tertiaryText),
-                              const SizedBox(height: 16),
-                              const Text('Tentando reconectar...',
-                                  style: TextStyle(
-                                      color: AppColors.secondaryText)),
-                              TextButton(
-                                  onPressed: () => setState(() {}),
-                                  child: const Text('Tentar agora',
-                                      style:
-                                          TextStyle(color: AppColors.primary))),
-                            ],
-                          ),
-                        );
-                      }
+            child: StreamBuilder<List<NotificationModel>>(
+              stream: _supabaseService.getNotificationsStream(widget.userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  final errorMsg = snapshot.error.toString();
+                  if (errorMsg.contains('RealtimeSubscribeException') ||
+                      errorMsg.contains('WebSocket') ||
+                      errorMsg.contains('Channel')) {
+                    if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                      debugPrint(
+                          '⚠️ [NotificationCenter] Erro de conexão silencioso: $errorMsg');
                     } else {
                       return Center(
-                          child: Text('Erro: ${snapshot.error}',
-                              style: const TextStyle(color: Colors.red)));
-                    }
-                  }
-
-                  final allNotifications = snapshot.data ?? [];
-                  final filtered = _filterNotifications(allNotifications);
-
-                  if (filtered.isEmpty) {
-                    return _buildEmptyState();
-                  }
-
-                  return ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filtered.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final notif = filtered[index];
-
-                      return _NotificationTile(
-                        notification: notif,
-                        isSelected: _selectedIds.contains(notif.id),
-                        isSelectionMode: _isSelectionMode,
-                        onTap: () {
-                          if (_isSelectionMode) {
-                            _toggleSelection(notif.id);
-                          } else {
-                            _handleNotificationTap(context, notif);
-                          }
-                        },
-                        onLongPress: () => _toggleSelectionMode(notif.id),
-                        onDelete: () => _deleteNotification(notif.id),
-                        onMarkAsRead: () => _markNotificationAsRead(notif.id),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.wifi_off_rounded,
+                                size: 48, color: AppColors.tertiaryText),
+                            const SizedBox(height: 16),
+                            const Text('Tentando reconectar...',
+                                style: TextStyle(
+                                    color: AppColors.secondaryText)),
+                            TextButton(
+                                onPressed: () => setState(() {}),
+                                child: const Text('Tentar agora',
+                                    style:
+                                        TextStyle(color: AppColors.primary))),
+                          ],
+                        ),
                       );
-                    },
-                  );
-                },
-              ),
+                    }
+                  } else {
+                    return Center(
+                        child: Text('Erro: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red)));
+                  }
+                }
+
+                // Handle optimistic UI updates
+                var allNotifications = snapshot.data ?? [];
+                
+                // 1. Remove optimally deleted
+                allNotifications = allNotifications
+                    .where((n) => !_optimisticallyDeletedIds.contains(n.id))
+                    .toList();
+                    
+                // 2. Map optimally read to true status
+                allNotifications = allNotifications.map<NotificationModel>((n) {
+                  if (_optimisticallyReadIds.contains(n.id) && !n.isRead) {
+                    return n.copyWith(isRead: true);
+                  }
+                  return n;
+                }).toList();
+
+                final filtered = _filterNotifications(allNotifications);
+                
+                // Cache the filtered IDs for the "Select All" functionality
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    _lastFilteredIds = filtered.map((e) => e.id).toList();
+                  }
+                });
+
+                if (filtered.isEmpty) {
+                  return _buildEmptyState();
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final notif = filtered[index];
+
+                    return _NotificationTile(
+                      notification: notif,
+                      isSelected: _selectedIds.contains(notif.id),
+                      isSelectionMode: _isSelectionMode,
+                      onTap: () {
+                        if (_isSelectionMode) {
+                          _toggleSelection(notif.id);
+                        } else {
+                          _handleNotificationTap(context, notif);
+                        }
+                      },
+                      onLongPress: () => _toggleSelectionMode(notif.id),
+                      onDelete: () => _deleteNotification(notif.id),
+                      onMarkAsRead: () => _markNotificationAsRead(notif.id),
+                    );
+                  },
+                );
+              },
             ),
-            if (_isSelectionMode)
-              _buildBottomActionBar()
-            else
-              _buildCloseFooter(context),
+          ),
+          _buildCloseFooter(context),
           ],
         ),
       ),
@@ -267,64 +303,134 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16.0),
-      color: _isSelectionMode
-          ? AppColors.primary.withValues(alpha: 0.1)
-          : Colors.transparent,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      color: Colors.transparent, // Always transparent now
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (_isSelectionMode)
-            IconButton(
-              icon: const Icon(Icons.close, color: Colors.white),
-              onPressed: () => setState(() {
-                _isSelectionMode = false;
-                _selectedIds.clear();
-              }),
-            ),
-          if (_isSelectionMode) const SizedBox(width: 8),
-          Text(
-            _isSelectionMode
-                ? '${_selectedIds.length} selecionadas'
-                : 'Notificações',
-            style: const TextStyle(
+          const Text(
+            'Notificações',
+            style: TextStyle(
                 color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const Spacer(),
-          if (!_isSelectionMode)
-            GestureDetector(
-              onTap: () => _toggleSelectionMode(null),
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white38,
-                    width: 1.5,
+          // Action Buttons (Select All / Delete)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: !_isSelectionMode
+                ? const SizedBox.shrink()
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Select All Capsule
+                      GestureDetector(
+                        onTap: () {
+                          // Note: Acesso completo aos Ids requer que seja extraído no build. 
+                          // Para manter simples e local, usamos uma chamada reativa se `allIds` estiver disponível ou tratamos diferente.
+                          // Como aqui é stateless do header, a seleção de todos é delegada ou ignorada, 
+                          // Vamos usar a lista do _filterNotifications mas pegando da cache ou refatorando `_selectAll`.
+                          // Solução: Adicionar `_filteredIdsCache` no build ou acessar diretamente.
+                          final currentVisibleIds = _getVisibleNotificationIds();
+                          _selectAll(currentVisibleIds);
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white24, width: 1.5),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: const [
+                              Icon(Icons.checklist, color: Colors.white, size: 16),
+                              SizedBox(width: 6),
+                              Text('Todos', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      // Delete Capsule
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOut,
+                        child: _selectedIds.isEmpty
+                            ? const SizedBox.shrink()
+                            : Padding(
+                                padding: const EdgeInsets.only(left: 8.0),
+                                child: GestureDetector(
+                                  onTap: _deleteSelected,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.redAccent.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(color: Colors.redAccent, width: 1.5),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        Icon(Icons.delete_outline, color: Colors.redAccent, size: 16),
+                                        SizedBox(width: 6),
+                                        Text('Excluir', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
                   ),
-                ),
-                child: const Icon(
-                  Icons.checklist_rounded,
-                  color: Colors.white38,
-                  size: 20,
-                ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: () {
+          ),
+          
+          // Toggle Selection Mode Button
+          GestureDetector(
+            onTap: () {
+              if (_isSelectionMode) {
+                // Cancel
                 setState(() {
                   _isSelectionMode = false;
                   _selectedIds.clear();
                 });
-              },
-              child: const Text('Cancelar',
-                  style: TextStyle(color: Colors.white70)),
+              } else {
+                _toggleSelectionMode(null);
+              }
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: _isSelectionMode ? Colors.white.withValues(alpha: 0.1) : Colors.transparent,
+                border: Border.all(
+                  color: _isSelectionMode ? Colors.white : Colors.white38,
+                  width: 1.5,
+                ),
+              ),
+              child: Icon(
+                _isSelectionMode ? Icons.close : Icons.checklist_rounded,
+                color: _isSelectionMode ? Colors.white : Colors.white54,
+                size: 18,
+              ),
             ),
+          ),
         ],
       ),
     );
   }
+
+  // Helper method for Select All button
+  List<String> _getVisibleNotificationIds() {
+    // We cannot access the snapshot synchronously here in the ideal way, but we can return cached ones if we added them to a property,
+    // Alternatively, we can just defer this logic to a state variable updated during build.
+    return _lastFilteredIds;
+  }
+  
+  List<String> _lastFilteredIds = [];
 
   Widget _buildCloseFooter(BuildContext context) {
     return Padding(
@@ -390,33 +496,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
         side: BorderSide(
           color: isSelected ? AppColors.primary : AppColors.border,
         ),
-      ),
-    );
-  }
-
-  Widget _buildBottomActionBar() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        color: AppColors.cardBackground,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          TextButton.icon(
-            icon: const Icon(Icons.mark_email_read, color: Colors.white),
-            label: const Text('Marcar Lida',
-                style: TextStyle(color: Colors.white)),
-            onPressed: _selectedIds.isEmpty ? null : _markSelectedAsRead,
-          ),
-          TextButton.icon(
-            icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-            label: const Text('Excluir',
-                style: TextStyle(color: Colors.redAccent)),
-            onPressed: _selectedIds.isEmpty ? null : _deleteSelected,
-          ),
-        ],
       ),
     );
   }
@@ -689,10 +768,12 @@ class _NotificationTile extends StatelessWidget {
       return content;
     }
 
-    // Swipe: esquerda = excluir, direita = marcar como lida
+    // Swipe: esquerda = excluir, direita = marcar como lida (se não lida)
     return Dismissible(
       key: ValueKey('dismiss_notif_${notification.id}'),
-      direction: DismissDirection.horizontal,
+      direction: notification.isRead
+          ? DismissDirection.endToStart
+          : DismissDirection.horizontal,
       // Swipe direita → marcar como lida (verde)
       background: Container(
         alignment: Alignment.centerLeft,
@@ -717,7 +798,7 @@ class _NotificationTile extends StatelessWidget {
         if (direction == DismissDirection.endToStart) {
           // Swipe Left → Excluir
           onDelete();
-          return false;
+          return true;
         } else if (direction == DismissDirection.startToEnd) {
           // Swipe Right → Marcar como lida
           onMarkAsRead();

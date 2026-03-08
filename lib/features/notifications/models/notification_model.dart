@@ -24,6 +24,32 @@ class NotificationModel {
   final DateTime createdAt;
   final Map<String, dynamic> metadata;
 
+  NotificationModel copyWith({
+    String? id,
+    String? userId,
+    NotificationType? type,
+    String? title,
+    String? body,
+    String? relatedItemId,
+    String? relatedItemType,
+    bool? isRead,
+    DateTime? createdAt,
+    Map<String, dynamic>? metadata,
+  }) {
+    return NotificationModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      body: body ?? this.body,
+      relatedItemId: relatedItemId ?? this.relatedItemId,
+      relatedItemType: relatedItemType ?? this.relatedItemType,
+      isRead: isRead ?? this.isRead,
+      createdAt: createdAt ?? this.createdAt,
+      metadata: metadata ?? this.metadata,
+    );
+  }
+
   NotificationModel({
     required this.id,
     required this.userId,
