@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.6.16](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.15...v1.6.16) (2026-03-08)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** add custom time picker dialog with period selection, duration options, and a clock dial interface. ([2051da8](https://github.com/gmalickovski/sincroapp_flutter/commit/2051da803ac97919338202b5fce107b305573846))
+
 ### [1.6.15](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.14...v1.6.15) (2026-03-08)
 
 
