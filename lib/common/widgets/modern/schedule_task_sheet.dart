@@ -180,6 +180,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     setState(() {
       if (_selectedDay != null && _isSameDay(_selectedDay!, selectedDay)) {
         _selectedDay = null; // Toggle off if clicked again
+        _showReminder = false;
+        _selectedReminderOffsets.clear();
       } else {
         _selectedDay = selectedDay;
       }
@@ -190,6 +192,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   void _toggleAllDay(bool value) {
     setState(() {
       _isAllDay = value;
+      // Clear reminders when switching contexts, as the available options change
+      _selectedReminderOffsets.clear();
+      
       if (value) {
         _selectedTime = null;
       } else {
@@ -323,8 +328,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       _focusedDay = DateTime.now();
       _isSelectingYearMonth = false;
     });
-    // Immediately apply the cleared state
-    _onSave();
   }
 
   Widget _buildCustomHeader() {
@@ -1201,14 +1204,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   Widget _buildReminderRow() {
-    // Hide only if no date is selected at all
+    // LEVEL 1: Hide completely if no date is selected
     if (_selectedDay == null) {
       return const SizedBox.shrink();
     }
 
+    final bool hasTime = _selectedTime != null;
     final String summary = _getReminderSummary();
-
-    // Full opacity always — reminders work for both timed and all-day tasks.
     const double contentOpacity = 1.0;
 
     return Column(
@@ -1221,13 +1223,14 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             }
 
             setState(() {
-              _showReminder = !_showReminder; // Toggle the visibility state
+              _showReminder = !_showReminder;
               if (!_showReminder) {
                 _selectedReminderOffsets.clear();
               } else {
-                // If turning on, and no reminder is set, default to "Na hora"
-                if (_selectedReminderOffsets.isEmpty)
-                  _selectedReminderOffsets.add(0);
+                // If turning on, and no reminder is set, default to 0 if it has time, or 9 hours (9:00 AM of the day) if it has no time
+                if (_selectedReminderOffsets.isEmpty) {
+                  _selectedReminderOffsets.add(hasTime ? 0 : 9 * 60);
+                }
               }
             });
           },
@@ -1237,7 +1240,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
-                // Opacity wrapper for Icon and Title
                 Opacity(
                   opacity: contentOpacity,
                   child: const Row(
@@ -1252,18 +1254,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     ],
                   ),
                 ),
-
-                if (!_canUseReminders && !_isAllDay) ...[
+                if (!_canUseReminders) ...[
                   const SizedBox(width: 8),
                   const Icon(Icons.lock_outline,
                       size: 16, color: AppColors.secondaryText),
                 ],
-
                 const Spacer(),
-
-                // Trailing Content Logic
                 ...[
-                  // Normal or Premium-locked State
                   if (!_canUseReminders)
                     Text(
                       "Recurso Premium",
@@ -1277,7 +1274,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                       style: const TextStyle(
                           color: AppColors.secondaryText, fontSize: 14),
                     ),
-
                   const SizedBox(width: 12),
                   Switch(
                     value: _showReminder,
@@ -1292,7 +1288,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                       if (states.contains(WidgetState.selected)) {
                         return AppColors.primary;
                       }
-                      return AppColors.border; // Cor para chave desligada
+                      return AppColors.border;
                     }),
                     thumbColor: WidgetStateProperty.all(Colors.white),
                     onChanged: !_canUseReminders
@@ -1303,9 +1299,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                               if (!val) {
                                 _selectedReminderOffsets.clear();
                               } else {
-                                // If turning on, and no reminder is set, default to "Na hora"
-                                if (_selectedReminderOffsets.isEmpty)
-                                  _selectedReminderOffsets.add(0);
+                                if (_selectedReminderOffsets.isEmpty) {
+                                  _selectedReminderOffsets.add(hasTime ? 0 : 9 * 60);
+                                }
                               }
                             });
                           },
@@ -1315,41 +1311,37 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             ),
           ),
         ),
-
         // Reminder Options (Expandable)
         AnimatedSize(
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeInOut,
-          child: _showReminder // Use decoupled state
+          child: _showReminder
               ? Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                   child: ScrollableChipsRow(
-                    children: [
-                      _buildReminderChip("Na hora", 0),
-                      const SizedBox(width: 8),
-                      _buildReminderChip("10 min antes", 10),
-                      const SizedBox(width: 8),
-                      _buildReminderChip("30 min antes", 30),
-                      const SizedBox(width: 8),
-                      _buildReminderChip("1 h antes", 60),
-                      const SizedBox(width: 8),
-                      _buildReminderChip("1 dia antes", 24 * 60),
-                      const SizedBox(width: 8),
-                      ActionChip(
-                        label: const Text("Definir horário"),
-                        onPressed: _pickReminderTime,
-                        backgroundColor: AppColors.background,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        labelStyle: const TextStyle(
-                          color: AppColors.secondaryText,
-                          fontFamily: 'Poppins',
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: const BorderSide(color: AppColors.border),
-                        ),
-                      ),
-                    ],
+                    children: hasTime
+                        // LEVEL 3: Task has date and time -> Show time-based offsets
+                        ? [
+                            _buildReminderChip("Na hora", 0),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("5 min antes", 5),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("10 min antes", 10),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("30 min antes", 30),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("1 h antes", 60),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("1 dia antes", 24 * 60),
+                          ]
+                        // LEVEL 2: Task has date but NO time (All-day) -> Show day-based offsets
+                        : [
+                            _buildReminderChip("No dia (9:00)", 9 * 60), // Represents 9:00 AM of that day
+                            const SizedBox(width: 8),
+                            _buildReminderChip("1 dia antes (9:00)", 24 * 60 + 9 * 60),
+                            const SizedBox(width: 8),
+                            _buildReminderChip("2 dias antes (9:00)", 2 * 24 * 60 + 9 * 60),
+                          ],
                   ),
                 )
               : const SizedBox.shrink(),
@@ -1360,15 +1352,25 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   String _getReminderSummary() {
     if (_selectedReminderOffsets.isEmpty) return "Sem lembrete";
-    if (_selectedReminderOffsets.length > 1)
+    if (_selectedReminderOffsets.length > 1) {
       return "${_selectedReminderOffsets.length} lembretes";
+    }
 
     final minutes = _selectedReminderOffsets.first;
-    if (minutes == 0) return "Na hora";
-    if (minutes < 60) return "$minutes min antes";
-    final hours = minutes ~/ 60;
-    if (hours < 24) return "$hours h antes";
-    return "${hours ~/ 24} dia(s) antes";
+    final bool hasTime = _selectedTime != null;
+
+    if (hasTime) {
+      if (minutes == 0) return "Na hora";
+      if (minutes < 60) return "$minutes min antes";
+      final hours = minutes ~/ 60;
+      if (hours < 24) return "$hours h antes";
+      return "${hours ~/ 24} dia(s) antes";
+    } else {
+      if (minutes == 9 * 60) return "No dia (9:00)";
+      if (minutes == 24 * 60 + 9 * 60) return "1 dia antes (9:00)";
+      if (minutes == 2 * 24 * 60 + 9 * 60) return "2 dias antes (9:00)";
+      return "Personalizado";
+    }
   }
 
   Widget _buildReminderChip(String label, int offsetMinutes) {
