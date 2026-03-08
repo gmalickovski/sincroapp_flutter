@@ -1,6 +1,8 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.0...v1.7.1) (2026-03-08)
+
 ## [1.7.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.6.17...v1.7.0) (2026-03-08)
 
 
