@@ -97,11 +97,18 @@ class _TaskInputModalState extends State<TaskInputModal> {
       // --- INÍCIO DA MUDANÇA: Popula os "pills" em vez do texto ---
       _selectedTags = List.from(widget.taskToEdit!.tags);
       _sharedWithUsernames = List.from(widget.taskToEdit!.sharedWith); // NOVO
-      _selectedDate = widget.taskToEdit!.dueDate?.toLocal();
+      
+      // Se for task Flow (tem startDate), usa startDate pro Calendar e dueDate fica null no pill se quisermos
+      // Mas pro calendário de exibição no input, o pill mostra a data de agendamento, que no Flow é o startDate
+      if (widget.taskToEdit!.startDate != null) {
+        _selectedDate = widget.taskToEdit!.startDate?.toLocal();
+      } else {
+        _selectedDate = widget.taskToEdit!.dueDate?.toLocal();
+      }
       // --- FIM DA MUDANÇA ---
 
       initialDateForPill =
-          widget.taskToEdit!.dueDate?.toLocal() ?? initialDateForPill;
+          _selectedDate ?? initialDateForPill;
       _selectedTime = widget.taskToEdit!.reminderTime;
       _selectedRecurrenceRule = RecurrenceRule(
         type: widget.taskToEdit!.recurrenceType,
@@ -121,8 +128,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
       // --- INÍCIO DA CORREÇÃO (Problema 1 e 2) ---
       // Lógica condicional:
-      // Se uma meta é pré-selecionada, estamos na tela de metas.
-      // Se não, estamos no calendário ou foco.
       if (widget.preselectedGoal != null) {
         // --- LÓGICA DA TELA DE METAS ---
         _selectedGoalId = widget.preselectedGoal!.id;
@@ -130,11 +135,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
         _selectedGoalDeadline =
             widget.preselectedGoal!.targetDate; // Popula deadline
 
-        // --- INÍCIO DA CORREÇÃO ---
-        // As linhas que adicionavam a tag automaticamente foram REMOVIDAS.
-        // --- FIM DA CORREÇÃO ---
-
-        // Usa a data inicial APENAS para a pílula de vibração (Problema 1)
         if (widget.initialDueDate != null) {
           initialDateForPill = DateTime(
             widget.initialDueDate!.year,
@@ -142,14 +142,18 @@ class _TaskInputModalState extends State<TaskInputModal> {
             widget.initialDueDate!.day,
           );
         }
-        // _selectedDate continua nulo, então o pill de data não aparece
       } else {
         // --- LÓGICA DO CALENDÁRIO / FOCO ---
-        // Só mostra o pill de data se initialDueDate foi EXPLICITAMENTE fornecido
-        if (widget.initialDueDate != null) {
+        // Verifica primeiro preselectedDate (usado para Flow)
+        if (widget.preselectedDate != null) {
+          initialDateForPill = DateTime(
+            widget.preselectedDate!.year,
+            widget.preselectedDate!.month,
+            widget.preselectedDate!.day,
+          );
+          _selectedDate = initialDateForPill;
+        } else if (widget.initialDueDate != null) {
           // CORREÇÃO: Usa os componentes da data para evitar shift de fuso horário (UTC -> Local)
-          // Se widget.initialDueDate for 29/11 00:00 UTC, toLocal() viraria 28/11 21:00 (BRT).
-          // Ao usar DateTime(y,m,d), criamos 29/11 00:00 Local, mantendo o dia correto.
           initialDateForPill = DateTime(
             widget.initialDueDate!.year,
             widget.initialDueDate!.month,
@@ -488,15 +492,19 @@ class _TaskInputModalState extends State<TaskInputModal> {
       initialReminderOffsets: _selectedReminderOffsets,
     ).then((result) {
       if (result != null) {
-        final selectedDateTime = result.dateTime;
-        if (selectedDateTime != null) {
-          final selectedDateMidnight = DateTime(selectedDateTime.year,
-              selectedDateTime.month, selectedDateTime.day);
+        // Se for uma task FLOW o anchor é o startDate, se for COMMITMENT é o dateTime (dueDate)
+        final selectedDateAnchor = result.startDate ?? result.dateTime;
+        
+        if (selectedDateAnchor != null) {
+          final selectedDateMidnight = DateTime(selectedDateAnchor.year,
+              selectedDateAnchor.month, selectedDateAnchor.day);
 
           _updateVibrationForDate(selectedDateMidnight);
 
           setState(() {
             _selectedDate = selectedDateMidnight;
+            // Para Tasks Flow, guardamos o recurrenceRule pra saber no submit se é Flow
+            _selectedRecurrenceRule = result.recurrenceRule;
 
             // Limpa contatos e @menções ao alterar data
             for (final username in _sharedWithUsernames) {
@@ -504,13 +512,12 @@ class _TaskInputModalState extends State<TaskInputModal> {
             }
             _sharedWithUsernames.clear();
 
-            if (result.hasTime) {
-              _selectedTime = TimeOfDay.fromDateTime(selectedDateTime);
+            if (result.hasTime && result.dateTime != null) {
+              _selectedTime = TimeOfDay.fromDateTime(result.dateTime!);
             } else {
               _selectedTime = null;
             }
 
-            _selectedRecurrenceRule = result.recurrenceRule;
             _selectedReminderOffsets = result.reminderOffsets;
             _updateParserFlags();
           });
@@ -557,29 +564,45 @@ class _TaskInputModalState extends State<TaskInputModal> {
     };
 
     DateTime? finalDueDate;
+    DateTime? finalStartDate;
+    
+    // Determining if it's a Flow task
+    bool isFlowTask = _selectedRecurrenceRule.recurrenceCategory == 'flow';
+
     if (_selectedDate != null) {
-      if (_selectedTime != null) {
-        // Com horário: cria DateTime local com data+hora
-        finalDueDate = DateTime(
+      if (isFlowTask) {
+        // Flow task uses startDate, dueDate is null
+        finalStartDate = DateTime(
           _selectedDate!.year,
           _selectedDate!.month,
           _selectedDate!.day,
-          _selectedTime!.hour,
-          _selectedTime!.minute,
         );
+        finalDueDate = null;
       } else {
-        // Sem horário: Local midnight
-        finalDueDate = DateTime(
-          _selectedDate!.year,
-          _selectedDate!.month,
-          _selectedDate!.day,
-        );
+        // Commitment task uses dueDate, startDate is null
+        if (_selectedTime != null) {
+          finalDueDate = DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+            _selectedTime!.hour,
+            _selectedTime!.minute,
+          );
+        } else {
+          finalDueDate = DateTime(
+            _selectedDate!.year,
+            _selectedDate!.month,
+            _selectedDate!.day,
+          );
+        }
+        finalStartDate = null;
       }
     }
 
     final ParsedTask finalParsedTask = textParseResult
         .copyWith(
           dueDate: finalDueDate,
+          startDate: finalStartDate, // Need to make sure ParsedTask supports this if not already
           reminderTime: _selectedTime,
           recurrenceRule: _selectedRecurrenceRule,
           tags: mergedTags.toList(),
@@ -844,29 +867,36 @@ class _TaskInputModalState extends State<TaskInputModal> {
                               },
                       ),
 
-                    // Pill da Data
+                    // Pill da Data (ou Inicio, para Fluxo)
                     if (_selectedDate != null)
-                      _buildPill(
-                        label: _formatDateReadable(_selectedDate!),
-                        icon: Icons.calendar_today_rounded,
-                        color: Colors.orangeAccent,
-                        onDeleted: () {
-                          setState(() {
-                            _selectedDate = null;
-                            _selectedTime = null; // Reseta a hora também
-                            // Remove @menções do texto antes de limpar contatos
-                            for (final username in _sharedWithUsernames) {
-                              _removeParserTextFromInput('@', username);
-                            }
-                            _sharedWithUsernames.clear(); // Limpa contatos ao remover data
-                            _selectedRecurrenceRule =
-                                RecurrenceRule(); // Reseta recorrência
-                            _updateVibrationForDate(DateTime
-                                .now()); // Atualiza pílula de vibração
-                            _updateParserFlags();
-                          });
-                        },
-                      ),
+                      Builder(builder: (_) {
+                        final isFlow = _selectedRecurrenceRule.recurrenceCategory == 'flow';
+                        final now = DateTime.now();
+                        final isToday = _selectedDate!.year == now.year &&
+                            _selectedDate!.month == now.month &&
+                            _selectedDate!.day == now.day;
+                        final String pillLabel = isFlow
+                            ? (isToday ? 'Iniciando hoje' : 'Iniciando ${_formatDateReadable(_selectedDate!)}')
+                            : _formatDateReadable(_selectedDate!);
+                        return _buildPill(
+                          label: pillLabel,
+                          icon: isFlow ? Icons.sync : Icons.calendar_today_rounded,
+                          color: isFlow ? Colors.purpleAccent : Colors.orangeAccent,
+                          onDeleted: () {
+                            setState(() {
+                              _selectedDate = null;
+                              _selectedTime = null;
+                              for (final username in _sharedWithUsernames) {
+                                _removeParserTextFromInput('@', username);
+                              }
+                              _sharedWithUsernames.clear();
+                              _selectedRecurrenceRule = RecurrenceRule();
+                              _updateVibrationForDate(DateTime.now());
+                              _updateParserFlags();
+                            });
+                          },
+                        );
+                      }),
 
                     // Pills das Tags
                     ..._selectedTags.map(

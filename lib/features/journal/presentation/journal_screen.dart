@@ -36,8 +36,7 @@ class JournalScreen extends StatefulWidget {
   State<JournalScreen> createState() => _JournalScreenState();
 }
 
-class _JournalScreenState extends State<JournalScreen>
-    with WidgetsBindingObserver {
+class _JournalScreenState extends State<JournalScreen> {
   final SupabaseService _supabaseService = SupabaseService();
 
   // Keys for Popup Anchoring
@@ -199,27 +198,7 @@ class _JournalScreenState extends State<JournalScreen>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _rebuildStream();
-  }
-
-  DateTime? _lastResumeTime;
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      // Cooldown de 2s para evitar múltiplos rebuilds seguidos
-      final now = DateTime.now();
-      if (_lastResumeTime != null &&
-          now.difference(_lastResumeTime!).inSeconds < 2) {
-        return;
-      }
-      _lastResumeTime = now;
-      debugPrint("🔄 [JournalScreen] App resumed. Refreshing stream...");
-      setState(() {
-        _rebuildStream();
-      });
-    }
   }
 
   void _rebuildStream() {
@@ -235,7 +214,6 @@ class _JournalScreenState extends State<JournalScreen>
 
   @override
   void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
     _fabOpacityController.dispose();
     super.dispose();
   }

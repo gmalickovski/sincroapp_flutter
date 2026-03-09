@@ -212,14 +212,14 @@ class TaskItem extends StatelessWidget {
         task.journeyTitle!.isNotEmpty;
     // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
-    // Usa hasDeadline em vez de _isNotToday para que sempre apareça o ícone se tiver data de vencimento
-    final bool shouldShowDateIcon = task.hasDeadline &&
+    // Usa hasDeadline ou hasStartDate em vez de _isNotToday para que sempre apareça o ícone se tiver data de vencimento/inicio
+    final bool shouldShowDateIcon = (task.hasDeadline || task.startDate != null) &&
         !isRecurrent; // Só mostra data se NÃO for recorrente
     // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
     int? effectivePersonalDay = task.personalDay;
-    if (task.dueDate == null && userData != null &&
+    if (task.effectiveDate == null && userData != null &&
         userData!.nomeAnalise.isNotEmpty && userData!.dataNasc.isNotEmpty) {
-      // Tarefa perpétua: calcula dia pessoal baseado na data de hoje
+      // Tarefa perpétua (nem flow nem agendada): calcula dia pessoal baseado na data de hoje
       try {
         final engine = NumerologyEngine(
           nomeCompleto: userData!.nomeAnalise,
@@ -238,7 +238,7 @@ class TaskItem extends StatelessWidget {
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
     // Flag para ícone de foco (tarefas sem data marcadas como foco)
-    final bool shouldShowFocusIcon = !task.hasDeadline && task.isFocus;
+    final bool shouldShowFocusIcon = !task.hasDeadline && task.startDate == null && task.isFocus;
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;

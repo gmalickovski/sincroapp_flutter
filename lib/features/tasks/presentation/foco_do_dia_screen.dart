@@ -209,6 +209,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   void _createSingleTask(ParsedTask parsedTask, {String? recurrenceId}) {
     // Garante que a data seja convertida para UTC
     DateTime? finalDueDateUtc;
+    DateTime? finalStartDateUtc;
     DateTime dateForPersonalDay;
 
     if (parsedTask.dueDate != null) {
@@ -220,6 +221,13 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         finalDueDateUtc = parsedTask.dueDate!.toUtc();
       }
       dateForPersonalDay = finalDueDateUtc!;
+    } else if (parsedTask.startDate != null) {
+      if (parsedTask.startDate!.isUtc) {
+        finalStartDateUtc = parsedTask.startDate;
+      } else {
+        finalStartDateUtc = parsedTask.startDate!.toUtc();
+      }
+      dateForPersonalDay = finalStartDateUtc!;
     } else {
       // Se não tem data específica, usa a data atual (não a de amanhã)
       final now = DateTime.now().toLocal();
@@ -235,6 +243,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       text: parsedTask.cleanText,
       createdAt: DateTime.now().toUtc(),
       dueDate: finalDueDateUtc,
+      startDate: finalStartDateUtc,
       // --- INÃCIO DA MUDANÃ‡A: Campos de Meta/Jornada (JÃ¡ estavam corretos) ---
       journeyId: parsedTask.journeyId,
       journeyTitle: parsedTask.journeyTitle,
@@ -265,10 +274,13 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // A nova lÃ³gica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a prÃ³xima ao concluir.
 
     // Usa a data definida ou 'Hoje'
-    final firstDate = parsedTask.dueDate ?? DateTime.now();
+    final firstDate = parsedTask.dueDate ?? parsedTask.startDate ?? DateTime.now();
+
+    final isFlow = parsedTask.recurrenceRule.recurrenceCategory == 'flow';
 
     final taskForFirstDate = parsedTask.copyWith(
-      dueDate: firstDate,
+      dueDate: isFlow ? null : firstDate,
+      startDate: isFlow ? firstDate : null,
     );
 
     // Cria apenas uma tarefa
@@ -532,10 +544,13 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
   // --- FIM DA MUDANÃ‡A ---
 
-  // --- INÃ CIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 2 & 3): LÃ³gica de filtro atualizada ---
+  // --- INÍCIO DA MUDANÇA (Solicitação 2 & 3): Lógica de filtro atualizada ---
   bool _doesRecurrenceMatch(TaskModel task, DateTime targetDate) {
-    if (task.dueDate == null) return false;
-    final start = task.dueDate!.toLocal();
+    // Para 'flow', usa startDate. Para outros, usa dueDate.
+    final DateTime? anchorDate = task.recurrenceCategory == 'flow' ? task.startDate : task.dueDate;
+    if (anchorDate == null) return false;
+    
+    final start = anchorDate.toLocal();
     final startOnly = DateTime(start.year, start.month, start.day);
     final targetOnly = DateTime(targetDate.year, targetDate.month, targetDate.day);
 
@@ -584,7 +599,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     List<TaskModel> preProcessedTasks = [];
     for (var task in rawTasks) {
        if (task.recurrenceCategory == 'flow' && !task.completed) {
-          // Flow Template - evaluate occurrences
+          // Flow Template - evaluate occurrences for matching dates only
           for (var d in evaluationDates) {
              if (_doesRecurrenceMatch(task, d)) {
                 // Check if already completed/instantiated for this day
@@ -595,8 +610,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                    isSameDay(inst.dueDate!.toLocal(), d));
                 if (!hasInstance) {
                    DateTime newDue = d;
-                   if (task.dueDate != null) {
-                      final time = task.dueDate!.toLocal();
+                   if (task.startDate != null) {
+                      final time = task.startDate!.toLocal();
                       newDue = DateTime(d.year, d.month, d.day, time.hour, time.minute);
                    }
                    preProcessedTasks.add(task.copyWith(dueDate: newDue));
@@ -628,11 +643,19 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         final tomorrowStart = todayStart.add(const Duration(days: 1));
         filteredTasks = allTasks.where((task) {
           if (task.completed) return false;
+          
           // Tarefas sem data marcadas como foco
           if (!task.hasDeadline && task.isFocus) return true;
-          // Tarefas atrasadas (com data)
-          if (task.isOverdue) return true;
-          // Tarefas agendadas para hoje
+          
+          // Tarefas atrasadas (com data) -> flow_instance hiberne (apagamento à meia noite)
+          if (task.isOverdue) {
+            if (task.recurrenceCategory == 'flow_instance' || task.recurrenceCategory == 'flow') {
+              return false;
+            }
+            return true;
+          }
+          
+          // Tarefas agendadas/ritmos para hoje
           if (task.hasDeadline) {
             final taskDateLocal = task.dueDate!.toLocal();
             final taskDateOnly = DateTime(
@@ -640,6 +663,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             return !taskDateOnly.isBefore(todayStart) &&
                 taskDateOnly.isBefore(tomorrowStart);
           }
+          
+          // Flow templates sem instância hoje (rituais contínuos) → sempre no foco
+          if (task.recurrenceCategory == 'flow') return true;
+
           return false;
         }).toList();
         break;

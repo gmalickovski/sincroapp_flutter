@@ -43,6 +43,7 @@ class ParsedTask {
   final String? journeyId;
   final String? journeyTitle;
   final DateTime? dueDate;
+  final DateTime? startDate;
   final TimeOfDay? reminderTime;
   final DateTime? reminderAt;
   final List<int>? reminderOffsets;
@@ -56,6 +57,7 @@ class ParsedTask {
     this.journeyId,
     this.journeyTitle,
     this.dueDate,
+    this.startDate,
     this.reminderTime,
     this.reminderAt,
     this.reminderOffsets,
@@ -70,6 +72,7 @@ class ParsedTask {
     String? journeyId,
     String? journeyTitle,
     DateTime? dueDate,
+    DateTime? startDate,
     TimeOfDay? reminderTime,
     DateTime? reminderAt,
     List<int>? reminderOffsets,
@@ -83,6 +86,7 @@ class ParsedTask {
       journeyId: journeyId ?? this.journeyId,
       journeyTitle: journeyTitle ?? this.journeyTitle,
       dueDate: dueDate ?? this.dueDate,
+      startDate: startDate ?? this.startDate,
       reminderTime: reminderTime ?? this.reminderTime,
       reminderAt: reminderAt ?? this.reminderAt,
       reminderOffsets: reminderOffsets ?? this.reminderOffsets,

@@ -2194,8 +2194,18 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     });
   }
 
+  DateTime? _lastSyncTime;
+
   Future<void> _syncJournalWithTaskList(List<TaskModel> systemTasks) async {
     if (!mounted) return;
+
+    // Throttle: prevent rapid repeated syncs (e.g. from rapid stream events)
+    final now = DateTime.now();
+    if (_lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 3) {
+      return;
+    }
+    _lastSyncTime = now;
+
     _isSyncing = true;
     try {
       debugPrint(
@@ -2232,13 +2242,10 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
           debugPrint(
               '🗑️ [JournalSync] Task $taskId not found in stream (Deleted). Removing line.');
           final offset = line.documentOffset;
-          // Delete operation: remove length + 1 (newline) to remove the line completely
           _controller.replaceText(offset, line.length + 1, '', null);
           docChanged = true;
           continue;
         }
-
-        // Task Exists -> Check for updates
 
         // A. Status Sync (System -> Journal)
         final currentListVal = line.style.attributes[Attribute.list.key]?.value;
@@ -2246,50 +2253,38 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
         if (systemTask.completed != isCheckedInJournal) {
           debugPrint(
-              '🔄 [JournalSync] Task $taskId status mismatch. System: ${systemTask.completed} vs Journal: $isCheckedInJournal');
-          final newAttr =
-              systemTask.completed ? Attribute.checked : Attribute.unchecked;
-          _controller.formatText(line.documentOffset, line.length, newAttr);
+              '🔄 [JournalSync] Task $taskId status mismatch. Updating checkbox.');
+          _controller.formatText(line.documentOffset, line.length,
+              systemTask.completed ? Attribute.checked : Attribute.unchecked);
           docChanged = true;
         }
 
-        // B. Text Sync (System -> Journal)
+        // B. Text Sync (System -> Journal) — only if text is meaningfully different
         final currentRaw = line.toPlainText().trim();
-        // Reconstruct the expected text from the System Task
         final expectedText = TaskParser.toText(systemTask);
 
-        debugPrint(
-            '      System: "${systemTask.text}" [${systemTask.completed}]');
-        debugPrint(
-            '      Journal: "$currentRaw" (clean: "${TaskParser.parse(currentRaw).cleanText}") [$isCheckedInJournal]');
-
-        // Compare meaningful content (ignoring minor formatting diffs if needed)
-        // Check if current raw text roughly matches expected (we can be strict for now)
-
         if (currentRaw != expectedText) {
-          debugPrint(
-              '📝 [JournalSync] Task $taskId content mismatch. Updating Journal.');
-          debugPrint('   Current: "$currentRaw"');
-          debugPrint('   Expected: "$expectedText"');
-
+          debugPrint('📝 [JournalSync] Task $taskId text changed. Updating Journal line.');
           _controller.replaceText(
               line.documentOffset, line.length, expectedText, null);
-
-          // Re-apply attributes (taskId and checkbox status)
           _controller.formatText(line.documentOffset, expectedText.length,
               Attribute(_taskIdKey, AttributeScope.inline, taskId));
           _controller.formatText(line.documentOffset, expectedText.length,
               systemTask.completed ? Attribute.checked : Attribute.unchecked);
-
           docChanged = true;
         }
       }
 
       if (docChanged) {
-        debugPrint(
-            '✅ [JournalSync] Applied stream updates to Journal content.');
-        // Auto-save silently to persist System -> Journal changes without user interaction
-        await _saveJournalContentSilent();
+        debugPrint('✅ [JournalSync] Applied stream updates to Journal content.');
+        // NOTE: We do NOT auto-save here to avoid triggering the stream again.
+        // Changes are reflected in the editor. The user's unsaved-changes indicator
+        // will appear, and a silent save is initiated after a short debounce.
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted && !_isSyncing) {
+            _saveJournalContentSilent();
+          }
+        });
       }
     } finally {
       _isSyncing = false;

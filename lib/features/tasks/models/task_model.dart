@@ -14,6 +14,8 @@ class TaskModel {
   final String? journeyId;
   final String? journeyTitle;
   final int? personalDay;
+  final DateTime? startDate; // INÍCIO MUDANÇA (Solicitação 2 & 3): Adicionado startDate
+
 
   final RecurrenceType recurrenceType; // Tipo de recorrência
   final int recurrenceInterval; // Intervalo da recorrência (novo)
@@ -47,6 +49,7 @@ class TaskModel {
     this.journeyId,
     this.journeyTitle,
     this.personalDay,
+    this.startDate, // INÍCIO MUDANÇA (Solicitação 2 & 3)
     this.recurrenceType = RecurrenceType.none,
     this.recurrenceInterval = 1,
     this.recurrenceDaysOfWeek = const [],
@@ -90,6 +93,7 @@ class TaskModel {
     Object? journeyId = const _Undefined(),
     Object? journeyTitle = const _Undefined(),
     Object? personalDay = const _Undefined(),
+    Object? startDate = const _Undefined(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
     RecurrenceType? recurrenceType,
     int? recurrenceInterval,
     List<int>? recurrenceDaysOfWeek,
@@ -216,6 +220,7 @@ class TaskModel {
       journeyId: data['journey_id'] ?? data['journeyId'],
       journeyTitle: data['journey_title'] ?? data['journeyTitle'],
       personalDay: data['personal_day'] ?? data['personalDay'],
+      startDate: _parseDate(data['start_date'] ?? data['startDate'])?.toLocal(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       recurrenceType: recType,
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
@@ -251,6 +256,7 @@ class TaskModel {
       'journey_id': journeyId,
       'journey_title': journeyTitle,
       'personal_day': personalDay,
+      'start_date': startDate?.toIso8601String(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       'recurrence_type': recurrenceTypeString,
       'recurrence_interval': recurrenceInterval,
       'recurrence_days_of_week': recurrenceDaysOfWeek,

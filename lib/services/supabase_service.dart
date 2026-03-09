@@ -1249,6 +1249,9 @@ class SupabaseService {
           case 'dueDate':
             mappedUpdates['due_date'] = value;
             break;
+          case 'startDate': // INÍCIO MUDANÇA (Solicitação 2 & 3)
+            mappedUpdates['start_date'] = value;
+            break;
           case 'createdAt':
             mappedUpdates['created_at'] = value;
             break;
@@ -1269,6 +1272,9 @@ class SupabaseService {
             break;
           case 'recurrenceEndDate':
             mappedUpdates['recurrence_end_date'] = value;
+            break;
+          case 'recurrenceCategory':
+            mappedUpdates['recurrence_category'] = value;
             break;
           case 'reminder_offsets':
             // Column does not exist in Supabase — skip to avoid PGRST204
@@ -1424,6 +1430,7 @@ class SupabaseService {
       completed: data['completed'] ?? false,
       createdAt: (DateTime.tryParse(data['created_at'] ?? ''))?.toLocal() ?? DateTime.now(),
       dueDate: _parseDateAsLocal(data['due_date']), // FIX
+      startDate: _parseDateAsLocal(data['start_date']), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       tags: List<String>.from(data['tags'] ?? []),
       journeyId: data['journey_id'],
       journeyTitle: data['journey_title'],
@@ -1449,6 +1456,7 @@ class SupabaseService {
       reminderOffsets: data['reminder_offsets'] != null
           ? List<int>.from(data['reminder_offsets'])
           : null,
+      recurrenceCategory: data['recurrence_category'], // ← FIX: was missing
     );
   }
 

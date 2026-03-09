@@ -172,6 +172,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       type: _recurrenceRule.type,
       daysOfWeek: List<int>.from(_recurrenceRule.daysOfWeek),
       endDate: _recurrenceRule.endDate,
+      recurrenceCategory: _recurrenceRule.recurrenceCategory,
     );
     _initialReminderOffsets = Set<int>.from(_selectedReminderOffsets);
   }
@@ -303,9 +304,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       reminderTime = TimeOfDay(hour: reminded.hour, minute: reminded.minute);
     }
 
+    // --- INÍCIO MUDANÇA (Solicitação 2 & 3): Tratamento de startDate e dueDate ---
+    DateTime? explicitDueDate = finalDateTime;
+    DateTime? explicitStartDate;
+
+    // Se é um 'Ritual' (Fluir na Trilha)
+    if (_recurrenceRule.recurrenceCategory == 'flow') {
+      explicitStartDate = finalDateTime; // A data selecionada âncora a recorrência
+      explicitDueDate = null; // Rituais não têm um prazo rígido para "Atraso"
+    }
+    // --- FIM MUDANÇA ---
+
     final result = DatePickerResult(
-      finalDateTime,
+      explicitDueDate, // Envia null se for fluxo
       _recurrenceRule,
+      startDate: explicitStartDate, // INÍCIO MUDANÇA (Solicitação 2 & 3)
       reminderTime: reminderTime,
       reminderOffsets: _selectedReminderOffsets.toList(),
       hasTime: !_isAllDay && _selectedTime != null,
@@ -581,6 +594,10 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     // Compare recurrence type
     if (_recurrenceRule.type != (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
     if (_recurrenceRule.recurrenceCategory != (_initialRecurrence?.recurrenceCategory ?? 'commitment')) return true;
+    // Compare recurrence days of week (catches adding/removing a weekday)
+    final currentDays = Set<int>.from(_recurrenceRule.daysOfWeek);
+    final initialDays = Set<int>.from(_initialRecurrence?.daysOfWeek ?? []);
+    if (!currentDays.containsAll(initialDays) || !initialDays.containsAll(currentDays)) return true;
     // Compare reminder offsets
     if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets)) return true;
     return false;
@@ -664,8 +681,34 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
     Widget footerContent;
 
-    if (_hasInitialData && hasAnySelection && !_hasModifications) {
-      // State A: Reopened with data, unchanged → Fechar + Limpar
+    bool canApply = true;
+    if (_recurrenceRule.recurrenceCategory == 'flow' && _recurrenceRule.type == RecurrenceType.none) {
+      canApply = false;
+    }
+
+    if (!hasAnySelection) {
+      // State C: Nothing selected (cleared or fresh empty) → Fechar only
+      footerContent = SizedBox(
+        key: const ValueKey('CloseButton'),
+        height: 48,
+        width: double.infinity,
+        child: OutlinedButton(
+          onPressed: _hasChanges ? _onSave : () => Navigator.pop(context),
+          style: OutlinedButton.styleFrom(
+            backgroundColor: AppColors.cardBackground,
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            side: const BorderSide(color: AppColors.border),
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Fechar",
+              style: TextStyle(
+                  color: AppColors.secondaryText,
+                  fontFamily: 'Poppins')),
+        ),
+      );
+    } else if (!canApply || (_hasInitialData && !_hasModifications)) {
+      // State A: Reopened with data, NO modifications OR Incomplete Flow selection → "Fechar" + "Limpar"
       footerContent = Row(
         key: const ValueKey('CloseAndClearButtons'),
         children: [
@@ -710,8 +753,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
           ),
         ],
       );
-    } else if (hasAnySelection) {
-      // State B: Has selection AND modifications → Limpar + Aplicar
+    } else {
+      // State B: Has selection AND modifications AND canApply → "Limpar" + "Aplicar"
       footerContent = Row(
         key: const ValueKey('ClearSaveButtons'),
         children: [
@@ -777,27 +820,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             ),
           ),
         ],
-      );
-    } else {
-      // State C: Nothing selected → Fechar only
-      footerContent = SizedBox(
-        key: const ValueKey('CloseButton'),
-        height: 48,
-        width: double.infinity,
-        child: OutlinedButton(
-          onPressed: _hasChanges ? _onSave : () => Navigator.pop(context),
-          style: OutlinedButton.styleFrom(
-            backgroundColor: AppColors.cardBackground,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            side: const BorderSide(color: AppColors.border),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
-          ),
-          child: const Text("Fechar",
-              style: TextStyle(
-                  color: AppColors.secondaryText,
-                  fontFamily: 'Poppins')),
-        ),
       );
     }
 
@@ -1512,6 +1534,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: false,
                     isToday: _isSameDay(day, _todayMidnight),
                     isOutside: false,
+                    isProjected: _isDayProjected(day),
+                    isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
                 selectedBuilder: (context, day, focusedDay) {
@@ -1521,6 +1545,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: true,
                     isToday: _isSameDay(day, _todayMidnight),
                     isOutside: false,
+                    isProjected: false, // Selected overrides projected
+                    isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
                 todayBuilder: (context, day, focusedDay) {
@@ -1530,6 +1556,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: _isSameDay(day, _selectedDay),
                     isToday: true,
                     isOutside: false,
+                    isProjected: !_isSameDay(day, _selectedDay) && _isDayProjected(day),
+                    isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
                 outsideBuilder: (context, day, focusedDay) {
@@ -1539,6 +1567,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: false,
                     isToday: _isSameDay(day, _todayMidnight),
                     isOutside: true,
+                    isProjected: _isDayProjected(day),
+                    isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
                 disabledBuilder: (context, day, focusedDay) {
@@ -1548,6 +1578,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: false,
                     isToday: _isSameDay(day, _todayMidnight),
                     isOutside: !_isSameMonth(day, _focusedDay),
+                    isProjected: false,
+                    isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
               ),
@@ -1569,12 +1601,35 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     );
   }
 
+  bool _isDayProjected(DateTime day) {
+    if (_selectedDay == null) return false;
+    if (_recurrenceRule.type == RecurrenceType.none) return false;
+    
+    // Projeção apenas ocorre a partir da data de início (start_date) selecionada
+    // Removendo o tempo para comparação correta
+    final dayDate = DateTime(day.year, day.month, day.day);
+    final selectedDate = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
+    
+    if (dayDate.isBefore(selectedDate)) return false;
+
+    if (_recurrenceRule.type == RecurrenceType.daily) {
+      return true;
+    } else if (_recurrenceRule.type == RecurrenceType.weekly) {
+      return _recurrenceRule.daysOfWeek.contains(day.weekday);
+    } else if (_recurrenceRule.type == RecurrenceType.monthly) {
+      return day.day == selectedDate.day;
+    }
+    return false;
+  }
+
   Widget _buildCalendarDayCell({
     required DateTime day,
     required bool isSelected,
     required bool isToday,
     required bool isOutside,
     required bool isEnabled,
+    bool isProjected = false,
+    bool isFlow = false,
   }) {
     final personalDay = _engine.calculatePersonalDayForDate(day);
 
@@ -1583,9 +1638,21 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     double borderWidth = 0;
 
     if (isSelected && isEnabled) {
-      cellFillColor = AppColors.primary;
-      borderColor = AppColors.primary;
-      borderWidth = 2.0;
+      // Destaque do start_date para Flow altera a cor de borda/fill (feedback de ativação)
+      if (isFlow) {
+        cellFillColor = AppColors.primary.withValues(alpha: 0.2);
+        borderColor = AppColors.primary;
+        borderWidth = 2.0;
+      } else {
+        cellFillColor = AppColors.primary;
+        borderColor = AppColors.primary;
+        borderWidth = 2.0;
+      }
+    } else if (isProjected && isEnabled) {
+      // Iluminar dias afetados pela regra
+      cellFillColor = AppColors.primary.withValues(alpha: 0.15);
+      borderColor = AppColors.primary.withValues(alpha: 0.3);
+      borderWidth = 1.0;
     } else if (isToday && isEnabled) {
       cellFillColor = AppColors.primary.withValues(alpha: 0.25);
     } else if (!isEnabled) {
@@ -1594,7 +1661,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
     Color baseDayTextColor = AppColors.secondaryText;
     if (isSelected && isEnabled) {
-      baseDayTextColor = Colors.white;
+      baseDayTextColor = isFlow ? AppColors.primary : Colors.white;
+    } else if (isProjected && isEnabled) {
+      baseDayTextColor = AppColors.primary.withValues(alpha: 0.8);
     } else if (isToday && isEnabled) {
       baseDayTextColor = AppColors.primary;
     } else if (isOutside) {
@@ -1608,7 +1677,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             ? baseDayTextColor
             : baseDayTextColor.withValues(alpha: 0.4),
         fontWeight:
-            (isToday || isSelected) ? FontWeight.bold : FontWeight.normal,
+            (isToday || isSelected || isProjected) ? FontWeight.bold : FontWeight.normal,
         fontSize: 11,
       ),
     );

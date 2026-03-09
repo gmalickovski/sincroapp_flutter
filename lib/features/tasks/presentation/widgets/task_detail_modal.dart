@@ -82,6 +82,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   // Estados para data/hora/recorrência/lembrete
   late DateTime? _selectedDateTime;
+  late DateTime? _selectedStartDate; // NOVO: Para tarefas Flow
   late RecurrenceRule _recurrenceRule;
   List<int>? _reminderOffsets;
   bool _hasExplicitTime = false; // Rastreia se o usuário selecionou horário explícito
@@ -196,6 +197,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       type: widget.task.recurrenceType,
       daysOfWeek: widget.task.recurrenceDaysOfWeek,
       endDate: widget.task.recurrenceEndDate?.toLocal(),
+      recurrenceCategory: widget.task.recurrenceCategory ?? 'commitment', // ← FIX: was always defaulting to 'commitment'
     );
 
     _personalDay = _calculatePersonalDayForDate(
@@ -207,6 +209,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     _originalSharedWith = List.from(widget.task.sharedWith);
     _currentSharedWith = List.from(widget.task.sharedWith);
     _originalDateTime = _selectedDateTime;
+    _selectedStartDate = widget.task.startDate; // INICIALIZA O START DATE AQUI
     _originalRecurrenceRule = _recurrenceRule.copyWith();
     _originalReminderOffsets =
         _reminderOffsets != null ? List.from(_reminderOffsets!) : null;
@@ -359,7 +362,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     bool tagsChanged =
         !_listEquality.equals(_currentTags..sort(), _originalTags..sort());
     bool dateTimeChanged =
-        !_compareDateTimes(_selectedDateTime, _originalDateTime);
+        !_compareDateTimes(_selectedDateTime, _originalDateTime) ||
+        !_compareDateTimes(_selectedStartDate, widget.task.startDate); // VERIFICA START DATE
     bool recurrenceChanged = _recurrenceRule != _originalRecurrenceRule;
     bool reminderChanged = !_listEquality.equals(
         (_reminderOffsets != null ? List<int>.from(_reminderOffsets!) : <int>[])
@@ -716,9 +720,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     setState(() => _isLoading = true);
 
+    // Calcula personal day com a data âncora certa (startDate pra flow, dueDate pra commitment, ou _selectedDateTime se ambos faltam, senão effectiveDate)
     int? newPersonalDay = widget.task.personalDay;
-    if (widget.isNew || !_compareDateTimes(_selectedDateTime, _originalDateTime)) {
-      final dateForCalc = _selectedDateTime ?? widget.task.effectiveDate;
+    if (widget.isNew || !_compareDateTimes(_selectedDateTime, _originalDateTime) || !_compareDateTimes(_selectedStartDate, widget.task.startDate)) {
+      final dateForCalc = _selectedStartDate ?? _selectedDateTime ?? widget.task.effectiveDate;
       newPersonalDay = _calculatePersonalDayForDate(dateForCalc);
       if (newPersonalDay == 0) newPersonalDay = null;
     }
@@ -738,6 +743,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       }
     }
 
+    DateTime? finalStartDateUtc;
+    if (_selectedStartDate != null) {
+      if (_hasExplicitTime) { // Se horário estivesse em flow... o flow tipicamente ignora, mas mantemos local
+         finalStartDateUtc = _selectedStartDate!.toUtc();
+      } else {
+         finalStartDateUtc = DateTime(_selectedStartDate!.year, _selectedStartDate!.month, _selectedStartDate!.day).toUtc();
+      }
+    }
+
     DateTime? reminderAt;
     if (finalDueDateUtc != null &&
         _reminderOffsets != null &&
@@ -751,9 +765,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     final Map<String, dynamic> updates = {
       'text': newText,
-      'dueDate': finalDueDateUtc,
-      // 'reminderHour': finalReminderTime?.hour, // Removido
-      // 'reminderMinute': finalReminderTime?.minute, // Removido
+      'dueDate': finalDueDateUtc?.toIso8601String(), // Se for explicitDue
+      'start_date': finalStartDateUtc?.toIso8601String(), // Se for Flow
       'reminder_offsets': _reminderOffsets,
       'reminder_at': reminderAt?.toIso8601String(), // Envia data calculada
       'tags': _currentTags,
@@ -765,6 +778,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           : null,
       'recurrenceDaysOfWeek': _recurrenceRule.daysOfWeek,
       'recurrenceEndDate': _recurrenceRule.endDate?.toUtc(),
+      'recurrenceCategory': _recurrenceRule.recurrenceCategory, // ← FIX
       'sharedWith': _currentSharedWith, // NOVO
       'is_focus': _isFocus,
     };
@@ -780,8 +794,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         // --- LOGICA DE CRIAÇÃO ---
         final newTask = widget.task.copyWith(
           text: newText,
-          dueDate:
-              finalDueDateUtc, // copyWith handles Object? so we pass directly
+          dueDate: finalDueDateUtc, // copyWith handles Object? so we pass directly
+          startDate: finalStartDateUtc, // NOVO: Para Rituaos
           tags: _currentTags,
           journeyId: _selectedGoal?.id,
           journeyTitle: _selectedGoal?.title,
@@ -789,6 +803,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           recurrenceType: _recurrenceRule.type,
           recurrenceDaysOfWeek: _recurrenceRule.daysOfWeek,
           recurrenceEndDate: _recurrenceRule.endDate?.toUtc(),
+          recurrenceCategory: _recurrenceRule.recurrenceCategory, // ← FIX
           sharedWith: _currentSharedWith,
           reminderAt: reminderAt,
           reminderOffsets: _reminderOffsets,
@@ -856,7 +871,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     FocusScope.of(context).unfocus();
 
     final DateTime initialPickerDate =
-        _selectedDateTime?.toLocal() ?? DateTime.now();
+        _selectedStartDate?.toLocal() ?? _selectedDateTime?.toLocal() ?? DateTime.now();
 
     final isDesktop = MediaQuery.of(context).size.width >= 768;
 
@@ -883,29 +898,34 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     if (result != null && mounted) {
       bool dateTimeChanged = !_compareDateTimes(
           result.dateTime?.toLocal(), _selectedDateTime?.toLocal());
+      bool startDateChanged = !_compareDateTimes(
+          result.startDate?.toLocal(), _selectedStartDate?.toLocal());
+
       bool recurrenceChanged = result.recurrenceRule != _recurrenceRule;
       final newOffsets = result.reminderOffsets;
       bool reminderChanged =
           !_listEquality.equals(newOffsets?..sort(), _reminderOffsets?..sort());
 
-      if (dateTimeChanged || recurrenceChanged || reminderChanged) {
+      if (dateTimeChanged || startDateChanged || recurrenceChanged || reminderChanged) {
         setState(() {
           _selectedDateTime = result.dateTime?.toLocal();
+          _selectedStartDate = result.startDate?.toLocal();
           _hasExplicitTime = result.hasTime; // Rastreia se o usuário selecionou horário
-          _textController.mentionEnabled = _selectedDateTime != null;
+          _textController.mentionEnabled = _selectedDateTime != null; // Se Flow (startDate sem dueDate), mention desabilita
           _recurrenceRule = result.recurrenceRule;
           _reminderOffsets = newOffsets; // Atualiza offset
 
           // Limpa contatos e @menções quando data muda ou é removida
-          if (dateTimeChanged) {
+          if (dateTimeChanged || startDateChanged) {
             for (final username in _currentSharedWith) {
               _removeParserTextFromInput('@', username);
             }
             _currentSharedWith.clear();
           }
 
-          if (_selectedDateTime != null) {
-            _personalDay = _calculatePersonalDayForDate(_selectedDateTime!);
+          if (_selectedDateTime != null || _selectedStartDate != null) {
+            final measureDate = _selectedStartDate ?? _selectedDateTime!;
+            _personalDay = _calculatePersonalDayForDate(measureDate);
             // Quando define data, desativa foco (botão vai sumir)
             _isFocus = false;
           } else {
@@ -1627,8 +1647,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         ? Colors.amber
         : AppColors.tertiaryText;
 
-    // When no dueDate and no recurrence: show placeholder
-    if (!hasDateTime && !hasRecurrence) {
+    // When no dueDate and no startDate and no recurrence: show placeholder
+    if (!hasDateTime && !hasRecurrence && _selectedStartDate == null) {
       return _buildIconText(
         Icons.calendar_today_outlined,
         'Adicionar agendamento',
@@ -1639,25 +1659,26 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
     List<Widget> children = [];
 
-    if (hasDateTime) {
-      final bool isOverdue = _selectedDateTime!.isBefore(DateTime.now()) &&
+    if (hasDateTime || _selectedStartDate != null) {
+      final dateToUse = _selectedStartDate ?? _selectedDateTime!;
+      final bool isOverdue = dateToUse.isBefore(DateTime.now()) &&
           !widget.task.completed &&
           !_isSameDay(
-              DateTime(_selectedDateTime!.year, _selectedDateTime!.month,
-                  _selectedDateTime!.day),
+              DateTime(dateToUse.year, dateToUse.month,
+                  dateToUse.day),
               DateTime(DateTime.now().year, DateTime.now().month,
                   DateTime.now().day));
 
       children.add(_buildIconText(
         Icons.calendar_today_outlined,
-        _buildDateSummaryText(),
+        _formatDateLabel(dateToUse),
         isOverdue ? Colors.redAccent : color,
         isOverdue ? Colors.redAccent : iconColor,
       ));
-      if (_selectedDateTime!.hour != 0 || _selectedDateTime!.minute != 0) {
+      if (_hasExplicitTime && dateToUse.hour != 0 || dateToUse.minute != 0) {
         children.add(_buildIconText(
           Icons.alarm,
-          DateFormat.Hm('pt_BR').format(_selectedDateTime!),
+          DateFormat.Hm('pt_BR').format(dateToUse),
           color,
           iconColor,
         ));

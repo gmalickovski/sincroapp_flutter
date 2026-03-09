@@ -4,6 +4,7 @@ import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 // Classe de retorno do modal, incluindo data/hora e regra de recorrência
 class DatePickerResult {
   final DateTime? dateTime; // Nullable to represent a 'Clear' action
+  final DateTime? startDate; // INÍCIO MUDANÇA (Solicitação 2 & 3): Para tarefas flow
   final RecurrenceRule recurrenceRule;
   final TimeOfDay? reminderTime;
   final List<int>? reminderOffsets; // Array de offsets em minutos
@@ -13,6 +14,7 @@ class DatePickerResult {
   DatePickerResult(
     this.dateTime,
     this.recurrenceRule, {
+    this.startDate, // INÍCIO MUDANÇA (Solicitação 2 & 3)
     this.reminderTime,
     this.reminderOffsets,
     this.hasTime = false,
