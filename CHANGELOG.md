@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.4](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.3...v1.7.4) (2026-03-09)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Introduce comprehensive task management with input parsing, recurrence logic, journal features, and associated UI components. ([a34ec0a](https://github.com/gmalickovski/sincroapp_flutter/commit/a34ec0a1390d77c83dcd39418dd151556a2e5be9))
+
 ### [1.7.3](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.2...v1.7.3) (2026-03-08)
 
 
