@@ -1974,37 +1974,72 @@ class SupabaseService {
 
       // 4. Calculate Total Token Usage & Cost (Approximation)
       // Fetch all usage logs (warning: heavy query, should be RPC in prod)
+      // 4. Calculate Total Token Usage & Cost
       int totalTokens = 0;
+      int totalTokensMes = 0;
       int totalRequests = 0;
+      int totalRequestsMes = 0;
+      double aiCost = 0.0;
+      double aiCostMes = 0.0;
 
       try {
-        // Buscando apenas a coluna tokens_total para reduzir tráfego
-        // Nota: RPC 'get_total_token_usage' seria ideal
+        final nowLocal = DateTime.now();
+        final currentMonth = nowLocal.month;
+        final currentYear = nowLocal.year;
+
         final usageResponse = await _supabase
             .schema('sincroapp')
             .from('usage_logs')
-            .select('tokens_total');
+            .select('tokens_total, model_name, created_at');
         final List<dynamic> usageList = usageResponse;
 
         totalRequests = usageList.length;
-        totalTokens = usageList.fold<int>(
-            0, (sum, item) => sum + (item['tokens_total'] as int? ?? 0));
+
+        for (var item in usageList) {
+          final tokens = item['tokens_total'] as int? ?? 0;
+          final modelName = item['model_name'] as String? ?? 'unknown';
+          final createdAtStr = item['created_at'] as String?;
+          
+          totalTokens += tokens;
+
+          // Custo baseado no modelo
+          double itemCost = 0.0;
+          if (modelName.contains('llama-3.3-70b-versatile')) {
+             // Groq llama-3.3-70b: média ~$0.69 por 1M de tokens (* 6.0 BRL)
+             itemCost = (tokens / 1000000) * 0.69 * 6.0;
+          } else if (modelName.contains('gpt-4o-mini')) {
+             // OpenAI gpt-4o-mini: média ~$0.30 por 1M de tokens (* 6.0 BRL)
+             itemCost = (tokens / 1000000) * 0.30 * 6.0;
+          } else if (modelName.contains('gpt-4o')) {
+             itemCost = (tokens / 1000000) * 10.0 * 6.0;
+          } else {
+             // Outros modelos ou fallback legacy N8N
+             itemCost = tokens > 0 ? (tokens / 1000000) * 0.20 * 6.0 : 0.05;
+          }
+          aiCost += itemCost;
+
+          // Verifica se é no mesmo mes
+          if (createdAtStr != null) {
+            try {
+              final date = DateTime.parse(createdAtStr).toLocal();
+              if (date.month == currentMonth && date.year == currentYear) {
+                totalTokensMes += tokens;
+                totalRequestsMes++;
+                aiCostMes += itemCost;
+              }
+            } catch (e) {
+              // Ignora datas inválidas
+            }
+          }
+        }
       } catch (e) {
         debugPrint('⚠️ Erro ao buscar usage_logs: $e');
-        // Fallback to subscription stats
         totalRequests = totalAiUsed;
+        aiCost = totalAiUsed * 0.05;
       }
 
-      // Custo estimado: ~R$0.05 por requisição (Legacy) OU Baseado em Tokens
-      // GPT-4o-mini: ~$0.20 per 1M tokens (Blended)
-      double aiCost = 0.0;
-      if (totalTokens > 0) {
-        aiCost = (totalTokens / 1000000) * 0.20 * 6.0; // USD to BRL (~6.0)
-      } else {
-        aiCost = totalAiUsed * 0.05; // Fallback Legacy
-      }
-
-      final double netProfit = grossMrr - aiCost;
+      // O lucro líquido do mês é o MRR bruto - custo da IA no mês
+      final double netProfit = grossMrr - aiCostMes;
 
       return {
         'totalUsers': users.length,
@@ -2015,9 +2050,12 @@ class SupabaseService {
         'expiredSubscriptions': expiredCount,
 
         'estimatedMRR': grossMrr,
-        'totalAiUsed': totalRequests, // Total Requests (Real or Legacy)
-        'totalAiTokens': totalTokens, // New Metric
+        'totalAiUsed': totalRequests, 
+        'totalAiTokens': totalTokens, 
         'totalAiCost': aiCost,
+        'totalAiUsedMes': totalRequestsMes, 
+        'totalAiTokensMes': totalTokensMes, 
+        'totalAiCostMes': aiCostMes,
         'netProfit': netProfit,
 
         'demographics': {
@@ -2036,17 +2074,62 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, int>> getUserTokenUsageMap() async {
+  Future<Map<String, Map<String, dynamic>>> getUserTokenUsageMap() async {
     try {
+      final nowLocal = DateTime.now();
+      final currentMonth = nowLocal.month;
+      final currentYear = nowLocal.year;
+
       final response = await _supabase
           .schema('sincroapp')
           .from('usage_logs')
-          .select('user_id, tokens_total');
-      final Map<String, int> usageMap = {};
+          .select('user_id, tokens_total, model_name, created_at');
+      
+      final Map<String, Map<String, dynamic>> usageMap = {};
+      
       for (var item in response) {
         final uid = item['user_id'] as String;
         final tokens = item['tokens_total'] as int? ?? 0;
-        usageMap[uid] = (usageMap[uid] ?? 0) + tokens;
+        final modelName = item['model_name'] as String? ?? 'unknown';
+        final createdAtStr = item['created_at'] as String?;
+
+        double itemCost = 0.0;
+        if (modelName.contains('llama-3.3-70b-versatile')) {
+           itemCost = (tokens / 1000000) * 0.69 * 6.0;
+        } else if (modelName.contains('gpt-4o-mini')) {
+           itemCost = (tokens / 1000000) * 0.30 * 6.0;
+        } else if (modelName.contains('gpt-4o')) {
+           itemCost = (tokens / 1000000) * 10.0 * 6.0;
+        } else {
+           itemCost = tokens > 0 ? (tokens / 1000000) * 0.20 * 6.0 : 0.05;
+        }
+
+        bool isCurrentMonth = false;
+        if (createdAtStr != null) {
+          try {
+            final date = DateTime.parse(createdAtStr).toLocal();
+            if (date.month == currentMonth && date.year == currentYear) {
+              isCurrentMonth = true;
+            }
+          } catch (_) {}
+        }
+
+        if (!usageMap.containsKey(uid)) {
+          usageMap[uid] = {
+            'totalTokens': 0,
+            'totalCost': 0.0,
+            'monthTokens': 0,
+            'monthCost': 0.0,
+          };
+        }
+
+        usageMap[uid]!['totalTokens'] = (usageMap[uid]!['totalTokens'] as int) + tokens;
+        usageMap[uid]!['totalCost'] = (usageMap[uid]!['totalCost'] as double) + itemCost;
+        
+        if (isCurrentMonth) {
+          usageMap[uid]!['monthTokens'] = (usageMap[uid]!['monthTokens'] as int) + tokens;
+          usageMap[uid]!['monthCost'] = (usageMap[uid]!['monthCost'] as double) + itemCost;
+        }
       }
       return usageMap;
     } catch (e) {
@@ -2164,6 +2247,38 @@ class SupabaseService {
     } catch (e) {
       debugPrint(
           '❌ [SupabaseService] Erro ao atualizar financial settings: $e');
+      rethrow;
+    }
+  }
+
+  // --- AI SETTINGS (Admin) ---
+
+  Future<Map<String, dynamic>> getAdminAiSettings() async {
+    try {
+      final response = await _supabase
+          .schema('sincroapp')
+          .from('site_settings')
+          .select()
+          .eq('key', 'ai_config')
+          .maybeSingle();
+      if (response != null && response['value'] != null) {
+        return response['value'] as Map<String, dynamic>;
+      }
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao carregar AI settings: $e');
+    }
+    return <String, dynamic>{};
+  }
+
+  Future<void> updateAdminAiSettings(Map<String, dynamic> settings) async {
+    try {
+      await _supabase.schema('sincroapp').from('site_settings').upsert({
+        'key': 'ai_config',
+        'value': settings,
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'key');
+    } catch (e) {
+      debugPrint('❌ [SupabaseService] Erro ao atualizar AI settings: $e');
       rethrow;
     }
   }

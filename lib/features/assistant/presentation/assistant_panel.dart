@@ -13,7 +13,7 @@ import 'package:supabase_flutter/supabase_flutter.dart'; // NEW: For direct Supa
 import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
+
 import 'package:sincro_app_flutter/features/assistant/services/assistant_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart'; // Task Model
@@ -108,8 +108,7 @@ class _AssistantPanelState extends State<AssistantPanel>
   late DraggableScrollableController _sheetController;
   final bool _isSheetExpanded = false; // Internal tracking
 
-  // N8N Service
-  final N8nService _n8nService = N8nService(); // Use singleton or provider
+  // AI Service agora é direto (sem N8N) — veja assistant_service.dart
 
   @override
   void initState() {
@@ -358,6 +357,7 @@ class _AssistantPanelState extends State<AssistantPanel>
       final answer = await AssistantService.ask(
         question: text,
         user: widget.userData,
+        chatHistory: _messages.reversed.toList(),
       );
 
       final assistantMsg = AssistantMessage(

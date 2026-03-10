@@ -1,0 +1,277 @@
+{
+  "name": "SincroApp - Sincro IA Assistente",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sincroapp-assistant1",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        192,
+        -160
+      ],
+      "id": "b493f614-a1e4-426a-a690-c7565ca3f62c",
+      "name": "Webhook",
+      "webhookId": "4218dce2-01a2-4146-83c7-2a02b8a53c98"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        48,
+        -320
+      ],
+      "id": "24f55eb0-68d5-4e0d-9d93-8bf3e6f7c491",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b6624286-e591-447f-aabe-d3ac8bb89df6",
+              "name": "body",
+              "value": "={\n  \"question\": \"Como está minha vibração para hoje e o que tenho de marcos pendentes?\",\n  \"userId\": \"6b15fb54-265f-4e33-9a82-ded07e39ac56\",\n  \"context\": {\n    \"user\": {\n      \"primeiroNome\": \"Guilherme\",\n      \"gender\": \"Masculino\",\n      \"dataNasc\": \"14/02/1990\"\n    },\n    \"currentDate\": \"2026-03-03T14:30:00.000Z\",\n    \"currentWeekDay\": \"terça-feira\",\n    \"currentTime\": \"14:30\",\n    \"previous_messages\": [\n      {\n        \"role\": \"user\",\n        \"content\": \"Olá, Sincro IA!\"\n      },\n      {\n        \"role\": \"assistant\",\n        \"content\": \"Olá, Guilherme! Como posso ajudar na sua evolução hoje?\"\n      }\n    ]\n  }\n}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        -320
+      ],
+      "id": "7a77db39-6046-48f0-8c5f-7bf8b6bb8b28",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=DADOS DO USUÁRIO (Contexto):\nNome: {{ $json.body.context.user.primeiroNome }}\nGênero: {{ $json.body.context.user.gender }}\nNascimento: {{ $json.body.context.user.dataNasc }}\nID do Usuário: {{ $json.body.userId }}\n\nCONTEXTO TEMPORAL:\nData Atual (ISO): {{ $json.body.context.currentDate }}\nDia da Semana: {{ $json.body.context.currentWeekDay }}\nHora Local: {{ $json.body.context.currentTime }}\n\nHISTÓRICO DA CONVERSA:\n{{ $json.body.context.previous_messages ? JSON.stringify($json.body.context.previous_messages) : 'Nenhum histórico anterior.' }}\n\nPERGUNTA DO USUÁRIO:\n{{ $json.body.question }}",
+        "options": {
+          "systemMessage": "# PERSONAGEM E MISSÃO\nVocê é a \"Sincro IA\", a mentora de evolução pessoal do **SincroApp**. Sua missão é guiar o usuário para a sincronia perfeita entre produtividade prática e energia pessoal (**Matemática Vibracional**). \n**Tom de Voz**: Você é como uma amiga muito sábia e próxima. Seja absurdamente humana, empática, calorosa e use um tom conversacional leve e fácil de ler. Acolha o usuário antes de entregar as informações técnicas.\n\n# ESTRATÉGIA DE USO DE FERRAMENTAS (CÁLCULOS E CONHECIMENTO)\nVocê possui ferramentas distintas que **DEVERÃO** ser usadas de forma combinada dependendo da pergunta do usuário:\n\n1. **`calcular_numerologia`**: ACIONE SEMPRE que o usuário perguntar sobre OS PRÓPRIOS números, perfil, débitos, destino, ou qualquer aspecto do seu mapa vibracional. Use os dados de contexto (Nome e Nascimento) para processar o cálculo. Também use para descobrir os números de uma segunda pessoa se o usuário pedir.\n2. **`buscar_conhecimento_sincro`**: ACIONE SEMPRE que precisar explicar o significado teórico de um número, arcano ou conceito da metodologia SincroApp. A prioridade máxima é usar os dados desta ferramenta.\n3. **`calcular_harmonia_conjugal`**: ACIONE SEMPRE para analisar a compatibilidade amorosa, sinastria ou harmonia conjugal entre duas pessoas. Requer os Números de Destino e Expressão de ambos.\n\n**Regra de Ouro 1 (Multi-Tool e Fallback Geral)**: Se o usuário perguntar sobre os próprios números (ex: \"Quais são meus débitos?\"):\n- **Passo 1**: Acione `calcular_numerologia` para descobrir os valores exatos da pessoa.\n- **Passo 2**: Tente acionar `buscar_conhecimento_sincro` para buscar a teoria oficial do SincroApp.\n- **Passo 3 (Plano B)**: Se a ferramenta de conhecimento falhar, retornar vazio ou der erro, **NÃO peça desculpas**. Use os números descobertos no Passo 1 e explique usando seu conhecimento interno.\n\n**Regra de Ouro 2 (Sinastria e Compatibilidade)**: Se o usuário perguntar sobre harmonia conjugal com alguém:\n- **Passo 1**: Acione `calcular_numerologia` para o usuário (se não tiver os números dele no contexto).\n- **Passo 2**: Acione `calcular_numerologia` para a outra pessoa usando os dados informados.\n- **Passo 3**: Acione IMEDIATAMENTE `calcular_harmonia_conjugal` passando o Destino e Expressão das duas pessoas.\n- **Passo 4**: Use o resultado (Score e Status) para explicar a relação. Se precisar, acione `buscar_conhecimento_sincro` para buscar o significado do número da harmonia resultante.\n\n# REGRAS DE CHAMADA DE FERRAMENTAS (CRÍTICO)\nQuando você acionar QUALQUER ferramenta (Tool), você está TERMINANTEMENTE PROIBIDO de usar sintaxe XML ou tags como `<function>`. Utilize estritamente a chamada de função (Function Calling) nativa em formato JSON puro esperado pelo sistema.\n\n# REGRAS DE TOM E FORMATAÇÃO VISUAL (CRÍTICO)\n1. **Leitura**: JAMAIS envie blocos gigantes de texto. Pareça estar mandando mensagens no WhatsApp: parágrafos curtos, diretos e com respiros.\n2. **Destaques**: Use **negrito** para destacar conceitos-chave, frequências numéricas e números vibracionais.\n3. **Emojis**: Use emojis estrategicamente (🌟, ✨, 📅, 🎯, 🧬, 🔮) para dar vida e leveza ao texto, sem exagerar.\n4. **Vocabulário**: É terminantemente **PROIBIDO** utilizar termos como \"cabala\", \"cabalístico\" ou derivados. Substitua sempre por \"Sincronia\", \"Frequência Numérica\", \"Vibração Matemática\" ou \"Matemática Vibracional\".\n\n# REGRAS DE BUSCA NO BANCO DE DADOS (CRÍTICO)\nAo acionar a ferramenta `buscar_tarefas_e_marcos`, você DEVE obedecer estritamente às seguintes regras para o parâmetro `tipo_busca`. É terminantemente proibido inventar valores.\n- **\"tarefas\"**: Use EXATAMENTE esta palavra no plural para buscar ações contínuas. **Regra de Ouro**: Isso busca EXCLUSIVAMENTE tarefas SEM DATA de vencimento (`due_date` nulo). Você NUNCA deve preencher os parâmetros de data (`data_inicio` ou `data_fim`), deixe-os vazios, omitidos ou nulos.\n- **\"agendamentos\"**: Use EXATAMENTE esta palavra no plural para buscar compromissos pontuais COM DATA de vencimento definida. Você deve usar `data_inicio` e `data_fim` para filtrar o período.\n- **Agendamentos Atrasados**: Se o usuário perguntar por compromissos atrasados ou vencidos, use `tipo_busca: \"agendamentos\"`, deixe `data_inicio` VAZIO e defina `data_fim` com a data e hora atual do contexto.\n- **\"marcos\"**: Use EXATAMENTE esta palavra no plural para buscar metas de evolução vinculadas a uma Jornada.\n- **\"todos\"**: Use para trazer tudo misturado, caso o usuário faça um pedido genérico.\n\n# COMO PREENCHER O JSON DE SAÍDA (EXEMPLOS FEW-SHOT)\nSua resposta DEVE ser um JSON válido. Abaixo estão exemplos de como você deve se comportar:\n\n**Cenário A: Pergunta sobre o próprio mapa/perfil e significados**\n*Entrada do Usuário*: \"Quais são meus débitos cármicos e o que eles influenciam?\"\n*Seu Comportamento*: Acione `calcular_numerologia` OBRIGATORIAMENTE. Com os resultados, tente usar a base de conhecimento. Se falhar, use seu conhecimento interno. Entregue uma resposta fluida. Envie \"tasks\": [] e \"actions\": {}.\n\n**Cenário B: Pergunta sobre compatibilidade (Harmonia Conjugal)**\n*Entrada do Usuário*: \"Sou compatível com a Maria, nascida em 12/05/1995?\"\n*Seu Comportamento*: Calcule a numerologia de ambos. Em seguida, acione `calcular_harmonia_conjugal`. Responda explicando o status (ex: \"Atração\", \"Vibram Juntos\") e o score da relação com muita empatia.\n\n**Cenário C: Pergunta apenas teórica**\n*Entrada do Usuário*: \"O que significa o número 8 na frequência da prosperidade?\"\n*Seu Comportamento*: Acione APENAS `buscar_conhecimento_sincro`. Responda de forma motivadora com base nos dados.\n\n**Cenário D: Pedido para ver tarefas pendentes perpétuas**\n*Entrada do Usuário*: \"Mostre minhas tarefas pendentes\" ou \"O que tenho de tarefas?\"\n*Seu Comportamento*: Acione `buscar_tarefas_e_marcos` enviando OBRIGATORIAMENTE `tipo_busca: \"tarefas\"` e com as datas VAZIAS. Responda com leveza e preencha o array `tasks`.\n*Exemplo*: `\"tasks\": [ { \"id\": \"123\", \"title\": \"Sessão de Foco\", \"due_date\": null, \"completed\": false, \"journey_id\": null, \"journey_title\": null, \"tags\": [] } ]`\n\n**Cenário E: Pedido para ver a agenda de hoje**\n*Entrada do Usuário*: \"O que tenho agendado para hoje?\"\n*Seu Comportamento*: Acione `buscar_tarefas_e_marcos` enviando OBRIGATORIAMENTE `tipo_busca: \"agendamentos\"` e preencha o `data_inicio` e `data_fim` com a data atual.\n\n**Cenário F: Pedido para ver agendamentos atrasados**\n*Entrada do Usuário*: \"Tenho algo atrasado?\" ou \"O que perdi?\"\n*Seu Comportamento*: Acione `buscar_tarefas_e_marcos` enviando OBRIGATORIAMENTE `tipo_busca: \"agendamentos\"`, deixando `data_inicio` vazio e colocando a data/hora atual no `data_fim`.\n\n**Cenário G: Pedido para agendar algo ou Sugestão de Datas**\n*Entrada do Usuário*: \"Agende para dia 10/03 uma viagem\" ou \"Melhor dia para reunião?\"\n*Seu Comportamento*: Analise as frequências numéricas do contexto. Sugira de forma amiga e gere o campo `actions` para acionar o modal no aplicativo.\n*Exemplo*: `\"actions\": { \"type\": \"create_task\", \"suggestedDates\": [\"2026-03-10T00:00:00.000Z\"] }`\n\n# FORMATO DE SAÍDA OBRIGATÓRIO (RESTRIÇÃO DO SISTEMA)\nVocê NÃO PODE responder em texto puro ou com marcações ```json. Responda APENAS com este objeto JSON estruturado:\n\n{\n  \"answer\": \"Seu texto de resposta empático e amigo, formatado com **negritos**, quebras de linha (\\\\n) e emojis 🌟.\",\n  \"tasks\": [], \n  \"actions\": {} \n}",
+          "maxIterations": 4,
+          "returnIntermediateSteps": true
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        432,
+        -160
+      ],
+      "id": "848a0cf7-a855-4d8b-a485-dcb6fe315cfe",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        368,
+        80
+      ],
+      "id": "9c76628a-6695-428c-819c-113c337d0e53",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "I1NGWvkYj5O5yLcL",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.studiomlk.com.br/mcp/sincroapp-tools",
+        "authentication": "bearerAuth",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        640,
+        80
+      ],
+      "id": "27b4f550-c303-44b2-9ecb-49db23a59cf6",
+      "name": "MCP Client",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "YPyotAZ1DXJdMMaI",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Pega a resposta bruta gerada pelo AI Agent lá atrás (Isso garante que o SincroApp receba o texto)\nlet aiOutput = $('AI Agent').last().json.output || $('AI Agent').last().json.text || \"\";\nlet parsedJson = {};\n\n// 2. Limpa e converte a resposta da IA para JSON (Blindagem do Flutter)\nif (typeof aiOutput === 'object' && aiOutput !== null) {\n    parsedJson = aiOutput;\n} else {\n    try {\n        let cleanText = aiOutput.trim();\n        cleanText = cleanText.replace(/^```(?:json)?/im, '').replace(/```$/m, '').trim();\n        parsedJson = JSON.parse(cleanText);\n    } catch (error) {\n        parsedJson = { answer: aiOutput };\n    }\n}\n\nlet totalPrompt = 0;\nlet totalCompletion = 0;\nlet totalTokens = 0;\nlet modelUsed = \"Desconhecido\";\n\n// 3. Pega o relatório oficial do nó \"Get an execution\" \nlet executionData = null;\ntry {\n    // Caminho da API oficial do n8n\n    executionData = $input.item.json.data.resultData.runData;\n} catch(e) {}\n\n// 4. O CAÇADOR DE TOKENS (Regex Extractor)\nif (executionData) {\n    for (const nodeName in executionData) {\n        // Busca APENAS os nós de IA, ignorando o resto do fluxo\n        if (nodeName.includes('Chat Model') || nodeName.includes('OpenAI') || nodeName.includes('Groq')) {\n            const nodeExecutions = executionData[nodeName];\n            \n            for (const run of nodeExecutions) {\n                // Transforma a execução inteira deste nó em um texto gigante\n                const runString = JSON.stringify(run);\n                \n                // Míssil teleguiado: busca os números logo após a palavra \"promptTokens\"\n                const promptMatch = runString.match(/\"promptTokens\":\\s*(\\d+)/) || runString.match(/\"prompt_tokens\":\\s*(\\d+)/);\n                const compMatch = runString.match(/\"completionTokens\":\\s*(\\d+)/) || runString.match(/\"completion_tokens\":\\s*(\\d+)/);\n                const totalMatch = runString.match(/\"totalTokens\":\\s*(\\d+)/) || runString.match(/\"total_tokens\":\\s*(\\d+)/);\n                \n                if (totalMatch) {\n                    totalPrompt += parseInt(promptMatch ? promptMatch[1] : 0);\n                    totalCompletion += parseInt(compMatch ? compMatch[1] : 0);\n                    totalTokens += parseInt(totalMatch[1]);\n                    \n                    if (nodeName.includes('Groq')) modelUsed = \"llama-3.3-70b-versatile (API Real)\";\n                    if (nodeName.includes('OpenAI')) modelUsed = \"gpt-4o-mini (API Real)\";\n                }\n            }\n        }\n    }\n}\n\n// 5. Fallback para a estimativa do n8n (Apenas se a busca acima der 0)\nif (totalTokens === 0) {\n    let fallback = $('AI Agent').last().json.tokenUsageEstimate;\n    if (fallback) {\n        totalPrompt = fallback.promptTokens || 0;\n        totalCompletion = fallback.completionTokens || 0;\n        totalTokens = fallback.totalTokens || 0;\n        modelUsed = \"Estimativa (Loops falharam)\";\n    }\n}\n\n// 6. Retorno Final Blindado que o SincroApp vai receber via Webhook\nreturn {\n    answer: parsedJson.answer || (typeof aiOutput === 'string' ? aiOutput : \"Aqui estão suas informações.\"),\n    tasks: Array.isArray(parsedJson.tasks) ? parsedJson.tasks : [],\n    actions: (typeof parsedJson.actions === 'object' && parsedJson.actions !== null) ? parsedJson.actions : {},\n    usage: {\n        prompt_tokens: totalPrompt,\n        completion_tokens: totalCompletion,\n        total_tokens: totalTokens\n    },\n    model_used: modelUsed\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        992,
+        -160
+      ],
+      "id": "59958c75-afd0-4977-97c1-4cdc0b06b223",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        80
+      ],
+      "id": "122060e4-6e88-4473-93f5-0287a8624000",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "YaCz69GySCayLi8Q",
+          "name": "StudioMLK - SincroApp"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "execution",
+        "operation": "get",
+        "executionId": "={{ $execution.id }}",
+        "options": {
+          "activeWorkflows": true
+        },
+        "requestOptions": {}
+      },
+      "type": "n8n-nodes-base.n8n",
+      "typeVersion": 1,
+      "position": [
+        784,
+        -160
+      ],
+      "id": "0797f8ff-cfa8-4d91-b682-24b04b811f94",
+      "name": "Get an execution",
+      "credentials": {
+        "n8nApi": {
+          "id": "569fiBUyNAoKpI2H",
+          "name": "n8n account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        []
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "MCP Client": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Get an execution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        []
+      ]
+    },
+    "Get an execution": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "d3b1f3dc-0b42-48fa-a814-fb157050d841",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "23eff0a49bd119e4a18afa8c0c7575eefe279312d40ead3f0f9b4dd1a181437f"
+  },
+  "id": "IdsUrV4FkJ1YbkPRkUGsE",
+  "tags": []
+}

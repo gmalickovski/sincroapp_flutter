@@ -27,7 +27,7 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   final TextEditingController _searchController = TextEditingController();
   List<UserModel> _allUsers = [];
   List<UserModel> _filteredUsers = [];
-  Map<String, int> _userUsage = {}; // Armazena uso de tokens por usuário
+  Map<String, Map<String, dynamic>> _userUsage = {}; // Armazena uso de IA por usuário
   bool _isLoading = true;
   String _filterPlan = 'all'; // all, free, plus, premium
   final double _usdToBrl = 6.0;
@@ -421,11 +421,17 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
                                 _buildMiniBadge('Expirado', Colors.red,
                                     isActive: true),
                               if (_userUsage.containsKey(user.uid) &&
-                                  _userUsage[user.uid]! > 0)
+                                  _userUsage[user.uid]!['totalTokens'] > 0) ...[
                                 _buildMiniBadge(
-                                    '${NumberFormat.compact().format(_userUsage[user.uid])} Tokens',
+                                    'Tot: ${NumberFormat.compact().format(_userUsage[user.uid]!['totalTokens'])} tk (R\$ ${_userUsage[user.uid]!['totalCost'].toStringAsFixed(3)})',
                                     Colors.purple,
                                     isActive: true),
+                                if (_userUsage[user.uid]!['monthTokens'] > 0)
+                                  _buildMiniBadge(
+                                      'Mês: ${NumberFormat.compact().format(_userUsage[user.uid]!['monthTokens'])} tk (R\$ ${_userUsage[user.uid]!['monthCost'].toStringAsFixed(3)})',
+                                      Colors.deepPurpleAccent,
+                                      isActive: true),
+                              ],
                             ],
                           )
                         ],

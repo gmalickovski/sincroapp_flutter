@@ -5,6 +5,7 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/tabs/admin_dashboard_tab.dart';
 import 'package:sincro_app_flutter/features/admin/presentation/tabs/admin_users_tab.dart';
+import 'package:sincro_app_flutter/features/admin/presentation/tabs/admin_ai_config_tab.dart';
 
 import 'package:sincro_app_flutter/features/admin/presentation/widgets/admin_sidebar.dart';
 
@@ -28,7 +29,7 @@ class _AdminScreenState extends State<AdminScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
         setState(() {
@@ -129,7 +130,9 @@ class _AdminScreenState extends State<AdminScreen>
                         Text(
                           _selectedIndex == 0
                               ? 'Dashboard'
-                              : 'Gerenciar Usuários',
+                              : _selectedIndex == 1
+                                  ? 'Gerenciar Usuários'
+                                  : 'Configuração de IA',
                           style: const TextStyle(
                             color: AppColors.primaryText,
                             fontSize: 24,
@@ -146,6 +149,7 @@ class _AdminScreenState extends State<AdminScreen>
                       children: [
                         AdminDashboardTab(userData: widget.userData),
                         AdminUsersTab(userData: widget.userData),
+                        const AdminAiConfigTab(),
                       ],
                     ),
                   ),
@@ -203,6 +207,16 @@ class _AdminScreenState extends State<AdminScreen>
                 ],
               ),
             ),
+            Tab(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.psychology_outlined),
+                  SizedBox(width: 8),
+                  Text('IA'),
+                ],
+              ),
+            ),
           ],
         ),
       ),
@@ -211,6 +225,7 @@ class _AdminScreenState extends State<AdminScreen>
         children: [
           AdminDashboardTab(userData: widget.userData),
           AdminUsersTab(userData: widget.userData),
+          const AdminAiConfigTab(),
         ],
       ),
     );

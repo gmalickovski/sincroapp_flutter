@@ -226,6 +226,23 @@ Future<void> main() async {
     }
   }
 
+  // ========================================
+  // CARREGA CONFIGURAÇÕES DA IA DO SUPABASE
+  // ========================================
+  try {
+    final aiSettings = await SupabaseService().getAdminAiSettings();
+    if (aiSettings.isNotEmpty) {
+      aiSettings.forEach((key, value) {
+        dotenv.env[key] = value.toString();
+      });
+      debugPrint('🧠 AI Config carregada do Supabase com sucesso ($aiSettings).');
+    } else {
+      debugPrint('🧠 Nenhuma configuração de IA customizada encontrada no Supabase. Usando .env padrão.');
+    }
+  } catch (e) {
+    debugPrint('⚠️ Não foi possível carregar AI Config do Supabase: $e');
+  }
+
   runApp(const SincroApp());
 }
 

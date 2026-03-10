@@ -1,13 +1,28 @@
+// lib/features/assistant/services/assistant_service.dart
+//
+// Orquestra o pipeline de IA direto (sem N8N):
+//   1. Monta contexto (usuário + data + numerologia)
+//   2. Envia mensagens ao LLM com ferramentas disponíveis
+//   3. Executa ferramentas se solicitadas (AiToolHandler)
+//   4. Repete até resposta final ou limite do AiLoopGuard
+//   5. Loga tokens reais no Supabase
+//
+// O formato de resposta JSON é mantido idêntico ao anterior:
+//   {"answer": "...", "tasks": [...], "actions": {...}}
+// para garantir compatibilidade total com a UI existente.
+
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:sincro_app_flutter/features/assistant/ai/ai_config.dart';
+import 'package:sincro_app_flutter/features/assistant/ai/ai_loop_guard.dart';
+import 'package:sincro_app_flutter/features/assistant/ai/ai_prompts.dart';
+import 'package:sincro_app_flutter/features/assistant/ai/ai_provider.dart';
+import 'package:sincro_app_flutter/features/assistant/ai/ai_tool_handler.dart';
 import 'package:sincro_app_flutter/features/assistant/models/assistant_models.dart';
-import 'package:sincro_app_flutter/features/assistant/services/n8n_service.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
@@ -17,36 +32,35 @@ class AssistantService {
   static bool _isFirstMessageOfDay() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-
     if (_lastInteractionDate == null) {
       _lastInteractionDate = today;
       return true;
     }
-
     final lastDay = DateTime(
       _lastInteractionDate!.year,
       _lastInteractionDate!.month,
       _lastInteractionDate!.day,
     );
-
     if (today.isAfter(lastDay)) {
       _lastInteractionDate = today;
       return true;
     }
-
     return false;
   }
 
+  // ---------------------------------------------------------------------------
+  // Loga uso de tokens no Supabase (usage_logs)
+  // ---------------------------------------------------------------------------
   static Future<void> _logUsage({
     required String userId,
     required String type,
     required int promptLength,
     required int outputLength,
-    int? inputTokens, // Precise
-    int? outputTokens, // Precise
+    int? inputTokens,
+    int? outputTokens,
+    String? modelName,
   }) async {
     try {
-      // Usa valor preciso se vier, senão estima
       final int finalInputTokens = inputTokens ?? (promptLength / 4).ceil();
       final int finalOutputTokens = outputTokens ?? (outputLength / 4).ceil();
       final int totalTokens = finalInputTokens + finalOutputTokens;
@@ -56,16 +70,13 @@ class AssistantService {
           .from('usage_logs')
           .insert({
         'user_id': userId,
+        'request_type': type,
         'tokens_total': totalTokens,
-        'tokens_input': finalInputTokens, // Matches Screenshot 'tokens_input'
-        'tokens_output':
-            finalOutputTokens, // Matches Screenshot 'tokens_output'
-        'model_name':
-            'n8n-assistant', // Matches Screenshot 'model_name' (using default string)
-        'created_at': DateTime.now().toIso8601String(),
+        'tokens_input': finalInputTokens,
+        'tokens_output': finalOutputTokens,
+        'model_name': modelName ?? AiConfig.activeModel,
       });
     } catch (e) {
-      // Ignora erro de tabela inexistente (PGRST205) para não poluir logs
       if (e.toString().contains('PGRST205') ||
           e.toString().contains('usage_logs')) {
         return;
@@ -74,131 +85,583 @@ class AssistantService {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // MÉTODO PRINCIPAL: ask()
+  // Pipeline: contexto → LLM → [ferramentas → LLM]* → resposta final
+  // ---------------------------------------------------------------------------
   static Future<AssistantAnswer> ask({
     required String question,
     required UserModel user,
     List<AssistantMessage> chatHistory = const [],
   }) async {
-    // Build simplified context payload
     final now = DateTime.now();
-    final contextData = {
-      'user': {
-        'primeiroNome': user.primeiroNome,
-        'gender': user.gender,
-        'dataNasc': user.dataNasc,
+    final sessionId = const Uuid().v4();
+    final guard = AiLoopGuard(sessionId: sessionId);
+    final provider = AiProvider();
+    final toolHandler = AiToolHandler(userId: user.uid);
+
+    // ─── 1. Montar contexto do usuário ───────────────────────────────────────
+    final contextBlock = _buildContextBlock(user, now);
+
+    // ─── 2. Montar lista de mensagens (system + histórico + nova pergunta) ───
+    // chatHistory chega em ordem cronológica (oldest→newest).
+    // Pegamos as ÚLTIMAS 6 (mais recentes) para manter contexto relevante.
+    final recentHistory = chatHistory.length > 6
+        ? chatHistory.sublist(chatHistory.length - 6)
+        : chatHistory;
+
+    final messages = <Map<String, dynamic>>[
+      {
+        'role': 'system',
+        'content': AiPrompts.systemPrompt + '\n\n' + contextBlock,
       },
-      'currentDate': now.toUtc().toIso8601String(),
-      'currentWeekDay': DateFormat('EEEE', 'pt_BR').format(now),
-      'currentTime': DateFormat('HH:mm').format(now),
-      'previous_messages': chatHistory
-          .take(6)
-          .map((m) => {
-                'role': m.role,
-                'content': m.content,
-              })
-          .toList(),
-    };
+      // Otimização: Oculta arrays pesados ("tasks", "actions") do histórico.
+      ...recentHistory.map((m) {
+        String safeContent = m.content;
+        if (m.role == 'assistant') {
+          try {
+            // Tenta decodificar o JSON e remover as porções que estufam o log
+            final decoded = jsonDecode(m.content) as Map<String, dynamic>;
+            final minified = {'answer': decoded['answer'] ?? ''};
+            safeContent = jsonEncode(minified);
+          } catch (_) {
+            // Se falhar (ex: erro de compilação na API), deixa o safeContent original
+          }
+        }
+        return {
+          'role': m.role,
+          'content': safeContent,
+        };
+      }),
+      {
+        'role': 'user',
+        'content': question,
+      },
+    ];
 
-    final payload = {
-      'question': question,
-      'context': contextData,
-    };
-    // serialized only for logging
-    final payloadJson = jsonEncode(payload);
-
-    final n8n = N8nService();
-    // 5. Call N8n
-    final text = await n8n.chat(payload: payload, userId: user.uid);
-
-    // Tentativa de Extrair Token Usage antes de logar
-    int? preciseInputTokens;
-    int? preciseOutputTokens;
+    AiUsage totalUsage = const AiUsage();
+    String finalContent = '';
+    // ── Captura de resultados de ferramentas para injeção no resultado final ──
+    // Garante que tasks/actions apareçam mesmo se a IA não gerar o JSON correto.
+    List<Map<String, dynamic>> capturedTasks = [];
 
     try {
-      // Quick scan for usage block to avoid full double parse if possible,
-      // but full parse is safer given we need it below anyway.
-      // We'll just do a lightweight regex check or parse explicitly if simple
-      // Logic: _logUsage is async fire-and-forget, but we want the data.
-      // We can defer logging until AFTER standard parsing below?
-      // But existing code structure has logging first.
-      // Let's refactor to Parse First -> Log -> Return.
-    } catch (_) {}
+      // ─── 3. Loop de Function Calling ────────────────────────────────────────
+      while (true) {
+        final response = await provider.chat(
+          messages: messages,
+          tools: AiConfig.toolDefinitions,
+        );
 
-    // --- REFACTORED PARSE & LOG LOGIC ---
+        totalUsage = totalUsage + response.usage;
 
-    // 1. Remove markdown
-    final cleanText = text
+        if (response.hasContent) {
+          // Resposta de texto final — sair do loop
+          finalContent = response.content!;
+          break;
+        }
+
+        if (response.hasToolCall) {
+          // Verificar limite anti-loop
+          guard.tick(response.toolCallName!);
+
+          // Executar a ferramenta
+          final toolResult = await toolHandler.dispatch(
+            response.toolCallName!,
+            response.toolCallArgs ?? {},
+          );
+
+          // ── Capturar resultados de buscar_tarefas_e_marcos ──
+          if (response.toolCallName == 'buscar_tarefas_e_marcos') {
+            final tasks = toolResult['tasks'];
+            if (tasks is List) {
+              capturedTasks = tasks
+                  .whereType<Map<String, dynamic>>()
+                  .toList();
+              debugPrint('[AssistantService] 📋 Captured ${capturedTasks.length} tasks from tool');
+            }
+          }
+
+          final toolResultStr = jsonEncode(toolResult);
+
+          // Adicionar mensagens da rodada ao histórico interno
+          messages.add({
+            'role': 'assistant',
+            'content': null,
+            'tool_calls': [
+              {
+                'id': response.toolCallId ?? 'call_${messages.length}',
+                'type': 'function',
+                'function': {
+                  'name': response.toolCallName,
+                  'arguments': jsonEncode(response.toolCallArgs),
+                },
+              }
+            ],
+          });
+
+          messages.add({
+            'role': 'tool',
+            'tool_call_id': response.toolCallId ?? 'call_${messages.length - 1}',
+            'content': toolResultStr,
+          });
+
+          // Continuar o loop para obter resposta pós-ferramenta
+          continue;
+        }
+
+        // Se chegou aqui sem content e sem tool call, algo errado
+        throw Exception('LLM retornou resposta vazia.');
+      }
+    } on AiLoopException catch (e) {
+      debugPrint('[AssistantService] 🚨 Loop detectado: $e');
+      // Log tokens parciais
+      unawaited(_logUsage(
+        userId: user.uid,
+        type: 'assistant_chat_loop_error',
+        promptLength: question.length,
+        outputLength: 0,
+        inputTokens: totalUsage.promptTokens,
+        outputTokens: totalUsage.completionTokens,
+        modelName: totalUsage.model,
+      ));
+      return AssistantAnswer(
+        answer: AiPrompts.loopErrorAnswer,
+        actions: [],
+      );
+    } catch (e, stack) {
+      debugPrint('[AssistantService] ❌ Erro no pipeline de IA: $e\n$stack');
+      // Log tokens parciais
+      unawaited(_logUsage(
+        userId: user.uid,
+        type: 'assistant_chat_error',
+        promptLength: question.length,
+        outputLength: 0,
+        inputTokens: totalUsage.promptTokens,
+        outputTokens: totalUsage.completionTokens,
+        modelName: totalUsage.model,
+      ));
+      return AssistantAnswer(
+        answer: AiPrompts.apiErrorAnswer,
+        actions: [],
+      );
+    }
+
+    // ─── 4. Processar resposta de texto final ────────────────────────────────
+    // Log de tokens reais
+    unawaited(_logUsage(
+      userId: user.uid,
+      type: 'assistant_chat',
+      promptLength: question.length,
+      outputLength: finalContent.length,
+      inputTokens: totalUsage.promptTokens,
+      outputTokens: totalUsage.completionTokens,
+      modelName: totalUsage.model,
+    ));
+
+    return _parseAiOutput(finalContent, capturedTasks: capturedTasks, userQuestion: question);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Output Parser — Filtro Blindado + Post-Processor (como o Node Code do N8N)
+  // capturedTasks: tasks capturados server-side da ferramenta buscar_tarefas_e_marcos
+  // userQuestion: pergunta original do usuário para detectar intent de agendamento
+  // ---------------------------------------------------------------------------
+  static AssistantAnswer _parseAiOutput(
+    String rawText, {
+    List<Map<String, dynamic>> capturedTasks = const [],
+    String userQuestion = '',
+  }) {
+    debugPrint('[OutputParser] RAW (${rawText.length} chars): ${rawText.substring(0, rawText.length > 500 ? 500 : rawText.length)}...');
+
+    // 1. Limpar markdown se a IA incluiu (defensivo)
+    final cleanText = rawText
         .replaceAll(RegExp(r'```json\s*'), '')
-        .replaceAll(RegExp(r'```\s*'), '');
+        .replaceAll(RegExp(r'```\s*'), '')
+        .trim();
 
-    // 2. Locate JSON
+    // 2. Tentar extrair o bloco {...}
     final startIndex = cleanText.indexOf('{');
     final endIndex = cleanText.lastIndexOf('}');
 
-    Map<String, dynamic>? parsedData;
+    AssistantAnswer? result;
 
-    if (startIndex != -1 && endIndex != -1 && startIndex <= endIndex) {
-      final jsonStr = cleanText.substring(startIndex, endIndex + 1);
-      try {
-        parsedData = jsonDecode(jsonStr) as Map<String, dynamic>;
+    if (startIndex == -1) {
+      // Sem JSON — texto puro
+      debugPrint('[OutputParser] ⚠️ Sem JSON detectado, retornando texto puro.');
+      result = AssistantAnswer(
+        answer: cleanText.isNotEmpty ? cleanText : AiPrompts.apiErrorAnswer,
+        actions: [],
+        embeddedTasks: capturedTasks,
+      );
+    } else {
+      // Se endIndex for menor, assumimos truncado
+      final jsonStr = cleanText.substring(
+          startIndex,
+          endIndex != -1 && endIndex >= startIndex
+              ? endIndex + 1
+              : cleanText.length);
 
-        // Extract Usage
-        if (parsedData.containsKey('usage')) {
-          final u = parsedData['usage'];
-          if (u is Map) {
-            preciseInputTokens = u['input'] ?? u['prompt_tokens'];
-            preciseOutputTokens = u['output'] ?? u['completion_tokens'];
+      // 3. Tentativas progressivas de parse
+      final fixAttempts = [
+        jsonStr, '$jsonStr}', '$jsonStr]}', '$jsonStr]}}', '$jsonStr"]}', '$jsonStr"]}}'
+      ];
+
+      for (final attempt in fixAttempts) {
+        try {
+          final parsedData = jsonDecode(attempt) as Map<String, dynamic>;
+          if (!parsedData.containsKey('answer')) {
+            parsedData['answer'] = 'Aqui estão suas informações.';
           }
+          if (!parsedData.containsKey('tasks') || parsedData['tasks'] is! List) {
+            parsedData['tasks'] = [];
+          }
+          if (!parsedData.containsKey('actions')) {
+            parsedData['actions'] = {};
+          }
+
+          debugPrint('[OutputParser] ✅ JSON parsed OK. tasks=${(parsedData['tasks'] as List).length}, actions=${parsedData['actions']}');
+          result = AssistantAnswer.fromJson(parsedData);
+          break;
+        } catch (_) {}
+      }
+
+      // 4. Fallback: Regex Extractor
+      if (result == null) {
+        debugPrint('[OutputParser] ⚠️ Falha no parse JSON. Usando Regex.');
+        String answerText = cleanText;
+        final answerMatch = RegExp(r'"answer"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"')
+            .firstMatch(cleanText);
+        if (answerMatch != null && answerMatch.groupCount >= 1) {
+          answerText = answerMatch.group(1)!
+              .replaceAll('\\n', '\n').replaceAll('\\"', '"');
         }
-      } catch (e) {
-        debugPrint('Erro parse JSON pré-log: $e');
+        result = AssistantAnswer(answer: answerText, actions: []);
       }
     }
 
-    // 3. Log NOW
-    _logUsage(
-      userId: user.uid,
-      type: 'assistant_chat',
-      promptLength: payloadJson.length,
-      outputLength: text.length,
-      inputTokens: preciseInputTokens,
-      outputTokens: preciseOutputTokens,
-    );
+    // ═══════════════════════════════════════════════════════════════════════════
+    // POST-PROCESSOR (Equivalente ao Node Code do N8N)
+    // Garante que a estrutura final tenha os modais corretos.
+    // ═══════════════════════════════════════════════════════════════════════════
 
-    // 4. Return handling (Legacy Logic adapted)
-    if (parsedData == null) {
-      // Fallback Text
-      if (cleanText.isNotEmpty) {
-        return AssistantAnswer(answer: cleanText, actions: []);
+    // ── MERGE TASKS: Injetar tasks capturadas APENAS se for cenário de LISTAGEM ──
+    if (result!.embeddedTasks.isEmpty && capturedTasks.isNotEmpty && result.actions.isEmpty) {
+      debugPrint('[OutputParser] 📋 Injetando ${capturedTasks.length} tasks capturadas');
+      result = AssistantAnswer(
+        answer: result.answer,
+        actions: result.actions,
+        embeddedTasks: capturedTasks,
+      );
+    } else if (capturedTasks.isNotEmpty && result.actions.isNotEmpty) {
+      debugPrint('[OutputParser] ⏭️ Tasks capturadas IGNORADAS (actions presente)');
+    }
+
+    // ── DETECT SCHEDULING: Se IA não gerou actions mas user pediu agendamento ──
+    if (result.actions.isEmpty && _isSchedulingIntent(userQuestion)) {
+      debugPrint('[OutputParser] 🔧 Post-processor: detectou intent de agendamento');
+      final extracted = _extractSchedulingData(result.answer, userQuestion);
+      if (extracted != null) {
+        debugPrint('[OutputParser] 🔧 Criando action: title="${extracted['title']}", date="${extracted['date']}"');
+        result = AssistantAnswer(
+          answer: result.answer,
+          actions: [
+            AssistantAction(
+              type: AssistantActionType.create_task,
+              title: extracted['title'] as String,
+              date: DateTime.parse(extracted['date'] as String),
+              data: {
+                'type': 'create_task',
+                'payload': {
+                  'title': extracted['title'],
+                  'time_specified': extracted['timeSpecified'] ?? true,
+                },
+              },
+              suggestedDates: [DateTime.parse(extracted['date'] as String)],
+            ),
+          ],
+          embeddedTasks: [],  // Limpar tasks se virou agendamento
+        );
       }
-      throw Exception('A IA não retornou um objeto JSON válido.');
     }
 
-    final data = parsedData; // Safe now
-
-    // Hande N8n/AI specific errors
-    if (data.containsKey('errorMessage') ||
-        data.containsKey('errorDescription')) {
-      final errorMsg = data['errorDescription'] ??
-          data['errorMessage'] ??
-          'Erro desconhecido.';
-      return AssistantAnswer(
-          answer:
-              "⚠️ *Erro Técnico (N8n)*:\n$errorMsg\n\nIsso geralmente acontece quando o modelo de IA falha ao tentar estruturar a resposta. Tente simplificar a pergunta ou verifique os logs do N8n.",
-          actions: []);
-    }
-
-
-    return AssistantAnswer.fromJson(data);
+    debugPrint('[OutputParser] ✅ Final: embeddedTasks=${result.embeddedTasks.length}, actions=${result.actions.length}');
+    return result;
   }
 
-  // --- Persistence & History Management ---
+  // ---------------------------------------------------------------------------
+  // Detecta se a pergunta do usuário é sobre AGENDAR/CRIAR algo
+  // ---------------------------------------------------------------------------
+  static bool _isSchedulingIntent(String question) {
+    if (question.isEmpty) return false;
+    final q = question.toLowerCase();
+    final keywords = [
+      'agend', 'agende', 'agendar', 'agenda',
+      'marcar', 'marque',
+      'criar', 'crie', 'criar tarefa', 'criar agendamento',
+      'registr', 'registre',
+      'melhor dia', 'melhor data', 'melhor horário',
+      'sugestão de data', 'sugerir data',
+      'quando devo',
+    ];
+    return keywords.any((k) => q.contains(k));
+  }
 
-  // --- Conversations Management ---
+  // ---------------------------------------------------------------------------
+  // Extrai título e data do texto da IA para criar actions automaticamente
+  // ---------------------------------------------------------------------------
+  static Map<String, dynamic>? _extractSchedulingData(String aiAnswer, String userQuestion) {
+    // ── Extrair título ──
+    // 1. Tentar pegar texto em **negrito** na resposta da IA
+    String? title;
+    final boldMatches = RegExp(r'\*\*([^*]+)\*\*').allMatches(aiAnswer).toList();
+    if (boldMatches.isNotEmpty) {
+      // Pegar o primeiro bold que não é hora/data
+      for (final m in boldMatches) {
+        final text = m.group(1)!;
+        if (!RegExp(r'^\d{1,2}h').hasMatch(text) && !RegExp(r'^\d{1,2}:\d{2}').hasMatch(text)) {
+          title = text;
+          break;
+        }
+      }
+    }
+    // 2. Fallback: extrair do userQuestion
+    if (title == null || title.isEmpty) {
+      title = _extractTitleFromQuestion(userQuestion);
+    }
+    if (title == null || title.isEmpty) return null;
 
-  static Future<String?> createConversation(String userId, String title) async {
-    // Single Table Mode: We just generate an ID client-side.
-    // The conversation "exists" once a message is saved with this ID.
+    // ── Extrair data ──
+    DateTime? date;
+    final now = DateTime.now();
+
+    // 1. Tentar "amanhã às XXh"
+    final tomorrowMatch = RegExp(r'amanh[ãa]\s+[àa]s?\s*(\d{1,2})\s*h', caseSensitive: false)
+        .firstMatch(aiAnswer) ?? RegExp(r'amanh[ãa]\s+[àa]s?\s*(\d{1,2})\s*h', caseSensitive: false)
+        .firstMatch(userQuestion);
+    if (tomorrowMatch != null) {
+      final hour = int.tryParse(tomorrowMatch.group(1)!) ?? 9;
+      final tomorrow = now.add(const Duration(days: 1));
+      date = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, hour, 0);
+    }
+
+    // 2. Tentar "hoje às XXh"
+    if (date == null) {
+      final todayMatch = RegExp(r'hoje\s+[àa]s?\s*(\d{1,2})\s*h', caseSensitive: false)
+          .firstMatch(aiAnswer) ?? RegExp(r'hoje\s+[àa]s?\s*(\d{1,2})\s*h', caseSensitive: false)
+          .firstMatch(userQuestion);
+      if (todayMatch != null) {
+        final hour = int.tryParse(todayMatch.group(1)!) ?? 9;
+        date = DateTime(now.year, now.month, now.day, hour, 0);
+      }
+    }
+
+    // 3. Tentar "dia DD/MM às XXh"
+    if (date == null) {
+      final dateMatch = RegExp(r'(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{4}))?\s*(?:[àa]s?\s*(\d{1,2})\s*h)?', caseSensitive: false)
+          .firstMatch(aiAnswer) ?? RegExp(r'(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{4}))?\s*(?:[àa]s?\s*(\d{1,2})\s*h)?', caseSensitive: false)
+          .firstMatch(userQuestion);
+      if (dateMatch != null) {
+        final day = int.tryParse(dateMatch.group(1)!) ?? now.day;
+        final month = int.tryParse(dateMatch.group(2)!) ?? now.month;
+        final year = int.tryParse(dateMatch.group(3) ?? '') ?? now.year;
+        final hour = int.tryParse(dateMatch.group(4) ?? '') ?? 0;
+        date = DateTime(year, month, day, hour, 0);
+      }
+    }
+
+    // 4. Tentar "amanhã" sem hora
+    if (date == null) {
+      if (aiAnswer.toLowerCase().contains('amanhã') || userQuestion.toLowerCase().contains('amanhã') || userQuestion.toLowerCase().contains('amanha')) {
+        final tomorrow = now.add(const Duration(days: 1));
+        date = DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 0, 0);
+      }
+    }
+
+    // 5. Fallback: amanhã às 9h
+    date ??= DateTime(now.year, now.month, now.day + 1, 9, 0);
+
+    final bool timeSpecified = date.hour != 0 || date.minute != 0;
+
+    return {
+      'title': title,
+      'date': date.toUtc().toIso8601String(),
+      'timeSpecified': timeSpecified,
+    };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Extrai título provável da pergunta do usuário
+  // ---------------------------------------------------------------------------
+  static String? _extractTitleFromQuestion(String question) {
+    final q = question.toLowerCase();
+
+    // Padrões comuns: "agende [TÍTULO] para/amanhã/dia"
+    final patterns = [
+      RegExp(r'agend\w*\s+(?:para\s+mim\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
+      RegExp(r'(?:marcar|criar|registrar)\s+(?:uma?\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
+      RegExp(r'agend\w*\s+(.+?)$', caseSensitive: false),
+    ];
+
+    for (final p in patterns) {
+      final match = p.firstMatch(q);
+      if (match != null && match.groupCount >= 1) {
+        final raw = match.group(1)!.trim();
+        if (raw.length > 3 && raw.length < 100) {
+          // Capitalizar primeira letra
+          return raw[0].toUpperCase() + raw.substring(1);
+        }
+      }
+    }
+    return null;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Constrói o bloco de contexto do usuário (injetado no system prompt)
+  // ---------------------------------------------------------------------------
+  static String _buildContextBlock(UserModel user, DateTime now) {
+    final dateStr = DateFormat('dd/MM/yyyy').format(now);
+    final timeStr = DateFormat('HH:mm').format(now);
+    final weekday = DateFormat('EEEE', 'pt_BR').format(now);
+    final isFirst = _isFirstMessageOfDay();
+
+    return '''
+# CONTEXTO DO USUÁRIO
+- Nome: ${user.primeiroNome} ${user.sobrenome}
+- Nome para análise: ${user.nomeAnalise}
+- Data de nascimento: ${user.dataNasc}
+- Gênero: ${user.gender ?? 'não informado'}
+- Data atual: $dateStr ($weekday)
+- Hora atual: $timeStr
+- Primeira interação do dia: ${isFirst ? 'SIM (cumprimente com carinho)' : 'NÃO (não reintroduza)'}
+''';
+  }
+
+  // ---------------------------------------------------------------------------
+  // SUGESTÕES DE ESTRATÉGIA — Usadas pelo StrategyFlow/FocoDoDia
+  // ---------------------------------------------------------------------------
+  static Future<List<String>> generateStrategySuggestions({
+    required UserModel user,
+    required List<TaskModel> tasks,
+    required int personalDay,
+    required StrategyMode mode,
+  }) async {
+    final now = DateTime.now();
+    final provider = AiProvider();
+    final guard = AiLoopGuard(sessionId: 'strategy_${const Uuid().v4()}');
+    final toolHandler = AiToolHandler(userId: user.uid);
+
+    final tasksJson = tasks
+        .take(15)
+        .map((t) => {'title': t.text, 'due_date': t.dueDate?.toIso8601String()})
+        .toList();
+
+    final messages = <Map<String, dynamic>>[
+      {
+        'role': 'system',
+        'content': AiPrompts.systemPrompt,
+      },
+      {
+        'role': 'user',
+        'content': '''
+Gere 3 sugestões de estratégia para o usuário ${user.primeiroNome}.
+Dia pessoal: $personalDay
+Modo: ${mode.toString()}
+Data: ${DateFormat('dd/MM/yyyy').format(now)}
+Tarefas do dia: ${jsonEncode(tasksJson)}
+
+Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "sugestão 3"]
+''',
+      },
+    ];
+
+    AiUsage totalUsage = const AiUsage();
+    String finalContent = '';
+
+    try {
+      while (true) {
+        final response = await provider.chat(
+          messages: messages,
+          tools: AiConfig.toolDefinitions,
+        );
+        totalUsage = totalUsage + response.usage;
+
+        if (response.hasContent) {
+          finalContent = response.content!;
+          break;
+        }
+
+        if (response.hasToolCall) {
+          guard.tick(response.toolCallName!);
+          final toolResult = await toolHandler.dispatch(
+            response.toolCallName!,
+            response.toolCallArgs ?? {},
+          );
+          messages.add({
+            'role': 'assistant',
+            'content': null,
+            'tool_calls': [
+              {
+                'id': response.toolCallId ?? 'call_s',
+                'type': 'function',
+                'function': {
+                  'name': response.toolCallName,
+                  'arguments': jsonEncode(response.toolCallArgs),
+                },
+              }
+            ],
+          });
+          messages.add({
+            'role': 'tool',
+            'tool_call_id': response.toolCallId ?? 'call_s',
+            'content': jsonEncode(toolResult),
+          });
+          continue;
+        }
+        break;
+      }
+    } catch (e) {
+      debugPrint('[AssistantService] Erro em generateStrategySuggestions: $e');
+      return [];
+    }
+
+    // Log usage
+    unawaited(_logUsage(
+      userId: user.uid,
+      type: 'strategy_flow',
+      promptLength: 200,
+      outputLength: finalContent.length,
+      inputTokens: totalUsage.promptTokens,
+      outputTokens: totalUsage.completionTokens,
+      modelName: totalUsage.model,
+    ));
+
+    // Parsear array JSON
+    final cleanText = finalContent
+        .replaceAll(RegExp(r'```json\s*'), '')
+        .replaceAll(RegExp(r'```\s*'), '');
+
+    final startIndex = cleanText.indexOf('[');
+    final endIndex = cleanText.lastIndexOf(']');
+
+    if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) return [];
+
+    try {
+      final jsonStr = cleanText.substring(startIndex, endIndex + 1);
+      final List<dynamic> data = jsonDecode(jsonStr);
+      return data.map((e) => e.toString()).toList();
+    } catch (e) {
+      debugPrint('[AssistantService] Erro ao parsear sugestões: $e');
+      return [];
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // CONVERSAS E HISTÓRICO — Lógica inalterada
+  // ---------------------------------------------------------------------------
+
+  static Future<String?> createConversation(
+      String userId, String title) async {
     return const Uuid().v4();
   }
 
@@ -206,7 +669,7 @@ class AssistantService {
     try {
       await Supabase.instance.client
           .schema('sincroapp')
-          .from('assistant_messages') // The view is view_conversations, but the actual data is likely in assistant_messages or we need to delete the messages first if there's a conversation table. Wait, looking at the code, there's `assistant_messages` with `conversation_id`. We can delete all messages with that id.
+          .from('assistant_messages')
           .delete()
           .eq('conversation_id', conversationId);
     } catch (e) {
@@ -220,16 +683,15 @@ class AssistantService {
     try {
       final response = await Supabase.instance.client
           .schema('sincroapp')
-          .from('view_conversations') // Query the View
+          .from('view_conversations')
           .select()
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
-      final List<AssistantConversation> list = [];
-      for (final row in response) {
-        list.add(AssistantConversation.fromJson(row));
-      }
-      return list;
+      return response
+          .map<AssistantConversation>(
+              (row) => AssistantConversation.fromJson(row))
+          .toList();
     } catch (e) {
       debugPrint('Erro ao buscar conversas: $e');
       return [];
@@ -243,7 +705,7 @@ class AssistantService {
           .schema('sincroapp')
           .from('assistant_messages')
           .select()
-          .eq('conversation_id', conversationId) // Filter by conversation
+          .eq('conversation_id', conversationId)
           .order('created_at', ascending: false)
           .limit(50);
 
@@ -254,13 +716,13 @@ class AssistantService {
           final acts = row['actions'] as List;
           actionsList.addAll(acts.map((e) => AssistantAction.fromJson(e)));
         }
-
         history.add(AssistantMessage(
-            id: row['id'].toString(),
-            role: row['role'],
-            content: row['content'],
-            time: DateTime.parse(row['created_at']),
-            actions: actionsList));
+          id: row['id'].toString(),
+          role: row['role'],
+          content: row['content'],
+          time: DateTime.parse(row['created_at']),
+          actions: actionsList,
+        ));
       }
       return history;
     } catch (e) {
@@ -273,123 +735,52 @@ class AssistantService {
       String userId, AssistantMessage message, String? conversationId) async {
     try {
       final actionsJson = message.actions.map((e) => e.toJson()).toList();
-
       await Supabase.instance.client
-          .schema('sincroapp') // Use correct schema
+          .schema('sincroapp')
           .from('assistant_messages')
           .insert({
         'user_id': userId,
-        'conversation_id': conversationId, // Link to conversation
+        'conversation_id': conversationId,
         'role': message.role,
         'content': message.content,
-        //'created_at': message.time.toIso8601String(), // Let DB handle default now()
-        'actions': actionsJson // Use 'actions' column directly
+        'actions': actionsJson,
       });
-
-      // Fire & Forget Cleanup to save VPS space
       _cleanupOldMessages(userId);
     } catch (e) {
       debugPrint('Erro ao salvar mensagem: $e');
     }
   }
 
-  /// Limpa mensagens antigas para economizar espaço (Mantém apenas as últimas 50)
   static Future<void> _cleanupOldMessages(String userId) async {
-    // Strategy: Non-blocking optimization
     try {
-      // 1. Count total
       final count = await Supabase.instance.client
-          .schema('sincroapp') // Use correct schema
+          .schema('sincroapp')
           .from('assistant_messages')
-          .count(CountOption.exact) // Returns int directly in newer SDKs
+          .count(CountOption.exact)
           .eq('user_id', userId);
 
       if (count > 50) {
         final overflow = count - 50;
-
-        // 2. Get IDs to delete (Oldest)
         final idsToDeleteResponse = await Supabase.instance.client
-            .schema('sincroapp') // Use correct schema
+            .schema('sincroapp')
             .from('assistant_messages')
             .select('id')
             .eq('user_id', userId)
-            .order('created_at', ascending: true) // Oldest first
+            .order('created_at', ascending: true)
             .limit(overflow);
-
         final ids = (idsToDeleteResponse as List).map((e) => e['id']).toList();
-
-        // 3. Delete
         if (ids.isNotEmpty) {
           await Supabase.instance.client
-              .schema('sincroapp') // Use correct schema
+              .schema('sincroapp')
               .from('assistant_messages')
               .delete()
               .filter('id', 'in', ids);
-          debugPrint(
-              '🧹 Limpeza de histórico: ${ids.length} mensagens removidas.');
+          debugPrint('🧹 Limpeza de histórico: ${ids.length} mensagens removidas.');
         }
       }
-    } catch (_) {
-      // Fail silently, not critical
-    }
-  }
-
-  static Future<List<String>> generateStrategySuggestions({
-    required UserModel user,
-    required List<TaskModel> tasks,
-    required int personalDay,
-    required StrategyMode mode,
-  }) async {
-    final contextData = {
-      'user': user.toJson(),
-      'tasks': tasks.map((t) => t.toJson()).toList(),
-      'personalDay': personalDay,
-      'mode': mode.toString(),
-      'currentDate': DateTime.now().toLocal().toIso8601String(),
-      'currentTime': DateFormat('HH:mm').format(DateTime.now()),
-      'currentWeekDay': DateFormat('EEEE', 'pt_BR').format(DateTime.now()),
-    };
-    final payload = {
-      'context': contextData,
-      'chatInput':
-          'Gere uma estratégia...', // Placeholder (not used by agent logic directly but good for logging)
-    };
-    final promptJson = jsonEncode(payload);
-
-    try {
-      final n8n = N8nService();
-      // O endpoint de estrategia pode esperar 'chatInput' ou 'context' direto.
-      // Vamos padronizar enviando o payload.
-      // Se o N8n strategy flow espera 'chatInput' explicitamente, pode precisar ajustar.
-      // Assumindo que o fluxo principal unificado trata tudo.
-      final text = await n8n.chat(payload: payload, userId: user.uid);
-
-      // Log Usage AFTER response
-      _logUsage(
-        userId: user.uid,
-        type: 'strategy_flow',
-        promptLength: promptJson.length,
-        outputLength: text.length,
-      );
-
-      // Clean up markdown
-      final cleanText = text
-          .replaceAll(RegExp(r'```json\s*'), '')
-          .replaceAll(RegExp(r'```\s*'), '');
-
-      final startIndex = cleanText.indexOf('[');
-      final endIndex = cleanText.lastIndexOf(']');
-
-      if (startIndex == -1 || endIndex == -1 || startIndex > endIndex) {
-        return [];
-      }
-
-      final jsonStr = cleanText.substring(startIndex, endIndex + 1);
-      final List<dynamic> data = jsonDecode(jsonStr);
-      return data.map((e) => e.toString()).toList();
-    } catch (e) {
-      debugPrint('Erro ao gerar sugestões de estratégia (n8n): $e');
-      return [];
-    }
+    } catch (_) {}
   }
 }
+
+// Evita warning de unawaited Future
+void unawaited(Future<void> future) {}

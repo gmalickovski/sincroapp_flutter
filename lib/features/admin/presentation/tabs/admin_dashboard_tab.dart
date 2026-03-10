@@ -76,6 +76,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         // AI Stats
         final int totalAiUsed = stats['totalAiUsed'] ?? 0;
         final int totalAiTokens = stats['totalAiTokens'] ?? 0;
+        final int totalAiUsedMes = stats['totalAiUsedMes'] ?? 0;
+        final int totalAiTokensMes = stats['totalAiTokensMes'] ?? 0;
+        final double totalAiCostMes = (stats['totalAiCostMes'] ?? 0.0).toDouble();
 
         return RefreshIndicator(
           onRefresh: () async {
@@ -105,7 +108,17 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               const SizedBox(height: 32),
 
               // 2. AI Usage & Costs
+              Text(
+                'Uso de Inteligência Artificial',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: isDesktop ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildAiUsageSection(
+                  totalAiUsedMes, totalAiTokensMes, totalAiCostMes,
                   totalAiUsed, totalAiTokens, totalAiCost, isDesktop),
               const SizedBox(height: 32),
 
@@ -157,6 +170,15 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               const SizedBox(height: 32),
 
               // 5. Site Control
+              Text(
+                'Controle de Acesso (Site)',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: isDesktop ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
               _buildSiteControlSection(isDesktop),
             ],
           ),
@@ -279,18 +301,19 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 value,
                 style: const TextStyle(
                   color: AppColors.primaryText,
-                  fontSize: 22,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.5,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
+              const SizedBox(height: 4),
               Text(
                 title,
                 style: const TextStyle(
                   color: AppColors.secondaryText,
-                  fontSize: 12,
+                  fontSize: 11,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -320,15 +343,6 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Distribuição de Planos',
-            style: TextStyle(
-              color: AppColors.primaryText,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 32),
           if (isDesktop)
             SizedBox(
               height: 200,
@@ -529,7 +543,8 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
   }
 
   Widget _buildAiUsageSection(
-      int totalAiUsed, int totalAiTokens, double totalAiCost, bool isDesktop) {
+      int usedMes, int tokensMes, double costMes,
+      int totalUsed, int totalTokens, double totalCost, bool isDesktop) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -540,18 +555,16 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            spacing: 8.0,
-            runSpacing: 8.0,
+          // ------ MES ATUAL ------
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Uso de Inteligência Artificial',
+                'Mês Atual',
                 style: TextStyle(
                   color: AppColors.primaryText,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               Container(
@@ -564,40 +577,32 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                       Border.all(color: Colors.purple.withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  '${NumberFormat.compact().format(totalAiUsed)} Requests',
+                  '${NumberFormat.compact().format(usedMes)} Reqs (Mês)',
                   style: const TextStyle(
                     color: Colors.purple,
                     fontWeight: FontWeight.bold,
+                    fontSize: 12,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          // Adaptive Layout for 3 metrics
           isDesktop
               ? Row(
                   children: [
                     Expanded(
                       child: _buildMiniMetric(
-                          "Requisições",
-                          totalAiUsed.toString(),
-                          Icons.chat_bubble_outline,
-                          Colors.purple),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildMiniMetric(
-                          "Tokens Totais",
-                          NumberFormat.compact().format(totalAiTokens),
+                          "Tokens Mês",
+                          NumberFormat.compact().format(tokensMes),
                           Icons.token,
                           Colors.amber),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: _buildMiniMetric(
-                          "Custo Estimado",
-                          _currencyFormat.format(totalAiCost),
+                          "Custo Mês",
+                          _currencyFormat.format(costMes),
                           Icons.attach_money,
                           Colors.redAccent),
                     ),
@@ -605,31 +610,90 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
                 )
               : Column(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMiniMetric(
-                              "Requisições",
-                              totalAiUsed.toString(),
-                              Icons.chat_bubble_outline,
-                              Colors.purple),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildMiniMetric(
-                              "Tokens",
-                              NumberFormat.compact().format(totalAiTokens),
-                              Icons.token,
-                              Colors.amber),
-                        ),
-                      ],
-                    ),
+                    _buildMiniMetric(
+                        "Tokens Mês",
+                        NumberFormat.compact().format(tokensMes),
+                        Icons.token,
+                        Colors.amber),
                     const SizedBox(height: 12),
                     _buildMiniMetric(
-                        "Custo Estimado",
-                        _currencyFormat.format(totalAiCost),
+                        "Custo Mês",
+                        _currencyFormat.format(costMes),
                         Icons.attach_money,
                         Colors.redAccent),
+                  ],
+                ),
+          
+          const SizedBox(height: 32),
+          const Divider(color: AppColors.border),
+          const SizedBox(height: 24),
+          
+          // ------ TOTAL ------
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Histórico Total',
+                style: TextStyle(
+                  color: AppColors.primaryText,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.grey.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border:
+                      Border.all(color: Colors.grey.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  '${NumberFormat.compact().format(totalUsed)} Reqs Totais',
+                  style: const TextStyle(
+                    color: AppColors.secondaryText,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          isDesktop
+              ? Row(
+                  children: [
+                    Expanded(
+                      child: _buildMiniMetric(
+                          "Tokens Totais",
+                          NumberFormat.compact().format(totalTokens),
+                          Icons.memory,
+                          Colors.blue),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildMiniMetric(
+                          "Custo Total",
+                          _currencyFormat.format(totalCost),
+                          Icons.account_balance_wallet,
+                          Colors.teal),
+                    ),
+                  ],
+                )
+              : Column(
+                  children: [
+                    _buildMiniMetric(
+                        "Tokens Totais",
+                        NumberFormat.compact().format(totalTokens),
+                        Icons.memory,
+                        Colors.blue),
+                    const SizedBox(height: 12),
+                    _buildMiniMetric(
+                        "Custo Total",
+                        _currencyFormat.format(totalCost),
+                        Icons.account_balance_wallet,
+                        Colors.teal),
                   ],
                 ),
         ],
@@ -654,11 +718,11 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             children: [
               Text(label,
                   style: const TextStyle(
-                      color: AppColors.secondaryText, fontSize: 12)),
+                      color: AppColors.secondaryText, fontSize: 11)),
               Text(value,
                   style: const TextStyle(
                       color: AppColors.primaryText,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold)),
             ],
           )
@@ -723,9 +787,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
           Text(title,
               style: const TextStyle(
                   color: AppColors.primaryText,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold)),
-          const SizedBox(height: 24),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
           Row(
             children: [
               // Chart
@@ -854,21 +918,6 @@ class _SiteControlCardState extends State<_SiteControlCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.settings_ethernet, color: AppColors.primary),
-              SizedBox(width: 12),
-              Text(
-                'Controle de Acesso (Site)',
-                style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
           if (widget.isDesktop)
             Row(
               children: [
