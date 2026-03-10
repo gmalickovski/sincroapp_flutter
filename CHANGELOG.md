@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.4...v1.7.5) (2026-03-10)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implementação do assistente de IA dentro do projeto rodando no flutter não mais no n8n ([b2a8f7e](https://github.com/gmalickovski/sincroapp_flutter/commit/b2a8f7e5a679395fcb8fb21996507551a1f6fd82))
+
 ### [1.7.4](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.3...v1.7.4) (2026-03-09)
 
 
