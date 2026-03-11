@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.6](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.5...v1.7.6) (2026-03-11)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Implement AI assistant action proposal with date selection, date suitability feedback, and task management integration. ([d6af199](https://github.com/gmalickovski/sincroapp_flutter/commit/d6af19968c93e7be23efbf75e945a72fb99b7ce4))
+
 ### [1.7.5](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.4...v1.7.5) (2026-03-10)
 
 
