@@ -644,8 +644,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         filteredTasks = allTasks.where((task) {
           if (task.completed) return false;
           
-          // Tarefas sem data marcadas como foco
-          if (!task.hasDeadline && task.isFocus) return true;
+          // Tarefas marcadas como foco
+          if (task.isFocus) return true;
           
           // Tarefas atrasadas (com data) -> flow_instance hiberne (apagamento à meia noite)
           if (task.isOverdue) {

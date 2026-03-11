@@ -2331,6 +2331,8 @@ class SupabaseService {
           final endOfDay = startOfDay.add(const Duration(days: 1));
 
           return tasks.where((task) {
+            if (task.isFocus) return true;
+
             if (task.dueDate != null) {
               // dueDate já é convertido para local no _mapTaskFromSupabase?
               // Se _parseDateAsLocal retorna local, então 'd' já está ok.

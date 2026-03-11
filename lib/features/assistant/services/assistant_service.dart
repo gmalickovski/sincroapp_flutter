@@ -363,13 +363,16 @@ class AssistantService {
       final extracted = _extractSchedulingData(result.answer, userQuestion);
       if (extracted != null) {
         debugPrint('[OutputParser] 🔧 Criando action: title="${extracted['title']}", date="${extracted['date']}"');
+        final extractedDateStr = extracted['date'] as String?;
+        final parsedDate = extractedDateStr != null ? DateTime.parse(extractedDateStr) : null;
+        
         result = AssistantAnswer(
           answer: result.answer,
           actions: [
             AssistantAction(
               type: AssistantActionType.create_task,
               title: extracted['title'] as String,
-              date: DateTime.parse(extracted['date'] as String),
+              date: parsedDate,
               data: {
                 'type': 'create_task',
                 'payload': {
@@ -377,7 +380,10 @@ class AssistantService {
                   'time_specified': extracted['timeSpecified'] ?? true,
                 },
               },
-              suggestedDates: [DateTime.parse(extracted['date'] as String)],
+              suggestedDates: (extracted['suggestedDates'] as List<dynamic>?)
+                      ?.map((s) => DateTime.parse(s.toString()))
+                      .toList() ??
+                  [],
             ),
           ],
           embeddedTasks: [],  // Limpar tasks se virou agendamento
@@ -395,13 +401,26 @@ class AssistantService {
   static bool _isSchedulingIntent(String question) {
     if (question.isEmpty) return false;
     final q = question.toLowerCase();
+
+    // Se o usuário está pedindo para listar seus dados, NÃO é criação/agendamento
+    final listKeywords = [
+      'mostr', 'listar', 'lista', 'quais', 'ver', 'ler', 'pendent',
+      'meus agendamentos', 'minhas tarefas', 'os agendamentos', 'as tarefas',
+      'tenho hoje', 'tenho amanhã', 'que eu tenho', 'temos hoje'
+    ];
+    
+    // Se a intenção primária for listar, ignora o fluxo de criação.
+    if (listKeywords.any((k) => q.contains(k))) {
+      return false; 
+    }
+
     final keywords = [
-      'agend', 'agende', 'agendar', 'agenda',
+      'agend', 'agende', 'agendar', 'agenda', // Isso pode pegar 'agendamentos', mas listKeywords filtra antes.
       'marcar', 'marque',
-      'criar', 'crie', 'criar tarefa', 'criar agendamento',
+      'criar', 'crie', 'criar tarefa', 'criar compromisso', 'criar agendamento',
       'registr', 'registre',
       'melhor dia', 'melhor data', 'melhor horário',
-      'sugestão de data', 'sugerir data',
+      'sugestão de', 'sugestões de', 'sugerir data', 'sugerir dia',
       'quando devo',
     ];
     return keywords.any((k) => q.contains(k));
@@ -412,28 +431,60 @@ class AssistantService {
   // ---------------------------------------------------------------------------
   static Map<String, dynamic>? _extractSchedulingData(String aiAnswer, String userQuestion) {
     // ── Extrair título ──
-    // 1. Tentar pegar texto em **negrito** na resposta da IA
-    String? title;
-    final boldMatches = RegExp(r'\*\*([^*]+)\*\*').allMatches(aiAnswer).toList();
-    if (boldMatches.isNotEmpty) {
-      // Pegar o primeiro bold que não é hora/data
-      for (final m in boldMatches) {
-        final text = m.group(1)!;
-        if (!RegExp(r'^\d{1,2}h').hasMatch(text) && !RegExp(r'^\d{1,2}:\d{2}').hasMatch(text)) {
-          title = text;
-          break;
+    // 1. Tentar extrair do userQuestion primeiro (É a fonte mais confiável)
+    String? title = _extractTitleFromQuestion(userQuestion);
+    
+    // 2. Fallback: pegar texto em **negrito** na resposta da IA
+    if (title == null || title.isEmpty || title == "Novo Compromisso") {
+      final boldMatches = RegExp(r'\*\*([^*]+)\*\*').allMatches(aiAnswer).toList();
+      if (boldMatches.isNotEmpty) {
+        // Pegar o primeiro bold que não parece ser uma data ou hora
+        for (final m in boldMatches) {
+          final text = m.group(1)!;
+          final isTime = RegExp(r'^\d{1,2}h').hasMatch(text) || RegExp(r'^\d{1,2}:\d{2}').hasMatch(text);
+          final isDate = text.toLowerCase().contains('feira') || text.toLowerCase().contains('de março');
+          if (!isTime && !isDate) {
+            title = text;
+            break;
+          }
         }
       }
     }
-    // 2. Fallback: extrair do userQuestion
-    if (title == null || title.isEmpty) {
-      title = _extractTitleFromQuestion(userQuestion);
-    }
+    
     if (title == null || title.isEmpty) return null;
 
     // ── Extrair data ──
     DateTime? date;
     final now = DateTime.now();
+    List<DateTime> suggestedDates = [];
+
+    // Mapeamento de meses para buscar sugestões
+    final monthNames = {
+      'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4,
+      'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9,
+      'outubro': 10, 'novembro': 11, 'dezembro': 12
+    };
+
+    // Extrair múltiplas datas das sugestões da IA (ex: "13 de março às 14h")
+    final suggestionMatches = RegExp(r'(\d{1,2})\s*de\s*([a-zA-Zç]+)(?:\s*(?:[àa]s?)\s*(\d{1,2})h?)?', caseSensitive: false).allMatches(aiAnswer);
+    
+    for (final match in suggestionMatches) {
+        final dayStr = match.group(1);
+        final monthStr = match.group(2)?.toLowerCase();
+        final hourStr = match.group(3);
+        
+        if (dayStr != null && monthStr != null && monthNames.containsKey(monthStr)) {
+            final day = int.parse(dayStr);
+            final month = monthNames[monthStr]!;
+            final hour = hourStr != null ? int.parse(hourStr) : 0;
+            
+            var year = now.year;
+            if (month < now.month || (month == now.month && day < now.day - 7)) {
+                year++;
+            }
+            suggestedDates.add(DateTime(year, month, day, hour, 0));
+        }
+    }
 
     // 1. Tentar "amanhã às XXh"
     final tomorrowMatch = RegExp(r'amanh[ãa]\s+[àa]s?\s*(\d{1,2})\s*h', caseSensitive: false)
@@ -478,15 +529,27 @@ class AssistantService {
       }
     }
 
-    // 5. Fallback: amanhã às 9h
-    date ??= DateTime(now.year, now.month, now.day + 1, 9, 0);
+    // Identificar se o usuário está pedindo apenas sugestões
+    final q = userQuestion.toLowerCase();
+    final isJustAskingForSuggestions = q.contains('sugest') || q.contains('melhor');
 
-    final bool timeSpecified = date.hour != 0 || date.minute != 0;
+    // 5. Fallback apenas se NÃO for apenas um pedido de sugestões
+    if (!isJustAskingForSuggestions && suggestedDates.isEmpty) {
+      date ??= DateTime(now.year, now.month, now.day + 1, 9, 0);
+    }
+    
+    // Se o user pediu sugestão de data e não deu para parsear nada, forçar a usar as extraídas se não tiver date
+    if (isJustAskingForSuggestions && date == null && suggestedDates.isNotEmpty) {
+      // date fica null mesmo para que apareçam apenas as bolhas de sugestões
+    }
+
+    final bool timeSpecified = date?.hour != 0 || date?.minute != 0;
 
     return {
       'title': title,
-      'date': date.toUtc().toIso8601String(),
+      'date': date?.toUtc().toIso8601String(), // Pode ser null agora
       'timeSpecified': timeSpecified,
+      'suggestedDates': suggestedDates.map((d) => d.toUtc().toIso8601String()).toList(),
     };
   }
 
@@ -494,26 +557,41 @@ class AssistantService {
   // Extrai título provável da pergunta do usuário
   // ---------------------------------------------------------------------------
   static String? _extractTitleFromQuestion(String question) {
+    if (question.isEmpty) return null;
     final q = question.toLowerCase();
 
-    // Padrões comuns: "agende [TÍTULO] para/amanhã/dia"
+    // 1. Check for explicit dash/hyphen (e.g., "marque para amanhã - Consulta Dentista")
+    final dashParts = question.split(RegExp(r'\s*-\s*'));
+    if (dashParts.length > 1) {
+      final possibleTitle = dashParts.last.trim();
+      if (possibleTitle.isNotEmpty && possibleTitle.length > 3) {
+        return possibleTitle[0].toUpperCase() + possibleTitle.substring(1);
+      }
+    }
+
+    // Padrões comuns
     final patterns = [
       RegExp(r'agend\w*\s+(?:para\s+mim\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
-      RegExp(r'(?:marcar|criar|registrar)\s+(?:uma?\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
+      RegExp(r'(?:marcar|criar|registrar|marque)\s+(?:um\s+|uma\s+compromisso\s+|uma?\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
       RegExp(r'agend\w*\s+(.+?)$', caseSensitive: false),
     ];
 
     for (final p in patterns) {
       final match = p.firstMatch(q);
       if (match != null && match.groupCount >= 1) {
-        final raw = match.group(1)!.trim();
+        var raw = match.group(1)!.trim();
+        // Remove artigos indefinidos do início ("um", "uma", "uns", "umas")
+        raw = raw.replaceFirst(RegExp(r'^(um|uma|uns|umas)\s+', caseSensitive: false), '');
+        
         if (raw.length > 3 && raw.length < 100) {
           // Capitalizar primeira letra
           return raw[0].toUpperCase() + raw.substring(1);
         }
       }
     }
-    return null;
+    
+    // Fallback genérico se falhar tudo
+    return "Novo Compromisso";
   }
 
   // ---------------------------------------------------------------------------
@@ -712,9 +790,16 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
       final List<AssistantMessage> history = [];
       for (final row in response) {
         final actionsList = <AssistantAction>[];
-        if (row['actions'] != null) {
+        if (row['actions'] != null && row['actions'] is List) {
           final acts = row['actions'] as List;
-          actionsList.addAll(acts.map((e) => AssistantAction.fromJson(e)));
+          actionsList.addAll(acts.map((e) => AssistantAction.fromJson(Map<String, dynamic>.from(e))));
+        }
+        // Carregar embedded_tasks do banco
+        final embeddedTasks = <Map<String, dynamic>>[];
+        if (row['embedded_tasks'] != null && row['embedded_tasks'] is List) {
+          for (final t in (row['embedded_tasks'] as List)) {
+            if (t is Map) embeddedTasks.add(Map<String, dynamic>.from(t));
+          }
         }
         history.add(AssistantMessage(
           id: row['id'].toString(),
@@ -722,6 +807,7 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
           content: row['content'],
           time: DateTime.parse(row['created_at']),
           actions: actionsList,
+          embeddedTasks: embeddedTasks,
         ));
       }
       return history;
@@ -735,6 +821,7 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
       String userId, AssistantMessage message, String? conversationId) async {
     try {
       final actionsJson = message.actions.map((e) => e.toJson()).toList();
+      final tasksJson = message.embeddedTasks;
       await Supabase.instance.client
           .schema('sincroapp')
           .from('assistant_messages')
@@ -744,6 +831,7 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
         'role': message.role,
         'content': message.content,
         'actions': actionsJson,
+        'embedded_tasks': tasksJson,
       });
       _cleanupOldMessages(userId);
     } catch (e) {

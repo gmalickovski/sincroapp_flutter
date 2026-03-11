@@ -21,6 +21,7 @@ class ActionProposalBubble extends StatefulWidget {
 
 class _ActionProposalBubbleState extends State<ActionProposalBubble> {
   DateTime? _selectedDate;
+  bool _userSelectedSuggestion = false;
   bool _isCancelled = false;
 
   @override
@@ -148,7 +149,19 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
             'icon': Icons.thumb_up_alt_rounded
           };
         }
-        // Default fallback for requested date
+        
+        // Se não tem analysis, mas a IA mandou sugestões diferentes, 
+        // significa que a data pedida não era boa!
+        if (suggestions.isNotEmpty) {
+           return {
+            'text': "Data não favorável ⚠️",
+            'color': Colors.redAccent,
+            'icon': Icons.warning_rounded
+          };
+        }
+
+        // Default fallback for requested date 
+        // (quando IA não reclamou da data e não mandou alternativas)
         return {
           'text': "Data solicitada",
           'color': AppColors.secondaryText,
@@ -266,21 +279,8 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. ORIGINAL REQUESTED DATE (Unless overridden, show standard. If overridden, keep visible but maybe dimmed? User said: "no espaço da data deveria aparecer a data que eu pedi")
-                // Actually user said: "No espaço da data deveria aparecer a data que eu pedi... ao lado escrito se é boa... e abaixo duas etiquetas... que qdo clicar vai valer a que selecionei"
-                // So the MAIN display should always show the REQUESTED date status, and the SELECTION logic happens below.
-                // Wait. If I select a new date, does the main text change? The user says: "quando eu clicar... vai valer a que eu selecionei".
-                // I will show the CURRENTLY VALID SELECTION prominently.
-                // But the Requested Date needs to be shown too for comparison?
-                // Let's interpret: "No espaço da data" = The field label.
-                // Let's keep one main "Selected Date" area, but pre-filled with Requested.
-                // And below, the "Alternative Options".
-
-                // Let's split: Top is "Requested Date Info". Bottom is "Alternatives".
-                // If I select an alternative, it becomes the Active Date.
-
-                // 1. HEADER DATE SELECTION (Visible only if a date is selected or was pre-set)
-                if (_selectedDate != null) ...[
+                // 1. main selected date OR unselected requested date
+                if (_selectedDate != null && (requestedDate != null || _userSelectedSuggestion)) ...[
                   const Text(
                     "Data Escolhida",
                     style: TextStyle(
@@ -289,59 +289,57 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min, // Keep tight
-                      children: [
-                        Icon(Icons.calendar_month,
-                            color: (isGood
-                                ? feedbackColor
-                                : AppColors.primaryAccent),
-                            size: 20),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                // Check if time was specified. If not (params['time_specified'] == false), show only Date
-                                timeSpecified
-                                    // If specified (or null/default), show Date + Time
-                                    ? DateFormat("EEEE, d 'de' MMMM • HH:mm",
-                                            'pt_BR')
-                                        .format(_selectedDate!)
-                                    // If NOT specified, show only Date
-                                    : DateFormat("EEEE, d 'de' MMMM", 'pt_BR')
-                                        .format(_selectedDate!),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                softWrap: true,
-                              ),
-                              Text(
-                                feedbackText,
-                                style: TextStyle(
-                                    color: feedbackColor,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold),
-                                softWrap: true,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 8),
+                  _buildMainDatePill(
+                    date: _selectedDate!,
+                    isGood: isGood,
+                    feedbackText: feedbackText,
+                    feedbackColor: feedbackColor,
+                    feedbackIcon: feedbackIcon,
+                    timeSpecified: timeSpecified,
+                    isSelected: true,
+                    // Só permite deselecionar se for ruim
+                    allowDeselect: !isGood,
+                    onTap: () {
+                      if (!isGood) {
+                        setState(() {
+                          _selectedDate = null;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                ] else if (requestedDate != null) ...[
+                  const Text(
+                    "Data Solicitada",
+                    style: TextStyle(
+                      color: AppColors.tertiaryText,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
+                  ),
+                  const SizedBox(height: 8),
+                  _buildMainDatePill(
+                    date: requestedDate,
+                    isGood: getFeedbackForDate(requestedDate)['color'] ==
+                        AppColors.success,
+                    feedbackText: getFeedbackForDate(requestedDate)['text'],
+                    feedbackColor: getFeedbackForDate(requestedDate)['color'],
+                    feedbackIcon: getFeedbackForDate(requestedDate)['icon'],
+                    timeSpecified: timeSpecified,
+                    isSelected: false,
+                    allowDeselect: false,
+                    onTap: () {
+                      setState(() {
+                        _selectedDate = requestedDate;
+                      });
+                    },
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                // 2. SUGGESTIONS / SELECTION AREA
-                if (suggestions.isNotEmpty) ...[
+                // 2. SUGGESTIONS
+                if (suggestions.isNotEmpty && (!isGood || _selectedDate != requestedDate)) ...[
                   const Text(
                     "Sugestões Favoráveis (Numerologia)",
                     style: TextStyle(
@@ -359,7 +357,6 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                           _selectedDate!.year == date.year &&
                           _selectedDate!.month == date.month &&
                           _selectedDate!.day == date.day;
-                      // Don't show requested date in suggestions to avoid duplication if it was good
                       if (requestedDate != null &&
                           date.year == requestedDate.year &&
                           date.month == requestedDate.month &&
@@ -368,10 +365,8 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                       }
 
                       return _buildPill(
-                        // Sugestões de numerologia são dias, então mostramos apenas a data
-                        // para evitar horários quebrados como "03:18"
                         label: DateFormat("d/MM").format(date),
-                        icon: Icons.star_rounded, // Star for suggestions
+                        icon: Icons.star_rounded,
                         color: isSelected
                             ? AppColors.primaryAccent
                             : AppColors.secondaryText,
@@ -379,10 +374,9 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                         onTap: () {
                           setState(() {
                             if (isSelected) {
-                              // Deselect: Revert to requested date
                               _selectedDate = requestedDate;
+                              _userSelectedSuggestion = false;
                             } else {
-                              // Select this suggestion BUT PRESERVE THE TIME from current selection or requested date
                               final baseTime = _selectedDate ??
                                   requestedDate ??
                                   DateTime.now();
@@ -393,6 +387,7 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                                 baseTime.hour,
                                 baseTime.minute,
                               );
+                              _userSelectedSuggestion = true;
                             }
                           });
                         },
@@ -405,9 +400,6 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                 // 3. MANUAL EDIT & CONFIRM
                 Row(
                   children: [
-                    // Manual Edit Button (Icon Only) if needed, or just keep the Date Picker logic on the main text if strictly needed.
-                    // User didn't explicitly ask for manual edit in this new flow, but it's safe to keep.
-                    // For now, let's stick to the requested UI: Cancel | Confirm
                     Expanded(
                       child: TextButton(
                         onPressed: _handleCancel,
@@ -420,7 +412,6 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                     Expanded(
                       flex: 2,
                       child: ElevatedButton(
-                        // Confirm is enabled if we have a selection (Suggestion OR Original)
                         onPressed:
                             _selectedDate != null ? _handleConfirm : null,
                         style: ElevatedButton.styleFrom(
@@ -432,7 +423,7 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                           elevation: 0,
                         ),
                         child: Text(_selectedDate == requestedDate
-                            ? "Confirmar Data Pedida"
+                            ? "Confirmar Agendamento"
                             : "Confirmar Nova Data"),
                       ),
                     ),
@@ -574,6 +565,84 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMainDatePill({
+    required DateTime date,
+    required bool isGood,
+    required String feedbackText,
+    required Color feedbackColor,
+    required IconData feedbackIcon,
+    required bool timeSpecified,
+    required bool isSelected,
+    required bool allowDeselect,
+    required VoidCallback onTap,
+  }) {
+    final formattedDate = timeSpecified
+        ? DateFormat("EEEE, d 'de' MMMM • HH:mm", 'pt_BR').format(date)
+        : DateFormat("EEEE, d 'de' MMMM", 'pt_BR').format(date);
+
+    return InkWell(
+      onTap: allowDeselect || !isSelected ? onTap : null,
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? feedbackColor.withValues(alpha: 0.15)
+              : AppColors.background.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? feedbackColor : Colors.white10,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected && isGood ? Icons.check_circle : feedbackIcon,
+              size: 18,
+              color: isSelected ? feedbackColor : Colors.white60,
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    formattedDate,
+                    style: TextStyle(
+                      color: isSelected ? Colors.white : Colors.white70,
+                      fontWeight:
+                          isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontSize: 14,
+                    ),
+                    softWrap: true,
+                  ),
+                  Text(
+                    feedbackText,
+                    style: TextStyle(
+                      color: feedbackColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    softWrap: true,
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected && allowDeselect) ...[
+              const SizedBox(width: 12),
+              const Icon(Icons.close, size: 16, color: Colors.white54),
+            ],
+          ],
+        ),
       ),
     );
   }

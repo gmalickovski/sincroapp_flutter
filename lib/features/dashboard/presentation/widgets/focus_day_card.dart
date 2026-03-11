@@ -57,8 +57,8 @@ class _FocusDayCardState extends State<FocusDayCard> {
     final allFocusDayTasks = widget.tasks.where((task) {
       if (task.completed) return false;
       
-      // Tarefas sem data marcadas como foco
-      if (!task.hasDeadline && task.isFocus) return true;
+      // Tarefas marcadas como foco explícito
+      if (task.isFocus) return true;
       
       // Tarefas atrasadas (com data) -> flow_instance hiberne (apagamento à meia noite)
       if (task.isOverdue) {

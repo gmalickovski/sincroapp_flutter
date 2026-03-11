@@ -111,6 +111,16 @@ class AiToolHandler {
         query = query.or('recurrence_category.eq.commitment,recurrence_category.eq.flow,recurrence_type.neq.none');
         break;
 
+      case 'tarefas_recorrentes':
+        query = query.or('recurrence_category.eq.commitment,recurrence_category.eq.flow,recurrence_type.neq.none')
+                     .isFilter('due_date', null);
+        break;
+
+      case 'agendamentos_recorrentes':
+        query = query.or('recurrence_category.eq.commitment,recurrence_category.eq.flow,recurrence_type.neq.none')
+                     .not('due_date', 'is', null);
+        break;
+
       case 'marcos':
         // Metas vinculadas a uma Jornada (goal_id preenchido)
         query = query.not('goal_id', 'is', null);
@@ -180,7 +190,7 @@ class AiToolHandler {
 
     final List<Map<String, dynamic>> allTasks = [];
 
-    // 1) Tarefas sem data marcadas como foco
+    // 1) Tarefas marcadas como foco (ignora se tem due_date ou não, is_focus prevalece)
     final focusTasks = await supabase
         .schema('sincroapp')
         .from('tasks')
@@ -188,7 +198,6 @@ class AiToolHandler {
         .eq('user_id', _userId)
         .eq('completed', false)
         .eq('is_focus', true)
-        .isFilter('due_date', null)
         .limit(15);
 
     for (final row in (focusTasks as List)) {

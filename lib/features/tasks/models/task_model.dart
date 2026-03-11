@@ -37,6 +37,7 @@ class TaskModel {
   final String? taskType; // 'appointment' or 'task'
   final int? durationMinutes; // Duração em minutos
   final bool isFocus; // Tarefas sem data marcadas como foco
+  final DateTime? focusedAt; // Quando a tarefa foi marcada como foco
 
   TaskModel({
     required this.id,
@@ -65,6 +66,7 @@ class TaskModel {
     this.taskType,
     this.durationMinutes,
     this.isFocus = false,
+    this.focusedAt,
   });
 
   /// Data efetiva da tarefa: dueDate tem prioridade, senão usa hoje (tarefas sem vencimento rolam para o dia atual).
@@ -109,6 +111,7 @@ class TaskModel {
     Object? taskType = const _Undefined(),
     Object? durationMinutes = const _Undefined(),
     bool? isFocus,
+    Object? focusedAt = const _Undefined(),
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -157,6 +160,9 @@ class TaskModel {
           ? this.durationMinutes
           : durationMinutes as int?,
       isFocus: isFocus ?? this.isFocus,
+      focusedAt: focusedAt is _Undefined
+          ? this.focusedAt
+          : focusedAt as DateTime?,
     );
   }
 
@@ -237,6 +243,7 @@ class TaskModel {
       taskType: data['task_type'] ?? data['taskType'],
       durationMinutes: data['duration_minutes'] ?? data['durationMinutes'],
       isFocus: data['is_focus'] ?? false,
+      focusedAt: _parseDate(data['focused_at'] ?? data['focusedAt'])?.toLocal(),
     );
   }
 
@@ -271,6 +278,7 @@ class TaskModel {
       'task_type': taskType,
       'duration_minutes': durationMinutes,
       'is_focus': isFocus,
+      'focused_at': focusedAt?.toUtc().toIso8601String(),
     };
   }
 
