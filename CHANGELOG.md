@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.8...v1.7.9) (2026-03-12)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** Introduce AI assistant functionality with dedicated prompts, service, and action proposal UI. ([8e641c9](https://github.com/gmalickovski/sincroapp_flutter/commit/8e641c91a423887b644130f2ba0330d6152622ff))
+
 ### [1.7.8](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.7...v1.7.8) (2026-03-12)
 
 
