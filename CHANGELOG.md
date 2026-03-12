@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.10](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.9...v1.7.10) (2026-03-12)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** update date handling for flow tasks and improve date display logic ([c1bf537](https://github.com/gmalickovski/sincroapp_flutter/commit/c1bf5371bc086f75ec61b3a848dedd52efb6157a))
+
 ### [1.7.9](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.8...v1.7.9) (2026-03-12)
 
 
