@@ -163,9 +163,9 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
         // Default fallback for requested date 
         // (quando IA não reclamou da data e não mandou alternativas)
         return {
-          'text': "Data solicitada",
-          'color': AppColors.secondaryText,
-          'icon': Icons.calendar_today
+          'text': "Data Favorável ✨",
+          'color': AppColors.success,
+          'icon': Icons.thumb_up_alt_rounded
         };
       }
 

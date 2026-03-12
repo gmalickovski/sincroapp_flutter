@@ -326,17 +326,30 @@ class AssistantService {
         } catch (_) {}
       }
 
-      // 4. Fallback: Regex Extractor
+      // 4. Fallback: Regex Extractor & Multi-JSON Merger
       if (result == null) {
         debugPrint('[OutputParser] ⚠️ Falha no parse JSON. Usando Regex.');
-        String answerText = cleanText;
-        final answerMatch = RegExp(r'"answer"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"')
-            .firstMatch(cleanText);
-        if (answerMatch != null && answerMatch.groupCount >= 1) {
-          answerText = answerMatch.group(1)!
-              .replaceAll('\\n', '\n').replaceAll('\\"', '"');
+        final answerMatches = RegExp(r'"answer"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"').allMatches(cleanText);
+        String mergedAnswer = '';
+        if (answerMatches.isNotEmpty) {
+          mergedAnswer = answerMatches.map((m) => m.group(1)!
+              .replaceAll('\\n', '\n').replaceAll('\\"', '"')).join('\n\n');
+        } else {
+          mergedAnswer = cleanText;
         }
-        result = AssistantAnswer(answer: answerText, actions: []);
+
+        Map<String, dynamic> mergedActions = {};
+        final actionsMatch = RegExp(r'"actions"\s*:\s*(\{[^}]+\})').allMatches(cleanText);
+        if (actionsMatch.isNotEmpty) {
+           try {
+             mergedActions = jsonDecode(actionsMatch.last.group(1)!) as Map<String, dynamic>;
+           } catch(_) {}
+        }
+        result = AssistantAnswer.fromJson({
+          'answer': mergedAnswer,
+          'actions': mergedActions,
+          'tasks': []
+        });
       }
     }
 
