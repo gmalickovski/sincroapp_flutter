@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.8](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.7...v1.7.8) (2026-03-12)
+
+
+### Correções de Bugs 🐛
+
+* **ci:** implement Supabase service for user profile and data management. ([81b0d77](https://github.com/gmalickovski/sincroapp_flutter/commit/81b0d77ebbeb9ecf71b6036bf9aad71c1071f1e9))
+
 ### [1.7.7](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.6...v1.7.7) (2026-03-12)
 
 
