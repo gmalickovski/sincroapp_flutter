@@ -2377,8 +2377,8 @@ class SupabaseService {
               if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
                   return true;
               }
-            } else if (task.completed && task.updatedAt != null) {
-              final taskDateLocal = task.updatedAt!.toLocal();
+            } else if (task.completed && task.completedAt != null) {
+              final taskDateLocal = task.completedAt!.toLocal();
               final taskDateOnly = DateTime(
                   taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
               if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
