@@ -55,13 +55,11 @@ class _FocusDayCardState extends State<FocusDayCard> {
     final tomorrowStart = todayStart.add(const Duration(days: 1));
 
     final allFocusDayTasks = widget.tasks.where((task) {
-      if (task.completed) return false;
-      
       // Tarefas marcadas como foco explícito
       if (task.isFocus) return true;
       
       // Tarefas atrasadas (com data) -> flow_instance hiberne (apagamento à meia noite)
-      if (task.isOverdue) {
+      if (task.isOverdue && !task.completed) {
         if (task.recurrenceCategory == 'flow_instance' || task.recurrenceCategory == 'flow') {
           return false;
         }
@@ -78,7 +76,7 @@ class _FocusDayCardState extends State<FocusDayCard> {
       }
       
       // Se for 'flow' pre-processado pre-existente, e tem 'dueDate' null por erro 
-      if (task.recurrenceCategory == 'flow') return true;
+      if (task.recurrenceCategory == 'flow' && !task.completed) return true;
 
       return false;
     }).toList();

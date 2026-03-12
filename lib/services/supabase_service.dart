@@ -2322,31 +2322,112 @@ class SupabaseService {
         .eq('user_id', uid)
         .order('created_at', ascending: false)
         .map((data) {
-          final List<TaskModel> tasks = data
+          final List<TaskModel> rawTasks = data
               .map<TaskModel>((item) => _mapTaskFromSupabase(item))
               .toList();
 
           final now = DateTime.now(); // Local time
-          final startOfDay = DateTime(now.year, now.month, now.day);
-          final endOfDay = startOfDay.add(const Duration(days: 1));
+          final todayStart = DateTime(now.year, now.month, now.day);
+          final tomorrowStart = todayStart.add(const Duration(days: 1));
 
-          return tasks.where((task) {
+          // 1. Process flows
+          List<TaskModel> preProcessedTasks = [];
+          for (var task in rawTasks) {
+            if (task.recurrenceCategory == 'flow' && !task.completed) {
+              if (_doesRecurrenceMatch(task, todayStart)) {
+                 final hasInstance = rawTasks.any((inst) => 
+                     inst.recurrenceCategory == 'flow_instance' &&
+                     inst.recurrenceId == task.id &&
+                     inst.dueDate != null &&
+                     inst.dueDate!.toLocal().year == todayStart.year &&
+                     inst.dueDate!.toLocal().month == todayStart.month &&
+                     inst.dueDate!.toLocal().day == todayStart.day);
+                 if (!hasInstance) {
+                    DateTime newDue = todayStart;
+                    if (task.startDate != null) {
+                       final time = task.startDate!.toLocal();
+                       newDue = DateTime(todayStart.year, todayStart.month, todayStart.day, time.hour, time.minute);
+                    }
+                    preProcessedTasks.add(task.copyWith(dueDate: newDue));
+                 }
+              }
+            } else if (task.recurrenceCategory != 'flow') {
+              preProcessedTasks.add(task);
+            }
+          }
+
+          // 2. Filter for today (both completed and uncompleted)
+          return preProcessedTasks.where((task) {
+            // Tarefas marcadas como foco explícito
             if (task.isFocus) return true;
 
-            if (task.dueDate != null) {
-              // dueDate já é convertido para local no _mapTaskFromSupabase?
-              // Se _parseDateAsLocal retorna local, então 'd' já está ok.
-              // Mas para garantir, usamos .toLocal()
-              final d = task.dueDate!.toLocal();
-              return !d.isBefore(startOfDay) && d.isBefore(endOfDay);
+            // Tarefas atrasadas (com data) -> flow_instance hiberne
+            if (task.isOverdue && !task.completed) {
+              if (task.recurrenceCategory == 'flow_instance' || task.recurrenceCategory == 'flow') {
+                return false;
+              }
+              return true;
             }
 
-            final c = task.createdAt.toLocal();
-            return !c.isBefore(startOfDay) && c.isBefore(endOfDay);
+            // Check completion date or due date matching today
+            if (task.hasDeadline) {
+              final taskDateLocal = task.dueDate!.toLocal();
+              final taskDateOnly = DateTime(
+                  taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+              if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
+                  return true;
+              }
+            } else if (task.completed && task.updatedAt != null) {
+              final taskDateLocal = task.updatedAt!.toLocal();
+              final taskDateOnly = DateTime(
+                  taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
+              if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
+                  return true; // was completed today
+              }
+            }
+            
+            if (task.recurrenceCategory == 'flow' && !task.completed) return true;
+
+            return false;
           }).toList()
             ..sort((a, b) =>
                 (a.dueDate ?? a.createdAt).compareTo(b.dueDate ?? b.createdAt));
         });
+  }
+
+  bool _doesRecurrenceMatch(TaskModel task, DateTime targetDate) {
+    final DateTime? anchorDate = task.recurrenceCategory == 'flow' ? task.startDate : task.dueDate;
+    if (anchorDate == null) return false;
+    
+    final start = anchorDate.toLocal();
+    final startOnly = DateTime(start.year, start.month, start.day);
+    final targetOnly = DateTime(targetDate.year, targetDate.month, targetDate.day);
+
+    if (targetOnly.isBefore(startOnly)) return false;
+
+    if (task.recurrenceEndDate != null) {
+      final endOnly = DateTime(task.recurrenceEndDate!.year, task.recurrenceEndDate!.month, task.recurrenceEndDate!.day);
+      if (targetOnly.isAfter(endOnly)) return false;
+    }
+
+    if (task.recurrenceType == RecurrenceType.none) {
+      return targetOnly.isAtSameMomentAs(startOnly);
+    } else if (task.recurrenceType == RecurrenceType.daily) {
+      final diff = targetOnly.difference(startOnly).inDays;
+      return diff % (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) == 0;
+    } else if (task.recurrenceType == RecurrenceType.weekly) {
+      if (!task.recurrenceDaysOfWeek.contains(targetOnly.weekday)) return false;
+      if (task.recurrenceInterval <= 1) return true;
+      final startWeek = startOnly.subtract(Duration(days: startOnly.weekday - 1));
+      final targetWeek = targetOnly.subtract(Duration(days: targetOnly.weekday - 1));
+      final weeksDiff = (targetWeek.difference(startWeek).inDays / 7).floor();
+      return weeksDiff % task.recurrenceInterval == 0;
+    } else if (task.recurrenceType == RecurrenceType.monthly) {
+      if (targetOnly.day != startOnly.day) return false;
+      final monthsDiff = (targetOnly.year - startOnly.year) * 12 + targetOnly.month - startOnly.month;
+      return monthsDiff % (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) == 0;
+    }
+    return false;
   }
 
   Stream<List<TaskModel>> getTasksForGoalStream(String uid, String goalId) {

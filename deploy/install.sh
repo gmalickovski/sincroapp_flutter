@@ -126,31 +126,7 @@ else
     log_warning "Você precisará copiar a pasta 'supabase/functions' manualmente para seu volume do Docker."
 fi
 
-# 8. SERVIÇO DE NOTIFICAÇÕES (MIGRADO)
-log_info "Configurando Serviço de Notificações (PM2)..."
-if [ -d "notification-service" ]; then
-    cd notification-service
-    
-    # Instalar deps
-    npm install
-    
-    # Verificar .env (O usuário precisa configurar isso!)
-    if [ ! -f ".env" ]; then
-        log_warning "Arquivo .env não encontrado em notification-service."
-        echo "SUPABASE_URL=https://supabase.studiomlk.com.br" > .env
-        echo "SUPABASE_SERVICE_ROLE_KEY=SUA_KEY_AQUI" >> .env
-        log_warning "Criado .env de exemplo. EDITE COM SUA SERVICE KEY!"
-    fi
-    
-    # Reiniciar PM2
-    pm2 delete sincroapp-notifications 2>/dev/null || true
-    pm2 start index.js --name sincroapp-notifications --time
-    pm2 save
-    
-    cd ..
-    log_success "Notification Service iniciado."
-fi
-
+# 8. (Removido: Serviço de Notificações migrado para Supabase Edge Functions)
 # 9. NGINX (CONFIGURAÇÃO)
 log_info "Configurando Nginx..."
 # (Mantendo a configuração otimizada do script anterior)

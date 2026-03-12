@@ -26,7 +26,6 @@ cd "$INSTALL_DIR"
 if [ -f ".env" ]; then
     log_info "Syncing .env to services..."
     cp ".env" "server/.env"
-    cp ".env" "notification-service/.env"
 else
     log_error "ROOT .env FILE MISSING in $INSTALL_DIR!"
     log_error "Please create .env with your credentials."
@@ -56,17 +55,7 @@ if [ -d "server" ]; then
     cd ..
 fi
 
-# 3. START NOTIFICATION SERVICE
-log_info "Starting Notification Service..."
-if [ -d "notification-service" ]; then
-    cd notification-service
-    pm2 delete sincroapp-notifications 2>/dev/null || true
-    # Note: pm2 --env option often applies to ecosystem.config.js, but explicit file usage works too if code uses dotenv
-    pm2 start index.js --name sincroapp-notifications --time
-    pm2 save
-    log_success "PM2: sincroapp-notifications started."
-    cd ..
-fi
+# 3. (Removido: Notification Service agora usa Supabase Edge Functions)
 
 # 4. NGINX RELOAD
 log_info "Reloading Nginx..."

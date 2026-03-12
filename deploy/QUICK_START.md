@@ -97,7 +97,6 @@ Selecione o tipo de deploy:
 2) Deploy apenas código (sem rebuild)
 3) Deploy apenas Flutter Web
 4) Deploy apenas Functions
-5) Deploy apenas Notification Service
 ```
 
 **Tempo estimado:** 2-10 minutos (depende da opção)
@@ -118,9 +117,6 @@ pm2 status
 # Logs do Nginx
 sudo tail -f /var/log/nginx/error.log
 
-# Logs do Serviço de Notificações
-pm2 logs sincroapp-notifications
-
 # Monitorar recursos
 pm2 monit
 ```
@@ -131,8 +127,8 @@ pm2 monit
 # Reiniciar Nginx
 sudo systemctl reload nginx
 
-# Reiniciar Notification Service
-pm2 restart sincroapp-notifications
+# Reiniciar Servidor Principal
+pm2 restart sincroapp-server
 
 # Reiniciar todos os processos PM2
 pm2 restart all
@@ -149,7 +145,7 @@ BACKUP_DATE="20251116_143022"
 sudo rm -rf /var/www/webapp/sincroapp_flutter
 sudo cp -r /var/backups/sincroapp_flutter/backup_$BACKUP_DATE /var/www/webapp/sincroapp_flutter
 sudo systemctl reload nginx
-pm2 restart sincroapp-notifications
+pm2 restart sincroapp-server
 ```
 
 ---
@@ -215,19 +211,12 @@ sudo tail -f /var/log/nginx/error.log
 ### Problema: Notificações não funcionam
 
 ```bash
-# 1. Verificar se o serviço está rodando
-pm2 status
+# 1. Verificar logs das Edge Functions (via VPS)
+docker logs supabase-edge-functions --tail 50
 
-# 2. Ver logs
-pm2 logs sincroapp-notifications
-
-# 3. Reiniciar serviço
-pm2 restart sincroapp-notifications
-
-# 4. Se não existir, criar
-cd /var/www/webapp/sincroapp_flutter/notification-service
-pm2 start index.js --name sincroapp-notifications
-pm2 save
+# 2. Reiniciar o Container das Functions do Supabase
+cd /var/www/app/supabase
+docker compose restart functions
 ```
 
 ### Problema: Functions não respondem

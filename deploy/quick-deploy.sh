@@ -52,9 +52,8 @@ echo "1) Deploy completo (código + build + restart)"
 echo "2) Deploy apenas código (sem rebuild)"
 echo "3) Deploy apenas Flutter Web"
 echo "4) Deploy apenas Functions"
-echo "5) Deploy apenas Notification Service"
 echo ""
-read -p "Opção [1-5]: " DEPLOY_OPTION
+read -p "Opção [1-4]: " DEPLOY_OPTION
 
 case $DEPLOY_OPTION in
     1)
@@ -72,10 +71,6 @@ case $DEPLOY_OPTION in
     4)
         log_info "Deploy apenas Functions selecionado"
         DEPLOY_TYPE="functions"
-        ;;
-    5)
-        log_info "Deploy apenas Notification Service selecionado"
-        DEPLOY_TYPE="notifications"
         ;;
     *)
         log_error "Opção inválida"
@@ -129,9 +124,6 @@ deploy_full() {
         # Instalar dependências
         flutter pub get
         cd functions && npm install && cd ..
-        if [ -d "notification-service" ]; then
-            cd notification-service && npm install && cd ..
-        fi
         
         # Configurar permissões
         chown -R www-data:www-data build/web
@@ -139,7 +131,6 @@ deploy_full() {
         
         # Reiniciar serviços
         systemctl reload nginx
-        pm2 restart sincroapp-notifications || true
         
         # Limpar
         rm "/tmp/sincroapp_deploy_$TIMESTAMP.tar.gz"
@@ -195,24 +186,6 @@ deploy_functions() {
     log_success "Functions atualizadas!"
 }
 
-# Função para deploy apenas notifications
-deploy_notifications() {
-    log_info "Deploy Notification Service..."
-    
-    # Enviar código do notification-service
-    rsync -avz --delete \
-        "$LOCAL_PATH/notification-service/" "$SERVER_USER@$SERVER_HOST:$SERVER_PATH/notification-service/"
-    
-    # Reinstalar e reiniciar
-    ssh "$SERVER_USER@$SERVER_HOST" << ENDSSH
-        cd "$SERVER_PATH/notification-service"
-        npm install
-        pm2 restart sincroapp-notifications
-ENDSSH
-    
-    log_success "Notification Service atualizado!"
-}
-
 # Executar deploy conforme opção
 case $DEPLOY_TYPE in
     full)
@@ -226,9 +199,6 @@ case $DEPLOY_TYPE in
         ;;
     functions)
         deploy_functions
-        ;;
-    notifications)
-        deploy_notifications
         ;;
 esac
 

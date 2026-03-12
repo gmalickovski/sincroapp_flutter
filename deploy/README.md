@@ -123,16 +123,20 @@ sudo tail -f /var/log/nginx/error.log
 sudo tail -f /var/log/nginx/access.log
 ```
 
-### Verificar logs do PM2 (Serviço de Notificações)
+### Listar Status
 ```bash
-pm2 logs sincroapp-notifications
+pm2 list
+```
+
+### Ver Logs
+```bash
+pm2 logs sincroapp-server
 pm2 monit
 ```
 
 ### Verificar status dos serviços
 ```bash
 sudo systemctl status nginx
-pm2 status
 ```
 
 ## 🔄 Rollback (Reverter Atualização)
@@ -150,7 +154,7 @@ BACKUP_DATE="20251116_143022"  # Substitua pela data do backup
 sudo rm -rf /var/www/webapp/sincroapp_flutter
 sudo cp -r /var/backups/sincroapp_flutter/backup_$BACKUP_DATE /var/www/webapp/sincroapp_flutter
 sudo systemctl reload nginx
-sudo pm2 restart sincroapp-notifications
+sudo pm2 restart sincroapp-server
 ```
 
 ## 🛡️ Segurança
@@ -186,8 +190,8 @@ sudo systemctl reload nginx
 
 ### Erro: "PM2: process not found"
 ```bash
-cd /var/www/webapp/sincroapp_flutter/notification-service
-pm2 start index.js --name sincroapp-notifications
+cd /var/www/webapp/sincroapp_flutter/server
+pm2 start index.js --name sincroapp-server
 pm2 save
 ```
 

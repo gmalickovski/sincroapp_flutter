@@ -96,12 +96,6 @@ log_success "Backup criado em: $BACKUP_PATH"
 # 4. PARAR SERVIÇOS
 log_info "Parando serviços..."
 
-# Parar PM2 (Serviço de Notificações)
-if pm2 list | grep -q sincroapp-notifications; then
-    pm2 stop sincroapp-notifications
-    log_success "Serviço de Notificações parado"
-fi
-
 # Parar PM2 (Backend API)
 log_info "Parando Backend API..."
 # Parar o processo correto se estiver rodando
@@ -141,14 +135,22 @@ sed -i 's/flutter_lints: \^4\.0\.0/flutter_lints: ^3.0.2/' "$INSTALL_DIR/pubspec
 sed -i 's/font_awesome_flutter: \^10\.12\.0/font_awesome_flutter: ^10.9.1/' "$INSTALL_DIR/pubspec.yaml"
 # Corrigir intl para versão compatível com Flutter 3.27.1 (VPS usa intl 0.19.0)
 sed -i 's/intl: \^0\.20\.2/intl: ^0.19.0/' "$INSTALL_DIR/pubspec.yaml"
+# Corrigir animations para versão compatível com Flutter 3.27.1 (Dart 3.6.0 não suporta ^2.1.1)
+sed -i 's/animations: \^2\.1\.1/animations: ^2.0.11/' "$INSTALL_DIR/pubspec.yaml"
 
 # Reverter withValues para withOpacity (Flutter 3.27.1 não suporta withValues completo)
 log_info "Revertendo withValues() para withOpacity() para compatibilidade com Flutter 3.27.1..."
 # Cobrir casos com literais, variáveis e expressões (ternário, etc.)
 find "$INSTALL_DIR/lib" -name "*.dart" -type f -exec sed -Ei 's/\.withValues\(alpha: ([^)]*)\)/.withOpacity(\1)/g' {} +
 
+# Reverter .toARGB32() para .value (Flutter 3.27.1 não possui essa extensão ainda)
+log_info "Revertendo .toARGB32() para .value para compatibilidade..."
+find "$INSTALL_DIR/lib" -name "*.dart" -type f -exec sed -Ei 's/\.toARGB32\(\)/.value/g' {} +
+
 # Ajustar DropdownButtonFormField: initialValue -> value (compatibilidade com Flutter 3.27.1)
 sed -i "s/initialValue:/value:/g" "$INSTALL_DIR/lib/features/admin/presentation/widgets/user_edit_dialog.dart"
+sed -i "s/initialValue:/value:/g" "$INSTALL_DIR/lib/features/authentication/presentation/register/register_screen.dart"
+sed -i "s/initialValue:/value:/g" "$INSTALL_DIR/lib/features/settings/presentation/tabs/account_settings_tab.dart"
 
 log_success "pubspec.yaml e código-fonte corrigidos para Flutter 3.27.1"
 
@@ -276,6 +278,28 @@ if [ -d "$INSTALL_DIR/server" ]; then
     pm2 save
     
     log_success "Backend API (sincroapp-server) reiniciado"
+fi
+
+# 16.2 ATUALIZAR EDGE FUNCTIONS (NOTIFICAÇÕES PUSH)
+log_info "Verificando Edge Functions (Sistema de Notificações)..."
+if [ -d "$INSTALL_DIR/supabase/functions" ]; then
+    SUPABASE_DIR="/var/www/app/supabase"
+    FUNCTIONS_DIR="$SUPABASE_DIR/volumes/functions"
+    
+    if [ -d "$FUNCTIONS_DIR" ]; then
+        log_info "Copiando Edge Functions atualizadas..."
+        # Copiar todas as funções de notificação
+        cp -r "$INSTALL_DIR/supabase/functions/"* "$FUNCTIONS_DIR/" 2>/dev/null || true
+        
+        log_info "Reiniciando container Supabase Edge Functions..."
+        cd "$SUPABASE_DIR"
+        docker compose restart functions
+        cd "$INSTALL_DIR"
+        
+        log_success "Edge Functions atualizadas e reiniciadas com sucesso."
+    else
+        log_warning "Diretório do Supabase ($FUNCTIONS_DIR) não encontrado no servidor VPS."
+    fi
 fi
 
 # 17. FIREBASE (LOGIN/USE/DEPLOY OPCIONAL)

@@ -89,9 +89,9 @@ class AiConfig {
                 },
                 'tipo_busca': {
                   'type': 'string',
-                  'enum': ['tarefas', 'agendamentos', 'recorrentes', 'marcos', 'foco_do_dia', 'foco', 'todos'],
+                  'enum': ['tarefas', 'agendamentos', 'tarefas_recorrentes', 'agendamentos_recorrentes', 'marcos', 'foco_do_dia', 'foco', 'todos'],
                   'description':
-                      'tarefas=sem data, agendamentos=com data, recorrentes=repetitivas, marcos=metas de jornada, foco_do_dia=visão completa do dia, foco=is_focus, todos=geral.',
+                      'tarefas=sem data, agendamentos=com data, tarefas_recorrentes=repetitivas sem data, agendamentos_recorrentes=repetitivos com data, marcos=metas de jornada, foco_do_dia=visão completa do dia, foco=is_focus, todos=geral.',
                 },
                 'data_inicio': {
                   'type': 'string',
