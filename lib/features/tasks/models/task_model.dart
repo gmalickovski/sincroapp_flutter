@@ -263,7 +263,7 @@ class TaskModel {
       'journey_id': journeyId,
       'journey_title': journeyTitle,
       'personal_day': personalDay,
-      'start_date': startDate?.toIso8601String(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
+      'start_date': startDate?.toUtc().toIso8601String(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       'recurrence_type': recurrenceTypeString,
       'recurrence_interval': recurrenceInterval,
       'recurrence_days_of_week': recurrenceDaysOfWeek,

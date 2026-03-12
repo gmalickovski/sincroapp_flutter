@@ -212,15 +212,32 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     DateTime? finalStartDateUtc;
     DateTime dateForPersonalDay;
 
-    if (parsedTask.dueDate != null) {
+    // Garante que tarefas do tipo 'flow' nunca tenham dueDate
+    final isFlow = parsedTask.recurrenceRule.recurrenceCategory == 'flow';
+
+    if (isFlow) {
+      finalDueDateUtc = null;
+      if (parsedTask.startDate != null) {
+        finalStartDateUtc = parsedTask.startDate!.isUtc
+            ? parsedTask.startDate
+            : parsedTask.startDate!.toUtc();
+        dateForPersonalDay = finalStartDateUtc!;
+      } else {
+        final now = DateTime.now().toLocal();
+        dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+      }
+    } else if (parsedTask.dueDate != null) {
       if (parsedTask.dueDate!.isUtc) {
-        // Já é UTC (date-only, vindo do TaskInputModal corrigido)
         finalDueDateUtc = parsedTask.dueDate;
       } else {
-        // DateTime local com horário — converte para UTC
         finalDueDateUtc = parsedTask.dueDate!.toUtc();
       }
       dateForPersonalDay = finalDueDateUtc!;
+      if (parsedTask.startDate != null) {
+        finalStartDateUtc = parsedTask.startDate!.isUtc
+            ? parsedTask.startDate
+            : parsedTask.startDate!.toUtc();
+      }
     } else if (parsedTask.startDate != null) {
       if (parsedTask.startDate!.isUtc) {
         finalStartDateUtc = parsedTask.startDate;
@@ -229,10 +246,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       }
       dateForPersonalDay = finalStartDateUtc!;
     } else {
-      // Se não tem data específica, usa a data atual (não a de amanhã)
       final now = DateTime.now().toLocal();
       dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-      // NÃO define finalDueDateUtc - deixa null para tarefas sem data específica
     }
 
     // Calcula o dia pessoal usando a data determinada
@@ -274,7 +289,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // A nova lÃ³gica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a prÃ³xima ao concluir.
 
     // Usa a data definida ou 'Hoje'
-    final firstDate = parsedTask.dueDate ?? parsedTask.startDate ?? DateTime.now();
+    final firstDate =
+        parsedTask.dueDate ?? parsedTask.startDate ?? DateTime.now();
 
     final isFlow = parsedTask.recurrenceRule.recurrenceCategory == 'flow';
 
@@ -496,7 +512,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   ),
                   child: const Text('Cancelar',
                       style: TextStyle(
-                          color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -510,7 +527,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                      side:
+                          const BorderSide(color: Colors.redAccent, width: 1.5),
                     ),
                   ),
                   child: const Text('Excluir',
@@ -547,17 +565,20 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   // --- INÍCIO DA MUDANÇA (Solicitação 2 & 3): Lógica de filtro atualizada ---
   bool _doesRecurrenceMatch(TaskModel task, DateTime targetDate) {
     // Para 'flow', usa startDate. Para outros, usa dueDate.
-    final DateTime? anchorDate = task.recurrenceCategory == 'flow' ? task.startDate : task.dueDate;
+    final DateTime? anchorDate =
+        task.recurrenceCategory == 'flow' ? task.startDate : task.dueDate;
     if (anchorDate == null) return false;
-    
+
     final start = anchorDate.toLocal();
     final startOnly = DateTime(start.year, start.month, start.day);
-    final targetOnly = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetOnly =
+        DateTime(targetDate.year, targetDate.month, targetDate.day);
 
     if (targetOnly.isBefore(startOnly)) return false;
 
     if (task.recurrenceEndDate != null) {
-      final endOnly = DateTime(task.recurrenceEndDate!.year, task.recurrenceEndDate!.month, task.recurrenceEndDate!.day);
+      final endOnly = DateTime(task.recurrenceEndDate!.year,
+          task.recurrenceEndDate!.month, task.recurrenceEndDate!.day);
       if (targetOnly.isAfter(endOnly)) return false;
     }
 
@@ -565,18 +586,26 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       return targetOnly.isAtSameMomentAs(startOnly);
     } else if (task.recurrenceType == RecurrenceType.daily) {
       final diff = targetOnly.difference(startOnly).inDays;
-      return diff % (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) == 0;
+      return diff %
+              (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) ==
+          0;
     } else if (task.recurrenceType == RecurrenceType.weekly) {
       if (!task.recurrenceDaysOfWeek.contains(targetOnly.weekday)) return false;
       if (task.recurrenceInterval <= 1) return true;
-      final startWeek = startOnly.subtract(Duration(days: startOnly.weekday - 1));
-      final targetWeek = targetOnly.subtract(Duration(days: targetOnly.weekday - 1));
+      final startWeek =
+          startOnly.subtract(Duration(days: startOnly.weekday - 1));
+      final targetWeek =
+          targetOnly.subtract(Duration(days: targetOnly.weekday - 1));
       final weeksDiff = (targetWeek.difference(startWeek).inDays / 7).floor();
       return weeksDiff % task.recurrenceInterval == 0;
     } else if (task.recurrenceType == RecurrenceType.monthly) {
       if (targetOnly.day != startOnly.day) return false;
-      final monthsDiff = (targetOnly.year - startOnly.year) * 12 + targetOnly.month - startOnly.month;
-      return monthsDiff % (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) == 0;
+      final monthsDiff = (targetOnly.year - startOnly.year) * 12 +
+          targetOnly.month -
+          startOnly.month;
+      return monthsDiff %
+              (task.recurrenceInterval > 0 ? task.recurrenceInterval : 1) ==
+          0;
     }
     return false;
   }
@@ -586,44 +615,47 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     DateTime referenceDate = _selectedDate ?? today;
-    
+
     List<DateTime> evaluationDates = [];
     if (_startDateFilter != null && _endDateFilter != null) {
-       for (var d = _startDateFilter!; !d.isAfter(_endDateFilter!); d = d.add(const Duration(days: 1))) {
-          evaluationDates.add(DateTime(d.year, d.month, d.day));
-       }
+      for (var d = _startDateFilter!;
+          !d.isAfter(_endDateFilter!);
+          d = d.add(const Duration(days: 1))) {
+        evaluationDates.add(DateTime(d.year, d.month, d.day));
+      }
     } else {
-       evaluationDates.add(referenceDate);
+      evaluationDates.add(referenceDate);
     }
-    
+
     List<TaskModel> preProcessedTasks = [];
     for (var task in rawTasks) {
-       if (task.recurrenceCategory == 'flow' && !task.completed) {
-          // Flow Template - evaluate occurrences for matching dates only
-          for (var d in evaluationDates) {
-             if (_doesRecurrenceMatch(task, d)) {
-                // Check if already completed/instantiated for this day
-                final hasInstance = rawTasks.any((inst) => 
-                   inst.recurrenceCategory == 'flow_instance' &&
-                   inst.recurrenceId == task.id &&
-                   inst.dueDate != null &&
-                   isSameDay(inst.dueDate!.toLocal(), d));
-                if (!hasInstance) {
-                   DateTime newDue = d;
-                   if (task.startDate != null) {
-                      final time = task.startDate!.toLocal();
-                      newDue = DateTime(d.year, d.month, d.day, time.hour, time.minute);
-                   }
-                   preProcessedTasks.add(task.copyWith(dueDate: newDue));
-                }
-             }
+      if (task.recurrenceCategory == 'flow' && !task.completed) {
+        // Flow Template - evaluate occurrences for matching dates only
+        for (var d in evaluationDates) {
+          if (_doesRecurrenceMatch(task, d)) {
+            // Check if already completed/instantiated for this day
+            final hasInstance = rawTasks.any((inst) =>
+                inst.recurrenceCategory == 'flow_instance' &&
+                inst.recurrenceId == task.id &&
+                inst.dueDate != null &&
+                isSameDay(inst.dueDate!.toLocal(), d));
+            if (!hasInstance) {
+              DateTime newDue = d;
+              if (task.startDate != null) {
+                final time = task.startDate!.toLocal();
+                newDue =
+                    DateTime(d.year, d.month, d.day, time.hour, time.minute);
+              }
+              preProcessedTasks.add(task.copyWith(dueDate: newDue));
+            }
           }
-       } else if (task.recurrenceCategory != 'flow') {
-          // Normal tasks and flow_instances
-          preProcessedTasks.add(task);
-       }
+        }
+      } else if (task.recurrenceCategory != 'flow') {
+        // Normal tasks and flow_instances
+        preProcessedTasks.add(task);
+      }
     }
-    
+
     List<TaskModel> allTasks = preProcessedTasks;
 
     // 0.5. SEARCH FILTERING
@@ -643,18 +675,19 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         final tomorrowStart = todayStart.add(const Duration(days: 1));
         filteredTasks = allTasks.where((task) {
           if (task.completed) return false;
-          
+
           // Tarefas marcadas como foco
           if (task.isFocus) return true;
-          
+
           // Tarefas atrasadas (com data) -> flow_instance hiberne (apagamento à meia noite)
           if (task.isOverdue) {
-            if (task.recurrenceCategory == 'flow_instance' || task.recurrenceCategory == 'flow') {
+            if (task.recurrenceCategory == 'flow_instance' ||
+                task.recurrenceCategory == 'flow') {
               return false;
             }
             return true;
           }
-          
+
           // Tarefas agendadas/ritmos para hoje
           if (task.hasDeadline) {
             final taskDateLocal = task.dueDate!.toLocal();
@@ -663,7 +696,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             return !taskDateOnly.isBefore(todayStart) &&
                 taskDateOnly.isBefore(tomorrowStart);
           }
-          
+
           // Flow templates sem instância hoje (rituais contínuos) → sempre no foco
           if (task.recurrenceCategory == 'flow') return true;
 
@@ -856,7 +889,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       // Normal task
       _supabaseService.updateTaskFields(_userId, task.id, {
         'completed': isCompleted,
-        'completedAt': isCompleted ? DateTime.now().toUtc().toIso8601String() : null,
+        'completedAt':
+            isCompleted ? DateTime.now().toUtc().toIso8601String() : null,
       }).then((_) {
         if (task.journeyId != null && task.journeyId!.isNotEmpty) {
           _supabaseService.updateGoalProgress(_userId, task.journeyId!);
@@ -892,7 +926,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                   ),
                   child: const Text('Cancelar',
                       style: TextStyle(
-                          color: AppColors.secondaryText, fontFamily: 'Poppins')),
+                          color: AppColors.secondaryText,
+                          fontFamily: 'Poppins')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -906,7 +941,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(color: Colors.redAccent, width: 1.5),
+                      side:
+                          const BorderSide(color: Colors.redAccent, width: 1.5),
                     ),
                   ),
                   child: const Text('Excluir',
@@ -1599,7 +1635,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       stream: _tasksStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          debugPrint('Erro no Stream de Tarefas na FocoDoDiaScreen: ${snapshot.error}');
+          debugPrint(
+              'Erro no Stream de Tarefas na FocoDoDiaScreen: ${snapshot.error}');
           if (!snapshot.hasData || (snapshot.data as List).isEmpty) {
             return const Center(
               child: Padding(
@@ -1607,17 +1644,22 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.cloud_off, size: 48, color: AppColors.secondaryText),
+                    Icon(Icons.cloud_off,
+                        size: 48, color: AppColors.secondaryText),
                     SizedBox(height: 16),
                     Text(
                       'Sem Conexão',
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 8),
                     Text(
                       'Não foi possível carregar as tarefas no momento. Verifique sua conexão com a internet e tente novamente.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.secondaryText, fontSize: 14),
+                      style: TextStyle(
+                          color: AppColors.secondaryText, fontSize: 14),
                     ),
                   ],
                 ),
@@ -1626,7 +1668,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
           }
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting && (!snapshot.hasData || (snapshot.data as List).isEmpty)) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            (!snapshot.hasData || (snapshot.data as List).isEmpty)) {
           return const Center(child: CustomLoadingSpinner());
         }
 
@@ -1726,7 +1769,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const PageTitleRow(title: 'Trilha de Ação', pageKey: 'tasks', forceDesktop: true),
+                                  const PageTitleRow(
+                                      title: 'Trilha de Ação',
+                                      pageKey: 'tasks',
+                                      forceDesktop: true),
                                   _buildToolbar(true, allTags, tasksToShow),
                                 ],
                               ),

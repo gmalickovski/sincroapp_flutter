@@ -1591,20 +1591,25 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   // Métodos auxiliares de texto... (sem alterações)
   String _buildDateSummaryText() {
-    if (_selectedDateTime == null) return '';
+    if (_selectedDateTime == null && _selectedStartDate == null) return '';
+    final dateToUse = _selectedStartDate ?? _selectedDateTime!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
-    final localSelectedDate = _selectedDateTime!.toLocal();
+    final localSelectedDate = dateToUse.toLocal();
     final selectedDateOnly = DateTime(
         localSelectedDate.year, localSelectedDate.month, localSelectedDate.day);
 
-    if (_isSameDay(selectedDateOnly, today)) return 'Hoje';
-    if (_isSameDay(selectedDateOnly, tomorrow)) return 'Amanhã';
+    final isFlow = _recurrenceRule.recurrenceCategory == 'flow';
+    String prefix = isFlow ? 'Iniciando ' : '';
+
+    if (_isSameDay(selectedDateOnly, today)) return '${prefix}Hoje';
+    if (_isSameDay(selectedDateOnly, tomorrow)) return '${prefix}Amanhã';
+    
     if (localSelectedDate.year == now.year) {
-      return DateFormat('EEE, dd/MM', 'pt_BR').format(localSelectedDate);
+      return prefix + DateFormat('EEE, dd/MM', 'pt_BR').format(localSelectedDate);
     }
-    return DateFormat('dd/MM/yy', 'pt_BR').format(localSelectedDate);
+    return prefix + DateFormat('dd/MM/yy', 'pt_BR').format(localSelectedDate);
   }
 
   String _getShortRecurrenceText(RecurrenceRule rule) {
@@ -1718,12 +1723,15 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final tomorrow = today.add(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
-    if (_isSameDay(dateOnly, today)) return 'Hoje';
-    if (_isSameDay(dateOnly, tomorrow)) return 'Amanhã';
+    final isFlow = _recurrenceRule.recurrenceCategory == 'flow';
+    String prefix = isFlow ? 'Iniciando ' : '';
+
+    if (_isSameDay(dateOnly, today)) return '${prefix}Hoje';
+    if (_isSameDay(dateOnly, tomorrow)) return '${prefix}Amanhã';
     if (date.year == now.year) {
-      return DateFormat('EEE, dd/MM', 'pt_BR').format(date);
+      return prefix + DateFormat('EEE, dd/MM', 'pt_BR').format(date);
     }
-    return DateFormat('dd/MM/yy', 'pt_BR').format(date);
+    return prefix + DateFormat('dd/MM/yy', 'pt_BR').format(date);
   }
 
   Widget _buildDetailRow({

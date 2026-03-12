@@ -24,7 +24,8 @@ class TaskItem extends StatelessWidget {
   final bool isActive; // Novo parâmetro para indicar item ativo (desktop)
   final Function(TaskModel, DateTime)?
       onRescheduleDate; // NOVO: Callback para menu
-  final UserModel? userData; // Para cálculo dinâmico do dia pessoal em tarefas perpétuas
+  final UserModel?
+      userData; // Para cálculo dinâmico do dia pessoal em tarefas perpétuas
   // --- FIM DA MUDANÇA ---
 
   // Props de layout (mantidos por enquanto, mas isCompact pode ser obsoleto)
@@ -212,13 +213,17 @@ class TaskItem extends StatelessWidget {
         task.journeyTitle!.isNotEmpty;
     // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
-    // Usa hasDeadline ou hasStartDate em vez de _isNotToday para que sempre apareça o ícone se tiver data de vencimento/inicio
-    final bool shouldShowDateIcon = (task.hasDeadline || task.startDate != null) &&
-        !isRecurrent; // Só mostra data se NÃO for recorrente
+    // Nova lógica: só mostra data se NÃO for recorrente OU se for recorrente do tipo 'commitment'
+    final bool shouldShowDateIcon =
+        (task.hasDeadline || task.startDate != null) &&
+            (!isRecurrent ||
+                (isRecurrent && task.recurrenceCategory == 'commitment'));
     // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
     int? effectivePersonalDay = task.personalDay;
-    if (task.effectiveDate == null && userData != null &&
-        userData!.nomeAnalise.isNotEmpty && userData!.dataNasc.isNotEmpty) {
+    if (task.effectiveDate == null &&
+        userData != null &&
+        userData!.nomeAnalise.isNotEmpty &&
+        userData!.dataNasc.isNotEmpty) {
       // Tarefa perpétua (nem flow nem agendada): calcula dia pessoal baseado na data de hoje
       try {
         final engine = NumerologyEngine(
@@ -238,7 +243,8 @@ class TaskItem extends StatelessWidget {
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
     // Flag para ícone de foco (tarefas sem data marcadas como foco)
-    final bool shouldShowFocusIcon = !task.hasDeadline && task.startDate == null && task.isFocus;
+    final bool shouldShowFocusIcon =
+        !task.hasDeadline && task.startDate == null && task.isFocus;
 
     // Padding vertical (inalterado)
     const double baseVerticalPadding = 6.0;
