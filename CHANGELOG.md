@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.7](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.6...v1.7.7) (2026-03-12)
+
+
+### Correções de Bugs 🐛
+
+* **CD:** Add comprehensive deployment scripts, AI features, Supabase service integration, and a new dashboard widget. ([3aeb0f9](https://github.com/gmalickovski/sincroapp_flutter/commit/3aeb0f9e6be3e982997bd7c70ec67b5008cbe665))
+
 ### [1.7.6](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.5...v1.7.6) (2026-03-11)
 
 
