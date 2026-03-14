@@ -1142,12 +1142,18 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 break;
               case 'tarefas':
                 milestones = milestones
-                    .where((t) => !t.completed && !t.hasDeadline)
+                    .where((t) => !t.completed &&
+                        (!t.hasDeadline ||
+                            t.recurrenceCategory == 'flow' ||
+                            t.recurrenceCategory == 'flow_instance'))
                     .toList();
                 break;
               case 'agendamentos':
                 milestones = milestones
-                    .where((t) => !t.completed && t.hasDeadline)
+                    .where((t) => !t.completed &&
+                        t.hasDeadline &&
+                        t.recurrenceCategory != 'flow' &&
+                        t.recurrenceCategory != 'flow_instance')
                     .toList();
                 break;
               case 'concluidas':

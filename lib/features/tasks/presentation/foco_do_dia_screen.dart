@@ -708,13 +708,21 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         }).toList();
         break;
       case 'tarefas':
+        // Tarefas = sem dueDate fixo OU tarefas flow/flow_instance (recorrentes sem prazo rígido)
         filteredTasks = allTasks
-            .where((task) => !task.completed && !task.hasDeadline)
+            .where((task) => !task.completed &&
+                (!task.hasDeadline ||
+                    task.recurrenceCategory == 'flow' ||
+                    task.recurrenceCategory == 'flow_instance'))
             .toList();
         break;
       case 'agendamentos':
+        // Agendamentos = com dueDate fixo E não são flow (tarefas commitment com data)
         filteredTasks = allTasks
-            .where((task) => !task.completed && task.hasDeadline)
+            .where((task) => !task.completed &&
+                task.hasDeadline &&
+                task.recurrenceCategory != 'flow' &&
+                task.recurrenceCategory != 'flow_instance')
             .toList();
         break;
       case 'concluidas':
