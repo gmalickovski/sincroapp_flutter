@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.7.11](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.10...v1.7.11) (2026-03-14)
+
+
+### Correções de Bugs 🐛
+
+* **tasks:** improve date handling for overdue logic and task input modals ([1ee5cbb](https://github.com/gmalickovski/sincroapp_flutter/commit/1ee5cbb811e963b820f331d3a6720456b77d7f03))
+
 ### [1.7.10](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.9...v1.7.10) (2026-03-12)
 
 
