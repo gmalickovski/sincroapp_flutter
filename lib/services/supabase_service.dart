@@ -747,7 +747,13 @@ class SupabaseService {
     try {
       final taskData = task.toMap();
       taskData['user_id'] = uid;
-      
+
+      // Safety net: flow tasks always need start_date
+      if (task.recurrenceCategory == 'flow' && taskData['start_date'] == null) {
+        final now = DateTime.now();
+        taskData['start_date'] = DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+      }
+
       // Keep sharedWith mention parsing logic
       taskData['shared_with'] = <String>{
           ...task.sharedWith,
