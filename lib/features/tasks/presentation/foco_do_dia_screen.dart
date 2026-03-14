@@ -272,6 +272,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
+      recurrenceCategory: parsedTask.recurrenceRule.recurrenceCategory,
       recurrenceId: recurrenceId,
       // --- INÃCIO DA MUDANÃ‡A: Salvar o Dia Pessoal calculado ---
       personalDay: finalPersonalDay,
@@ -290,9 +291,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // A logica antiga gerava 100+ tarefas.
     // A nova lÃ³gica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a prÃ³xima ao concluir.
 
-    // Usa a data definida ou 'Hoje'
-    final firstDate =
-        parsedTask.dueDate ?? parsedTask.startDate ?? DateTime.now();
+    // Usa a data definida ou 'Hoje' (meia-noite local)
+    final _nowFallback = DateTime.now();
+    final firstDate = parsedTask.dueDate ?? parsedTask.startDate ??
+        DateTime(_nowFallback.year, _nowFallback.month, _nowFallback.day);
 
     final isFlow = parsedTask.recurrenceRule.recurrenceCategory == 'flow';
 
