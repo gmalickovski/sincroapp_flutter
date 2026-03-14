@@ -750,6 +750,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       } else {
          finalStartDateUtc = DateTime(_selectedStartDate!.year, _selectedStartDate!.month, _selectedStartDate!.day).toUtc();
       }
+    } else if (_recurrenceRule.recurrenceCategory == 'flow') {
+      // Fallback: tarefas flow sempre precisam de start_date
+      final now = DateTime.now();
+      finalStartDateUtc = DateTime(now.year, now.month, now.day).toUtc();
     }
 
     DateTime? reminderAt;

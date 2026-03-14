@@ -333,8 +333,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       reminderTime = TimeOfDay(hour: reminded.hour, minute: reminded.minute);
     }
 
-    // Se recorrência flow e nenhum dia foi escolhido (pode acontecer em alguns fluxos), fixa hoje
-    if (_recurrenceRule.recurrenceCategory == 'flow' && finalDateTime == null) {
+    // Se há recorrência e nenhum dia foi escolhido, usa hoje como start_date padrão
+    if (_recurrenceRule.type != RecurrenceType.none && finalDateTime == null) {
       final now = DateTime.now();
       finalDateTime = DateTime(now.year, now.month, now.day);
       _selectedDay = finalDateTime;

@@ -747,7 +747,13 @@ class SupabaseService {
     try {
       final taskData = task.toMap();
       taskData['user_id'] = uid;
-      
+
+      // Safety net: flow tasks always need start_date
+      if (task.recurrenceCategory == 'flow' && taskData['start_date'] == null) {
+        final now = DateTime.now();
+        taskData['start_date'] = DateTime(now.year, now.month, now.day).toUtc().toIso8601String();
+      }
+
       // Keep sharedWith mention parsing logic
       taskData['shared_with'] = <String>{
           ...task.sharedWith,
@@ -1412,13 +1418,17 @@ class SupabaseService {
 
     TimeOfDay? reminder;
     {
-      // Derive reminderTime from dueDate if it has a non-midnight time
+      // Derive reminderTime from dueDate if it has a non-midnight LOCAL time
+      // IMPORTANTE: usar .toLocal() ANTES de checar hora para evitar falso-positivo com fuso horário
+      // (meia-noite local = 03:00 UTC no Brasil — sem .toLocal() seria incorretamente detectado como horário)
       final dueDateStr = data['due_date'];
       if (dueDateStr != null) {
         final dueParsed = DateTime.tryParse(dueDateStr);
-        if (dueParsed != null && (dueParsed.hour != 0 || dueParsed.minute != 0)) {
+        if (dueParsed != null) {
           final localDue = dueParsed.toLocal();
-          reminder = TimeOfDay(hour: localDue.hour, minute: localDue.minute);
+          if (localDue.hour != 0 || localDue.minute != 0) {
+            reminder = TimeOfDay(hour: localDue.hour, minute: localDue.minute);
+          }
         }
       }
     }
