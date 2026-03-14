@@ -55,8 +55,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   late final String _userId;
   final Uuid _uuid = const Uuid();
 
-  // Filtro ativo: 'foco' (default), 'tarefas', 'agendamentos', 'concluidas', 'atrasadas', null (todas)
-  String? _activeFilter = 'foco';
+  // Filtro ativo: 'tarefas', 'agendamentos', 'concluidas', 'atrasadas', null (todas — padrão)
+  String? _activeFilter;
   DateTime? _selectedDate; // Single date (when start==end)
   DateTime? _startDateFilter; // Range start
   DateTime? _endDateFilter; // Range end
