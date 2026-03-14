@@ -82,8 +82,11 @@ class TaskModel {
     // Fallback para lógica baseada em tempo (compatibilidade com dados antigos)
     // IMPORTANTE: usa .toLocal() para evitar falso-positivo com fuso horário
     // (meia-noite local = 03:00 UTC no Brasil, sem .toLocal() seria detectado como horário)
+    // reminderTime só conta como horário explícito se não for meia-noite
+    final hasExplicitReminder = reminderTime != null &&
+        (reminderTime!.hour != 0 || reminderTime!.minute != 0);
     final localDue = dueDate?.toLocal();
-    return reminderTime != null ||
+    return hasExplicitReminder ||
         (localDue != null && (localDue.hour != 0 || localDue.minute != 0));
   }
 
