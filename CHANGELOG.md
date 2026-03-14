@@ -1,6 +1,23 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.8.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.11...v1.8.0) (2026-03-14)
+
+
+### Correções de Bugs 🐛
+
+* **tasks:** ensure start_date is always saved for flow recurring tasks ([41a68b4](https://github.com/gmalickovski/sincroapp_flutter/commit/41a68b44fbf27bdd2a48a307bff117e9fd66e13d))
+* **tasks:** fix overdue detection for recurring and all-day tasks ([72ef4f4](https://github.com/gmalickovski/sincroapp_flutter/commit/72ef4f42e13c2a6ce183c63160135bfc57bc5549))
+* **tasks:** fix tarefas/agendamentos filter to exclude flow tasks ([72af06e](https://github.com/gmalickovski/sincroapp_flutter/commit/72af06e5a976481f7bb0a2a8900af86fee035a97))
+* **tasks:** fix UTC/local timezone bug in appointment and time detection ([d988777](https://github.com/gmalickovski/sincroapp_flutter/commit/d98877761c21872103686b3b4400e02d03700539))
+* **tasks:** remove foco as default filter on Foco do Dia screen ([e1e124f](https://github.com/gmalickovski/sincroapp_flutter/commit/e1e124febe49f6118842159a00cb0b8c32c788a0))
+* **tasks:** save recurrenceCategory and fix startDate for flow recurring tasks ([9851dd8](https://github.com/gmalickovski/sincroapp_flutter/commit/9851dd8c16021fc8f30d20b0d60e2a6ef4eb8b9d))
+
+
+### Funcionalidades ✨
+
+* **toolbar:** fix left actions and make only filter chips scrollable ([3ff723a](https://github.com/gmalickovski/sincroapp_flutter/commit/3ff723a0cd842fe17ca3265425461fe4312d45ac))
+
 ### [1.7.11](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.10...v1.7.11) (2026-03-14)
 
 
