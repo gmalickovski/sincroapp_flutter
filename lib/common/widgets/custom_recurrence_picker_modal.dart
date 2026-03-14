@@ -1,10 +1,11 @@
-﻿// lib/common/widgets/custom_recurrence_picker_modal.dart
+// lib/common/widgets/custom_recurrence_picker_modal.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'custom_end_date_picker_dialog.dart';
-
+import 'package:sincro_app_flutter/common/widgets/scrollable_chips_row.dart';
 
 // --- Widget do Modal ---
 
@@ -61,17 +62,11 @@ class _CustomRecurrencePickerModalState
   }
 
   Future<void> _showEndDatePicker() async {
-    // Abrir o seletor de data final. Por padr├úo, focar na data de in├¡cio
-    // (ou na data j├í selecionada em `_endDate`) para evitar saltos de m├¬s.
     final DateTime? newEndDate = await showDialog<DateTime>(
       context: context,
       builder: (BuildContext dialogContext) {
         return CustomEndDatePickerDialog(
           userData: widget.userData,
-          // Antes us├ívamos startDate + 30 dias como inicial ÔÇö isso fazia
-          // o calend├írio pular para o m├¬s seguinte (ex: dezembro).
-          // Agora usamos _endDate (se existir) ou o pr├│prio startDate para
-          // que o calend├írio abra no m├¬s esperado.
           initialDate: _endDate ?? widget.startDate,
           firstDate: widget.startDate,
           lastDate: DateTime.now().add(const Duration(days: 365 * 5)),
@@ -80,7 +75,6 @@ class _CustomRecurrencePickerModalState
     );
 
     if (newEndDate != null) {
-      // Salva o final do dia para incluir a data selecionada
       final endOfDay = DateTime(
           newEndDate.year, newEndDate.month, newEndDate.day, 23, 59, 59);
       setState(() {
@@ -91,10 +85,8 @@ class _CustomRecurrencePickerModalState
 
   @override
   Widget build(BuildContext context) {
-    // --- ALTERA├ç├âO (TASK 2): L├│gica de valida├º├úo para o bot├úo OK ---
     final bool isRecurrenceSelected = _selectedType != RecurrenceType.none;
     final bool isEndDateMissing = isRecurrenceSelected && _endDate == null;
-    // --- FIM DA ALTERA├ç├âO ---
 
     return Container(
       padding: const EdgeInsets.only(top: 8.0),
@@ -115,7 +107,6 @@ class _CustomRecurrencePickerModalState
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
                 children: [
                   _buildNaturezaRow(),
                   const Divider(color: AppColors.border, height: 1, indent: 16, endIndent: 16),
@@ -144,9 +135,7 @@ class _CustomRecurrencePickerModalState
             ),
           ),
           const Divider(color: AppColors.border, height: 1),
-          // --- ALTERA├ç├âO (TASK 2): Passa a flag de valida├º├úo para o bot├úo ---
           _buildActionButtons(context, isEndDateMissing: isEndDateMissing),
-          // --- FIM DA ALTERA├ç├âO ---
           SizedBox(
               height: MediaQuery.of(context).padding.bottom > 0
                   ? MediaQuery.of(context).padding.bottom
@@ -166,7 +155,7 @@ class _CustomRecurrencePickerModalState
           width: 40,
           height: 4,
           decoration: BoxDecoration(
-            color: AppColors.tertiaryText.withValues(alpha: 0.5),
+            color: AppColors.tertiaryText.withOpacity(0.5),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
@@ -179,12 +168,62 @@ class _CustomRecurrencePickerModalState
       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
       child: Text(
         "Repetir Tarefa",
-        // --- ALTERA├ç├âO (TASK 1): Garante uso da fonte do tema ---
         style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: AppColors.primaryText,
               fontWeight: FontWeight.bold,
             ),
-        // --- FIM DA ALTERA├ç├âO ---
+      ),
+    );
+  }
+
+  Widget _buildNaturezaRow() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      child: ScrollableChipsRow(
+        children: [
+          _buildCategoryChip("Fixar na Agenda", 'commitment',
+              Icons.push_pin_outlined),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+              "Fluir na Trilha", 'flow', Icons.waves),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, String value, IconData icon) {
+    final isSelected = _selectedCategory == value;
+
+    return ChoiceChip(
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon,
+              size: 16,
+              color: isSelected ? Colors.white : AppColors.secondaryText),
+          const SizedBox(width: 6),
+          Text(label),
+        ],
+      ),
+      selected: isSelected,
+      showCheckmark: false,
+      onSelected: (val) {
+        if (val) {
+          setState(() {
+            _selectedCategory = value;
+          });
+        }
+      },
+      selectedColor: AppColors.primary,
+      backgroundColor: AppColors.background,
+      labelStyle: TextStyle(
+        color: isSelected ? Colors.white : AppColors.secondaryText,
+        fontFamily: 'Poppins',
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+            color: isSelected ? AppColors.primary : AppColors.border),
       ),
     );
   }
@@ -222,7 +261,6 @@ class _CustomRecurrencePickerModalState
             children: [
               Text(
                 title,
-                // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyLarge) ---
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: isSelected
                           ? AppColors.primary
@@ -230,7 +268,6 @@ class _CustomRecurrencePickerModalState
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.w500,
                     ),
-                // --- FIM DA ALTERA├ç├âO ---
               ),
               if (isSelected)
                 const Icon(Icons.check, color: AppColors.primary, size: 20),
@@ -242,9 +279,7 @@ class _CustomRecurrencePickerModalState
   }
 
   Widget _buildWeeklySelector() {
-    // --- ALTERA├ç├âO (TASK 1): Remove decora├º├úo (fundo e borda) ---
     return Container(
-      // decoration: BoxDecoration(...) // REMOVIDO
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -252,13 +287,11 @@ class _CustomRecurrencePickerModalState
           Padding(
             padding: const EdgeInsets.only(left: 8.0),
             child: Text(
-              "REPETIR ├ÇS",
-              // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (labelMedium) ---
+              "REPETIR ÀS",
               style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: AppColors.secondaryText,
                     letterSpacing: 0.5,
                   ),
-              // --- FIM DA ALTERA├ç├âO ---
             ),
           ),
           const SizedBox(height: 12),
@@ -291,36 +324,27 @@ class _CustomRecurrencePickerModalState
           }
         });
       },
-      // --- ALTERA├ç├âO (TASK 1): Raio do InkWell para combinar com o container ---
       borderRadius: BorderRadius.circular(8.0),
-      // --- FIM DA ALTERA├ç├âO ---
       child: Container(
         width: 40,
         height: 40,
         alignment: Alignment.center,
-        // --- ALTERA├ç├âO (TASK 1): Estilo "Contido" Minimalista ---
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(8.0), // Ret├óngulo arredondado
-          // Borda removida para visual mais limpo
+          borderRadius: BorderRadius.circular(8.0),
         ),
-        // --- FIM DA ALTERA├ç├âO ---
         child: Text(
           dayLetter,
-          // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyMedium) ---
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: isSelected ? Colors.white : AppColors.secondaryText,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
               ),
-          // --- FIM DA ALTERA├ç├âO ---
         ),
       ),
     );
   }
 
-  // --- ALTERA├ç├âO (TASK 2): Recebe 'isRecurrenceSelected' ---
   Widget _buildEndConditionRow(bool isRecurrenceSelected) {
-    // --- ALTERA├ç├âO (TASK 2): L├│gica de texto aprimorada ---
     final String endDateText;
     final Color endDateColor;
 
@@ -331,18 +355,16 @@ class _CustomRecurrencePickerModalState
       endDateText = DateFormat.yMd('pt_BR').format(_endDate!);
       endDateColor = AppColors.primary;
     } else {
-      // Pede ao usu├írio para selecionar a data, pois ├® obrigat├│rio
       endDateText = "Selecionar data";
       endDateColor = AppColors.secondaryText;
     }
-    // --- FIM DA ALTERA├ç├âO ---
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: (isRecurrenceSelected)
             ? _showEndDatePicker
-            : null, // S├│ permite clicar se repetir
+            : null, 
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Row(
@@ -352,26 +374,20 @@ class _CustomRecurrencePickerModalState
               const SizedBox(width: 16),
               Text(
                 "Termina em",
-                // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyLarge) ---
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.primaryText,
                       fontWeight: FontWeight.w500,
                     ),
-                // --- FIM DA ALTERA├ç├âO ---
               ),
               const Spacer(),
               Text(
-                // --- ALTERA├ç├âO (TASK 2): Usa nova vari├ível de texto ---
                 endDateText,
-                // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyLarge) ---
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      // --- ALTERA├ç├âO (TASK 2): Usa nova vari├ível de cor ---
                       color: endDateColor,
                       fontWeight: (isRecurrenceSelected && _endDate != null)
                           ? FontWeight.w500
                           : FontWeight.w400,
                     ),
-                // --- FIM DA ALTERA├ç├âO ---
               ),
               const SizedBox(width: 4),
               if (isRecurrenceSelected)
@@ -384,10 +400,8 @@ class _CustomRecurrencePickerModalState
     );
   }
 
-  // --- ALTERA├ç├âO (TASK 2): Recebe 'isEndDateMissing' ---
   Widget _buildActionButtons(BuildContext context,
       {required bool isEndDateMissing}) {
-    // --- FIM DA ALTERA├ç├âO ---
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
@@ -402,12 +416,10 @@ class _CustomRecurrencePickerModalState
               ),
               child: Text(
                 "Cancelar",
-                // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyLarge) ---
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: AppColors.secondaryText,
                       fontWeight: FontWeight.w600,
                     ),
-                // --- FIM DA ALTERA├ç├âO ---
               ),
             ),
           ),
@@ -421,7 +433,6 @@ class _CustomRecurrencePickerModalState
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              // --- ALTERA├ç├âO (TASK 2): Bot├úo ├® desabilitado se a data for obrigat├│ria e estiver faltando ---
               onPressed: isEndDateMissing
                   ? null
                   : () {
@@ -433,8 +444,6 @@ class _CustomRecurrencePickerModalState
                           ? _endDate
                           : null;
 
-                      // Se o bot├úo estava habilitado, 'finalEndDate' n├úo pode ser nulo
-                      // (a menos que o tipo seja 'none')
                       final newRule = RecurrenceRule(
                         type: _selectedType,
                         daysOfWeek: finalDaysOfWeek,
@@ -443,15 +452,12 @@ class _CustomRecurrencePickerModalState
                       );
                       Navigator.pop(context, newRule);
                     },
-              // --- FIM DA ALTERA├ç├âO ---
               child: Text(
                 "OK",
-                // --- ALTERA├ç├âO (TASK 1): Usa fonte do tema (bodyLarge) ---
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,
                     ),
-                // --- FIM DA ALTERA├ç├âO ---
               ),
             ),
           ),

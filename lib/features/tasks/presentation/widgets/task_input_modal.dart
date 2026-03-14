@@ -97,7 +97,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       // --- INÍCIO DA MUDANÇA: Popula os "pills" em vez do texto ---
       _selectedTags = List.from(widget.taskToEdit!.tags);
       _sharedWithUsernames = List.from(widget.taskToEdit!.sharedWith); // NOVO
-      
+
       // Se for task Flow (tem startDate), usa startDate pro Calendar e dueDate fica null no pill se quisermos
       // Mas pro calendário de exibição no input, o pill mostra a data de agendamento, que no Flow é o startDate
       if (widget.taskToEdit!.startDate != null) {
@@ -107,8 +107,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       }
       // --- FIM DA MUDANÇA ---
 
-      initialDateForPill =
-          _selectedDate ?? initialDateForPill;
+      initialDateForPill = _selectedDate ?? initialDateForPill;
       _selectedTime = widget.taskToEdit!.reminderTime;
       _selectedRecurrenceRule = RecurrenceRule(
         type: widget.taskToEdit!.recurrenceType,
@@ -494,7 +493,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
       if (result != null) {
         // Se for uma task FLOW o anchor é o startDate, se for COMMITMENT é o dateTime (dueDate)
         final selectedDateAnchor = result.startDate ?? result.dateTime;
-        
+
         if (selectedDateAnchor != null) {
           final selectedDateMidnight = DateTime(selectedDateAnchor.year,
               selectedDateAnchor.month, selectedDateAnchor.day);
@@ -565,7 +564,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     DateTime? finalDueDate;
     DateTime? finalStartDate;
-    
+
     // Determining if it's a Flow task
     bool isFlowTask = _selectedRecurrenceRule.recurrenceCategory == 'flow';
 
@@ -599,10 +598,17 @@ class _TaskInputModalState extends State<TaskInputModal> {
       }
     }
 
+    // Se é tarefa Flow e ainda não há startDate por alguma razão, usa hoje como fallback e garante valor
+    if (isFlowTask && finalStartDate == null) {
+      final now = DateTime.now();
+      finalStartDate = DateTime(now.year, now.month, now.day);
+    }
+
     final ParsedTask finalParsedTask = textParseResult
         .copyWith(
           dueDate: finalDueDate,
-          startDate: finalStartDate, // Need to make sure ParsedTask supports this if not already
+          startDate:
+              finalStartDate, // Need to make sure ParsedTask supports this if not already
           reminderTime: _selectedTime,
           recurrenceRule: _selectedRecurrenceRule,
           tags: mergedTags.toList(),
@@ -623,7 +629,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     _selectedTime!.hour, _selectedTime!.minute);
               }
               // Calculate reminderAt and ensure UTC for saving
-              return base.subtract(Duration(minutes: _selectedReminderOffsets!.first)).toUtc();
+              return base
+                  .subtract(Duration(minutes: _selectedReminderOffsets!.first))
+                  .toUtc();
             }());
 
     widget.onAddTask(finalParsedTask);
@@ -700,8 +708,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
     bool changed = false;
 
     // 1. Tags
-    final currentTextTags = currentParsed.tags.map((t) => t.toLowerCase()).toSet();
-    final tagsToRemove = _tagsInText.where((t) => !currentTextTags.contains(t)).toList();
+    final currentTextTags =
+        currentParsed.tags.map((t) => t.toLowerCase()).toSet();
+    final tagsToRemove =
+        _tagsInText.where((t) => !currentTextTags.contains(t)).toList();
     for (var t in tagsToRemove) {
       _selectedTags.removeWhere((st) => st.toLowerCase() == t);
       changed = true;
@@ -712,8 +722,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
         .toSet();
 
     // 2. Mentions
-    final currentTextMentions = currentParsed.sharedWith.map((m) => m.toLowerCase()).toSet();
-    final mentionsToRemove = _contactsInText.where((m) => !currentTextMentions.contains(m)).toList();
+    final currentTextMentions =
+        currentParsed.sharedWith.map((m) => m.toLowerCase()).toSet();
+    final mentionsToRemove =
+        _contactsInText.where((m) => !currentTextMentions.contains(m)).toList();
     for (var m in mentionsToRemove) {
       _sharedWithUsernames.removeWhere((sm) => sm.toLowerCase() == m);
       changed = true;
@@ -724,12 +736,17 @@ class _TaskInputModalState extends State<TaskInputModal> {
         .toSet();
 
     // 3. Goal
-    final currentTextGoals = currentParsed.goals.map((g) => TaskParser.normalizeParserKey(g, ParserKeyType.goal)).toSet();
+    final currentTextGoals = currentParsed.goals
+        .map((g) => TaskParser.normalizeParserKey(g, ParserKeyType.goal))
+        .toSet();
     if (_selectedGoalId != null && _selectedGoalTitle != null) {
-      final normalizedGoalTitle = TaskParser.normalizeParserKey(_selectedGoalTitle!, ParserKeyType.goal);
-      
+      final normalizedGoalTitle = TaskParser.normalizeParserKey(
+          _selectedGoalTitle!, ParserKeyType.goal);
+
       if (_goalInText) {
-        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        bool found = currentTextGoals.any((gText) =>
+            normalizedGoalTitle.contains(gText) ||
+            gText.contains(normalizedGoalTitle));
         if (!found) {
           _selectedGoalId = null;
           _selectedGoalTitle = null;
@@ -738,7 +755,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
           changed = true;
         }
       } else {
-        bool found = currentTextGoals.any((gText) => normalizedGoalTitle.contains(gText) || gText.contains(normalizedGoalTitle));
+        bool found = currentTextGoals.any((gText) =>
+            normalizedGoalTitle.contains(gText) ||
+            gText.contains(normalizedGoalTitle));
         if (found) {
           _goalInText = true;
         }
@@ -836,101 +855,110 @@ class _TaskInputModalState extends State<TaskInputModal> {
                   _selectedDate != null ||
                   _selectedTags.isNotEmpty ||
                   _sharedWithUsernames.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 6.0, bottom: 2.0),
-                child: Wrap(
-                  spacing: 6.0, // Espa├ºo horizontal entre os pills
-                  runSpacing: 4.0, // Espa├ºo vertical entre as linhas de pills
-                  children: [
-                    // Pill da Meta (l├│gica que j├í t├¡nhamos)
-                    // Pill da Meta (EXIBIDO APENAS SE NÃO FOR PRÉ-SELECIONADO)
-                    if (_selectedGoalTitle != null &&
-                        _selectedGoalTitle!.isNotEmpty &&
-                        widget.preselectedGoal == null)
-                      _buildPill(
-                        label: _selectedGoalTitle!,
-                        icon: Icons.flag_rounded,
-                        color: Colors.cyanAccent,
-                        onDeleted: widget.preselectedGoal != null
-                            ? null
-                            : () {
-                                // Remove do texto antes de limpar o estado
-                                final goalKey = TaskParser.normalizeParserKey(
-                                    _selectedGoalTitle!, ParserKeyType.goal);
-                                _removeParserTextFromInput('!', goalKey);
-                                setState(() {
-                                  _selectedGoalId = null;
-                                  _selectedGoalTitle = null;
-                                  _selectedGoalDeadline = null;
-                                  _updateParserFlags();
-                                });
-                              },
+                Padding(
+                  padding: const EdgeInsets.only(top: 6.0, bottom: 2.0),
+                  child: Wrap(
+                    spacing: 6.0, // Espa├ºo horizontal entre os pills
+                    runSpacing:
+                        4.0, // Espa├ºo vertical entre as linhas de pills
+                    children: [
+                      // Pill da Meta (l├│gica que j├í t├¡nhamos)
+                      // Pill da Meta (EXIBIDO APENAS SE NÃO FOR PRÉ-SELECIONADO)
+                      if (_selectedGoalTitle != null &&
+                          _selectedGoalTitle!.isNotEmpty &&
+                          widget.preselectedGoal == null)
+                        _buildPill(
+                          label: _selectedGoalTitle!,
+                          icon: Icons.flag_rounded,
+                          color: Colors.cyanAccent,
+                          onDeleted: widget.preselectedGoal != null
+                              ? null
+                              : () {
+                                  // Remove do texto antes de limpar o estado
+                                  final goalKey = TaskParser.normalizeParserKey(
+                                      _selectedGoalTitle!, ParserKeyType.goal);
+                                  _removeParserTextFromInput('!', goalKey);
+                                  setState(() {
+                                    _selectedGoalId = null;
+                                    _selectedGoalTitle = null;
+                                    _selectedGoalDeadline = null;
+                                    _updateParserFlags();
+                                  });
+                                },
+                        ),
+
+                      // Pill da Data (ou Inicio, para Fluxo)
+                      if (_selectedDate != null)
+                        Builder(builder: (_) {
+                          final isFlow =
+                              _selectedRecurrenceRule.recurrenceCategory ==
+                                  'flow';
+                          final now = DateTime.now();
+                          final isToday = _selectedDate!.year == now.year &&
+                              _selectedDate!.month == now.month &&
+                              _selectedDate!.day == now.day;
+                          final String pillLabel = isFlow
+                              ? (isToday
+                                  ? 'Iniciando hoje'
+                                  : 'Iniciando ${_formatDateReadable(_selectedDate!)}')
+                              : _formatDateReadable(_selectedDate!);
+                          return _buildPill(
+                            label: pillLabel,
+                            icon: isFlow
+                                ? Icons.sync
+                                : Icons.calendar_today_rounded,
+                            color: isFlow
+                                ? Colors.purpleAccent
+                                : Colors.orangeAccent,
+                            onDeleted: () {
+                              setState(() {
+                                _selectedDate = null;
+                                _selectedTime = null;
+                                for (final username in _sharedWithUsernames) {
+                                  _removeParserTextFromInput('@', username);
+                                }
+                                _sharedWithUsernames.clear();
+                                _selectedRecurrenceRule = RecurrenceRule();
+                                _updateVibrationForDate(DateTime.now());
+                                _updateParserFlags();
+                              });
+                            },
+                          );
+                        }),
+
+                      // Pills das Tags
+                      ..._selectedTags.map(
+                        (tag) => _buildPill(
+                          label: tag,
+                          icon: Icons.label_rounded,
+                          color: Colors.purpleAccent,
+                          onDeleted: () {
+                            _removeParserTextFromInput('#', tag);
+                            setState(() {
+                              _selectedTags.remove(tag);
+                            });
+                          },
+                        ),
                       ),
 
-                    // Pill da Data (ou Inicio, para Fluxo)
-                    if (_selectedDate != null)
-                      Builder(builder: (_) {
-                        final isFlow = _selectedRecurrenceRule.recurrenceCategory == 'flow';
-                        final now = DateTime.now();
-                        final isToday = _selectedDate!.year == now.year &&
-                            _selectedDate!.month == now.month &&
-                            _selectedDate!.day == now.day;
-                        final String pillLabel = isFlow
-                            ? (isToday ? 'Iniciando hoje' : 'Iniciando ${_formatDateReadable(_selectedDate!)}')
-                            : _formatDateReadable(_selectedDate!);
-                        return _buildPill(
-                          label: pillLabel,
-                          icon: isFlow ? Icons.sync : Icons.calendar_today_rounded,
-                          color: isFlow ? Colors.purpleAccent : Colors.orangeAccent,
+                      // Pills dos Contatos Compartilhados
+                      ..._sharedWithUsernames.map(
+                        (username) => _buildPill(
+                          label: '@$username',
+                          icon: Icons.person,
+                          color: Colors.lightBlueAccent,
                           onDeleted: () {
+                            _removeParserTextFromInput('@', username);
                             setState(() {
-                              _selectedDate = null;
-                              _selectedTime = null;
-                              for (final username in _sharedWithUsernames) {
-                                _removeParserTextFromInput('@', username);
-                              }
-                              _sharedWithUsernames.clear();
-                              _selectedRecurrenceRule = RecurrenceRule();
-                              _updateVibrationForDate(DateTime.now());
+                              _sharedWithUsernames.remove(username);
                               _updateParserFlags();
                             });
                           },
-                        );
-                      }),
-
-                    // Pills das Tags
-                    ..._selectedTags.map(
-                      (tag) => _buildPill(
-                        label: tag,
-                        icon: Icons.label_rounded,
-                        color: Colors.purpleAccent,
-                        onDeleted: () {
-                          _removeParserTextFromInput('#', tag);
-                          setState(() {
-                            _selectedTags.remove(tag);
-                          });
-                        },
+                        ),
                       ),
-                    ),
-
-                    // Pills dos Contatos Compartilhados
-                    ..._sharedWithUsernames.map(
-                      (username) => _buildPill(
-                        label: '@$username',
-                        icon: Icons.person,
-                        color: Colors.lightBlueAccent,
-                        onDeleted: () {
-                          _removeParserTextFromInput('@', username);
-                          setState(() {
-                            _sharedWithUsernames.remove(username);
-                            _updateParserFlags();
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
               // --- FIM: ├üREA DE "PILLS" ---
 
               const SizedBox(height: 6),
@@ -952,9 +980,10 @@ class _TaskInputModalState extends State<TaskInputModal> {
                           ? null
                           : _selectGoal, // Desativa se tiver contatos
                       color: _sharedWithUsernames.isNotEmpty
-                          ? AppColors.tertiaryText
-                              .withValues(alpha: 0.3)
-                          : (_selectedGoalId != null ? Colors.cyanAccent : null),
+                          ? AppColors.tertiaryText.withValues(alpha: 0.3)
+                          : (_selectedGoalId != null
+                              ? Colors.cyanAccent
+                              : null),
                     ),
                   _buildActionButton(
                     icon: Icons.calendar_today_outlined,
@@ -986,7 +1015,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
                         padding: const EdgeInsets.only(left: 6.0),
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            final screenWidth = MediaQuery.of(context).size.width;
+                            final screenWidth =
+                                MediaQuery.of(context).size.width;
                             // On small screens (< 380px), use compact (circle) version
                             return VibrationPill(
                               vibrationNumber: _personalDay,
@@ -1006,7 +1036,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     duration: const Duration(milliseconds: 250),
                     switchInCurve: Curves.easeOutCubic,
                     switchOutCurve: Curves.easeInCubic,
-                    transitionBuilder: (Widget child, Animation<double> animation) {
+                    transitionBuilder:
+                        (Widget child, Animation<double> animation) {
                       return FadeTransition(
                         opacity: animation,
                         child: ScaleTransition(
@@ -1019,7 +1050,8 @@ class _TaskInputModalState extends State<TaskInputModal> {
                     child: _textController.text.trim().isNotEmpty
                         ? Padding(
                             key: const ValueKey('submitButton'),
-                            padding: EdgeInsets.only(left: _personalDay > 0 ? 6.0 : 0.0),
+                            padding: EdgeInsets.only(
+                                left: _personalDay > 0 ? 6.0 : 0.0),
                             child: ElevatedButton(
                               onPressed: _submit,
                               style: ElevatedButton.styleFrom(

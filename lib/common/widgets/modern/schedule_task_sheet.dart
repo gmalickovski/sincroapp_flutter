@@ -50,7 +50,8 @@ class ScheduleTaskSheet extends StatefulWidget {
         context: context,
         builder: (ctx) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          insetPadding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 420),
             child: ScheduleTaskSheet(
@@ -136,10 +137,32 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     final now = DateTime.now();
     _todayMidnight = DateTime(now.year, now.month, now.day);
 
-    _focusedDay = widget.initialDate ?? now;
-    _selectedDay = widget.initialDate;
-    _selectedTime = widget.initialTime;
     _recurrenceRule = widget.initialRecurrence ?? RecurrenceRule();
+
+    _focusedDay = widget.initialDate ?? now;
+    // Se já veio uma data inicial, usa ela. Se não, e recorrência está ativada, seleciona hoje como start_date.
+    if (widget.initialDate != null) {
+      _selectedDay = widget.initialDate;
+    } else if (_recurrenceRule.type != RecurrenceType.none) {
+      _selectedDay = _todayMidnight;
+    } else {
+      _selectedDay = null;
+    }
+    _selectedTime = widget.initialTime;
+
+    // Se recorrência semanal e daysOfWeek não veio, deixa vazio (não marca nada por padrão)
+    if (_recurrenceRule.type == RecurrenceType.weekly &&
+        _recurrenceRule.daysOfWeek.isEmpty) {
+      _recurrenceRule = _recurrenceRule.copyWith(daysOfWeek: []);
+    }
+
+    // Se recorrência semanal e daysOfWeek não veio, deixa vazio (não marca nada por padrão)
+    if (_recurrenceRule.type == RecurrenceType.weekly &&
+        _recurrenceRule.daysOfWeek.isNotEmpty) {
+      // Mantém o que veio
+    } else if (_recurrenceRule.type == RecurrenceType.weekly) {
+      _recurrenceRule = _recurrenceRule.copyWith(daysOfWeek: []);
+    }
     _showRecurrence = _recurrenceRule.type != RecurrenceType.none;
     _showReminder = _selectedReminderOffsets.isNotEmpty;
 
@@ -180,7 +203,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     setState(() {
       if (_selectedDay != null && _isSameDay(_selectedDay!, selectedDay)) {
-        _selectedDay = null; // Toggle off if clicked again
+        if (_recurrenceRule.type != RecurrenceType.none) {
+          // Para recorrências, nunca limpamos startDate/cancelamos o dia selecionado.
+          _focusedDay = focusedDay;
+          return;
+        }
+
+        _selectedDay = null; // Toggle off if clicked again (sem recorrência)
         _showReminder = false;
         _selectedReminderOffsets.clear();
       } else {
@@ -195,7 +224,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       _isAllDay = value;
       // Clear reminders when switching contexts, as the available options change
       _selectedReminderOffsets.clear();
-      
+
       if (value) {
         _selectedTime = null;
       } else {
@@ -304,21 +333,33 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       reminderTime = TimeOfDay(hour: reminded.hour, minute: reminded.minute);
     }
 
+    // Se recorrência flow e nenhum dia foi escolhido (pode acontecer em alguns fluxos), fixa hoje
+    if (_recurrenceRule.recurrenceCategory == 'flow' && finalDateTime == null) {
+      final now = DateTime.now();
+      finalDateTime = DateTime(now.year, now.month, now.day);
+      _selectedDay = finalDateTime;
+      _focusedDay = finalDateTime;
+    }
+
     // --- INÍCIO MUDANÇA (Solicitação 2 & 3): Tratamento de startDate e dueDate ---
     DateTime? explicitDueDate = finalDateTime;
     DateTime? explicitStartDate;
 
-    // Se é um 'Ritual' (Fluir na Trilha)
+    // Tarefas recorrentes ('Fixar' ou 'Fluir') precisam de uma data de início.
+    if (_recurrenceRule.type != RecurrenceType.none) {
+      explicitStartDate = finalDateTime;
+    }
+
+    // Se for 'Fluir na Trilha' (um ritual), não há data de vencimento (prazo).
     if (_recurrenceRule.recurrenceCategory == 'flow') {
-      explicitStartDate = finalDateTime; // A data selecionada âncora a recorrência
       explicitDueDate = null; // Rituais não têm um prazo rígido para "Atraso"
     }
     // --- FIM MUDANÇA ---
 
     final result = DatePickerResult(
-      explicitDueDate, // Envia null se for fluxo
+      explicitDueDate, // Será nulo para 'Fluir na Trilha'
       _recurrenceRule,
-      startDate: explicitStartDate, // INÍCIO MUDANÇA (Solicitação 2 & 3)
+      startDate: explicitStartDate, // Terá valor para qualquer recorrência
       reminderTime: reminderTime,
       reminderOffsets: _selectedReminderOffsets.toList(),
       hasTime: !_isAllDay && _selectedTime != null,
@@ -592,14 +633,18 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     if (_selectedTime?.hour != _initialTime?.hour ||
         _selectedTime?.minute != _initialTime?.minute) return true;
     // Compare recurrence type
-    if (_recurrenceRule.type != (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
-    if (_recurrenceRule.recurrenceCategory != (_initialRecurrence?.recurrenceCategory ?? 'commitment')) return true;
+    if (_recurrenceRule.type !=
+        (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
+    if (_recurrenceRule.recurrenceCategory !=
+        (_initialRecurrence?.recurrenceCategory ?? 'commitment')) return true;
     // Compare recurrence days of week (catches adding/removing a weekday)
     final currentDays = Set<int>.from(_recurrenceRule.daysOfWeek);
     final initialDays = Set<int>.from(_initialRecurrence?.daysOfWeek ?? []);
-    if (!currentDays.containsAll(initialDays) || !initialDays.containsAll(currentDays)) return true;
+    if (!currentDays.containsAll(initialDays) ||
+        !initialDays.containsAll(currentDays)) return true;
     // Compare reminder offsets
-    if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets)) return true;
+    if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets))
+      return true;
     return false;
   }
 
@@ -682,7 +727,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     Widget footerContent;
 
     bool canApply = true;
-    if (_recurrenceRule.recurrenceCategory == 'flow' && _recurrenceRule.type == RecurrenceType.none) {
+    if (_recurrenceRule.recurrenceCategory == 'flow' &&
+        _recurrenceRule.type == RecurrenceType.none) {
       canApply = false;
     }
 
@@ -698,13 +744,12 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             backgroundColor: AppColors.cardBackground,
             padding: const EdgeInsets.symmetric(vertical: 12),
             side: const BorderSide(color: AppColors.border),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
           child: const Text("Fechar",
               style: TextStyle(
-                  color: AppColors.secondaryText,
-                  fontFamily: 'Poppins')),
+                  color: AppColors.secondaryText, fontFamily: 'Poppins')),
         ),
       );
     } else if (!canApply || (_hasInitialData && !_hasModifications)) {
@@ -726,8 +771,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 ),
                 child: const Text("Fechar",
                     style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontFamily: 'Poppins')),
+                        color: AppColors.secondaryText, fontFamily: 'Poppins')),
               ),
             ),
           ),
@@ -746,8 +790,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 ),
                 child: const Text("Limpar",
                     style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontFamily: 'Poppins')),
+                        color: AppColors.secondaryText, fontFamily: 'Poppins')),
               ),
             ),
           ),
@@ -772,8 +815,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 ),
                 child: const Text("Limpar",
                     style: TextStyle(
-                        color: AppColors.secondaryText,
-                        fontFamily: 'Poppins')),
+                        color: AppColors.secondaryText, fontFamily: 'Poppins')),
               ),
             ),
           ),
@@ -784,38 +826,32 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
               child: ElevatedButton(
                 onPressed: _onSave,
                 style: ButtonStyle(
-                  backgroundColor:
-                      WidgetStateProperty.resolveWith<Color>(
-                          (states) => AppColors.primary),
-                  foregroundColor:
-                      WidgetStateProperty.resolveWith<Color>(
-                          (states) => Colors.white),
-                  elevation: WidgetStateProperty.resolveWith<double>(
-                      (states) => 0),
-                  padding: WidgetStateProperty
-                      .resolveWith<EdgeInsetsGeometry>((states) =>
-                          const EdgeInsets.symmetric(vertical: 12)),
+                  backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                      (states) => AppColors.primary),
+                  foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                      (states) => Colors.white),
+                  elevation:
+                      WidgetStateProperty.resolveWith<double>((states) => 0),
+                  padding: WidgetStateProperty.resolveWith<EdgeInsetsGeometry>(
+                      (states) => const EdgeInsets.symmetric(vertical: 12)),
                   shape:
-                      WidgetStateProperty.resolveWith<OutlinedBorder>(
-                          (states) {
+                      WidgetStateProperty.resolveWith<OutlinedBorder>((states) {
                     if (states.contains(WidgetState.hovered)) {
                       return RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(
-                            color: Colors.white, width: 2),
+                        side: const BorderSide(color: Colors.white, width: 2),
                       );
                     }
                     return RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: AppColors.primary, width: 2),
+                      side:
+                          const BorderSide(color: AppColors.primary, width: 2),
                     );
                   }),
                 ),
                 child: const Text("Aplicar",
                     style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Poppins')),
+                        fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
               ),
             ),
           ),
@@ -843,15 +879,17 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   bool get _hasChanges {
     // Basic change detection: if we had initial data and now we don't, that's a change
     if (_hasInitialData && _selectedDay == null) return true;
-    
+
     // Detailed change detection
     if (_initialDay != _selectedDay) return true;
     if (_initialTime != _selectedTime) return true;
     if (_initialRecurrence?.type != _recurrenceRule.type) return true;
     // Reminders
-    if (_initialReminderOffsets.length != _selectedReminderOffsets.length) return true;
-    if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets)) return true;
-    
+    if (_initialReminderOffsets.length != _selectedReminderOffsets.length)
+      return true;
+    if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets))
+      return true;
+
     return false;
   }
 
@@ -953,7 +991,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   value: !_isAllDay,
                   onChanged: (val) => _toggleAllDay(!val),
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
-                  trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                  trackOutlineColor:
+                      WidgetStateProperty.resolveWith<Color?>((states) {
                     if (states.contains(WidgetState.hovered)) {
                       return !_isAllDay ? Colors.white : AppColors.primary;
                     }
@@ -1026,7 +1065,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 Switch(
                   value: _showRecurrence,
                   overlayColor: WidgetStateProperty.all(Colors.transparent),
-                  trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                  trackOutlineColor:
+                      WidgetStateProperty.resolveWith<Color?>((states) {
                     if (states.contains(WidgetState.hovered)) {
                       return _showRecurrence ? Colors.white : AppColors.primary;
                     }
@@ -1075,9 +1115,11 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                         padding: const EdgeInsets.only(bottom: 16.0),
                         child: ScrollableChipsRow(
                           children: [
-                            _buildCategoryChip("Fixar na Agenda", 'commitment', Icons.push_pin_outlined),
+                            _buildCategoryChip("Fixar na Agenda", 'commitment',
+                                Icons.push_pin_outlined),
                             const SizedBox(width: 8),
-                            _buildCategoryChip("Fluir na Trilha", 'flow', Icons.waves),
+                            _buildCategoryChip(
+                                "Fluir na Trilha", 'flow', Icons.waves),
                           ],
                         ),
                       ),
@@ -1113,12 +1155,14 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
 
   Widget _buildCategoryChip(String label, String value, IconData icon) {
     final isSelected = _recurrenceRule.recurrenceCategory == value;
-    
+
     return ChoiceChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: isSelected ? Colors.white : AppColors.secondaryText),
+          Icon(icon,
+              size: 16,
+              color: isSelected ? Colors.white : AppColors.secondaryText),
           const SizedBox(width: 6),
           Text(label),
         ],
@@ -1128,7 +1172,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
       onSelected: (val) {
         if (val) {
           setState(() {
-            _recurrenceRule = _recurrenceRule.copyWith(recurrenceCategory: value);
+            if (_selectedDay == null) {
+              final DateTime nowDate = DateTime.now();
+              _selectedDay = DateTime(nowDate.year, nowDate.month, nowDate.day);
+              _focusedDay = _selectedDay!;
+            }
+            _recurrenceRule =
+                _recurrenceRule.copyWith(recurrenceCategory: value);
           });
         }
       },
@@ -1191,12 +1241,17 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 } else {
                   // Select
                   _recurrenceRule = _recurrenceRule.copyWith(type: type);
-                  // Initialize days if switching to weekly and empty
+                  // Se não há start_date definido (nenhum dia selecionado), usa hoje como âncora
+                  if (_selectedDay == null) {
+                    final DateTime currentDate = DateTime.now();
+                    _selectedDay = DateTime(
+                        currentDate.year, currentDate.month, currentDate.day);
+                    _focusedDay = _selectedDay!;
+                  }
+                  // Não preselecionar dias da semana - o usuário escolhe manualmente
                   if (type == RecurrenceType.weekly &&
-                      _recurrenceRule.daysOfWeek.isEmpty &&
-                      _selectedDay != null) {
-                    _recurrenceRule = _recurrenceRule
-                        .copyWith(daysOfWeek: [_selectedDay!.weekday]);
+                      _recurrenceRule.daysOfWeek.isEmpty) {
+                    _recurrenceRule = _recurrenceRule.copyWith(daysOfWeek: []);
                   }
                 }
               });
@@ -1255,7 +1310,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             setState(() {
               final currentDays = List<int>.from(_recurrenceRule.daysOfWeek);
               if (isSelected) {
-                if (currentDays.length > 1) currentDays.remove(day);
+                currentDays.remove(day);
               } else {
                 currentDays.add(day);
               }
@@ -1264,7 +1319,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
             });
           },
           customBorder: const CircleBorder(),
-          // Reverted hover colors as per user clarification
           child: Container(
             width: 36,
             height: 36,
@@ -1363,13 +1417,15 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                   Switch(
                     value: _showReminder,
                     overlayColor: WidgetStateProperty.all(Colors.transparent),
-                    trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+                    trackOutlineColor:
+                        WidgetStateProperty.resolveWith<Color?>((states) {
                       if (states.contains(WidgetState.hovered)) {
                         return _showReminder ? Colors.white : AppColors.primary;
                       }
                       return Colors.transparent;
                     }),
-                    trackColor: WidgetStateProperty.resolveWith<Color>((states) {
+                    trackColor:
+                        WidgetStateProperty.resolveWith<Color>((states) {
                       if (states.contains(WidgetState.selected)) {
                         return AppColors.primary;
                       }
@@ -1385,7 +1441,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                                 _selectedReminderOffsets.clear();
                               } else {
                                 if (_selectedReminderOffsets.isEmpty) {
-                                  _selectedReminderOffsets.add(hasTime ? 0 : 9 * 60);
+                                  _selectedReminderOffsets
+                                      .add(hasTime ? 0 : 9 * 60);
                                 }
                               }
                             });
@@ -1421,11 +1478,14 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                           ]
                         // LEVEL 2: Task has date but NO time (All-day) -> Show day-based offsets
                         : [
-                            _buildReminderChip("No dia (9:00)", 9 * 60), // Represents 9:00 AM of that day
+                            _buildReminderChip("No dia (9:00)",
+                                9 * 60), // Represents 9:00 AM of that day
                             const SizedBox(width: 8),
-                            _buildReminderChip("1 dia antes (9:00)", 24 * 60 + 9 * 60),
+                            _buildReminderChip(
+                                "1 dia antes (9:00)", 24 * 60 + 9 * 60),
                             const SizedBox(width: 8),
-                            _buildReminderChip("2 dias antes (9:00)", 2 * 24 * 60 + 9 * 60),
+                            _buildReminderChip(
+                                "2 dias antes (9:00)", 2 * 24 * 60 + 9 * 60),
                           ],
                   ),
                 )
@@ -1556,7 +1616,8 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                     isSelected: _isSameDay(day, _selectedDay),
                     isToday: true,
                     isOutside: false,
-                    isProjected: !_isSameDay(day, _selectedDay) && _isDayProjected(day),
+                    isProjected:
+                        !_isSameDay(day, _selectedDay) && _isDayProjected(day),
                     isFlow: _recurrenceRule.recurrenceCategory == 'flow',
                   );
                 },
@@ -1604,12 +1665,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   bool _isDayProjected(DateTime day) {
     if (_selectedDay == null) return false;
     if (_recurrenceRule.type == RecurrenceType.none) return false;
-    
+
     // Projeção apenas ocorre a partir da data de início (start_date) selecionada
     // Removendo o tempo para comparação correta
     final dayDate = DateTime(day.year, day.month, day.day);
-    final selectedDate = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-    
+    final selectedDate =
+        DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
+
     if (dayDate.isBefore(selectedDate)) return false;
 
     if (_recurrenceRule.type == RecurrenceType.daily) {
@@ -1676,8 +1738,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
         color: isEnabled
             ? baseDayTextColor
             : baseDayTextColor.withValues(alpha: 0.4),
-        fontWeight:
-            (isToday || isSelected || isProjected) ? FontWeight.bold : FontWeight.normal,
+        fontWeight: (isToday || isSelected || isProjected)
+            ? FontWeight.bold
+            : FontWeight.normal,
         fontSize: 11,
       ),
     );

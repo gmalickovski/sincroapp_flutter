@@ -14,8 +14,8 @@ class TaskModel {
   final String? journeyId;
   final String? journeyTitle;
   final int? personalDay;
-  final DateTime? startDate; // INÍCIO MUDANÇA (Solicitação 2 & 3): Adicionado startDate
-
+  final DateTime?
+      startDate; // INÍCIO MUDANÇA (Solicitação 2 & 3): Adicionado startDate
 
   final RecurrenceType recurrenceType; // Tipo de recorrência
   final int recurrenceInterval; // Intervalo da recorrência (novo)
@@ -95,7 +95,8 @@ class TaskModel {
     Object? journeyId = const _Undefined(),
     Object? journeyTitle = const _Undefined(),
     Object? personalDay = const _Undefined(),
-    Object? startDate = const _Undefined(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
+    Object? startDate =
+        const _Undefined(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
     RecurrenceType? recurrenceType,
     int? recurrenceInterval,
     List<int>? recurrenceDaysOfWeek,
@@ -160,9 +161,8 @@ class TaskModel {
           ? this.durationMinutes
           : durationMinutes as int?,
       isFocus: isFocus ?? this.isFocus,
-      focusedAt: focusedAt is _Undefined
-          ? this.focusedAt
-          : focusedAt as DateTime?,
+      focusedAt:
+          focusedAt is _Undefined ? this.focusedAt : focusedAt as DateTime?,
     );
   }
 
@@ -218,7 +218,8 @@ class TaskModel {
       text: data['text'] ?? '',
       completed: data['completed'] ?? false,
       createdAt:
-          _parseDate(data['created_at'] ?? data['createdAt'])?.toLocal() ?? DateTime.now(),
+          _parseDate(data['created_at'] ?? data['createdAt'])?.toLocal() ??
+              DateTime.now(),
       dueDate: _parseDate(data['due_date'] ?? data['dueDate'])?.toLocal(),
       tags: List<String>.from(data['tags'] ?? []),
       sharedWith:
@@ -226,19 +227,23 @@ class TaskModel {
       journeyId: data['journey_id'] ?? data['journeyId'],
       journeyTitle: data['journey_title'] ?? data['journeyTitle'],
       personalDay: data['personal_day'] ?? data['personalDay'],
-      startDate: _parseDate(data['start_date'] ?? data['startDate'])?.toLocal(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
+      startDate: _parseDate(data['start_date'] ?? data['startDate'])
+          ?.toLocal(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       recurrenceType: recType,
       recurrenceInterval: recInterval,
       recurrenceDaysOfWeek: recDays,
       recurrenceEndDate:
-          _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate'])?.toLocal(),
+          _parseDate(data['recurrence_end_date'] ?? data['recurrenceEndDate'])
+              ?.toLocal(),
       reminderTime: reminder,
       reminderOffsets: remOffsets,
-      recurrenceCategory: data['recurrence_category'] ?? data['recurrenceCategory'],
+      recurrenceCategory:
+          data['recurrence_category'] ?? data['recurrenceCategory'],
       recurrenceId: data['recurrence_id'] ?? data['recurrenceId'],
       goalId: data['goal_id'] ?? data['goalId'],
       sourceJournalId: data['source_journal_id'] ?? data['sourceJournalId'],
-      completedAt: _parseDate(data['completed_at'] ?? data['completedAt'])?.toLocal(),
+      completedAt:
+          _parseDate(data['completed_at'] ?? data['completedAt'])?.toLocal(),
       reminderAt: _parseDate(data['reminder_at'])?.toLocal(),
       taskType: data['task_type'] ?? data['taskType'],
       durationMinutes: data['duration_minutes'] ?? data['durationMinutes'],
@@ -263,7 +268,9 @@ class TaskModel {
       'journey_id': journeyId,
       'journey_title': journeyTitle,
       'personal_day': personalDay,
-      'start_date': startDate?.toUtc().toIso8601String(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
+      'start_date': startDate
+          ?.toUtc()
+          .toIso8601String(), // INÍCIO MUDANÇA (Solicitação 2 & 3)
       'recurrence_type': recurrenceTypeString,
       'recurrence_interval': recurrenceInterval,
       'recurrence_days_of_week': recurrenceDaysOfWeek,
@@ -285,31 +292,28 @@ class TaskModel {
   Map<String, dynamic> toJson() => toMap();
 
   bool get isOverdue {
-    if (completed) return false;
-    // Rituais fluídos (flow) nunca ficam atrasados
-    if (recurrenceCategory == 'flow') return false;
-    // Tarefas sem vencimento nunca ficam atrasadas
-    if (dueDate == null) return false;
-    final now = DateTime.now();
-    // dueDate ja esta em local (convertido no fromMap/_mapTaskFromSupabase)
-    final localDate = dueDate!;
-
-    // Se tiver dueDate com horario definido (nao meia-noite) ou reminderTime, considera horario exato
-    if ((localDate.hour != 0 || localDate.minute != 0) ||
-        reminderTime != null) {
-      if (durationMinutes != null) {
-        final end = localDate.add(Duration(minutes: durationMinutes!));
-        return end.isBefore(now);
-      }
-      return localDate.isBefore(now);
+    // Tarefas concluídas, sem data de vencimento, ou do tipo 'flow' nunca ficam atrasadas.
+    if (completed || dueDate == null || recurrenceCategory == 'flow') {
+      return false;
     }
 
-    // Senao, compara apenas data (tarefa de dia inteiro)
-    final today = DateTime(now.year, now.month, now.day);
-    final localDateOnly =
-        DateTime(localDate.year, localDate.month, localDate.day);
+    final now = DateTime.now();
+    final localDueDate = dueDate!.toLocal(); // Garante que a data está na timezone local
 
-    return localDateOnly.isBefore(today);
+    // Usa o getter 'isAppointment' para verificar se a tarefa tem um horário específico.
+    final bool isAllDayTask = !isAppointment;
+
+    if (isAllDayTask) {
+      // Tarefas de dia inteiro: ficam atrasadas apenas se o DIA já passou.
+      // Compara as datas ignorando o horário.
+      final today = DateTime(now.year, now.month, now.day);
+      final dueDateOnly =
+          DateTime(localDueDate.year, localDueDate.month, localDueDate.day);
+      return dueDateOnly.isBefore(today);
+    } else {
+      // Tarefas com horário específico: ficam atrasadas se a data E a hora já passaram.
+      return localDueDate.isBefore(now);
+    }
   }
 }
 

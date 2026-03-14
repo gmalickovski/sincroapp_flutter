@@ -223,8 +223,10 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
             : parsedTask.startDate!.toUtc();
         dateForPersonalDay = finalStartDateUtc!;
       } else {
-        final now = DateTime.now().toLocal();
-        dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
+        final now = DateTime.now();
+        final localToday = DateTime(now.year, now.month, now.day);
+        finalStartDateUtc = localToday.toUtc();
+        dateForPersonalDay = finalStartDateUtc;
       }
     } else if (parsedTask.dueDate != null) {
       if (parsedTask.dueDate!.isUtc) {
