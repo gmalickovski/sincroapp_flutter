@@ -80,8 +80,11 @@ class TaskModel {
     if (taskType != null) return taskType == 'appointment';
 
     // Fallback para lógica baseada em tempo (compatibilidade com dados antigos)
+    // IMPORTANTE: usa .toLocal() para evitar falso-positivo com fuso horário
+    // (meia-noite local = 03:00 UTC no Brasil, sem .toLocal() seria detectado como horário)
+    final localDue = dueDate?.toLocal();
     return reminderTime != null ||
-        (dueDate != null && (dueDate!.hour != 0 || dueDate!.minute != 0));
+        (localDue != null && (localDue.hour != 0 || localDue.minute != 0));
   }
 
   TaskModel copyWith({
@@ -292,8 +295,9 @@ class TaskModel {
   Map<String, dynamic> toJson() => toMap();
 
   bool get isOverdue {
-    // Tarefas concluídas, sem data de vencimento, ou do tipo 'flow' nunca ficam atrasadas.
-    if (completed || dueDate == null || recurrenceCategory == 'flow') {
+    // Tarefas concluídas, sem data de vencimento, flow ou recorrentes nunca ficam atrasadas.
+    if (completed || dueDate == null || recurrenceCategory == 'flow' ||
+        recurrenceType != RecurrenceType.none) {
       return false;
     }
 
