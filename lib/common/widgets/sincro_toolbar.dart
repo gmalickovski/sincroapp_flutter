@@ -172,60 +172,70 @@ class _SincroToolbarState extends State<SincroToolbar> {
                 const SizedBox(height: 8),
               ],
 
-              // 2. Actions & Filters Row with scroll arrows
+              // 2. Actions & Filters Row
               SizedBox(
                 height: 40,
                 child: Row(
                   children: [
-                    // Left scroll arrow
-                    if (_showLeftArrow)
-                      _ScrollArrowButton(
-                        direction: AxisDirection.left,
-                        onTap: () {
-                          _filterScrollController.animateTo(
-                            (_filterScrollController.offset - 120).clamp(
-                                0.0,
-                                _filterScrollController
-                                    .position.maxScrollExtent),
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        },
-                      ),
-                    // Scrollable content
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: _filterScrollController,
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        child: Container(
-                          height: 40,
-                          alignment: Alignment.centerLeft,
-                          padding: EdgeInsets.zero,
+                    // LADO ESQUERDO — fixo, sem scroll
+                    ..._buildFixedLeft(),
+
+                    // DIVISÓRIA — fixa
+                    if (widget.filters.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(height: 24, width: 1, color: Colors.white24),
+                      const SizedBox(width: 8),
+                    ],
+
+                    // LADO DIREITO — só os filtros, com scroll
+                    if (widget.filters.isNotEmpty) ...[
+                      if (_showLeftArrow)
+                        _ScrollArrowButton(
+                          direction: AxisDirection.left,
+                          onTap: () {
+                            _filterScrollController.animateTo(
+                              (_filterScrollController.offset - 120).clamp(
+                                  0.0,
+                                  _filterScrollController
+                                      .position.maxScrollExtent),
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOut,
+                            );
+                          },
+                        ),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          controller: _filterScrollController,
+                          scrollDirection: Axis.horizontal,
+                          physics: const BouncingScrollPhysics(),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.center,
-                            children: _buildToolbarChildren(
-                                availableWidth, isDesktop),
+                            children: widget.filters
+                                .map((item) => Padding(
+                                      padding:
+                                          const EdgeInsets.only(right: 8.0),
+                                      child: _SincroFilterChip(item: item),
+                                    ))
+                                .toList(),
                           ),
                         ),
                       ),
-                    ),
-                    // Right scroll arrow
-                    if (_showRightArrow)
-                      _ScrollArrowButton(
-                        direction: AxisDirection.right,
-                        onTap: () {
-                          _filterScrollController.animateTo(
-                            (_filterScrollController.offset + 120).clamp(
-                                0.0,
-                                _filterScrollController
-                                    .position.maxScrollExtent),
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                          );
-                        },
-                      ),
+                      if (_showRightArrow)
+                        _ScrollArrowButton(
+                          direction: AxisDirection.right,
+                          onTap: () {
+                            _filterScrollController.animateTo(
+                              (_filterScrollController.offset + 120).clamp(
+                                  0.0,
+                                  _filterScrollController
+                                      .position.maxScrollExtent),
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOut,
+                            );
+                          },
+                        ),
+                    ],
                   ],
                 ),
               ),
@@ -240,9 +250,10 @@ class _SincroToolbarState extends State<SincroToolbar> {
     );
   }
 
-  List<Widget> _buildToolbarChildren(double availableWidth, bool isDesktop) {
+  // Lado esquerdo fixo: pesquisa, ações, limpar filtros
+  List<Widget> _buildFixedLeft() {
     return [
-      // 1. Search Button (icon-only, toggles search row below)
+      // 1. Search Button
       if (!widget.isSelectionMode && widget.onSearchChanged != null) ...[
         _SincroActionButton(
           key: _searchButtonKey,
@@ -260,7 +271,7 @@ class _SincroToolbarState extends State<SincroToolbar> {
         child: _buildUnifiedActions(),
       ),
 
-      // 3. Clear Filters (Always right next to divider)
+      // 3. Clear Filters
       SizedBox(
         height: 30,
         child: Builder(builder: (context) {
@@ -293,17 +304,6 @@ class _SincroToolbarState extends State<SincroToolbar> {
           );
         }),
       ),
-
-      // 4. Filters Divider and List
-      if (widget.filters.isNotEmpty) ...[
-        const SizedBox(width: 8),
-        Container(height: 24, width: 1, color: Colors.white24),
-        const SizedBox(width: 8),
-        ...widget.filters.map((item) => Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: _SincroFilterChip(item: item),
-            )),
-      ],
     ];
   }
 
