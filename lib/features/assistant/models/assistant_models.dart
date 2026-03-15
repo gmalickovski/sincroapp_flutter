@@ -20,6 +20,7 @@ class AssistantAction {
   final List<String> subtasks;
   final bool isExecuting;
   final bool isExecuted;
+  final bool isCancelled;
   final bool needsUserInput;
   final Map<String, dynamic> data;
 
@@ -34,6 +35,7 @@ class AssistantAction {
     this.suggestedDates = const [],
     this.isExecuting = false,
     this.isExecuted = false,
+    this.isCancelled = false,
     this.needsUserInput = false,
     this.data = const {},
   });
@@ -50,6 +52,7 @@ class AssistantAction {
     List<DateTime>? suggestedDates,
     bool? isExecuting,
     bool? isExecuted,
+    bool? isCancelled,
     bool? needsUserInput,
     Map<String, dynamic>? data,
   }) {
@@ -64,6 +67,7 @@ class AssistantAction {
       suggestedDates: suggestedDates ?? this.suggestedDates,
       isExecuting: isExecuting ?? this.isExecuting,
       isExecuted: isExecuted ?? this.isExecuted,
+      isCancelled: isCancelled ?? this.isCancelled,
       needsUserInput: needsUserInput ?? this.needsUserInput,
       data: data ?? this.data,
     );
@@ -127,11 +131,13 @@ class AssistantAction {
           ? List<String>.from(json['subtasks'].map((e) => e.toString()))
           : const <String>[],
       suggestedDates: suggestions,
-      needsUserInput:
-          json['needsUserInput'] == true, // Parse needsUserInput flag
+      needsUserInput: json['needsUserInput'] == true,
+      isExecuted: json['isExecuted'] == true,   // ← restaura estado do DB
+      isCancelled: json['isCancelled'] == true, // ← restaura estado do DB
       data: extraData,
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'type': type.toString().split('.').last,
@@ -144,6 +150,7 @@ class AssistantAction {
       'suggestedDates': suggestedDates.map((e) => e.toIso8601String()).toList(),
       'isExecuting': isExecuting,
       'isExecuted': isExecuted,
+      'isCancelled': isCancelled,
       'needsUserInput': needsUserInput,
       ...data,
     };

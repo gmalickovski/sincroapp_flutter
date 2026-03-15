@@ -436,18 +436,26 @@ class _AssistantPanelState extends State<AssistantPanel>
         );
 
         // Update UI State (Mark executed & Persist Selected Date)
+        String? messageId;
         setState(() {
           for (var msg in _messages) {
             final index = msg.actions.indexOf(action);
             if (index != -1) {
               msg.actions[index] = action.copyWith(
                 isExecuted: true,
-                date: selectedDate, // Update to show what was picked
+                date: selectedDate,
               );
+              messageId = msg.id;
               break;
             }
           }
         });
+        // Persiste o estado no banco para que o bubble não reapareça ao reabrir o painel
+        if (messageId != null) {
+          final updatedMsg =
+              _messages.firstWhere((m) => m.id == messageId);
+          AssistantService.updateMessageActions(messageId!, updatedMsg.actions);
+        }
       }
     } catch (e) {
       debugPrint("Error executing action: $e");
@@ -497,16 +505,30 @@ class _AssistantPanelState extends State<AssistantPanel>
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
-                  bool shouldAnimate = !_animatedMessageIds.contains(msg.id);
-                  if (shouldAnimate) _animatedMessageIds.add(msg.id);
-
                   return ChatMessageItem(
                     message: msg,
                     isUser: msg.isUser,
-                    animate: shouldAnimate,
+                    animate: false, // sem animação de entrada por mensagem
                     onActionConfirm: _handleActionConfirm,
                     onActionCancel: (action) {
-                      debugPrint("Action cancelled: ${action.type}");
+                      String? messageId;
+                      setState(() {
+                        for (var msg in _messages) {
+                          final index = msg.actions.indexOf(action);
+                          if (index != -1) {
+                            msg.actions[index] =
+                                action.copyWith(isCancelled: true);
+                            messageId = msg.id;
+                            break;
+                          }
+                        }
+                      });
+                      if (messageId != null) {
+                        final updatedMsg = _messages
+                            .firstWhere((m) => m.id == messageId);
+                        AssistantService.updateMessageActions(
+                            messageId!, updatedMsg.actions);
+                      }
                     },
                     userData: widget.userData,
                   );

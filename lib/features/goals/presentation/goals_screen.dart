@@ -499,6 +499,7 @@ class _GoalsScreenState extends State<GoalsScreen> {
           ),
         ),
       ), // This closes ScreenInteractionListener
+      floatingActionButtonLocation: const BottomSafeFabLocation(),
       floatingActionButton: LayoutBuilder(
         builder: (context, constraints) {
           final bool isDesktop = constraints.maxWidth >= kDesktopBreakpoint;

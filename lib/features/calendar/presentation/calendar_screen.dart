@@ -478,6 +478,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                 ),
         ),
       ),
+      floatingActionButtonLocation: const BottomSafeFabLocation(),
       floatingActionButton:
           MediaQuery.of(context).size.width >= kTabletBreakpoint
               ? null

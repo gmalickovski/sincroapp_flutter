@@ -958,6 +958,7 @@ class _JournalScreenState extends State<JournalScreen> {
           ),
         ),
       ),
+      floatingActionButtonLocation: const BottomSafeFabLocation(),
       floatingActionButton: isDesktop
           ? null
           : OpenContainer(

@@ -839,6 +839,7 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
           .schema('sincroapp')
           .from('assistant_messages')
           .insert({
+        'id': message.id, // Preserva o UUID gerado em memória → permite atualizar depois
         'user_id': userId,
         'conversation_id': conversationId,
         'role': message.role,
@@ -849,6 +850,21 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
       _cleanupOldMessages(userId);
     } catch (e) {
       debugPrint('Erro ao salvar mensagem: $e');
+    }
+  }
+
+  /// Persiste o estado atualizado das [actions] de uma mensagem específica
+  /// (ex: isExecuted/isCancelled após o usuário interagir com o bubble).
+  static Future<void> updateMessageActions(
+      String messageId, List<AssistantAction> actions) async {
+    try {
+      await Supabase.instance.client
+          .schema('sincroapp')
+          .from('assistant_messages')
+          .update({'actions': actions.map((e) => e.toJson()).toList()})
+          .eq('id', messageId);
+    } catch (e) {
+      debugPrint('❌ [AssistantService] Erro ao atualizar actions: $e');
     }
   }
 

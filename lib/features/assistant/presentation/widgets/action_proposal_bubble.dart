@@ -27,9 +27,9 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
   @override
   void initState() {
     super.initState();
-    // Initialize with primary date ONLY if provided by action (Intent to schedule specific date)
-    // If it's a suggestion list, start empty to avoid "Data Escolhida" confusion.
     _selectedDate = widget.action.date;
+    // Restaura estado persistido — se o usuário já cancelou/confirmou, mantém esse estado
+    _isCancelled = widget.action.isCancelled;
   }
 
   void _handleConfirm() {

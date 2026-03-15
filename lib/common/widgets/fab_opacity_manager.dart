@@ -82,6 +82,25 @@ class TransparentFabWrapper extends StatelessWidget {
   }
 }
 
+/// Places the FAB 8dp above the bottom safe area instead of the default 16dp,
+/// resulting in a slightly lower visual position while still respecting the
+/// gesture navigation bar on both iOS (home indicator) and Android (gesture bar).
+class BottomSafeFabLocation extends FloatingActionButtonLocation {
+  const BottomSafeFabLocation();
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final double fabX = scaffoldGeometry.scaffoldSize.width
+        - scaffoldGeometry.floatingActionButtonSize.width
+        - 16.0;
+    final double fabY = scaffoldGeometry.scaffoldSize.height
+        - scaffoldGeometry.floatingActionButtonSize.height
+        - 8.0 // 8dp margin (half the default 16dp) → FAB sits lower
+        - scaffoldGeometry.minInsets.bottom; // respects safe area / gesture bar
+    return Offset(fabX, fabY);
+  }
+}
+
 /// Custom FloatingActionButtonAnimator to disable the scaling animation
 class NoScalingAnimation extends FloatingActionButtonAnimator {
   @override

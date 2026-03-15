@@ -18,6 +18,7 @@ import 'widgets/task_detail_modal.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/models/contact_model.dart';
+import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'dart:async';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
@@ -993,6 +994,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       ),
 
       // Esconde FAB em modo de seleÃ§Ã£o e Desktop
+      floatingActionButtonLocation: const BottomSafeFabLocation(),
       floatingActionButton: (_isSelectionMode || isDesktop)
           ? null
           : FloatingActionButton(
