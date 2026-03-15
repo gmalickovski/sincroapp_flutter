@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.12.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.1...v1.12.2) (2026-03-15)
+
+
+### Correções de Bugs 🐛
+
+* **admin:** corrige layout da aba IA no Painel Admin mobile ([c631f14](https://github.com/gmalickovski/sincroapp_flutter/commit/c631f140c44719af8b417140f0512cfe38d7b2a2))
+
 ### [1.12.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.0...v1.12.1) (2026-03-15)
 
 
