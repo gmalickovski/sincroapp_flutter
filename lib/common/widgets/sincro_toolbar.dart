@@ -202,7 +202,10 @@ class _SincroToolbarState extends State<SincroToolbar> {
                               curve: Curves.easeOut,
                             );
                           },
-                        ),
+                        )
+                      else
+                        // Espaço de respiro quando a seta esquerda não está visível
+                        const SizedBox(width: 8),
                       Expanded(
                         child: SingleChildScrollView(
                           controller: _filterScrollController,
@@ -704,14 +707,14 @@ class _ScrollArrowButtonState extends State<_ScrollArrowButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          width: 18, // mínimo possível — só o espaço do ícone
+          width: 20, // mínimo possível — só o espaço do ícone
           padding: EdgeInsets.zero,
           decoration: BoxDecoration(gradient: gradient),
           alignment: Alignment.center,
           child: Icon(
             isLeft ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
             color: _isHovered ? AppColors.primaryAccent : Colors.white60,
-            size: 16,
+            size: 19,
           ),
         ),
       ),
