@@ -1,6 +1,18 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.9.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.8.0...v1.9.0) (2026-03-15)
+
+
+### Correções de Bugs 🐛
+
+* **assistant:** optimize ActionProposalBubble for mobile layout ([dd10876](https://github.com/gmalickovski/sincroapp_flutter/commit/dd10876cd4f39d250eddc230f3a372eba6d3a3e4))
+
+
+### Funcionalidades ✨
+
+* **toolbar:** add frosted gradient effect on scroll arrow buttons ([eebf325](https://github.com/gmalickovski/sincroapp_flutter/commit/eebf32542a8e9631657ffcf139868d985506b3d6))
+
 ## [1.8.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.7.11...v1.8.0) (2026-03-14)
 
 
