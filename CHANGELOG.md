@@ -1,6 +1,18 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.14.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.13.0...v1.14.0) (2026-03-15)
+
+
+### Funcionalidades ✨
+
+* **tasks:** swipe-direito reagenda por dueDate em tarefas não-recorrentes ([9e37a76](https://github.com/gmalickovski/sincroapp_flutter/commit/9e37a761536f48096166f928f9111e8efe285caf))
+
+
+### Correções de Bugs 🐛
+
+* **tasks:** exibe prefixo "Iniciando" em labels de data para tarefas recorrentes ([848a637](https://github.com/gmalickovski/sincroapp_flutter/commit/848a6379f13818e8c285030d8fe279b2239e8950))
+
 ## [1.13.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.2...v1.13.0) (2026-03-15)
 
 
