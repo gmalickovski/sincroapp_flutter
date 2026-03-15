@@ -1800,8 +1800,14 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final tomorrow = today.add(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
-    // Show "Iniciando" prefix for any recurring task (commitment or flow) that has a start_date
-    String prefix = _selectedStartDate != null ? 'Iniciando ' : '';
+    // Mostra "Iniciando" para qualquer tarefa com recorrência ativa
+    // (commitment template, flow, ou instâncias de ambos)
+    final bool isRecurringContext = _recurrenceRule.type != RecurrenceType.none ||
+        _selectedStartDate != null ||
+        widget.task.recurrenceCategory == 'commitment_instance' ||
+        widget.task.recurrenceCategory == 'flow' ||
+        widget.task.recurrenceCategory == 'flow_instance';
+    String prefix = isRecurringContext ? 'Iniciando ' : '';
 
     if (_isSameDay(dateOnly, today)) return '${prefix}Hoje';
     if (_isSameDay(dateOnly, tomorrow)) return '${prefix}Amanhã';
