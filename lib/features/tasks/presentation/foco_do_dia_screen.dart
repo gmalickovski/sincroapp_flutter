@@ -599,7 +599,14 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         final todayStart = DateTime(now.year, now.month, now.day);
         final tomorrowStart = todayStart.add(const Duration(days: 1));
         filteredTasks = allTasks.where((task) {
-          if (task.completed) return false;
+          // Concluídas: mostrar apenas as concluídas HOJE (feedback visual)
+          if (task.completed) {
+            if (task.completedAt == null) return false;
+            final completedLocal = task.completedAt!.toLocal();
+            final completedDateOnly = DateTime(
+                completedLocal.year, completedLocal.month, completedLocal.day);
+            return completedDateOnly == todayStart;
+          }
 
           // Tarefas marcadas como foco
           if (task.isFocus) return true;

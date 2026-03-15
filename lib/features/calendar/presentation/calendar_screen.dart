@@ -11,6 +11,7 @@ import 'package:sincro_app_flutter/features/tasks/services/task_action_service.d
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
+import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
 import 'widgets/calendar_header.dart';
@@ -160,6 +161,13 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Processar tarefas
     for (var task in _currentTasksDueDate) {
       if (task.dueDate != null) {
+        // Calendário exibe apenas agendamentos (tasks com dueDate).
+        // Exclui rituais/flow (aparecem só no foco do dia, não na agenda).
+        final cat = task.recurrenceCategory;
+        if (cat == 'flow' || cat == 'flow_instance') continue;
+        // Exclui templates de recorrência commitment (o calendário usa as instâncias)
+        if (cat == 'commitment' && task.recurrenceType != RecurrenceType.none) continue;
+
         // --- INÍCIO DA CORREÇÃO (Marcadores) ---
         // Usa UTC para chave do mapa de eventos (compatível com CustomCalendar)
         final dateUtc = DateTime.utc(

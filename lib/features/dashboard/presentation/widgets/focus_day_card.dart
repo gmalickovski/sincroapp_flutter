@@ -85,9 +85,13 @@ class _FocusDayCardState extends State<FocusDayCard> {
     final int completedTasks =
         allFocusDayTasks.where((t) => t.completed).length;
 
-    // Para a lista visual, mostramos apenas as não concluídas
-    final tasksToDisplay =
+    // Lista visual: não concluídas primeiro (até 3) + concluídas de hoje (até 2)
+    // para dar feedback visual de progresso sem sobrecarregar o card.
+    final uncompletedDisplay =
         allFocusDayTasks.where((t) => !t.completed).take(3).toList();
+    final completedDisplay =
+        allFocusDayTasks.where((t) => t.completed).take(2).toList();
+    final tasksToDisplay = [...uncompletedDisplay, ...completedDisplay];
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
