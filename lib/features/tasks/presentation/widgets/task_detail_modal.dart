@@ -1587,6 +1587,7 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
             style: TextStyle(
                 fontFamily: 'Poppins', color: textColor, fontSize: 15),
             overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
       ],
@@ -1689,12 +1690,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       ));
     }
 
-    return Wrap(
-      spacing: 12.0,
-      runSpacing: 4.0,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: children,
-    );
+    // Single-line row: earlier items keep natural size, last item truncates if needed
+    if (children.length == 1) return children[0];
+    final List<Widget> rowChildren = [];
+    for (int i = 0; i < children.length; i++) {
+      if (i > 0) rowChildren.add(const SizedBox(width: 12));
+      rowChildren.add(
+        i < children.length - 1 ? children[i] : Flexible(child: children[i]),
+      );
+    }
+    return Row(mainAxisSize: MainAxisSize.min, children: rowChildren);
   }
 
   /// Formats a date as "Hoje", "Amanhã", or the date string.
@@ -1704,8 +1709,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final tomorrow = today.add(const Duration(days: 1));
     final dateOnly = DateTime(date.year, date.month, date.day);
 
-    final isFlow = _recurrenceRule.recurrenceCategory == 'flow';
-    String prefix = isFlow ? 'Iniciando ' : '';
+    // Show "Iniciando" prefix for any recurring task (commitment or flow) that has a start_date
+    String prefix = _selectedStartDate != null ? 'Iniciando ' : '';
 
     if (_isSameDay(dateOnly, today)) return '${prefix}Hoje';
     if (_isSameDay(dateOnly, tomorrow)) return '${prefix}Amanhã';

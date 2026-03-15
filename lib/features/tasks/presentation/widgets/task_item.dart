@@ -202,11 +202,14 @@ class TaskItem extends StatelessWidget {
         task.journeyTitle!.isNotEmpty;
     // final bool shouldShowTagIcon = showTagsIconFlag && task.tags.isNotEmpty; // REMOVIDO
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
-    // Nova lógica: só mostra data se NÃO for recorrente OU se for recorrente do tipo 'commitment'
+    final bool isFlowOrInstance = task.recurrenceCategory == 'flow' ||
+        task.recurrenceCategory == 'flow_instance';
+    final bool isCommitmentOrInstance =
+        task.recurrenceCategory == 'commitment' ||
+        task.recurrenceCategory == 'commitment_instance';
+    // Mostra ícone de data para tarefas normais e recorrentes de compromisso; nunca para flow
     final bool shouldShowDateIcon =
-        (task.hasDeadline || task.startDate != null) &&
-            (!isRecurrent ||
-                (isRecurrent && task.recurrenceCategory == 'commitment'));
+        (task.hasDeadline || task.startDate != null) && !isFlowOrInstance;
     // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
     int? effectivePersonalDay = task.personalDay;
     if (userData != null &&
@@ -225,9 +228,11 @@ class TaskItem extends StatelessWidget {
       } catch (_) {}
     }
 
+    // Pílula só para tarefas normais e commitment; nunca para flow (ritmo livre)
     final bool shouldShowPill = showVibrationPillFlag &&
         effectivePersonalDay != null &&
-        effectivePersonalDay > 0;
+        effectivePersonalDay > 0 &&
+        !isFlowOrInstance;
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
     // Flag para ícone de foco (tarefas sem data marcadas como foco)
@@ -406,17 +411,16 @@ class TaskItem extends StatelessWidget {
                             color: AppColors.primary, // Roxo como destaque
                           ),
                         ),
-                      // --- INÍCIO DA MUDANÇA: Ícone de Recorrência ---
-                      if (task.recurrenceType != RecurrenceType.none)
+                      // Ícone de recorrência: templates recorrentes + instances de commitment/flow
+                      if (isRecurrent || isCommitmentOrInstance || isFlowOrInstance)
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 3.0),
                           child: Icon(
-                            Icons.repeat_rounded, // Ícone de repetição
+                            Icons.repeat_rounded,
                             size: iconIndicatorSize,
                             color: Color(0xFF8B5CF6), // Violet-500
                           ),
                         ),
-                      // --- FIM DA MUDANÇA ---
                       if (shouldShowGoalIcon)
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 3.0),

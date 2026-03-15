@@ -95,7 +95,7 @@ class BottomSafeFabLocation extends FloatingActionButtonLocation {
         - 16.0;
     final double fabY = scaffoldGeometry.scaffoldSize.height
         - scaffoldGeometry.floatingActionButtonSize.height
-        - 8.0 // 8dp margin (half the default 16dp) → FAB sits lower
+        - 16.0 // 16dp margin — matches lateral margin, respects proportions
         - scaffoldGeometry.minInsets.bottom; // respects safe area / gesture bar
     return Offset(fabX, fabY);
   }
