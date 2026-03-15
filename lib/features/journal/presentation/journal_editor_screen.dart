@@ -1216,21 +1216,71 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       ],
     );
 
+    final showToolbarSaveBtn =
+        isMobile && isKeyboardOpen(context) && (_hasUnsavedChanges || _isSaving);
+
     return Container(
-      padding: const EdgeInsets.symmetric(
-          horizontal: 8.0,
-          vertical: 4.0), // Reduced to 8.0 for both to push arrows to edge
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
       decoration: const BoxDecoration(
         color: AppColors.cardBackground,
         border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
-      child: _ScrollableToolbarWrapper(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(
-              minWidth:
-                  600), // Ensure content is wide enough to scroll if needed
-          child: toolbarContent,
-        ),
+      child: Row(
+        children: [
+          // Botões de formatação (rolável)
+          Expanded(
+            child: _ScrollableToolbarWrapper(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 600),
+                child: toolbarContent,
+              ),
+            ),
+          ),
+          // Botão salvar no toolbar — aparece com animação quando teclado visível + alterações
+          AnimatedSize(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeInOut,
+            child: showToolbarSaveBtn
+                ? Padding(
+                    padding: const EdgeInsets.only(left: 6),
+                    child: GestureDetector(
+                      onTap: _hasUnsavedChanges ? _handleSave : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 4,
+                              offset: Offset(0, 2),
+                            )
+                          ],
+                        ),
+                        alignment: Alignment.center,
+                        child: _isSaving
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
       ),
     );
   }
@@ -1453,113 +1503,123 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       ),
       body: editorBody, // Use the body defined above
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         decoration: const BoxDecoration(
           color: AppColors.cardBackground,
           border: Border(top: BorderSide(color: AppColors.border)),
         ),
         child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _MoodSelector(
-              selectedMood: _selectedMood,
-              onMoodSelected: (mood) {
-                setState(() {
-                  _selectedMood = mood == 0 ? null : mood;
-                  _checkForChanges();
-                });
-              },
-            ),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isDesktop && _hasUnsavedChanges)
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Text(
-                      'Ctrl+S',
-                      style: TextStyle(
-                        color: AppColors.secondaryText.withValues(alpha: 0.5),
-                        fontSize: 12,
-                        fontFamily: 'Poppins',
-                      ),
-                    ),
-                  ),
-                if (_hasUnsavedChanges || _isSaving)
-                  AnimatedScale(
-                    scale: _hasUnsavedChanges || _isSaving ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 250),
-                    child: isDesktop
-                        ? // DESKTOP: Capsule Button "Salvar"
-                        ElevatedButton(
-                            onPressed: _hasUnsavedChanges ? _handleSave : null,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 24, vertical: 12),
-                              elevation: 4,
+            // ── Botão salvar mobile (animado) ────────────────────────────
+            // Aparece quando há alterações e empurra os emojis para o lado
+            if (isMobile)
+              AnimatedSize(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                child: (_hasUnsavedChanges || _isSaving)
+                    ? Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: GestureDetector(
+                          onTap: _hasUnsavedChanges ? _handleSave : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 150),
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Colors.black26,
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
+                                )
+                              ],
                             ),
+                            alignment: Alignment.center,
                             child: _isSaving
                                 ? const SizedBox(
-                                    width: 20, // Smaller spinner
+                                    width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
                                       color: Colors.white,
-                                      strokeWidth: 2,
+                                      strokeWidth: 2.5,
                                     ),
                                   )
-                                : const Text(
-                                    'Salvar',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Poppins',
-                                      fontSize: 14,
-                                    ),
+                                : const Icon(
+                                    Icons.check_rounded,
+                                    color: Colors.white,
+                                    size: 22,
                                   ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
+
+            // ── Emojis de humor — ocupa toda a largura restante ──────────
+            Expanded(
+              child: _MoodSelector(
+                selectedMood: _selectedMood,
+                onMoodSelected: (mood) {
+                  setState(() {
+                    _selectedMood = mood == 0 ? null : mood;
+                    _checkForChanges();
+                  });
+                },
+              ),
+            ),
+
+            // ── Desktop: dica Ctrl+S + botão Salvar ─────────────────────
+            if (isDesktop) ...[
+              if (_hasUnsavedChanges)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    'Ctrl+S',
+                    style: TextStyle(
+                      color: AppColors.secondaryText.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              if (_hasUnsavedChanges || _isSaving)
+                AnimatedScale(
+                  scale: _hasUnsavedChanges || _isSaving ? 1.0 : 0.0,
+                  duration: const Duration(milliseconds: 250),
+                  child: ElevatedButton(
+                    onPressed: _hasUnsavedChanges ? _handleSave : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      elevation: 4,
+                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
                           )
-                        : // MOBILE: Round Button (Smaller)
-                        Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: _hasUnsavedChanges ? _handleSave : null,
-                              borderRadius: BorderRadius.circular(50),
-                              child: Container(
-                                padding:
-                                    const EdgeInsets.all(10), // Reduced from 12
-                                decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black26,
-                                        blurRadius: 4,
-                                        offset: Offset(0, 2),
-                                      )
-                                    ]),
-                                child: _isSaving
-                                    ? const SizedBox(
-                                        width: 20, // Reduced from 24
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                          color: Colors.white,
-                                          strokeWidth: 2.5,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.check,
-                                        color: Colors.white,
-                                        size: 20, // Reduced from 24
-                                      ),
-                              ),
+                        : const Text(
+                            'Salvar',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
                             ),
                           ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ],
         ),
       ),
