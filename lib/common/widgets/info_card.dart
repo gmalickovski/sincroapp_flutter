@@ -13,7 +13,8 @@ class InfoCard extends StatefulWidget {
   final bool isEditMode;
   final Widget? dragHandle;
   final bool isDesktopLayout;
-  final Widget? bottomAction; // New parameter
+  final Widget? bottomAction;
+  final Color? highlightBorderColor; // Optional persistent highlight border
 
   const InfoCard({
     super.key,
@@ -27,6 +28,7 @@ class InfoCard extends StatefulWidget {
     this.dragHandle,
     this.isDesktopLayout = false,
     this.bottomAction,
+    this.highlightBorderColor,
   });
 
   @override
@@ -140,11 +142,16 @@ class _InfoCardState extends State<InfoCard> {
   Widget build(BuildContext context) {
     final displayTitle = widget.info.tituloTradicional ?? widget.info.titulo;
 
-    // Compute animated border like GoalCard (purple on hover)
-    final Color borderColor = (_isHovered && !widget.isEditMode)
-        ? AppColors.primary.withValues(alpha: 0.8)
-        : AppColors.border.withValues(alpha: 0.7);
-    final double borderWidth = (_isHovered && !widget.isEditMode) ? 1.5 : 1.0;
+    // Highlight border takes priority, then hover effect, then default
+    final Color borderColor = widget.highlightBorderColor != null && !widget.isEditMode
+        ? widget.highlightBorderColor!.withValues(alpha: 0.8)
+        : (_isHovered && !widget.isEditMode)
+            ? AppColors.primary.withValues(alpha: 0.8)
+            : AppColors.border.withValues(alpha: 0.7);
+    final double borderWidth = (widget.highlightBorderColor != null && !widget.isEditMode) ||
+            (_isHovered && !widget.isEditMode)
+        ? 1.5
+        : 1.0;
 
     // Use a solid high-opacity color instead of Blur for performance
     final cardContent = AnimatedContainer(

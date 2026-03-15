@@ -58,6 +58,23 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     super.dispose();
   }
 
+  bool get _hasInput =>
+      _nameController.text.isNotEmpty ||
+      _birthDateController.text.isNotEmpty ||
+      _selectedUser != null;
+
+  void _clearAll() {
+    setState(() {
+      _nameController.clear();
+      _birthDateController.clear();
+      _selectedUser = null;
+      _result = null;
+      _aiAnalysis = null;
+      _showResultFooter = false;
+    });
+    _tabController.animateTo(0);
+  }
+
   Future<void> _calculate() async {
     if (_nameController.text.isEmpty || _birthDateController.text.length < 10) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -212,31 +229,109 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               ? AnimatedBuilder(
                   animation: _tabController,
                   builder: (context, child) {
-                    // Hide button if we have a result and are on the Result tab (index 1)
                     if (_result != null && _tabController.index == 1) {
                       return const SizedBox.shrink();
                     }
                     return Padding(
                       padding: const EdgeInsets.all(16.0),
-                      child: ElevatedButton(
-                        onPressed: _isLoading ? null : _calculate,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: const StadiumBorder(),
-                          elevation: 4,
-                          shadowColor: AppColors.primary.withValues(alpha: 0.4),
-                        ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Text('Calcular compatibilidade',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 16)),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        transitionBuilder: (child, anim) => FadeTransition(
+                            opacity: anim,
+                            child: ScaleTransition(scale: anim, child: child)),
+                        child: _hasInput
+                            ? Row(
+                                key: const ValueKey('ActionButtons'),
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 48,
+                                      child: OutlinedButton(
+                                        onPressed: _clearAll,
+                                        style: OutlinedButton.styleFrom(
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                          side: const BorderSide(
+                                              color: AppColors.border),
+                                          shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
+                                        ),
+                                        child: const Text('Limpar',
+                                            style: TextStyle(
+                                                color: AppColors.secondaryText,
+                                                fontFamily: 'Poppins')),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 48,
+                                      child: ElevatedButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _calculate,
+                                        style: ButtonStyle(
+                                          backgroundColor: WidgetStateProperty
+                                              .resolveWith<Color>((s) =>
+                                                  AppColors.harmonyPink),
+                                          foregroundColor: WidgetStateProperty
+                                              .resolveWith<Color>(
+                                                  (s) => Colors.white),
+                                          elevation: WidgetStateProperty
+                                              .resolveWith<double>((s) => 0),
+                                          padding: WidgetStateProperty
+                                              .resolveWith<EdgeInsetsGeometry>(
+                                                  (s) =>
+                                                      const EdgeInsets.symmetric(
+                                                          vertical: 12)),
+                                          shape: WidgetStateProperty
+                                              .resolveWith<OutlinedBorder>(
+                                                  (s) => RoundedRectangleBorder(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              12))),
+                                        ),
+                                        child: _isLoading
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: Colors.white))
+                                            : const Text('Calcular',
+                                                style: TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                    fontFamily: 'Poppins')),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : SizedBox(
+                                key: const ValueKey('CloseButton'),
+                                width: double.infinity,
+                                height: 48,
+                                child: OutlinedButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: AppColors.cardBackground,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
+                                    side: const BorderSide(
+                                        color: AppColors.border),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                  ),
+                                  child: const Text('Fechar',
+                                      style: TextStyle(
+                                          color: AppColors.secondaryText,
+                                          fontFamily: 'Poppins')),
+                                ),
+                              ),
                       ),
                     );
                   },

@@ -16,9 +16,7 @@ class _SelectUserModalState extends State<SelectUserModal> {
   final SupabaseService _supabaseService = SupabaseService();
   final String _currentUserId = Supabase.instance.client.auth.currentUser!.id;
 
-  // All contacts (loaded initially)
   List<UserModel> _allContacts = [];
-  // Filtered results to display
   List<UserModel> _displayedUsers = [];
 
   bool _isLoading = true;
@@ -29,12 +27,18 @@ class _SelectUserModalState extends State<SelectUserModal> {
     _loadContacts();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadContacts() async {
     try {
       final contacts = await _supabaseService.getUserContacts(_currentUserId);
       setState(() {
         _allContacts = contacts;
-        _displayedUsers = contacts; // Initially show all contacts
+        _displayedUsers = contacts;
         _isLoading = false;
       });
     } catch (e) {
@@ -44,34 +48,17 @@ class _SelectUserModalState extends State<SelectUserModal> {
 
   void _onSearchChanged(String query) {
     if (query.isEmpty) {
-      // Show all contacts if query is empty
-      setState(() {
-        _displayedUsers = _allContacts;
-      });
+      setState(() => _displayedUsers = _allContacts);
       return;
     }
-
-    // 1. Filter local contacts first (Instant)
-    final localMatches = _allContacts.where((u) {
-      final q = query.toLowerCase();
-      return (u.username?.toLowerCase().contains(q) == true) ||
-          (u.primeiroNome.toLowerCase().contains(q)) ||
-          (u.sobrenome.toLowerCase().contains(q));
-    }).toList();
-
+    final q = query.toLowerCase();
     setState(() {
-      _displayedUsers = localMatches;
+      _displayedUsers = _allContacts.where((u) {
+        return (u.username?.toLowerCase().contains(q) == true) ||
+            (u.primeiroNome.toLowerCase().contains(q)) ||
+            (u.sobrenome.toLowerCase().contains(q));
+      }).toList();
     });
-
-    // 2. If query is long enough, perform global search (Optional, if we want to find NEW people)
-    // For now, based on user request "show contacts I already filter", local filtering is priority.
-    // If we want global search mixed in, we'd need to debouce.
-    // Assuming user wants to search GLOBAL only if not found in contacts?
-    // User said: "Show contacts I already have... and as I type filter them".
-    // It doesn't explicitly forbid global search, but prioritizes contacts.
-    // Let's keep it simple: Local filter of contacts. If they want to search NEW users, maybe a button or if list is empty?
-    // Current imp implements global search on submit. Let's keep global search on submit OR debounce.
-    // Let's do: Local Filter immediately. Global Search on "Search" icon or Enter.
   }
 
   void _performGlobalSearch() async {
@@ -82,8 +69,6 @@ class _SelectUserModalState extends State<SelectUserModal> {
 
     try {
       final globalResults = await _supabaseService.searchUsersByUsername(query);
-      // Remove self and duplicates (keep existing contact objects if possible or just use new ones)
-      // Actually simple list replacement is fine.
       setState(() {
         _displayedUsers =
             globalResults.where((u) => u.uid != _currentUserId).toList();
@@ -99,8 +84,6 @@ class _SelectUserModalState extends State<SelectUserModal> {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamic Height: Use padding for keyboard + wrap in SingleChildScrollView/Column(min)
-    // But we want the LIST to expand.
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -111,69 +94,81 @@ class _SelectUserModalState extends State<SelectUserModal> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         constraints: BoxConstraints(
-          maxHeight:
-              MediaQuery.of(context).size.height * 0.85, // Max height limit
+          maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         child: Column(
-          mainAxisSize: MainAxisSize.min, // Wrap content height
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon:
-                        const Icon(Icons.close, color: AppColors.tertiaryText),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Expanded(
-                    child: Text(
-                      'Selecionar Pessoa',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
+            // Drag handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 4),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
 
-            // Search Bar
+            // Header — centered title, no X button
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Text(
+                'Meus Contatos',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+
+            // Search bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
               child: TextField(
                 controller: _searchController,
                 style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   hintText: 'Buscar por @username ou nome...',
-                  hintStyle: const TextStyle(color: AppColors.secondaryText),
-                  prefixIcon:
-                      const Icon(Icons.search, color: AppColors.primary),
+                  hintStyle:
+                      const TextStyle(color: AppColors.tertiaryText, fontSize: 14),
+                  prefixIcon: const Icon(Icons.search,
+                      color: AppColors.tertiaryText, size: 20),
                   filled: true,
                   fillColor: AppColors.background,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(30),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 ),
-                onChanged: _onSearchChanged, // Real-time filtering
-                onSubmitted: (_) =>
-                    _performGlobalSearch(), // Explicit global search
+                onChanged: _onSearchChanged,
+                onSubmitted: (_) => _performGlobalSearch(),
               ),
             ),
 
-            // Results List
-            // Use Flexible/Expanded to allow list to take space up to MaxHeight
+            // List
             Flexible(
               child: _isLoading
                   ? const Padding(
                       padding: EdgeInsets.all(32.0),
-                      child: CircularProgressIndicator())
+                      child: CircularProgressIndicator(
+                        color: AppColors.harmonyPink,
+                      ),
+                    )
                   : _displayedUsers.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.all(32.0),
@@ -181,54 +176,119 @@ class _SelectUserModalState extends State<SelectUserModal> {
                             _searchController.text.isEmpty
                                 ? 'Você ainda não tem contatos adicionados.'
                                 : 'Nenhum contato encontrado. Pressione Enter para buscar em todos usuários.',
-                            style:
-                                const TextStyle(color: AppColors.secondaryText),
+                            style: const TextStyle(
+                                color: AppColors.secondaryText, fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
                         )
                       : ListView.builder(
-                          shrinkWrap: true, // Allow wrapping if few items
-                          padding: const EdgeInsets.all(16),
+                          shrinkWrap: true,
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
                           itemCount: _displayedUsers.length,
                           itemBuilder: (context, index) {
                             final user = _displayedUsers[index];
-                            return ListTile(
-                              contentPadding: const EdgeInsets.symmetric(
-                                  vertical: 4, horizontal: 8),
-                              leading: CircleAvatar(
-                                backgroundColor:
-                                    AppColors.primary.withValues(alpha: 0.2),
-                                child: Text(
-                                  user.username?[0].toUpperCase() ??
-                                      user.primeiroNome[0].toUpperCase(),
-                                  style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                              title: Text(
+                            final displayName =
                                 user.nomeAnalise.isNotEmpty
                                     ? user.nomeAnalise
                                     : '${user.primeiroNome} ${user.sobrenome}'
-                                        .trim(),
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold),
+                                        .trim();
+                            final username = '@${user.username ?? "user"}';
+                            final initials = (user.username?.isNotEmpty == true
+                                    ? user.username![0]
+                                    : user.primeiroNome[0])
+                                .toUpperCase();
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.background,
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              subtitle: Text(
-                                '@${user.username ?? "user"}',
-                                style: const TextStyle(
-                                    color: AppColors.secondaryText,
-                                    fontSize: 12),
+                              child: InkWell(
+                                onTap: () => _selectUser(user),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  child: Row(
+                                    children: [
+                                      CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: AppColors.harmonyPink
+                                            .withValues(alpha: 0.2),
+                                        child: Text(
+                                          initials,
+                                          style: const TextStyle(
+                                            color: AppColors.harmonyPink,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              username,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              displayName,
+                                              style: const TextStyle(
+                                                color: AppColors.secondaryText,
+                                                fontSize: 13,
+                                              ),
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(Icons.chevron_right,
+                                          color: Colors.white24, size: 24),
+                                    ],
+                                  ),
+                                ),
                               ),
-                              trailing: const Icon(Icons.chevron_right,
-                                  color: Colors.white24),
-                              onTap: () => _selectUser(user), // Select on tap
                             );
                           },
                         ),
             ),
-            const SizedBox(height: 16),
+
+            // Footer — "Fechar" button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: AppColors.cardBackground,
+                    side: const BorderSide(color: AppColors.border),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Fechar',
+                    style: TextStyle(
+                      color: AppColors.secondaryText,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -1412,6 +1412,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   _numerologyData!.numeros['missao'] ?? 0),
               icon: Icons.favorite_border,
               color: Colors.pink.shade200,
+              highlightBorderColor: Colors.pink.shade400,
               isEditMode: _isEditMode,
               dragHandle:
                   _isEditMode ? _buildDragHandle('harmoniaConjugal') : null,
@@ -1419,6 +1420,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   ? null
                   : SizedBox(
                       width: double.infinity,
+                      height: 48,
                       child: ElevatedButton(
                         onPressed: () {
                           if (MediaQuery.of(context).size.width > 600) {
@@ -1441,11 +1443,14 @@ class _DashboardScreenState extends State<DashboardScreen>
                           backgroundColor: Colors.pink.shade400,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 12),
-                          shape: const StadiumBorder(),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
                         child: const Text('Fazer teste de compatibilidade',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Poppins')),
                       ),
                     ),
               onTap: () => _showNumerologyDetail(
