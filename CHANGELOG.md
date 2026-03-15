@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.13.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.2...v1.13.0) (2026-03-15)
+
+
+### Funcionalidades ✨
+
+* **tasks:** swipe só para esquerda + dialog inteligente de exclusão de recorrência ([4ea82d0](https://github.com/gmalickovski/sincroapp_flutter/commit/4ea82d0590fd0590898b4c5f436e13e2023f747f))
+
 ### [1.12.2](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.1...v1.12.2) (2026-03-15)
 
 
