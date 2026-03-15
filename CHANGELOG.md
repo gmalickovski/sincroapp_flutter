@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.12.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.11.1...v1.12.0) (2026-03-15)
+
+
+### Funcionalidades ✨
+
+* **harmony:** redesign conjugal harmony cards and modals ([54e52eb](https://github.com/gmalickovski/sincroapp_flutter/commit/54e52ebd0998b950a3f08c5f5af9fa83d9c0c2ba))
+
 ### [1.11.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.11.0...v1.11.1) (2026-03-15)
 
 
