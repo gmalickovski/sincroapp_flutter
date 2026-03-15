@@ -1591,8 +1591,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ),
             ],
 
-            // ── Desktop: dica Ctrl+S + botão Salvar ─────────────────────
+            // ── Desktop: botão "Salvar e Fechar" (sempre visível) ────────
             if (isDesktop) ...[
+              const SizedBox(width: 12),
               if (_hasUnsavedChanges)
                 Padding(
                   padding: const EdgeInsets.only(right: 8),
@@ -1605,22 +1606,29 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                     ),
                   ),
                 ),
-              if (_hasUnsavedChanges || _isSaving)
-                AnimatedScale(
-                  scale: _hasUnsavedChanges || _isSaving ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 250),
-                  child: ElevatedButton(
-                    onPressed: _hasUnsavedChanges ? _handleSave : null,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(24),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      elevation: 4,
-                    ),
+              // Botão "Salvar e Fechar" — sempre presente no desktop
+              // Com alterações: roxo preenchido (salva e fecha)
+              // Sem alterações: outline branco (só fecha)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  color: (_hasUnsavedChanges || _isSaving)
+                      ? AppColors.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: (_hasUnsavedChanges || _isSaving)
+                      ? null
+                      : Border.all(color: Colors.white54, width: 1.5),
+                ),
+                child: InkWell(
+                  onTap: (_hasUnsavedChanges || _isSaving)
+                      ? (_hasUnsavedChanges ? _handleSave : null)
+                      : () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
                     child: _isSaving
                         ? const SizedBox(
                             width: 20,
@@ -1630,16 +1638,20 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text(
-                            'Salvar',
+                        : Text(
+                            'Salvar e Fechar',
                             style: TextStyle(
-                              fontWeight: FontWeight.bold,
+                              color: (_hasUnsavedChanges)
+                                  ? Colors.white
+                                  : Colors.white54,
+                              fontWeight: FontWeight.w600,
                               fontFamily: 'Poppins',
                               fontSize: 14,
                             ),
                           ),
                   ),
                 ),
+              ),
             ],
           ],
         ),
