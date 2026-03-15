@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.12.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.12.0...v1.12.1) (2026-03-15)
+
+
+### Correções de Bugs 🐛
+
+* **tasks:** corrige ícone de recorrência e pílula no task_item ([afc1f73](https://github.com/gmalickovski/sincroapp_flutter/commit/afc1f73895554b03f66d0142f7db8d86761e8581))
+
 ## [1.12.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.11.1...v1.12.0) (2026-03-15)
 
 
