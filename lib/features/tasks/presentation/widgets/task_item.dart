@@ -204,8 +204,8 @@ class TaskItem extends StatelessWidget {
     final bool isRecurrent = task.recurrenceType != RecurrenceType.none;
     final bool isFlowOrInstance = task.recurrenceCategory == 'flow' ||
         task.recurrenceCategory == 'flow_instance';
-    final bool isCommitmentOrInstance =
-        task.recurrenceCategory == 'commitment' ||
+    // Somente instâncias de commitment (não o valor default 'commitment' em tarefas normais)
+    final bool isCommitmentInstance =
         task.recurrenceCategory == 'commitment_instance';
     // Mostra ícone de data para tarefas normais e recorrentes de compromisso; nunca para flow
     final bool shouldShowDateIcon =
@@ -228,11 +228,10 @@ class TaskItem extends StatelessWidget {
       } catch (_) {}
     }
 
-    // Pílula só para tarefas normais e commitment; nunca para flow (ritmo livre)
+    // Pílula vibracional para todos os tipos de tarefa (commitment, flow, normais)
     final bool shouldShowPill = showVibrationPillFlag &&
         effectivePersonalDay != null &&
-        effectivePersonalDay > 0 &&
-        !isFlowOrInstance;
+        effectivePersonalDay > 0;
     // Nova flag para lembrete
     final bool shouldShowReminderIcon = task.reminderAt != null;
     // Flag para ícone de foco (tarefas sem data marcadas como foco)
@@ -380,7 +379,10 @@ class TaskItem extends StatelessWidget {
                   // shouldShowTagIcon || // REMOVIDO
                   shouldShowReminderIcon ||
                   shouldShowFocusIcon ||
-                  shouldShowPill)
+                  shouldShowPill ||
+                  isRecurrent ||
+                  isCommitmentInstance ||
+                  isFlowOrInstance)
                 Padding(
                   // Alinha com a primeira linha do texto (considerando height 1.45)
                   padding: const EdgeInsets.only(left: 8.0, top: 1.0),
@@ -411,8 +413,10 @@ class TaskItem extends StatelessWidget {
                             color: AppColors.primary, // Roxo como destaque
                           ),
                         ),
-                      // Ícone de recorrência: templates recorrentes + instances de commitment/flow
-                      if (isRecurrent || isCommitmentOrInstance || isFlowOrInstance)
+                      // Ícone de recorrência: apenas templates (recurrenceType != none)
+                      // + instâncias explícitas (commitment_instance / flow / flow_instance)
+                      // Nunca para tarefas normais que têm recurrenceCategory='commitment' por padrão
+                      if (isRecurrent || isCommitmentInstance || isFlowOrInstance)
                         const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 3.0),
                           child: Icon(
@@ -446,8 +450,10 @@ class TaskItem extends StatelessWidget {
                           padding: EdgeInsets.only(
                             left: (shouldShowDateIcon ||
                                     shouldShowGoalIcon ||
-                                    // shouldShowTagIcon ||
-                                    shouldShowReminderIcon) // Ajuste padding
+                                    shouldShowReminderIcon ||
+                                    isRecurrent ||
+                                    isCommitmentInstance ||
+                                    isFlowOrInstance)
                                 ? 6.0
                                 : 0,
                           ),

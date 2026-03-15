@@ -270,7 +270,11 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       recurrenceType: parsedTask.recurrenceRule.type,
       recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
       recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
-      recurrenceCategory: parsedTask.recurrenceRule.recurrenceCategory,
+      // Só salva recurrenceCategory quando a recorrência está ativa;
+      // tarefas normais ficam com null (evita confusão com o valor default 'commitment')
+      recurrenceCategory: parsedTask.recurrenceRule.type != RecurrenceType.none
+          ? parsedTask.recurrenceRule.recurrenceCategory
+          : null,
       recurrenceId: recurrenceId,
       // --- INÃCIO DA MUDANÃ‡A: Salvar o Dia Pessoal calculado ---
       personalDay: finalPersonalDay,

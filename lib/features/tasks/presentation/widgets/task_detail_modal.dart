@@ -782,7 +782,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           : null,
       'recurrenceDaysOfWeek': _recurrenceRule.daysOfWeek,
       'recurrenceEndDate': _recurrenceRule.endDate?.toUtc(),
-      'recurrenceCategory': _recurrenceRule.recurrenceCategory, // ← FIX
+      // Só persiste category quando há recorrência ativa (evita default 'commitment' em tarefas normais)
+      'recurrenceCategory': _recurrenceRule.type != RecurrenceType.none
+          ? _recurrenceRule.recurrenceCategory
+          : null,
       'sharedWith': _currentSharedWith, // NOVO
       'is_focus': _isFocus,
     };
@@ -807,7 +810,10 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           recurrenceType: _recurrenceRule.type,
           recurrenceDaysOfWeek: _recurrenceRule.daysOfWeek,
           recurrenceEndDate: _recurrenceRule.endDate?.toUtc(),
-          recurrenceCategory: _recurrenceRule.recurrenceCategory, // ← FIX
+          // Só persiste category quando há recorrência ativa
+          recurrenceCategory: _recurrenceRule.type != RecurrenceType.none
+              ? _recurrenceRule.recurrenceCategory
+              : null,
           sharedWith: _currentSharedWith,
           reminderAt: reminderAt,
           reminderOffsets: _reminderOffsets,
