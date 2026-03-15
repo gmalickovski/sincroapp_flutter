@@ -9,6 +9,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/features/assistant/ai/content_data_lookup.dart';
+import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
 
 class AiToolHandler {
   final String _userId;
@@ -34,6 +36,8 @@ class AiToolHandler {
           return _buscarConhecimentoSincro(args);
         case 'buscar_relatorios_evolucao':
           return await _buscarRelatoriosEvolucao(args);
+        case 'calcular_datas_favoraveis':
+          return _calcularDatasFavoraveis(args);
         default:
           return {'error': 'Ferramenta desconhecida: $toolName'};
       }
@@ -348,7 +352,11 @@ class AiToolHandler {
       dataNascimento: dataNasc,
     );
 
-    final result = engine.calculateProfile();
+    // calcular() retorna o perfil completo incluindo diaPessoal/mesPessoal/anoPessoal
+    final result = engine.calcular();
+    if (result == null) {
+      return {'error': 'Não foi possível calcular a numerologia. Verifique o nome e data de nascimento.'};
+    }
     debugPrint('[AiToolHandler] calcular_numerologia → ${result.numeros}');
     return result.toJson();
   }
@@ -404,6 +412,112 @@ class AiToolHandler {
       },
       'details': synastry['details'],
     };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // FERRAMENTA 6: Calcular Datas Favoráveis (SincroFlow)
+  // Usa NumerologyEngine + SincroFlow para calcular o Dia Pessoal e o Modo
+  // Estratégico de cada data, cruzando com os Dias Favoráveis pessoais do usuário.
+  // ─────────────────────────────────────────────────────────────────────────
+  Map<String, dynamic> _calcularDatasFavoraveis(Map<String, dynamic> args) {
+    final atividade = args['atividade']?.toString() ?? '';
+    final dataNasc = args['data_nascimento']?.toString() ?? '';
+    final dataInicioStr = args['data_inicio']?.toString() ?? '';
+    final dataFimStr = args['data_fim']?.toString() ?? '';
+    final quantidade = (args['quantidade'] as int?)?.clamp(1, 3) ?? 3;
+
+    if (dataNasc.isEmpty) {
+      return {'error': 'data_nascimento é obrigatório.'};
+    }
+
+    final now = DateTime.now();
+    final inicio = dataInicioStr.isNotEmpty
+        ? DateTime.tryParse(dataInicioStr) ?? now.add(const Duration(days: 1))
+        : now.add(const Duration(days: 1));
+    final fim = dataFimStr.isNotEmpty
+        ? DateTime.tryParse(dataFimStr) ?? now.add(const Duration(days: 30))
+        : inicio.add(const Duration(days: 30));
+
+    // Dias favoráveis pessoais do usuário (números de 1-31 do mês)
+    final engine = NumerologyEngine(nomeCompleto: '', dataNascimento: dataNasc);
+    final diasFavoraveis = engine.calcularDiasFavoraveis();
+
+    final atividadeLower = atividade.toLowerCase();
+    final candidatos = <Map<String, dynamic>>[];
+
+    var current = DateTime(inicio.year, inicio.month, inicio.day);
+    while (!current.isAfter(fim) && candidatos.length < 90) {
+      final personalDay = NumerologyEngine.calculatePersonalDay(current, dataNasc);
+      final mode = StrategyEngine.calculateMode(personalDay);
+      final isDiaFavoravel = diasFavoraveis.contains(current.day);
+
+      // Pontuação base pelo alinhamento do Modo SincroFlow com a atividade
+      double score = _scoreSincroFlowForActivity(mode, atividadeLower);
+
+      // Bônus forte se cair nos Dias Favoráveis pessoais do usuário
+      if (isDiaFavoravel) score += 0.3;
+
+      if (score > 0.4) {
+        final day = current.day.toString().padLeft(2, '0');
+        final month = current.month.toString().padLeft(2, '0');
+        candidatos.add({
+          'data': '$day/$month/${current.year}',
+          'data_iso': DateTime(current.year, current.month, current.day, 9, 0).toUtc().toIso8601String(),
+          'dia_pessoal': personalDay,
+          'modo_sincroflow': StrategyEngine.getModeTitle(mode),
+          'modo_descricao': StrategyEngine.getModeDescription(mode),
+          'dia_favoravel_pessoal': isDiaFavoravel,
+          '_score': score,
+        });
+      }
+      current = current.add(const Duration(days: 1));
+    }
+
+    // Ordenar por score desc → pegar top N → reordenar cronologicamente
+    candidatos.sort((a, b) => (b['_score'] as double).compareTo(a['_score'] as double));
+    final top = candidatos.take(quantidade).toList()
+      ..sort((a, b) => (a['data_iso'] as String).compareTo(b['data_iso'] as String));
+
+    for (final d in top) {
+      d.remove('_score');
+    }
+
+    debugPrint('[AiToolHandler] calcular_datas_favoraveis (SincroFlow) → ${top.length} datas para "$atividade"');
+    return {
+      'atividade': atividade,
+      'quantidade': top.length,
+      'datas_favoraveis': top,
+    };
+  }
+
+  /// Pontua o alinhamento entre um Modo SincroFlow e a atividade descrita.
+  /// Retorna 0.9 se a atividade é compatível com o modo, 0.5 (neutro) caso contrário.
+  double _scoreSincroFlowForActivity(StrategyMode mode, String atividade) {
+    const modeKeywords = <StrategyMode, List<String>>{
+      StrategyMode.focus: [
+        'negóci', 'reunião', 'contrato', 'decisão', 'trabalho', 'financ', 'comprar',
+        'vender', 'investimento', 'emprego', 'entrevista', 'apresentação', 'meta',
+        'objetivo', 'projeto', 'liderança', 'execução', 'resultado',
+      ],
+      StrategyMode.flow: [
+        'família', 'relacionamento', 'casamento', 'conversa', 'parceria', 'colabor',
+        'social', 'evento', 'aniversário', 'encontro', 'confraterniz', 'concluir',
+        'finaliz', 'harmoniz', 'amigo', 'amor',
+      ],
+      StrategyMode.grounding: [
+        'viagem', 'criativ', 'comunicação', 'comunicar', 'escrever', 'arte',
+        'aventura', 'mudança', 'explorar', 'venda', 'palestra', 'flexiv', 'passeio',
+      ],
+      StrategyMode.rescue: [
+        'médico', 'consulta', 'cirurgia', 'hospital', 'saúde', 'exame', 'análise',
+        'estudo', 'meditação', 'espiritualid', 'planejar', 'planejamento', 'reflexão',
+        'terapia', 'descanso', 'retiro',
+      ],
+    };
+
+    final keywords = modeKeywords[mode] ?? [];
+    final hasMatch = keywords.any((k) => atividade.contains(k));
+    return hasMatch ? 0.9 : 0.5;
   }
 
   // ─────────────────────────────────────────────────────────────────────────

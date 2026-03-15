@@ -133,17 +133,6 @@ class ContentDataLookup {
       });
     }
 
-    // Bússola de Atividades
-    final bussola = ContentData.bussolaAtividades[numero];
-    if (bussola != null) {
-      results.add({
-        'source': 'bussola_atividades',
-        'numero': numero,
-        'potencializar': bussola.potencializar,
-        'atencao': bussola.atencao,
-      });
-    }
-
     // Texto dia favorável longo
     final textoLongo = ContentData.textosDiasFavoraveisLongos[numero];
     if (textoLongo != null) {

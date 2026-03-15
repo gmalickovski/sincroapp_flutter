@@ -22,6 +22,8 @@ import 'package:sincro_app_flutter/features/assistant/models/assistant_models.da
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/strategy/models/strategy_mode.dart';
+import 'package:sincro_app_flutter/features/strategy/services/strategy_engine.dart';
+import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
@@ -479,7 +481,8 @@ class AssistantService {
     };
 
     // Extrair múltiplas datas das sugestões da IA (ex: "13 de março às 14h")
-    final suggestionMatches = RegExp(r'(\d{1,2})\s*de\s*([a-zA-Zç]+)(?:\s*(?:[àa]s?)\s*(\d{1,2})h?)?', caseSensitive: false).allMatches(aiAnswer);
+    // Inclui chars acentuados do PT-BR: ã, õ, á, é, í, ó, ú, â, ê, ô, ç
+    final suggestionMatches = RegExp(r'(\d{1,2})\s*de\s*([a-zA-ZçãõáéíóúâêîôûàèìòùÃÕÁÉÍÓÚÂÊÎÔÛÀÈÌÒÙ]+)(?:\s*(?:[àa]s?)\s*(\d{1,2})h?)?', caseSensitive: false).allMatches(aiAnswer);
     
     for (final match in suggestionMatches) {
         final dayStr = match.group(1);
@@ -616,6 +619,38 @@ class AssistantService {
     final weekday = DateFormat('EEEE', 'pt_BR').format(now);
     final isFirst = _isFirstMessageOfDay();
 
+    // Pré-calcular numerologia básica para evitar tool calls desnecessários
+    String numerologyCtx = '';
+    if (user.nomeAnalise.isNotEmpty && user.dataNasc.isNotEmpty) {
+      try {
+        final engine = NumerologyEngine(
+          nomeCompleto: user.nomeAnalise,
+          dataNascimento: user.dataNasc,
+        );
+        final profile = engine.calcular();
+        if (profile != null) {
+          final n = profile.numeros;
+          final diaPessoal = n['diaPessoal'] as int? ?? 1;
+          final sincroMode = StrategyEngine.calculateMode(diaPessoal);
+          final modeTitle = StrategyEngine.getModeTitle(sincroMode);
+          final modeDesc = StrategyEngine.getModeDescription(sincroMode);
+          numerologyCtx = '''
+## Números Pessoais Pré-Calculados (use diretamente — não chame calcular_numerologia para estes)
+- Dia Pessoal: **${n['diaPessoal'] ?? '?'}**
+- Mês Pessoal: **${n['mesPessoal'] ?? '?'}**
+- Ano Pessoal: **${n['anoPessoal'] ?? '?'}**
+- Número de Destino: **${n['destino'] ?? '?'}**
+- Número de Expressão: **${n['expressao'] ?? '?'}**
+- Harmonia Conjugal: **${n['harmoniaConjugal'] ?? '?'}**
+## Modo SincroFlow de Hoje
+- Modo: **$modeTitle**
+- Estratégia: $modeDesc''';
+        }
+      } catch (_) {
+        // Falha silenciosa — IA usará ferramenta se precisar
+      }
+    }
+
     return '''
 # CONTEXTO DO USUÁRIO
 - Nome: ${user.primeiroNome} ${user.sobrenome}
@@ -625,6 +660,7 @@ class AssistantService {
 - Data atual: $dateStr ($weekday)
 - Hora atual: $timeStr
 - Primeira interação do dia: ${isFirst ? 'SIM (cumprimente com carinho)' : 'NÃO (não reintroduza)'}
+$numerologyCtx
 ''';
   }
 

@@ -47,7 +47,7 @@ class AiConfig {
       double.tryParse(dotenv.env['AI_TEMPERATURE'] ?? '0.7') ?? 0.7;
 
   static int get maxTokens =>
-      int.tryParse(dotenv.env['AI_MAX_TOKENS'] ?? '1024') ?? 1024;
+      int.tryParse(dotenv.env['AI_MAX_TOKENS'] ?? '2048') ?? 2048;
 
   /// Número máximo de iterações de ferramentas por resposta.
   /// Proteção anti-loop: se ultrapassar, a IA retorna mensagem de erro amigável.
@@ -183,6 +183,40 @@ class AiConfig {
                   'description': 'Máx relatórios (padrão: 5).',
                 },
               },
+            },
+          },
+        },
+        {
+          'type': 'function',
+          'function': {
+            'name': 'calcular_datas_favoraveis',
+            'description':
+                'Calcula as melhores datas para uma atividade com base na numerologia pessoal. Use SEMPRE que o usuário pedir sugestão de data(s) favorável(is) para alguma atividade.',
+            'parameters': {
+              'type': 'object',
+              'properties': {
+                'atividade': {
+                  'type': 'string',
+                  'description': 'Descrição da atividade. Ex: "reunião de negócios", "consulta médica", "viagem".',
+                },
+                'data_nascimento': {
+                  'type': 'string',
+                  'description': 'Data de nascimento do usuário em DD/MM/AAAA.',
+                },
+                'data_inicio': {
+                  'type': 'string',
+                  'description': 'ISO 8601. Data inicial do período de busca. Padrão: amanhã.',
+                },
+                'data_fim': {
+                  'type': 'string',
+                  'description': 'ISO 8601. Data final do período de busca. Padrão: 30 dias após início.',
+                },
+                'quantidade': {
+                  'type': 'integer',
+                  'description': 'Número de datas a sugerir, máximo 3. Padrão: 3.',
+                },
+              },
+              'required': ['atividade', 'data_nascimento'],
             },
           },
         },
