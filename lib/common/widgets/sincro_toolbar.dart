@@ -184,7 +184,7 @@ class _SincroToolbarState extends State<SincroToolbar> {
                     if (widget.filters.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(height: 24, width: 1, color: Colors.white24),
-                      const SizedBox(width: 8),
+                      // Sem SizedBox aqui — a seta cola diretamente no divisor
                     ],
 
                     // LADO DIREITO — só os filtros, com scroll
@@ -683,17 +683,17 @@ class _ScrollArrowButtonState extends State<_ScrollArrowButton> {
   Widget build(BuildContext context) {
     final isLeft = widget.direction == AxisDirection.left;
 
-    // Gradiente que "embaça" os chips por trás — começa transparente e vai
-    // até a cor de fundo do app, criando o efeito de desfoque suave.
+    // Gradiente sutil — transparente → cor do fundo, para "embaçar"
+    // os chips por trás sem tomar espaço visual desnecessário.
     final gradient = LinearGradient(
       begin: isLeft ? Alignment.centerRight : Alignment.centerLeft,
       end: isLeft ? Alignment.centerLeft : Alignment.centerRight,
       colors: [
         AppColors.background.withValues(alpha: 0.0),
-        AppColors.background.withValues(alpha: 0.75),
-        AppColors.background.withValues(alpha: 0.95),
+        AppColors.background.withValues(alpha: 0.6),
+        AppColors.background.withValues(alpha: 0.85),
       ],
-      stops: const [0.0, 0.5, 1.0],
+      stops: const [0.0, 0.55, 1.0],
     );
 
     return MouseRegion(
@@ -704,15 +704,14 @@ class _ScrollArrowButtonState extends State<_ScrollArrowButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          width: 28,
-          // Padding: zero horizontal, mantém só o espaço vertical via height
+          width: 18, // mínimo possível — só o espaço do ícone
           padding: EdgeInsets.zero,
           decoration: BoxDecoration(gradient: gradient),
           alignment: Alignment.center,
           child: Icon(
             isLeft ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-            color: _isHovered ? AppColors.primaryAccent : Colors.white70,
-            size: 20,
+            color: _isHovered ? AppColors.primaryAccent : Colors.white60,
+            size: 16,
           ),
         ),
       ),
