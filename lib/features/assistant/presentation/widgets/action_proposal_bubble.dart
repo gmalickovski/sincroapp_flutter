@@ -45,37 +45,6 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
     widget.onCancel();
   }
 
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-    );
-
-    if (pickedDate != null && mounted) {
-      final pickedTime = await showTimePicker(
-        context: context,
-        initialTime: _selectedDate != null
-            ? TimeOfDay.fromDateTime(_selectedDate!)
-            : const TimeOfDay(hour: 9, minute: 0),
-      );
-
-      if (pickedTime != null && mounted) {
-        setState(() {
-          _selectedDate = DateTime(
-            pickedDate.year,
-            pickedDate.month,
-            pickedDate.day,
-            pickedTime.hour,
-            pickedTime.minute,
-          );
-        });
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isCancelled) {
@@ -90,9 +59,6 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
     final payload =
         widget.action.data['payload'] as Map<String, dynamic>? ?? {};
     final title = widget.action.title ?? payload['title'] ?? 'Nova Ação';
-    // Tags from payload
-    final tags =
-        (payload['tags'] as List?)?.map((e) => e.toString()).toList() ?? [];
 
     // Suggestions
     final suggestions = widget.action.suggestedDates;
@@ -223,9 +189,15 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
     }
 
     final bool timeSpecified = isTimeExplicitlySpecified();
+    final isMobile = MediaQuery.of(context).size.width < 500;
 
     return Container(
-      margin: const EdgeInsets.only(top: 12, bottom: 12, left: 24, right: 8),
+      margin: EdgeInsets.only(
+        top: 12,
+        bottom: 12,
+        left: isMobile ? 8 : 24,
+        right: 8,
+      ),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(20),
@@ -401,11 +373,19 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                 Row(
                   children: [
                     Expanded(
-                      child: TextButton(
+                      child: OutlinedButton(
                         onPressed: _handleCancel,
-                        style: TextButton.styleFrom(
-                            foregroundColor: Colors.white60),
-                        child: const Text("Cancelar"),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white60,
+                          side: const BorderSide(color: Colors.white24),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                        ),
+                        child: const Text(
+                          "Cancelar",
+                          style: TextStyle(fontSize: 14),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -422,9 +402,13 @@ class _ActionProposalBubbleState extends State<ActionProposalBubble> {
                               borderRadius: BorderRadius.circular(12)),
                           elevation: 0,
                         ),
-                        child: Text(_selectedDate == requestedDate
-                            ? "Confirmar Agendamento"
-                            : "Confirmar Nova Data"),
+                        child: const Text(
+                          "Confirmar",
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
                     ),
                   ],
