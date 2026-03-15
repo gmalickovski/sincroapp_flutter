@@ -1,6 +1,20 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.11.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.10.0...v1.11.0) (2026-03-15)
+
+
+### Funcionalidades ✨
+
+* **tasks,calendar:** completed-today in foco filter, exclude flow from calendar ([7306893](https://github.com/gmalickovski/sincroapp_flutter/commit/730689303e17e12e29d7637fc49bff786d877bca))
+* **tasks:** implement correct recurring logic for commitment and flow tasks ([218b729](https://github.com/gmalickovski/sincroapp_flutter/commit/218b7299ef683878fdfc5379fec3e36efdd0de60))
+
+
+### Correções de Bugs 🐛
+
+* **ui:** add dividers to task modal, fix bottom spacing in modals, reduce dashboard card gaps ([de3defb](https://github.com/gmalickovski/sincroapp_flutter/commit/de3defb3524ce16fc7de0e9155b4d54854f0f4f5))
+* **ui:** lower FAB position, fix assistant bubble persistence, remove chat scroll animations ([bd6dce4](https://github.com/gmalickovski/sincroapp_flutter/commit/bd6dce4796a43cf7fe01b67b1c39e3a565200b28))
+
 ## [1.10.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.9.0...v1.10.0) (2026-03-15)
 
 
