@@ -502,7 +502,6 @@ class _SincroActionButton extends StatefulWidget {
   final String? tooltip;
   final Color? activeColor;
   final bool isCircular;
-  final bool useGreyishStyle;
   final bool forceFill;
   final bool useWhiteBorderOnActive;
   final Color? overrideColor;
@@ -517,7 +516,6 @@ class _SincroActionButton extends StatefulWidget {
     this.tooltip,
     this.activeColor,
     this.isCircular = false,
-    this.useGreyishStyle = false,
     this.forceFill = false,
     this.useWhiteBorderOnActive = false,
     this.overrideColor,
@@ -684,6 +682,20 @@ class _ScrollArrowButtonState extends State<_ScrollArrowButton> {
   @override
   Widget build(BuildContext context) {
     final isLeft = widget.direction == AxisDirection.left;
+
+    // Gradiente que "embaça" os chips por trás — começa transparente e vai
+    // até a cor de fundo do app, criando o efeito de desfoque suave.
+    final gradient = LinearGradient(
+      begin: isLeft ? Alignment.centerRight : Alignment.centerLeft,
+      end: isLeft ? Alignment.centerLeft : Alignment.centerRight,
+      colors: [
+        AppColors.background.withValues(alpha: 0.0),
+        AppColors.background.withValues(alpha: 0.75),
+        AppColors.background.withValues(alpha: 0.95),
+      ],
+      stops: const [0.0, 0.5, 1.0],
+    );
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -692,13 +704,15 @@ class _ScrollArrowButtonState extends State<_ScrollArrowButton> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          width: 20,
-          height: 40,
+          width: 28,
+          // Padding: zero horizontal, mantém só o espaço vertical via height
+          padding: EdgeInsets.zero,
+          decoration: BoxDecoration(gradient: gradient),
           alignment: Alignment.center,
           child: Icon(
             isLeft ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-            color: _isHovered ? AppColors.primary : Colors.white54,
-            size: 18,
+            color: _isHovered ? AppColors.primaryAccent : Colors.white70,
+            size: 20,
           ),
         ),
       ),
