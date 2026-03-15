@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.15.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.14.0...v1.15.0) (2026-03-15)
+
+
+### Funcionalidades ✨
+
+* **assistant:** redesenha Sincro IA com SincroFlow, contexto pré-calculado e nova tool de datas ([dcd1024](https://github.com/gmalickovski/sincroapp_flutter/commit/dcd1024485a920d03facf01c2267d079ad9a682c))
+
 ## [1.14.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.13.0...v1.14.0) (2026-03-15)
 
 
