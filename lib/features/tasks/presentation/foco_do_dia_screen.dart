@@ -99,6 +99,8 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
         if (mounted) setState(() => _availableGoals = goals);
       });
       _fetchContacts();
+      // Cria instâncias de recorrência (commitment/flow) que ainda não existem no banco
+      _supabaseService.ensureRecurringInstances(_userId);
     }
     if (_userId.isEmpty) {
       debugPrint("ERRO: FocoDoDiaScreen acessada sem usuÃ¡rio logado!");
@@ -918,6 +920,12 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   // Swipe Right: Reagendar (com deadline) ou Toggle Foco (sem deadline)
   Future<bool?> _handleSwipeRight(TaskModel task) async {
     if (widget.userData == null) return false;
+
+    // Instâncias de recorrência não podem ser reagendadas (possuem data fixa da recorrência)
+    if (task.recurrenceCategory == 'commitment_instance' ||
+        task.recurrenceCategory == 'flow_instance') {
+      return false;
+    }
 
     // Tarefas sem data: toggle foco
     if (!task.hasDeadline) {

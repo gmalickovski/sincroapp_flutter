@@ -2328,6 +2328,141 @@ class SupabaseService {
     }
   }
 
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  // ─── Recurring instances management ─────────────────────────────────────────
+
+  /// Cria no banco as instâncias de recorrência que ainda não existem:
+  ///  - **commitment**: cada data de recorrência dos últimos [lookbackDays] até hoje.
+  ///  - **flow**: somente hoje (instâncias de dias anteriores não são criadas;
+  ///    tarefas flow não acumulam).
+  ///
+  /// Deve ser chamado uma vez por sessão, no initState da tela de tarefas.
+  Future<void> ensureRecurringInstances(String uid,
+      {int lookbackDays = 30}) async {
+    try {
+      final now = DateTime.now();
+      final todayOnly = DateTime(now.year, now.month, now.day);
+
+      // 1. Buscar templates de recorrência ativos
+      final templatesRaw = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select()
+          .eq('user_id', uid)
+          .eq('completed', false)
+          .inFilter('recurrence_category', ['commitment', 'flow'])
+          .neq('recurrence_type', 'none');
+
+      if (templatesRaw.isEmpty) return;
+
+      final templates =
+          (templatesRaw as List).map((r) => _mapTaskFromSupabase(r)).toList();
+
+      // 2. Buscar instâncias já existentes (commitment_instance + flow_instance)
+      final instancesRaw = await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .select('id, recurrence_id, due_date, recurrence_category')
+          .eq('user_id', uid)
+          .inFilter(
+              'recurrence_category', ['commitment_instance', 'flow_instance']);
+
+      final existingInstances = (instancesRaw as List).map((r) {
+        final raw = r as Map<String, dynamic>;
+        return (
+          recurrenceId: raw['recurrence_id'] as String?,
+          dueDate: raw['due_date'] != null
+              ? DateTime.parse(raw['due_date'] as String).toLocal()
+              : null,
+          category: raw['recurrence_category'] as String?,
+        );
+      }).toList();
+
+      // 3. Gerar e inserir instâncias em batch
+      final List<Map<String, dynamic>> toInsert = [];
+
+      for (final template in templates) {
+        final isCommitment = template.recurrenceCategory == 'commitment';
+        final anchor = template.dueDate ?? template.startDate;
+        if (anchor == null) continue;
+
+        final anchorLocal = anchor.toLocal();
+        final anchorOnly =
+            DateTime(anchorLocal.year, anchorLocal.month, anchorLocal.day);
+
+        // Commitment: olha desde max(anchor, hoje-lookback); Flow: só hoje
+        final checkFrom = isCommitment
+            ? (anchorOnly.isBefore(
+                    todayOnly.subtract(Duration(days: lookbackDays)))
+                ? todayOnly.subtract(Duration(days: lookbackDays))
+                : anchorOnly)
+            : todayOnly;
+
+        DateTime cursor = checkFrom;
+        while (!cursor.isAfter(todayOnly)) {
+          if (_doesRecurrenceMatch(template, cursor)) {
+            final alreadyExists = existingInstances.any((inst) =>
+                inst.recurrenceId == template.id &&
+                inst.dueDate != null &&
+                _isSameDay(inst.dueDate!, cursor) &&
+                inst.category ==
+                    (isCommitment
+                        ? 'commitment_instance'
+                        : 'flow_instance'));
+
+            if (!alreadyExists) {
+              // Preserva a hora do template (para appointments com horário)
+              DateTime instanceDue;
+              if (template.dueDate != null && template.isAppointment) {
+                final t = template.dueDate!.toLocal();
+                instanceDue = DateTime(
+                    cursor.year, cursor.month, cursor.day, t.hour, t.minute);
+              } else {
+                instanceDue = cursor;
+              }
+
+              toInsert.add({
+                'user_id': uid,
+                'text': template.text,
+                'completed': false,
+                'due_date': instanceDue.toUtc().toIso8601String(),
+                'tags': template.tags,
+                'shared_with': template.sharedWith,
+                'recurrence_category':
+                    isCommitment ? 'commitment_instance' : 'flow_instance',
+                'recurrence_id': template.id,
+                'recurrence_type': 'none',
+                'recurrence_interval': 1,
+                'task_type': template.taskType,
+                'journey_id': template.journeyId,
+                'journey_title': template.journeyTitle,
+                'goal_id': template.goalId,
+                'duration_minutes': template.durationMinutes,
+                'reminder_offsets': template.reminderOffsets,
+              });
+            }
+          }
+          cursor = cursor.add(const Duration(days: 1));
+        }
+      }
+
+      if (toInsert.isNotEmpty) {
+        await _supabase.schema('sincroapp').from('tasks').insert(toInsert);
+        debugPrint(
+            '✅ [SupabaseService] ${toInsert.length} instância(s) de recorrência criadas.');
+      }
+    } catch (e) {
+      debugPrint(
+          '❌ [SupabaseService] Erro em ensureRecurringInstances: $e');
+    }
+  }
+
+  // ─── Today stream ────────────────────────────────────────────────────────────
+
   Stream<List<TaskModel>> getTodayTasksStream(String uid) {
     return _supabase
         .schema('sincroapp')
@@ -2340,67 +2475,69 @@ class SupabaseService {
               .map<TaskModel>((item) => _mapTaskFromSupabase(item))
               .toList();
 
-          final now = DateTime.now(); // Local time
+          final now = DateTime.now();
           final todayStart = DateTime(now.year, now.month, now.day);
           final tomorrowStart = todayStart.add(const Duration(days: 1));
 
-          // 1. Process flows
-          List<TaskModel> preProcessedTasks = [];
-          for (var task in rawTasks) {
-            if (task.recurrenceCategory == 'flow' && !task.completed) {
-              if (_doesRecurrenceMatch(task, todayStart)) {
-                 final hasInstance = rawTasks.any((inst) => 
-                     inst.recurrenceCategory == 'flow_instance' &&
-                     inst.recurrenceId == task.id &&
-                     inst.dueDate != null &&
-                     inst.dueDate!.toLocal().year == todayStart.year &&
-                     inst.dueDate!.toLocal().month == todayStart.month &&
-                     inst.dueDate!.toLocal().day == todayStart.day);
-                 if (!hasInstance) {
-                    DateTime newDue = todayStart;
-                    if (task.startDate != null) {
-                       final time = task.startDate!.toLocal();
-                       newDue = DateTime(todayStart.year, todayStart.month, todayStart.day, time.hour, time.minute);
-                    }
-                    preProcessedTasks.add(task.copyWith(dueDate: newDue));
-                 }
-              }
-            } else if (task.recurrenceCategory != 'flow') {
-              preProcessedTasks.add(task);
-            }
-          }
+          // Templates (commitment/flow) são excluídos da exibição direta.
+          // Somente as instâncias geradas por ensureRecurringInstances aparecem.
+          final List<TaskModel> preProcessedTasks = rawTasks
+              .where((t) =>
+                  t.recurrenceCategory != 'commitment' &&
+                  t.recurrenceCategory != 'flow')
+              .toList();
 
-          // 2. Filter for today (both completed and uncompleted)
           return preProcessedTasks.where((task) {
-            // Tarefas marcadas como foco explícito
+            // Foco explícito → sempre visível
             if (task.isFocus) return true;
 
-            // Tarefas atrasadas (com data) -> flow_instance hiberne
-            if (task.isOverdue && !task.completed) {
-              if (task.recurrenceCategory == 'flow_instance' || task.recurrenceCategory == 'flow') {
-                return false;
+            final cat = task.recurrenceCategory;
+
+            // ── Instâncias de COMMITMENT ──────────────────────────────────────
+            // Acumulam: ficam visíveis enquanto não concluídas (overdue ou hoje).
+            if (cat == 'commitment_instance') {
+              if (task.completed) {
+                // Concluída hoje → mostrar; dias anteriores → ocultar
+                return task.completedAt != null &&
+                    _isSameDay(task.completedAt!.toLocal(), todayStart);
+              }
+              if (task.dueDate == null) return false;
+              final dueDateOnly = DateTime(task.dueDate!.toLocal().year,
+                  task.dueDate!.toLocal().month, task.dueDate!.toLocal().day);
+              // Mostra se é hoje OU data passada (overdue) — instâncias futuras ficam ocultas
+              return !dueDateOnly.isAfter(todayStart);
+            }
+
+            // ── Instâncias de FLOW ────────────────────────────────────────────
+            // Não acumulam: aparecem só no dia da recorrência e somem se não concluídas.
+            if (cat == 'flow_instance') {
+              if (task.dueDate == null) return false;
+              final dueDateOnly = DateTime(task.dueDate!.toLocal().year,
+                  task.dueDate!.toLocal().month, task.dueDate!.toLocal().day);
+              // Somente o dia exato da recorrência
+              if (!_isSameDay(dueDateOnly, todayStart)) return false;
+              if (task.completed) {
+                return task.completedAt != null &&
+                    _isSameDay(task.completedAt!.toLocal(), todayStart);
               }
               return true;
             }
 
-            // Check completion date or due date matching today
+            // ── Tarefas normais ───────────────────────────────────────────────
+            if (task.isOverdue && !task.completed) return true;
+
             if (task.hasDeadline) {
-              final taskDateLocal = task.dueDate!.toLocal();
-              final taskDateOnly = DateTime(
-                  taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
-              if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
-                  return true;
+              final taskDateOnly = DateTime(task.dueDate!.toLocal().year,
+                  task.dueDate!.toLocal().month, task.dueDate!.toLocal().day);
+              if (!taskDateOnly.isBefore(todayStart) &&
+                  taskDateOnly.isBefore(tomorrowStart)) {
+                return true;
               }
             } else if (task.completed && task.completedAt != null) {
-              final taskDateLocal = task.completedAt!.toLocal();
-              final taskDateOnly = DateTime(
-                  taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
-              if (!taskDateOnly.isBefore(todayStart) && taskDateOnly.isBefore(tomorrowStart)) {
-                  return true; // was completed today
+              if (_isSameDay(task.completedAt!.toLocal(), todayStart)) {
+                return true;
               }
             }
-            
-            if (task.recurrenceCategory == 'flow' && !task.completed) return true;
 
             return false;
           }).toList()

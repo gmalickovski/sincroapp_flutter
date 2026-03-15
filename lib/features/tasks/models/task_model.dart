@@ -298,9 +298,11 @@ class TaskModel {
   Map<String, dynamic> toJson() => toMap();
 
   bool get isOverdue {
-    // Tarefas concluídas, sem data de vencimento, flow ou recorrentes nunca ficam atrasadas.
-    if (completed || dueDate == null || recurrenceCategory == 'flow' ||
-        recurrenceType != RecurrenceType.none) {
+    if (completed || dueDate == null) return false;
+    // Flow tasks (templates e instâncias) nunca ficam atrasadas — somem no final do dia.
+    if (recurrenceCategory == 'flow' || recurrenceCategory == 'flow_instance') return false;
+    // Templates de recorrência (commitment/sem categoria) nunca são mostrados diretamente.
+    if (recurrenceType != RecurrenceType.none && recurrenceCategory != 'commitment_instance') {
       return false;
     }
 
