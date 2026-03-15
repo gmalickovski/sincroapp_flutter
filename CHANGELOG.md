@@ -1,6 +1,23 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+## [1.10.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.9.0...v1.10.0) (2026-03-15)
+
+
+### Correções de Bugs 🐛
+
+* **journal:** improve list/paragraph spacing and fix Enter-to-exit-list bug ([e45fefa](https://github.com/gmalickovski/sincroapp_flutter/commit/e45fefaa7daa15430741413ab5e3080d2494d5e3))
+* **toolbar:** add breathing space when left arrow hidden and increase arrow icon size ([2193386](https://github.com/gmalickovski/sincroapp_flutter/commit/219338660bb3fc2737753f59b9aa3d6f0c9609c3))
+* **toolbar:** minimize scroll arrow size and remove gap after divider ([c120144](https://github.com/gmalickovski/sincroapp_flutter/commit/c120144317f4f3ed905a9725e152ec354f61ae32))
+
+
+### Funcionalidades ✨
+
+* **admin:** redesign KPI cards, fix mobile overflow, refresh users tab on switch ([07099d0](https://github.com/gmalickovski/sincroapp_flutter/commit/07099d0c34873cbdbf06aa903362ba03accee4a3))
+* **journal:** add animated save button in toolbar and rework bottom bar mobile layout ([618808b](https://github.com/gmalickovski/sincroapp_flutter/commit/618808b37c4f1b0e7a605e313fbecc6c220320e9))
+* **journal:** desktop bottom bar - 'Salvar e Fechar' button replaces separate save ([b50314e](https://github.com/gmalickovski/sincroapp_flutter/commit/b50314e29165604ffc2c65290aabe90b61b74462))
+* **journal:** rework bottom bar button - X close / check save with animation ([adfdf50](https://github.com/gmalickovski/sincroapp_flutter/commit/adfdf50041ab4dea9b761e9ee6614da6077bac22))
+
 ## [1.9.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.8.0...v1.9.0) (2026-03-15)
 
 
