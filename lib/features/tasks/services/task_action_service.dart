@@ -36,11 +36,11 @@ class TaskActionService {
             taskDateLocal.year, taskDateLocal.month, taskDateLocal.day);
 
         if (taskDateOnly.isBefore(today)) {
-          // Cenário 3: Atrasada -> Vai para Hoje
+          // Cenário 2: Atrasada -> Vai para Hoje
           targetDate = today;
           message = 'Trazida para hoje! 🚀';
         } else {
-          // Cenário 2: Hoje ou Futuro -> Vai para o dia seguinte da data atual da tarefa
+          // Cenário 3: Hoje ou Futuro -> Vai para o dia seguinte da data atual da tarefa
           targetDate = taskDateOnly.add(const Duration(days: 1));
           message = 'Adiada para ${targetDate.day}/${targetDate.month}! 🗓️';
         }
@@ -65,6 +65,7 @@ class TaskActionService {
       }
 
       // Prepara os campos para atualização
+      // Agendamentos normais (sem recorrência) usam APENAS dueDate — startDate é exclusivo de recorrências
       final updates = <String, dynamic>{
         // Usa .toUtc() para preservar o instante exato da meia-noite local
         // Isso evita que a data volte um dia ao ser convertida de volta para local em fusos negativos (ex: Brasil)

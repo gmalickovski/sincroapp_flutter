@@ -1033,43 +1033,45 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       return false;
     }
 
-    // Tarefas sem data: toggle foco
-    if (!task.hasDeadline) {
-      try {
-        await _supabaseService.updateTaskFields(
-          _userId,
-          task.id,
-          {'is_focus': !task.isFocus},
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(task.isFocus ? 'Foco removido' : 'Em foco ⚡'),
-              duration: const Duration(seconds: 1),
-            ),
-          );
+    // Tarefas com dueDate: reagendar
+    // (startDate é exclusivo de recorrências e não entra neste fluxo)
+    if (task.dueDate != null) {
+      final newDate = await _taskActionService.rescheduleTask(
+        context,
+        task,
+        widget.userData!,
+      );
+
+      if (newDate != null) {
+        if (_activeFilter == 'foco') {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final newDateOnly =
+              DateTime(newDate.year, newDate.month, newDate.day);
+          if (!newDateOnly.isAtSameMomentAs(today)) return true;
+        } else if (_activeFilter == 'atrasadas') {
+          return true;
         }
-      } catch (_) {}
+      }
       return false;
     }
 
-    // Tarefas com data: reagendar
-    final newDate = await _taskActionService.rescheduleTask(
-      context,
-      task,
-      widget.userData!,
-    );
-
-    if (newDate != null) {
-      if (_activeFilter == 'foco') {
-        final now = DateTime.now();
-        final today = DateTime(now.year, now.month, now.day);
-        final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
-        if (!newDateOnly.isAtSameMomentAs(today)) return true;
-      } else if (_activeFilter == 'atrasadas') {
-        return true;
+    // Tarefas sem data: toggle foco
+    try {
+      await _supabaseService.updateTaskFields(
+        _userId,
+        task.id,
+        {'is_focus': !task.isFocus},
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(task.isFocus ? 'Foco removido' : 'Em foco ⚡'),
+            duration: const Duration(seconds: 1),
+          ),
+        );
       }
-    }
+    } catch (_) {}
     return false;
   }
   // --- FIM DA MUDANÃ‡A ---

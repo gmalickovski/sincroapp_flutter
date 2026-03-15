@@ -476,22 +476,57 @@ class TaskItem extends StatelessWidget {
       return content;
     }
 
-    // Retorna o Dismissible — somente swipe esquerdo (excluir)
+    // Tarefas recorrentes: somente swipe ← (excluir)
+    // Tarefas normais: swipe → (foco/reagendar) + swipe ← (excluir)
+    final bool isRecurrentTask =
+        isRecurrent || isCommitmentInstance || isFlowOrInstance;
+
     return Dismissible(
       key: ValueKey('dismiss_${task.id}'),
-      direction: DismissDirection.endToStart, // apenas ← para excluir
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20.0),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
-      ),
+      direction: isRecurrentTask
+          ? DismissDirection.endToStart
+          : DismissDirection.horizontal,
+      // background: mostrado no swipe → (startToEnd) para tarefas normais;
+      // para recorrentes (endToStart only) o Flutter usa background quando
+      // secondaryBackground é null — por isso deixamos o background como delete.
+      background: isRecurrentTask
+          ? Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child:
+                  const Icon(Icons.delete_outline_rounded, color: Colors.white),
+            )
+          : Container(
+              alignment: Alignment.centerLeft,
+              padding: const EdgeInsets.only(left: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade700,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child: const Icon(Icons.bolt, color: Colors.white),
+            ),
+      // secondaryBackground: swipe ← (endToStart) para tarefas normais
+      secondaryBackground: isRecurrentTask
+          ? null
+          : Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20.0),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+              child:
+                  const Icon(Icons.delete_outline_rounded, color: Colors.white),
+            ),
       confirmDismiss: (direction) async {
-        if (onSwipeLeft != null) {
-          return await onSwipeLeft!(task);
+        if (direction == DismissDirection.endToStart) {
+          if (onSwipeLeft != null) return await onSwipeLeft!(task);
+        } else {
+          if (onSwipeRight != null) return await onSwipeRight!(task);
         }
         return false;
       },
