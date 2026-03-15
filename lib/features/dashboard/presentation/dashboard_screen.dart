@@ -2799,13 +2799,13 @@ class _DashboardScreenState extends State<DashboardScreen>
 
     if (!isDesktop) {
       return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 80),
         itemCount: _cards.length,
         itemBuilder: (context, index) {
           final itemWidget = _cards[index];
           return Padding(
               key: itemWidget.key ?? ValueKey('card_$index'),
-              padding: const EdgeInsets.only(bottom: 20.0),
+              padding: const EdgeInsets.only(bottom: 16.0),
               child: itemWidget);
         },
       );

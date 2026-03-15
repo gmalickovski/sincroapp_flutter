@@ -1287,6 +1287,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
                   : null,
             ),
 
+            if (showGoal || showContact)
+              const Divider(color: AppColors.border, height: 16),
             if (showGoal) ...[
               _buildDetailRow(
                 icon: Icons.flag_outlined,
@@ -1331,6 +1333,8 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
               ),
 
             ],
+            if (showGoal && showContact)
+              const Divider(color: AppColors.border, height: 16),
             if (showContact) ...[
               _buildSharedWithSection(),
             ],
@@ -1495,18 +1499,16 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
           color: AppColors.cardBackground,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
         ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              header,
-              Flexible(child: contentBody),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: _buildBottomActions(),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            header,
+            Flexible(child: contentBody),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: _buildBottomActions(),
+            ),
+          ],
         ),
       );
     }

@@ -410,12 +410,10 @@ class _GoalFormContentState extends State<_GoalFormContent> {
           padding: EdgeInsets.only(
             left: widget.isDesktop ? 32.0 : 16.0,
             right: widget.isDesktop ? 32.0 : 16.0,
-            bottom: widget.isDesktop ? 32.0 : 16.0,
+            bottom: 16.0,
             top: 8.0,
           ),
-          child: SafeArea(
-            top: false,
-            child: AnimatedSwitcher(
+          child: AnimatedSwitcher(
               duration: const Duration(milliseconds: 150),
               transitionBuilder: (Widget child, Animation<double> animation) {
                 return FadeTransition(
@@ -520,7 +518,6 @@ class _GoalFormContentState extends State<_GoalFormContent> {
                     ),
             ),
           ),
-        ),
       ],
     );
   }
