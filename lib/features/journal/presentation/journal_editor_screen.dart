@@ -812,6 +812,23 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       final style = line.style;
       final listAttr = style.attributes[Attribute.list.key];
 
+      // ── Bullet / Numbered list: Enter em linha VAZIA → sair da lista ──────
+      // Comportamento igual ao Word / Google Docs / Notion:
+      // pressionar Enter numa linha de lista vazia remove a formatação de lista
+      // e retorna ao parágrafo convencional.
+      if (listAttr?.value == Attribute.ul.value ||
+          listAttr?.value == Attribute.ol.value) {
+        final lineText = line.toPlainText().replaceAll('\n', '').trim();
+        if (lineText.isEmpty) {
+          _controller.formatText(
+            selection.baseOffset,
+            0,
+            Attribute.clone(Attribute.list, null),
+          );
+          return KeyEventResult.handled;
+        }
+      }
+
       // Intervene for ALL list items (checked or unchecked) to prevent ID duplication
       if (listAttr?.value == Attribute.checked.value ||
           listAttr?.value == Attribute.unchecked.value) {
@@ -1358,7 +1375,8 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                       fontFamily: 'Poppins',
                     ),
                     HorizontalSpacing(0, 0),
-                    VerticalSpacing(0, 0),
+                    // Pequeno respiro entre parágrafos (como Notion/Google Docs)
+                    VerticalSpacing(2, 2),
                     VerticalSpacing(0, 0),
                     null,
                   ),
@@ -1369,9 +1387,12 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                       height: 1.5,
                       fontFamily: 'Poppins',
                     ),
-                    const HorizontalSpacing(16, 0),
-                    const VerticalSpacing(0, 0),
-                    const VerticalSpacing(0, 0),
+                    // Recuo menor — mais próximo da borda (era 16px)
+                    const HorizontalSpacing(8, 0),
+                    // Margem acima/abaixo do bloco de lista em relação a parágrafos
+                    const VerticalSpacing(8, 8),
+                    // Espaço entre itens da mesma lista
+                    const VerticalSpacing(2, 2),
                     null, // BoxDecoration
                     _SincroCheckboxBuilder(), // QuillCheckboxBuilder
                   ),
