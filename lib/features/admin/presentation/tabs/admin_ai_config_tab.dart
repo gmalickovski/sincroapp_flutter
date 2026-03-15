@@ -387,7 +387,7 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16), // era 24 — ganho de 16dp horizontais
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -410,7 +410,7 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16), // era 20
           child,
         ],
       ),
@@ -431,14 +431,13 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
       onTap: () {
         setState(() {
           _selectedProvider = provider;
-          // Auto-select first model of new provider
           _selectedModel = _currentModels.first.id;
           _markChanged();
         });
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(12), // era 20 — reduz consumo horizontal
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.1) : const Color(0xff1e293b),
           borderRadius: BorderRadius.circular(12),
@@ -450,37 +449,50 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Linha: ícone + nome + badge ATIVO
+            // Flexible no nome evita overflow quando badge está visível
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Icon(icon, color: isSelected ? color : AppColors.secondaryText, size: 24),
-                const SizedBox(width: 10),
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: isSelected ? color : AppColors.primaryText,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                Icon(icon, color: isSelected ? color : AppColors.secondaryText, size: 20),
+                const SizedBox(width: 6),
+                Flexible(
+                  child: Text(
+                    name,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: isSelected ? color : AppColors.primaryText,
+                      fontSize: 16, // era 18
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                const Spacer(),
-                if (isSelected)
+                if (isSelected) ...[
+                  const SizedBox(width: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       'ATIVO',
-                      style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+                      style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
                     ),
                   ),
+                ],
               ],
             ),
-            const SizedBox(height: 8),
-            Text(badge, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600)),
             const SizedBox(height: 6),
-            Text(description, style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+            // Badge de categoria (ex: "⚡ Mais rápido")
+            Text(badge, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 4),
+            // Descrição com softWrap para quebrar corretamente
+            Text(
+              description,
+              style: const TextStyle(color: AppColors.secondaryText, fontSize: 11),
+              softWrap: true,
+            ),
           ],
         ),
       ),
@@ -499,8 +511,8 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10), // era all(16)
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : const Color(0xff1e293b),
           borderRadius: BorderRadius.circular(12),
@@ -510,50 +522,57 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start, // radio alinha ao topo quando texto quebra
           children: [
-            // Radio
-            Container(
-              width: 20,
-              height: 20,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isSelected ? AppColors.primary : AppColors.secondaryText,
-                  width: 2,
+            // Radio — alinhado ao topo da linha de conteúdo
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? AppColors.primary : AppColors.secondaryText,
+                    width: 2,
+                  ),
                 ),
-              ),
-              child: isSelected
-                  ? Center(
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: const BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.primary,
+                child: isSelected
+                    ? Center(
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primary,
+                          ),
                         ),
-                      ),
-                    )
-                  : null,
+                      )
+                    : null,
+              ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12), // era 16
             // Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
+                  // Título + Badge em Wrap: badge vai para próxima linha se não couber
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Text(
                         model.displayName,
                         style: TextStyle(
                           color: isSelected ? AppColors.primary : AppColors.primaryText,
-                          fontSize: 15,
+                          fontSize: 14, // era 15
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                         decoration: BoxDecoration(
                           color: isSelected
                               ? AppColors.primary.withValues(alpha: 0.15)
@@ -576,22 +595,21 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
                     model.description,
                     style: const TextStyle(color: AppColors.secondaryText, fontSize: 12),
                   ),
+                  // ID técnico só no desktop
+                  if (MediaQuery.of(context).size.width > 800) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      model.id,
+                      style: TextStyle(
+                        color: AppColors.secondaryText.withValues(alpha: 0.4),
+                        fontSize: 10,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
-            // Model ID — só visível no desktop (evita overflow mobile)
-            if (MediaQuery.of(context).size.width > 800)
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: Text(
-                  model.id,
-                  style: TextStyle(
-                    color: AppColors.secondaryText.withValues(alpha: 0.5),
-                    fontSize: 10,
-                    fontFamily: 'monospace',
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -614,24 +632,46 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Label + Badge em Row com crossAxisAlignment.start:
+        // quando label quebra para 2+ linhas, badge fica alinhado ao topo (não ao centro)
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Label com ícone de ajuda — ocupa espaço restante
             Expanded(
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Flexible(
-                    child: Text(label, style: const TextStyle(color: AppColors.primaryText, fontSize: 13, fontWeight: FontWeight.w500)),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: AppColors.primaryText,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        height: 1.4,
+                      ),
+                    ),
                   ),
-                  const SizedBox(width: 6),
-                  Tooltip(
-                    message: tooltip,
-                    child: Icon(Icons.help_outline, size: 14, color: AppColors.secondaryText.withValues(alpha: 0.5)),
+                  // Ícone de ajuda: padding top para alinhar com a primeira linha do label
+                  Padding(
+                    padding: const EdgeInsets.only(left: 4, top: 2),
+                    child: Tooltip(
+                      message: tooltip,
+                      child: Icon(
+                        Icons.help_outline,
+                        size: 14,
+                        color: AppColors.secondaryText.withValues(alpha: 0.5),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+            // Badge de valor — sempre no topo graças ao crossAxisAlignment.start
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: isRecommended ? const Color(0xff064e3b) : const Color(0xff1e293b),
                 borderRadius: BorderRadius.circular(6),
@@ -651,7 +691,7 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
                     ),
                   ),
                   if (isRecommended) ...[
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 4),
                     const Text('✓', style: TextStyle(color: Color(0xff34d399), fontSize: 12)),
                   ],
                 ],
@@ -659,7 +699,7 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 6),
         SliderTheme(
           data: SliderThemeData(
             activeTrackColor: AppColors.primary,
