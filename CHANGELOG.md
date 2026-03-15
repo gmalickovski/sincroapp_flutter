@@ -1,6 +1,13 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.11.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.11.0...v1.11.1) (2026-03-15)
+
+
+### Correções de Bugs 🐛
+
+* **ui:** fix detail row height, FAB margin, recurring task icons and start date label ([8963d9a](https://github.com/gmalickovski/sincroapp_flutter/commit/8963d9a26555ad356e1c9ba8caea9197da5b5bc8))
+
 ## [1.11.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.10.0...v1.11.0) (2026-03-15)
 
 
