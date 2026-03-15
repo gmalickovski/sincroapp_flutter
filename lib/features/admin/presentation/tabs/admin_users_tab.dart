@@ -19,10 +19,11 @@ class AdminUsersTab extends StatefulWidget {
   });
 
   @override
-  State<AdminUsersTab> createState() => _AdminUsersTabState();
+  State<AdminUsersTab> createState() => AdminUsersTabState();
 }
 
-class _AdminUsersTabState extends State<AdminUsersTab> {
+class AdminUsersTabState extends State<AdminUsersTab> {
+  void refresh() => _loadUsers();
   final SupabaseService _supabaseService = SupabaseService();
   final TextEditingController _searchController = TextEditingController();
   List<UserModel> _allUsers = [];
@@ -34,6 +35,13 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   @override
   void initState() {
     super.initState();
+    _loadUsers();
+  }
+
+  @override
+  void activate() {
+    // Chamado quando a aba volta a ser visível (TabBarView)
+    super.activate();
     _loadUsers();
   }
 

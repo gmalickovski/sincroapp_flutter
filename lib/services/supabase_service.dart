@@ -1907,6 +1907,9 @@ class SupabaseService {
       final now = DateTime.now();
 
       for (final user in users) {
+        // Admins não entram no cálculo financeiro (MRR)
+        if (user.isAdmin) continue;
+
         // 1. Plan & Financials logic
         final plan = user.subscription.plan;
 

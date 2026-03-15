@@ -25,6 +25,7 @@ class _AdminScreenState extends State<AdminScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   int _selectedIndex = 0;
+  final _usersTabKey = GlobalKey<AdminUsersTabState>();
 
   @override
   void initState() {
@@ -35,6 +36,10 @@ class _AdminScreenState extends State<AdminScreen>
         setState(() {
           _selectedIndex = _tabController.index;
         });
+      } else if (_tabController.index == 1) {
+        // IndexedStack keeps widgets alive; manually refresh Users tab
+        // when the tab animation finishes settling on index 1 (desktop layout).
+        _usersTabKey.currentState?.refresh();
       }
     });
   }
@@ -50,6 +55,12 @@ class _AdminScreenState extends State<AdminScreen>
       _selectedIndex = index;
       _tabController.animateTo(index);
     });
+    if (index == 1) {
+      // Eagerly refresh Users tab when sidebar item is tapped on desktop.
+      // The tabController listener also fires, but this ensures immediate refresh
+      // even if the animation was already at index 1.
+      Future.microtask(() => _usersTabKey.currentState?.refresh());
+    }
   }
 
   @override
@@ -148,7 +159,10 @@ class _AdminScreenState extends State<AdminScreen>
                       index: _selectedIndex,
                       children: [
                         AdminDashboardTab(userData: widget.userData),
-                        AdminUsersTab(userData: widget.userData),
+                        AdminUsersTab(
+                          key: _usersTabKey,
+                          userData: widget.userData,
+                        ),
                         const AdminAiConfigTab(),
                       ],
                     ),

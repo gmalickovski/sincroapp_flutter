@@ -92,9 +92,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               Text(
                 'Visão Geral Financeira',
                 style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryText,
+                  fontSize: isDesktop ? 22 : 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -111,9 +111,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               Text(
                 'Uso de Inteligência Artificial',
                 style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryText,
+                  fontSize: isDesktop ? 22 : 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -126,9 +126,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               Text(
                 'Demografia do Usuário',
                 style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryText,
+                  fontSize: isDesktop ? 22 : 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -153,9 +153,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               Text(
                 'Distribuição de Planos',
                 style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryText,
+                  fontSize: isDesktop ? 22 : 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -173,9 +173,9 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
               Text(
                 'Controle de Acesso (Site)',
                 style: TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: isDesktop ? 24 : 20,
-                  fontWeight: FontWeight.bold,
+                  color: AppColors.secondaryText,
+                  fontSize: isDesktop ? 22 : 18,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 16),
@@ -239,15 +239,27 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
             .toList(),
       );
     } else {
-      // Grid layout for mobile (2x2) is often better than single column for KPIs
-      return GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        childAspectRatio: 1.3,
-        children: cards,
+      // 2x2 com altura intrínseca — sem GridView para não forçar tamanho fixo
+      return Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: cards[0]),
+              const SizedBox(width: 10),
+              Expanded(child: cards[1]),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: cards[2]),
+              const SizedBox(width: 10),
+              Expanded(child: cards[3]),
+            ],
+          ),
+        ],
       );
     }
   }
@@ -261,7 +273,7 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
     required bool trendUp,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppColors.cardBackground,
         borderRadius: BorderRadius.circular(16),
@@ -276,50 +288,47 @@ class _AdminDashboardTabState extends State<AdminDashboardTab> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Cabeçalho: ícone + título ─────────────────────────────
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: color, size: 16),
               ),
-              // Trend indicator removed for cleaner look or simpler approach on mobile
-              // Re-adding if needed
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: AppColors.secondaryText,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
-          /* const SizedBox(height: 12), */
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value,
-                style: const TextStyle(
-                  color: AppColors.primaryText,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: -0.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: AppColors.secondaryText,
-                  fontSize: 11,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          )
+          const SizedBox(height: 10),
+          // ── Conteúdo: valor em destaque ───────────────────────────
+          Text(
+            value,
+            style: const TextStyle(
+              color: AppColors.primaryText,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              letterSpacing: -0.5,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );

@@ -1216,8 +1216,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       ],
     );
 
-    final showToolbarSaveBtn =
-        isMobile && isKeyboardOpen(context) && (_hasUnsavedChanges || _isSaving);
+    // Show toolbar action button whenever keyboard is open on mobile
+    final showToolbarSaveBtn = isMobile && isKeyboardOpen(context);
+    final toolbarBtnHasChanges = _hasUnsavedChanges || _isSaving;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -1236,7 +1237,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ),
             ),
           ),
-          // Botão salvar no toolbar — aparece com animação quando teclado visível + alterações
+          // Botão espelho do bottom bar: X (fechar) ou ✓ (salvar)
           AnimatedSize(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
@@ -1244,21 +1245,33 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 ? Padding(
                     padding: const EdgeInsets.only(left: 6),
                     child: GestureDetector(
-                      onTap: _hasUnsavedChanges ? _handleSave : null,
+                      onTap: toolbarBtnHasChanges
+                          ? (_hasUnsavedChanges ? _handleSave : null)
+                          : () => Navigator.of(context).pop(),
                       child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
+                        duration: const Duration(milliseconds: 200),
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color: toolbarBtnHasChanges
+                              ? AppColors.primary
+                              : Colors.transparent,
                           borderRadius: BorderRadius.circular(10),
-                          boxShadow: const [
-                            BoxShadow(
-                              color: Colors.black26,
-                              blurRadius: 4,
-                              offset: Offset(0, 2),
-                            )
-                          ],
+                          border: toolbarBtnHasChanges
+                              ? null
+                              : Border.all(
+                                  color: Colors.white54,
+                                  width: 1.5,
+                                ),
+                          boxShadow: toolbarBtnHasChanges
+                              ? const [
+                                  BoxShadow(
+                                    color: Colors.black26,
+                                    blurRadius: 4,
+                                    offset: Offset(0, 2),
+                                  )
+                                ]
+                              : null,
                         ),
                         alignment: Alignment.center,
                         child: _isSaving
@@ -1270,10 +1283,26 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(
-                                Icons.check_rounded,
-                                color: Colors.white,
-                                size: 20,
+                            : AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                transitionBuilder: (child, animation) =>
+                                    ScaleTransition(
+                                      scale: animation,
+                                      child: child,
+                                    ),
+                                child: toolbarBtnHasChanges
+                                    ? const Icon(
+                                        Icons.check_rounded,
+                                        key: ValueKey('toolbar_check'),
+                                        color: Colors.white,
+                                        size: 20,
+                                      )
+                                    : const Icon(
+                                        Icons.close_rounded,
+                                        key: ValueKey('toolbar_close'),
+                                        color: Colors.white70,
+                                        size: 20,
+                                      ),
                               ),
                       ),
                     ),
@@ -1300,6 +1329,9 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   Widget build(BuildContext context) {
     final isMobile = _isMobile(context);
     final isDesktop = !isMobile;
+
+    // Limiar: >= 500px → botão com texto; < 500px → botão ícone
+    final useTextButton = MediaQuery.of(context).size.width >= 500;
 
     // Determine Hero Tag
     final heroTag = widget.entry?.id ?? 'new_note_fab';
@@ -1491,14 +1523,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 tooltip: _isWindowMode ? 'Tela Cheia' : 'Modo Janela',
               ),
             ),
-          Padding(
-            padding: const EdgeInsets.only(right: 8.0), // Reduced from 16.0
-            child: IconButton(
-              icon: const Icon(Icons.close, color: AppColors.secondaryText),
-              onPressed: () => Navigator.of(context).pop(),
-              tooltip: 'Fechar',
-            ),
-          ),
         ],
       ),
       body: editorBody, // Use the body defined above
@@ -1523,11 +1547,81 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               ),
             ),
 
-            // ── Botão direito (mobile): X fechar ↔ ✓ salvar ─────────────
-            // Sem alterações → X outline branco (fechar)
-            // Com alterações → ✓ roxo preenchido (salvar)
-            if (isMobile) ...[
-              const SizedBox(width: 12),
+            const SizedBox(width: 12),
+
+            // ── Botão dinâmico: texto (>= 500px) ↔ ícone (< 500px) ──────
+            // Sem alterações → "Fechar" / X outline → fecha
+            // Com alterações → "Salvar e Fechar" / ✓ roxo → salva
+            if (useTextButton) ...[
+              // ── MODO TEXTO ────────────────────────────────────────────
+              if ((_hasUnsavedChanges || _isSaving) && !_isSaving)
+                Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Text(
+                    'Ctrl+S',
+                    style: TextStyle(
+                      color: AppColors.secondaryText.withValues(alpha: 0.5),
+                      fontSize: 12,
+                      fontFamily: 'Poppins',
+                    ),
+                  ),
+                ),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeInOut,
+                decoration: BoxDecoration(
+                  color: (_hasUnsavedChanges || _isSaving)
+                      ? AppColors.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                  border: (_hasUnsavedChanges || _isSaving)
+                      ? null
+                      : Border.all(color: Colors.white54, width: 1.5),
+                  boxShadow: (_hasUnsavedChanges || _isSaving)
+                      ? const [
+                          BoxShadow(
+                            color: Colors.black26,
+                            blurRadius: 6,
+                            offset: Offset(0, 2),
+                          )
+                        ]
+                      : null,
+                ),
+                child: InkWell(
+                  onTap: (_hasUnsavedChanges || _isSaving)
+                      ? (_hasUnsavedChanges ? _handleSave : null)
+                      : () => Navigator.of(context).pop(),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 10),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            (_hasUnsavedChanges || _isSaving)
+                                ? 'Salvar'
+                                : 'Fechar',
+                            style: TextStyle(
+                              color: (_hasUnsavedChanges || _isSaving)
+                                  ? Colors.white
+                                  : Colors.white54,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: 'Poppins',
+                              fontSize: 14,
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // ── MODO ÍCONE ────────────────────────────────────────────
               GestureDetector(
                 onTap: (_hasUnsavedChanges || _isSaving)
                     ? (_hasUnsavedChanges ? _handleSave : null)
@@ -1538,8 +1632,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    // Sem alterações: sem preenchimento + borda branca
-                    // Com alterações: roxo preenchido + sem borda
                     color: (_hasUnsavedChanges || _isSaving)
                         ? AppColors.primary
                         : Colors.transparent,
@@ -1573,7 +1665,7 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                             scale: anim,
                             child: child,
                           ),
-                          child: (_hasUnsavedChanges)
+                          child: _hasUnsavedChanges
                               ? const Icon(
                                   Icons.check_rounded,
                                   key: ValueKey('check'),
@@ -1587,69 +1679,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                                   size: 22,
                                 ),
                         ),
-                ),
-              ),
-            ],
-
-            // ── Desktop: botão "Salvar e Fechar" (sempre visível) ────────
-            if (isDesktop) ...[
-              const SizedBox(width: 12),
-              if (_hasUnsavedChanges)
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: Text(
-                    'Ctrl+S',
-                    style: TextStyle(
-                      color: AppColors.secondaryText.withValues(alpha: 0.5),
-                      fontSize: 12,
-                      fontFamily: 'Poppins',
-                    ),
-                  ),
-                ),
-              // Botão "Salvar e Fechar" — sempre presente no desktop
-              // Com alterações: roxo preenchido (salva e fecha)
-              // Sem alterações: outline branco (só fecha)
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeInOut,
-                decoration: BoxDecoration(
-                  color: (_hasUnsavedChanges || _isSaving)
-                      ? AppColors.primary
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
-                  border: (_hasUnsavedChanges || _isSaving)
-                      ? null
-                      : Border.all(color: Colors.white54, width: 1.5),
-                ),
-                child: InkWell(
-                  onTap: (_hasUnsavedChanges || _isSaving)
-                      ? (_hasUnsavedChanges ? _handleSave : null)
-                      : () => Navigator.of(context).pop(),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 10),
-                    child: _isSaving
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
-                            ),
-                          )
-                        : Text(
-                            'Salvar e Fechar',
-                            style: TextStyle(
-                              color: (_hasUnsavedChanges)
-                                  ? Colors.white
-                                  : Colors.white54,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'Poppins',
-                              fontSize: 14,
-                            ),
-                          ),
-                  ),
                 ),
               ),
             ],

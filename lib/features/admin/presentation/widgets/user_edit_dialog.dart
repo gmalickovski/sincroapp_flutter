@@ -139,9 +139,11 @@ class _UserEditDialogState extends State<UserEditDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Editar Usuário (Admin)',
-                        style: TextStyle(
+                      Text(
+                        widget.user.isAdmin
+                            ? 'Editar Usuário (Admin)'
+                            : 'Editar Usuário',
+                        style: const TextStyle(
                           color: AppColors.primaryText,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,

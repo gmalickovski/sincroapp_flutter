@@ -579,15 +579,19 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
                 ],
               ),
             ),
-            // Model ID
-            Text(
-              model.id,
-              style: TextStyle(
-                color: AppColors.secondaryText.withValues(alpha: 0.5),
-                fontSize: 10,
-                fontFamily: 'monospace',
+            // Model ID — só visível no desktop (evita overflow mobile)
+            if (MediaQuery.of(context).size.width > 800)
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Text(
+                  model.id,
+                  style: TextStyle(
+                    color: AppColors.secondaryText.withValues(alpha: 0.5),
+                    fontSize: 10,
+                    fontFamily: 'monospace',
+                  ),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -615,7 +619,9 @@ class _AdminAiConfigTabState extends State<AdminAiConfigTab> {
             Expanded(
               child: Row(
                 children: [
-                  Text(label, style: const TextStyle(color: AppColors.primaryText, fontSize: 14, fontWeight: FontWeight.w500)),
+                  Flexible(
+                    child: Text(label, style: const TextStyle(color: AppColors.primaryText, fontSize: 13, fontWeight: FontWeight.w500)),
+                  ),
                   const SizedBox(width: 6),
                   Tooltip(
                     message: tooltip,
