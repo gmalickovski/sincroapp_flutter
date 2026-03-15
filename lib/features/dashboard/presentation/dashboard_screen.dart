@@ -686,6 +686,7 @@ class _DashboardScreenState extends State<DashboardScreen>
           ),
         );
       }
+      return null;
     });
   }
 
@@ -2166,13 +2167,6 @@ class _DashboardScreenState extends State<DashboardScreen>
       'Dezembro'
     ];
     return months[month];
-  }
-
-  int _reduzirLocal(int n) {
-    while (n > 9) {
-      n = n.toString().split('').map(int.parse).reduce((a, b) => a + b);
-    }
-    return n;
   }
 
   /// Builder para Ciclos de Vida: versão curta (card) mostra apenas o ciclo atual, versão completa mostra todos os ciclos com intervalos.

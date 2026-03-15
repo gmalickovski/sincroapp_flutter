@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 
@@ -66,7 +66,7 @@ class StorageService {
       }
     } catch (e) {
       // Ignore if file not found or parsing fails
-      print('Error deleting image: $e');
+      debugPrint('Error deleting image: $e');
     }
   }
 }

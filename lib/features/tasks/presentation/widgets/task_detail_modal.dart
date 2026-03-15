@@ -877,8 +877,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
     final DateTime initialPickerDate =
         _selectedStartDate?.toLocal() ?? _selectedDateTime?.toLocal() ?? DateTime.now();
 
-    final isDesktop = MediaQuery.of(context).size.width >= 768;
-
     Future<DatePickerResult?> resultFuture;
 
     final bool isMidnight = _selectedDateTime != null &&
@@ -1591,29 +1589,6 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
         ),
       ],
     );
-  }
-
-  // Métodos auxiliares de texto... (sem alterações)
-  String _buildDateSummaryText() {
-    if (_selectedDateTime == null && _selectedStartDate == null) return '';
-    final dateToUse = _selectedStartDate ?? _selectedDateTime!;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final tomorrow = today.add(const Duration(days: 1));
-    final localSelectedDate = dateToUse.toLocal();
-    final selectedDateOnly = DateTime(
-        localSelectedDate.year, localSelectedDate.month, localSelectedDate.day);
-
-    final isFlow = _recurrenceRule.recurrenceCategory == 'flow';
-    String prefix = isFlow ? 'Iniciando ' : '';
-
-    if (_isSameDay(selectedDateOnly, today)) return '${prefix}Hoje';
-    if (_isSameDay(selectedDateOnly, tomorrow)) return '${prefix}Amanhã';
-    
-    if (localSelectedDate.year == now.year) {
-      return prefix + DateFormat('EEE, dd/MM', 'pt_BR').format(localSelectedDate);
-    }
-    return prefix + DateFormat('dd/MM/yy', 'pt_BR').format(localSelectedDate);
   }
 
   String _getShortRecurrenceText(RecurrenceRule rule) {

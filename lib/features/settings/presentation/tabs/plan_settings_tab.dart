@@ -15,15 +15,10 @@ class PlanSettingsTab extends StatefulWidget {
 }
 
 class _PlanSettingsTabState extends State<PlanSettingsTab> {
-  final bool _isLoadingPortal = false;
-
   @override
   Widget build(BuildContext context) {
     final currentPlan = widget.userData.subscription.plan;
     final planName = PlanLimits.getPlanName(currentPlan);
-
-    // Check if running on desktop
-    final isDesktop = MediaQuery.of(context).size.width >= 720;
 
     return SingleChildScrollView(
       // Padding handled by SettingsScreen wrapper (16.0)

@@ -7,18 +7,13 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-// ATUALIZADO: Importa ParsedTask
-import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
-import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import '../models/event_model.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_calendar.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/widgets/task_input_modal.dart';
 import 'widgets/calendar_header.dart';
-import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'widgets/day_detail_panel.dart';
 
@@ -41,7 +36,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   final SupabaseService _supabaseService = SupabaseService();
   final TaskActionService _taskActionService = TaskActionService();
   final AuthRepository _authRepository = AuthRepository();
-  final Uuid _uuid = const Uuid();
 
   DateTime _focusedDay = DateTime.now();
 
@@ -59,7 +53,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
   int? _personalDayNumber;
   bool _isScreenLoading = true;
-  final bool _isChangingMonth = false;
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
@@ -67,7 +60,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
   StreamSubscription? _tasksCreatedAtSubscription;
 
   List<TaskModel> _currentTasksDueDate = [];
-  List<TaskModel> _currentTasksCreatedAt = [];
 
   // initState, dispose, _initializeStreams, _onTasksDueDateUpdated,
   // _onTasksCreatedAtUpdated, _processEvents, _updatePersonalDay,
@@ -147,8 +139,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     // Stream de tarefas por data de criação (para mostrar no dia que foi criada, se quiser)
     // Ou apenas mantemos o dueDate. Por simplificação, vamos focar no dueDate.
     // Mas se o app usa createdAt para algo, podemos manter.
-    // Vou manter simplificado para dueDate por enquanto, mas inicializar a lista.
-    _currentTasksCreatedAt = [];
     _processEvents();
 
     // --- INÍCIO DA CORREÇÃO (Vibração) ---
@@ -265,201 +255,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
     return a.year == b.year && a.month == b.month;
   }
 
-  void _openAddTaskModal() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => TaskInputModal(
-        userId: _userId,
-        userData: widget.userData,
-        initialDueDate: _selectedDay,
-        onAddTask: (parsedTask) {
-          if (parsedTask.recurrenceRule.type == RecurrenceType.none) {
-            _createSingleTask(parsedTask);
-          } else {
-            _createRecurringTasks(parsedTask);
-          }
-        },
-      ),
-    );
-  }
-
-  // --- MÉTODOS DE CRIAÇÃO DE TAREFA (Copiados de FocoDoDiaScreen) ---
-
-  int? _calculatePersonalDay(DateTime? date) {
-    if (widget.userData.dataNasc.isEmpty ||
-        widget.userData.nomeAnalise.isEmpty ||
-        date == null) {
-      return null;
-    }
-
-    final engine = NumerologyEngine(
-      nomeCompleto: widget.userData.nomeAnalise,
-      dataNascimento: widget.userData.dataNasc,
-    );
-
-    try {
-      final dateUtc = date.toUtc();
-      final day = engine.calculatePersonalDayForDate(dateUtc);
-      return (day > 0) ? day : null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  void _createSingleTask(ParsedTask parsedTask, {String? recurrenceId}) {
-    DateTime? finalDueDateUtc;
-    DateTime dateForPersonalDay;
-
-    if (parsedTask.dueDate != null) {
-      if (parsedTask.dueDate!.isUtc) {
-        // Já é UTC (date-only, vindo do TaskInputModal corrigido)
-        finalDueDateUtc = parsedTask.dueDate;
-      } else {
-        // DateTime local com horário — converte para UTC
-        finalDueDateUtc = parsedTask.dueDate!.toUtc();
-      }
-      dateForPersonalDay = finalDueDateUtc!;
-    } else {
-      final now = DateTime.now().toLocal();
-      dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-    }
-
-    final int? finalPersonalDay = _calculatePersonalDay(dateForPersonalDay);
-
-    final newTask = TaskModel(
-      id: '',
-      text: parsedTask.cleanText,
-      createdAt: DateTime.now().toUtc(),
-      dueDate: finalDueDateUtc,
-      journeyId: parsedTask.journeyId,
-      journeyTitle: parsedTask.journeyTitle,
-      tags: parsedTask.tags,
-      reminderTime: parsedTask.reminderTime,
-      reminderAt: parsedTask.reminderAt,
-      reminderOffsets: parsedTask.reminderOffsets,
-      recurrenceType: parsedTask.recurrenceRule.type,
-      recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
-      recurrenceEndDate: parsedTask.recurrenceRule.endDate?.toUtc(),
-      recurrenceId: recurrenceId,
-      personalDay: finalPersonalDay,
-    );
-
-    _supabaseService.addTask(_userId, newTask).catchError((error) {
-      _showErrorSnackbar("Erro ao salvar tarefa: $error");
-    });
-  }
-
-  void _createRecurringTasks(ParsedTask parsedTask) {
-    final String recurrenceId = _uuid.v4();
-    final List<DateTime> dates = _calculateRecurrenceDates(
-        parsedTask.recurrenceRule, parsedTask.dueDate);
-
-    if (dates.isEmpty) {
-      _showErrorSnackbar(
-          "Nenhuma data futura encontrada para esta recorrência.");
-      return;
-    }
-
-    for (final date in dates) {
-      final taskForDate = parsedTask.copyWith(
-        dueDate: date,
-      );
-      _createSingleTask(taskForDate, recurrenceId: recurrenceId);
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Criando tarefas recorrentes...'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  List<DateTime> _calculateRecurrenceDates(
-      RecurrenceRule rule, DateTime? startDate) {
-    final List<DateTime> dates = [];
-    DateTime currentDate = (startDate ?? DateTime.now()).toLocal();
-    currentDate =
-        DateTime(currentDate.year, currentDate.month, currentDate.day);
-
-    final DateTime safetyLimit =
-        DateTime.now().add(const Duration(days: 365 * 2));
-    final DateTime loopEndDate = (rule.endDate?.toLocal() ?? safetyLimit);
-    final DateTime finalEndDate = DateTime(
-        loopEndDate.year, loopEndDate.month, loopEndDate.day, 23, 59, 59);
-
-    int iterations = 0;
-    const int maxIterations = 100;
-
-    if (rule.type != RecurrenceType.none &&
-        _doesDateMatchRule(rule, currentDate, startDate)) {
-      dates.add(currentDate);
-      iterations++;
-    }
-
-    DateTime nextDate = _getNextDate(rule, currentDate);
-
-    while (nextDate.isBefore(finalEndDate) && iterations < maxIterations) {
-      if (_doesDateMatchRule(rule, nextDate, startDate)) {
-        dates.add(nextDate);
-        iterations++;
-      }
-      nextDate = _getNextDate(rule, nextDate);
-      if (iterations > maxIterations + 5) {
-        break;
-      }
-    }
-    return dates;
-  }
-
-  bool _doesDateMatchRule(
-      RecurrenceRule rule, DateTime date, DateTime? ruleStartDate) {
-    switch (rule.type) {
-      case RecurrenceType.daily:
-        return true;
-      case RecurrenceType.weekly:
-        return rule.daysOfWeek.contains(date.weekday);
-      case RecurrenceType.monthly:
-        return date.day == (ruleStartDate?.day ?? date.day);
-      case RecurrenceType.none:
-        return false;
-    }
-  }
-
-  DateTime _getNextDate(RecurrenceRule rule, DateTime currentDate) {
-    switch (rule.type) {
-      case RecurrenceType.daily:
-      case RecurrenceType.weekly:
-        return currentDate.add(const Duration(days: 1));
-      case RecurrenceType.monthly:
-        int nextMonth = currentDate.month + 1;
-        int nextYear = currentDate.year;
-        if (nextMonth > 12) {
-          nextMonth = 1;
-          nextYear++;
-        }
-        int daysInNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
-        int nextDay = currentDate.day > daysInNextMonth
-            ? daysInNextMonth
-            : currentDate.day;
-        return DateTime(nextYear, nextMonth, nextDay);
-      case RecurrenceType.none:
-        return DateTime.now().add(const Duration(days: 365 * 10));
-    }
-  }
-
-  void _showErrorSnackbar(String message) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message), backgroundColor: Colors.red),
-      );
-    }
-  }
-
   Future<void> _onToggleTask(TaskModel task, bool newValue) async {
     try {
       await _supabaseService.updateTaskCompletion(
@@ -468,6 +263,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
         completed: newValue,
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro ao atualizar tarefa: $e')),
       );
@@ -577,8 +373,6 @@ class _CalendarScreenState extends State<CalendarScreen> {
 
     // Se a data mudou, precisamos atualizar a UI.
     if (newDate != null) {
-      final now = DateTime.now();
-      final today = DateTime(now.year, now.month, now.day);
       final newDateOnly = DateTime(newDate.year, newDate.month, newDate.day);
 
       // Se a nova data não for a mesma do dia selecionado, remove visualmente
@@ -613,7 +407,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
   }
 
   void _openNewTaskDetail() {
-    final date = _selectedDay ?? DateTime.now();
+    final date = _selectedDay;
     // Use local date components to avoid UTC→local timezone shift
     // (e.g., UTC midnight becomes previous day in UTC-3)
     final localDate = DateTime(date.year, date.month, date.day);

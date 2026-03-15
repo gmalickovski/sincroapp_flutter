@@ -322,13 +322,12 @@ class _InfoCardState extends State<InfoCard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: widget.color.withValues(alpha: 0.1) ??
-                        AppColors.primaryAccent.withValues(alpha: 0.1),
+                    color: widget.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     widget.icon,
-                    color: widget.color ?? AppColors.primaryAccent,
+                    color: widget.color,
                     size: 24,
                   ),
                 ),
@@ -355,7 +354,7 @@ class _InfoCardState extends State<InfoCard> {
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.bold,
-                              color: widget.color ?? AppColors.primaryAccent,
+                              color: widget.color,
                               height: 1.0,
                             )),
                       const SizedBox(height: 8),

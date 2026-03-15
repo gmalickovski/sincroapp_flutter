@@ -91,10 +91,8 @@ class _ContactPickerModalState extends State<ContactPickerModal> {
       } else {
         _filteredContacts = _contacts
             .where((c) =>
-                (c.displayName.toLowerCase().contains(query.toLowerCase()) ??
-                    false) ||
-                (c.username.toLowerCase().contains(query.toLowerCase()) ??
-                    false))
+                c.displayName.toLowerCase().contains(query.toLowerCase()) ||
+                c.username.toLowerCase().contains(query.toLowerCase()))
             .toList();
       }
     });

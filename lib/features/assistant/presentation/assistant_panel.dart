@@ -10,7 +10,6 @@ import 'package:sincro_app_flutter/features/assistant/presentation/widgets/actio
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'; // NEW: For direct Supabase calls
 
-import 'package:sincro_app_flutter/services/harmony_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 
@@ -84,15 +83,12 @@ class _AssistantPanelState extends State<AssistantPanel>
   // --- Controllers & Services ---
   final _controller = TextEditingController();
   final _scrollController = ScrollController();
-  final _supabase = SupabaseService();
-  final _harmonyService = HarmonyService();
   final _inputFocusNode = FocusNode();
   final Set<String> _animatedMessageIds = {};
 
   // --- State Variables ---
   String? _currentConversationId; // Tracks active conversation
   List<AssistantMessage> _messages = [];
-  bool _isLoading = false;
   bool _isSending = false;
   bool _isInputEmpty = true;
   bool _isInputHovered = false;
@@ -106,7 +102,6 @@ class _AssistantPanelState extends State<AssistantPanel>
 
   // Mobile Sheet Controller (if needed internally, but we use scroll controller passed in)
   late DraggableScrollableController _sheetController;
-  final bool _isSheetExpanded = false; // Internal tracking
 
   // AI Service agora é direto (sem N8N) — veja assistant_service.dart
 
@@ -297,7 +292,6 @@ class _AssistantPanelState extends State<AssistantPanel>
   }
 
   Future<void> _loadHistory() async {
-    setState(() => _isLoading = true);
     try {
       // 1. Fetch recent conversations
       final conversations =
@@ -316,7 +310,6 @@ class _AssistantPanelState extends State<AssistantPanel>
       debugPrint("Error loading history: $e");
     } finally {
       setState(() {
-        _isLoading = false;
         _isHistoryLoaded = true;
       });
     }
@@ -542,8 +535,6 @@ class _AssistantPanelState extends State<AssistantPanel>
     );
   }
 
-  // Helper: whether we're in "idle" (new conversation) mode
-  bool get _isIdle => _isHistoryLoaded && _messages.isEmpty && !_isSending;
   // Helper: whether we're in "active" (has conversation) mode
   bool get _isActive => _isHistoryLoaded && (_messages.isNotEmpty || _isSending);
 
@@ -578,17 +569,17 @@ class _AssistantPanelState extends State<AssistantPanel>
             },
             child: !_isHistoryLoaded
                 // --- Loading: show only star while history loads ---
-                ? Row(
-                    key: const ValueKey('header_loading'),
+                ? const Row(
+                    key: ValueKey('header_loading'),
                     children: [
-                      const AgentStarIcon(
+                      AgentStarIcon(
                         size: 50,
                         mode: AgentStarMode.dashboard,
                         isStatic: false,
                         isHollow: false,
                         slowAnimation: true,
                       ),
-                      const Spacer(),
+                      Spacer(),
                     ],
                   )
                 : _isActive
@@ -791,31 +782,6 @@ class _AssistantPanelState extends State<AssistantPanel>
         ),
       );
     }
-  }
-
-  Widget _buildTypingIndicator() {
-    return Container(
-      key: const ValueKey('typing_indicator'),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppColors.cardBackground,
-        borderRadius: BorderRadius.circular(12).copyWith(
-          topLeft: const Radius.circular(0),
-        ),
-        border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            "Pensando",
-            style: TextStyle(color: AppColors.secondaryText, fontSize: 13),
-          ),
-          SizedBox(width: 4),
-          TypingIndicator(color: AppColors.primary),
-        ],
-      ),
-    );
   }
 
   Widget _buildInputArea() {
@@ -1084,41 +1050,6 @@ class ChatMessageItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  // NOVO: Widget para exibir texto introdutório separado das tasks
-  Widget _buildTextBubble(BuildContext context) {
-    if (message.content.isEmpty) return const SizedBox.shrink();
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        constraints:
-            BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.cardBackgroundLight,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-            bottomLeft: Radius.circular(4),
-            bottomRight: Radius.circular(20),
-          ),
-          border: Border.all(
-            color: Colors.white.withValues(alpha: 0.05),
-          ),
-        ),
-        child: MarkdownBody(
-          data: message.content,
-          styleSheet: MarkdownStyleSheet(
-            p: const TextStyle(color: Colors.white, fontSize: 15, height: 1.4),
-            strong: const TextStyle(
-                color: AppColors.primaryAccent, fontWeight: FontWeight.bold),
-          ),
         ),
       ),
     );
@@ -1394,6 +1325,7 @@ class ChatMessageItem extends StatelessWidget {
           .from('tasks')
           .update({'completed': newCompleted}).eq('id', taskId);
 
+      if (!context.mounted) return;
       // Feedback visual
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1422,10 +1354,11 @@ class ChatMessageItem extends StatelessWidget {
     final recurrenceStr = taskData['recurrence_type']?.toString().toLowerCase();
     if (recurrenceStr == 'daily') {
       recurrenceType = RecurrenceType.daily;
-    } else if (recurrenceStr == 'weekly')
+    } else if (recurrenceStr == 'weekly') {
       recurrenceType = RecurrenceType.weekly;
-    else if (recurrenceStr == 'monthly')
+    } else if (recurrenceStr == 'monthly') {
       recurrenceType = RecurrenceType.monthly;
+    }
 
     // Criar TaskModel a partir do Map
     final task = TaskModel(
@@ -1587,13 +1520,13 @@ class _AssistantHistorySheetState extends State<_AssistantHistorySheet> {
                   try {
                     final msgs = await AssistantService.fetchMessages(
                         widget.userData.uid, conv.id);
-                    if (mounted) {
-                      Navigator.pop(context); // close loader
-                      Navigator.pop(context); // close sheet
-                      widget.onConversationSelected(conv.id, msgs);
-                    }
+                    if (!context.mounted) return;
+                    Navigator.pop(context); // close loader
+                    Navigator.pop(context); // close sheet
+                    widget.onConversationSelected(conv.id, msgs);
                   } catch (e) {
-                    if (mounted) Navigator.pop(context); // close loader
+                    if (!context.mounted) return;
+                    Navigator.pop(context); // close loader
                   }
                 },
               ),

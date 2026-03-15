@@ -1,4 +1,3 @@
-import 'package:collection/collection.dart';
 import 'package:animations/animations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
@@ -11,19 +10,14 @@ import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.d
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/features/journal/presentation/widgets/hoverable_card.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:sincro_app_flutter/services/numerology_engine.dart';
-import 'package:uuid/uuid.dart';
 import 'journal_editor_screen.dart';
 import 'widgets/journal_entry_card.dart';
 // import 'widgets/journal_filter_panel.dart'; // Deleted
 import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
-import 'package:sincro_app_flutter/features/journal/models/journal_view_scope.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
-import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 // New Generic Filter Popup
-import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_dialog.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_filter_selector.dart'; // Unified Selector
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart'; // Helper for colors
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart'; // Mobile Filter Sheet
@@ -45,7 +39,6 @@ class _JournalScreenState extends State<JournalScreen> {
   final GlobalKey _vibrationFilterKey = GlobalKey();
   final GlobalKey _sortFilterKey = GlobalKey();
 
-  JournalViewScope _currentScope = JournalViewScope.todas;
   DateTime? _dateFilter;
   DateTime? _startDateFilter; // New Range Start
   DateTime? _endDateFilter; // New Range End
@@ -59,15 +52,6 @@ class _JournalScreenState extends State<JournalScreen> {
 
   // Search State
   String _searchQuery = '';
-
-  // Calculate Personal Day for duplication
-  int _calculatePersonalDay(DateTime date) {
-    final engine = NumerologyEngine(
-      nomeCompleto: widget.userData.nomeAnalise,
-      dataNascimento: widget.userData.dataNasc,
-    );
-    return engine.calculatePersonalDayForDate(date);
-  }
 
   final FabOpacityController _fabOpacityController = FabOpacityController();
 
@@ -139,7 +123,7 @@ class _JournalScreenState extends State<JournalScreen> {
                   onPressed: () => Navigator.pop(context, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor:
-                        Colors.redAccent.withOpacity(0.1),
+                        Colors.redAccent.withValues(alpha: 0.1),
                     foregroundColor: Colors.redAccent,
                     elevation: 0,
                     padding: const EdgeInsets.symmetric(vertical: 14),
@@ -746,7 +730,6 @@ class _JournalScreenState extends State<JournalScreen> {
                           _vibrationFilter = null;
                           _moodFilter = null;
                           _selectedSort = null;
-                          _currentScope = JournalViewScope.todas;
                           _selectedEntryIds.clear();
                           _isSelectionMode = false;
                           _rebuildStream();
@@ -856,8 +839,9 @@ class _JournalScreenState extends State<JournalScreen> {
                                     setState(() {
                                       if (isSelected) {
                                         _selectedEntryIds.remove(entry.id);
-                                        if (_selectedEntryIds.isEmpty)
+                                        if (_selectedEntryIds.isEmpty) {
                                           _isSelectionMode = false;
+                                        }
                                       } else {
                                         _selectedEntryIds.add(entry.id);
                                       }
@@ -929,8 +913,9 @@ class _JournalScreenState extends State<JournalScreen> {
                                     setState(() {
                                       if (isSelected) {
                                         _selectedEntryIds.remove(entry.id);
-                                        if (_selectedEntryIds.isEmpty)
+                                        if (_selectedEntryIds.isEmpty) {
                                           _isSelectionMode = false;
+                                        }
                                       } else {
                                         _selectedEntryIds.add(entry.id);
                                       }

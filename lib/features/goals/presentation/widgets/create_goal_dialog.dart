@@ -131,44 +131,50 @@ class _GoalFormContentState extends State<_GoalFormContent> {
   Future<void> _pickDate() async {
     FocusScope.of(context).unfocus();
 
-    final pickedDate = widget.isDesktop
-        ? await showDialog<DateTime>(
-            context: context,
-            builder: (context) => Dialog(
-              backgroundColor: AppColors.cardBackground,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16)),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 400),
-                child: CustomEndDatePickerBottomSheet(
-                  userData: widget.userData,
-                  initialDate: _targetDate,
-                  firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-                  isDesktop: true,
-                ),
-              ),
+    DateTime? pickedDate;
+    if (widget.isDesktop) {
+      if (!mounted) return;
+      pickedDate = await showDialog<DateTime>(
+        context: context,
+        builder: (context) => Dialog(
+          backgroundColor: AppColors.cardBackground,
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 400),
+            child: CustomEndDatePickerBottomSheet(
+              userData: widget.userData,
+              initialDate: _targetDate,
+              firstDate: DateTime.now(),
+              lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+              isDesktop: true,
             ),
-          )
-        : await showModalBottomSheet<DateTime>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            builder: (context) => Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: CustomEndDatePickerBottomSheet(
-                userData: widget.userData,
-                initialDate: _targetDate,
-                firstDate: DateTime.now(),
-                lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
-              ),
-            ),
-          );
+          ),
+        ),
+      );
+    } else {
+      if (!mounted) return;
+      pickedDate = await showModalBottomSheet<DateTime>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: CustomEndDatePickerBottomSheet(
+            userData: widget.userData,
+            initialDate: _targetDate,
+            firstDate: DateTime.now(),
+            lastDate: DateTime.now().add(const Duration(days: 365 * 10)),
+          ),
+        ),
+      );
+    }
 
+    if (!mounted) return;
     if (pickedDate != null) {
-      setState(() => _targetDate = pickedDate);
+      setState(() => _targetDate = pickedDate!);
     }
   }
 

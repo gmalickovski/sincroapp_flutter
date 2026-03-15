@@ -5,7 +5,6 @@ import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
 import 'package:sincro_app_flutter/common/widgets/modern/custom_time_picker_dialog.dart';
 import 'package:sincro_app_flutter/models/date_picker_result.dart';
-import 'package:sincro_app_flutter/common/widgets/custom_month_year_picker.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -240,63 +239,6 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     });
   }
 
-  Future<void> _pickReminderTime() async {
-    final now = TimeOfDay.now();
-    final bool isDesktop = MediaQuery.of(context).size.width > 800;
-
-    final TimePickerResult? result = isDesktop
-        ? await showDialog<TimePickerResult>(
-            context: context,
-            builder: (context) => CustomTimePickerDialog(initialTime: now),
-          )
-        : await showModalBottomSheet<TimePickerResult>(
-            context: context,
-            isScrollControlled: true,
-            backgroundColor: Colors.transparent,
-            useSafeArea: true,
-            builder: (context) => Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.cardBackground,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-                ),
-                child: SafeArea(
-                  child: CustomTimePickerWidget(
-                    initialTime: now,
-                    onConfirm: (res) => Navigator.pop(context, res),
-                    onCancel: () => Navigator.pop(context),
-                  ),
-                ),
-              ),
-            ),
-          );
-
-    if (result != null) {
-      final picked = result.time;
-      setState(() {
-        // Calculate offset from base time
-        final baseHour = _selectedTime?.hour ?? 0;
-        final baseMinute = _selectedTime?.minute ?? 0;
-        final baseDt = DateTime(2024, 1, 1, baseHour, baseMinute);
-
-        var targetDt = DateTime(2024, 1, 1, picked.hour, picked.minute);
-
-        // If target is after base, assume it's for the previous day
-        if (targetDt.isAfter(baseDt)) {
-          targetDt = targetDt.subtract(const Duration(days: 1));
-        }
-
-        final diffMinutes = baseDt.difference(targetDt).inMinutes;
-        if (diffMinutes >= 0) {
-          _selectedReminderOffsets.add(diffMinutes);
-        }
-      });
-    }
-  }
-
   void _onSave() {
     // If no day is selected but we are saving, maybe we just return nulls or whatever was there.
     // Use a data selecionada base (meia noite)
@@ -453,7 +395,7 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -603,13 +545,13 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
   }
 
   Widget _buildHeader() {
-    return Padding(
-      padding: const EdgeInsets.only(
+    return const Padding(
+      padding: EdgeInsets.only(
           top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          const Text(
+          Text(
             "Agendar Tarefa",
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -631,20 +573,29 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     if (!_isSameDay(_selectedDay, _initialDay)) return true;
     // Compare time
     if (_selectedTime?.hour != _initialTime?.hour ||
-        _selectedTime?.minute != _initialTime?.minute) return true;
+        _selectedTime?.minute != _initialTime?.minute) {
+      return true;
+    }
     // Compare recurrence type
     if (_recurrenceRule.type !=
-        (_initialRecurrence?.type ?? RecurrenceType.none)) return true;
+        (_initialRecurrence?.type ?? RecurrenceType.none)) {
+      return true;
+    }
     if (_recurrenceRule.recurrenceCategory !=
-        (_initialRecurrence?.recurrenceCategory ?? 'commitment')) return true;
+        (_initialRecurrence?.recurrenceCategory ?? 'commitment')) {
+      return true;
+    }
     // Compare recurrence days of week (catches adding/removing a weekday)
     final currentDays = Set<int>.from(_recurrenceRule.daysOfWeek);
     final initialDays = Set<int>.from(_initialRecurrence?.daysOfWeek ?? []);
     if (!currentDays.containsAll(initialDays) ||
-        !initialDays.containsAll(currentDays)) return true;
-    // Compare reminder offsets
-    if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets))
+        !initialDays.containsAll(currentDays)) {
       return true;
+    }
+    // Compare reminder offsets
+    if (!_setEquals(_selectedReminderOffsets, _initialReminderOffsets)) {
+      return true;
+    }
     return false;
   }
 
@@ -885,10 +836,12 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
     if (_initialTime != _selectedTime) return true;
     if (_initialRecurrence?.type != _recurrenceRule.type) return true;
     // Reminders
-    if (_initialReminderOffsets.length != _selectedReminderOffsets.length)
+    if (_initialReminderOffsets.length != _selectedReminderOffsets.length) {
       return true;
-    if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets))
+    }
+    if (!_initialReminderOffsets.containsAll(_selectedReminderOffsets)) {
       return true;
+    }
 
     return false;
   }
@@ -1379,9 +1332,9 @@ class _ScheduleTaskSheetState extends State<ScheduleTaskSheet> {
                 const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Row(
               children: [
-                Opacity(
+                const Opacity(
                   opacity: contentOpacity,
-                  child: const Row(
+                  child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.notifications_none_rounded,

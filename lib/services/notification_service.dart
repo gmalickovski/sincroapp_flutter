@@ -6,12 +6,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart'
 import 'package:flutter/foundation.dart'; // Import kIsWeb
 import 'package:flutter/material.dart'; // Import Material for TimeOfDay, Colors
 import 'package:permission_handler/permission_handler.dart';
-import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/features/notifications/models/notification_model.dart';
 import 'package:sincro_app_flutter/features/notifications/presentation/widgets/notification_detail_modal.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/settings/presentation/settings_screen.dart';
-import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -55,10 +53,6 @@ class NotificationService {
   static const String _channelNameDaily = 'Insights Diários';
   static const String _channelDescDaily =
       'Notificações matinais sobre seu dia pessoal e lembretes.';
-
-  // IDs únicos para tipos de notificação agendada
-  static const int _dailyPersonalDayId = 1;
-  static const int _dailyEndOfDayId = 2;
 
   /// Inicializa os pacotes, configura canais e solicita permissões
   Future<void> init() async {
@@ -195,7 +189,7 @@ class NotificationService {
     SupabaseService().getUserData(userId).then((userData) {
       if (userData == null) return;
       final ctx = NavigationService.navigatorKey.currentContext;
-      if (ctx == null) return;
+      if (ctx == null || !ctx.mounted) return;
 
       final isDesktop = MediaQuery.of(ctx).size.width >= 720;
       if (isDesktop) {
@@ -290,28 +284,6 @@ class NotificationService {
     } catch (e) {
       debugPrint('❌ Erro ao exibir notificação desktop: $e');
     }
-  }
-
-  /// Agenda uma notificação no Windows via Timer (funciona enquanto app aberto)
-  void _scheduleDesktopNotification({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime scheduledDate,
-  }) {
-    // Cancela timer anterior com mesmo ID
-    _windowsTimers[id]?.cancel();
-
-    final now = DateTime.now();
-    final delay = scheduledDate.difference(now);
-
-    if (delay.isNegative) return; // Já passou
-
-    _windowsTimers[id] = Timer(delay, () {
-      _showDesktopNotification(title: title, body: body);
-      _windowsTimers.remove(id);
-    });
-    debugPrint('[Desktop] Notificação agendada: "$title" em ${delay.inMinutes}min');
   }
 
   /// Solicita permissões de notificação usando permission_handler
@@ -428,33 +400,6 @@ class NotificationService {
         }
       }
     }
-  }
-
-  /// Converte um TimeOfDay para um tz.TZDateTime na próxima ocorrência
-  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
-    tz.TZDateTime scheduledDate = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day, time.hour, time.minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-    return scheduledDate;
-  }
-
-  /// Versão local (DateTime puro) para uso no Windows/Linux
-  DateTime _nextInstanceOfTimeLocal(TimeOfDay time) {
-    final now = DateTime.now();
-    var scheduledDate = DateTime(now.year, now.month, now.day, time.hour, time.minute);
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-    return scheduledDate;
-  }
-
-  /// Converte uma data e hora específicas para tz.TZDateTime
-  tz.TZDateTime _instanceOfDateTime(DateTime date, TimeOfDay time) {
-    return tz.TZDateTime(
-        tz.local, date.year, date.month, date.day, time.hour, time.minute);
   }
 
   /// Exibe uma notificação simples agora

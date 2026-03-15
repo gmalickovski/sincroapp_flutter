@@ -63,17 +63,6 @@ class TaskItem extends StatelessWidget {
   final Future<bool?> Function(TaskModel)? onSwipeLeft; // Excluir
   final Future<bool?> Function(TaskModel)? onSwipeRight; // Reagendar
 
-  // Helper para verificar se a data NÃO é hoje (inalterado)
-  bool _isNotToday(DateTime? date) {
-    if (date == null) return false;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    // CORREÇÃO: Converter para Local antes de extrair dia/mês/ano
-    final dateLocal = date.toLocal();
-    final targetDate = DateTime(dateLocal.year, dateLocal.month, dateLocal.day);
-    return !today.isAtSameMomentAs(targetDate);
-  }
-
   TextSpan _buildMentionHighlightedText(
     String text, {
     required TextStyle baseStyle,
@@ -220,8 +209,7 @@ class TaskItem extends StatelessWidget {
                 (isRecurrent && task.recurrenceCategory == 'commitment'));
     // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
     int? effectivePersonalDay = task.personalDay;
-    if (task.effectiveDate == null &&
-        userData != null &&
+    if (userData != null &&
         userData!.nomeAnalise.isNotEmpty &&
         userData!.dataNasc.isNotEmpty) {
       // Tarefa perpétua (nem flow nem agendada): calcula dia pessoal baseado na data de hoje
@@ -460,7 +448,7 @@ class TaskItem extends StatelessWidget {
                                 : 0,
                           ),
                           child: VibrationPill(
-                            vibrationNumber: effectivePersonalDay!,
+                            vibrationNumber: effectivePersonalDay,
                             type: VibrationPillType.compact,
                           ),
                         ),

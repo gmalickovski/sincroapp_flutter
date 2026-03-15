@@ -10,10 +10,10 @@ class SettingsHeader extends StatelessWidget {
   const SettingsHeader({super.key, required this.userData});
 
   void _shareProfile() {
-    Share.share(
-      'Me adicione no Sincro App! Meu usuário é @${userData.username ?? ""}',
+    SharePlus.instance.share(ShareParams(
+      text: 'Me adicione no Sincro App! Meu usuário é @${userData.username ?? ""}',
       subject: 'Convite Sincro App',
-    );
+    ));
   }
 
   @override

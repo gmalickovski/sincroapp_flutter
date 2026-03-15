@@ -317,7 +317,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.05),
+                              color: Colors.white.withValues(alpha: 0.05),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(
@@ -447,8 +447,9 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
         _isSelectingItem = false;
       } else if (widget.type == MobileFilterType.date) {
         if (_dateMode == DateFilterMode.interval) _isSelectingYearMonth = false;
-        if (_dateMode == DateFilterMode.month)
+        if (_dateMode == DateFilterMode.month) {
           _isSelectingYearInMonthView = false;
+        }
       }
     });
   }
@@ -931,7 +932,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
@@ -982,8 +983,9 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
       rangeEndDay: _tempEndDate,
 
       onDaySelected: (selectedDay, focusedDay) {
-        if (_isSelectingYearMonth)
+        if (_isSelectingYearMonth) {
           return; // Disable selection while picker is open
+        }
 
         setState(() {
           _focusedDay = focusedDay;
@@ -1491,6 +1493,15 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                   duration: const Duration(milliseconds: 200),
                   width: 36,
                   height: 36,
+                  decoration: BoxDecoration(
+                    color: isSelected ? colors.background : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color:
+                          isSelected ? Colors.transparent : colors.background,
+                      width: 2,
+                    ),
+                  ),
                   child: Center(
                     child: Text(
                       '$vibe',
@@ -1499,15 +1510,6 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),
-                    ),
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected ? colors.background : Colors.transparent,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color:
-                          isSelected ? Colors.transparent : colors.background,
-                      width: 2,
                     ),
                   ),
                 ),
@@ -1652,11 +1654,11 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
           key: const ValueKey('GoalList'),
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Text("Selecione uma Jornada",
+                  Text("Selecione uma Jornada",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -1825,11 +1827,11 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
           key: const ValueKey('ContactList'),
           mainAxisSize: MainAxisSize.min,
           children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Row(
                 children: [
-                  const Text("Selecione um Contato",
+                  Text("Selecione um Contato",
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -2047,7 +2049,7 @@ class _MobileFilterSheetState extends State<MobileFilterSheet> {
           );
         },
         child: Column(
-          key: ValueKey('SortList_${_sortCategory}'),
+          key: ValueKey('SortList_$_sortCategory'),
           mainAxisSize: MainAxisSize.min,
           children: [
             Padding(
@@ -2213,37 +2215,6 @@ class _HoverableOptionTileState extends State<_HoverableOptionTile> {
 
   @override
   Widget build(BuildContext context) {
-    final selectionColor = widget.overrideSelectionColor ??
-        Colors.cyan; // Default cyan for Goals, override for others
-    // Mapping: Goals=Cyan, Contacts=Blue, Scope=Primary(DeepPurple/Default)
-    // Note: The original code used AppColors.primary for Scope.
-    // If overrideSelectionColor is null, we might want to default to Primary or handle it.
-    // Goals used cyan. Contacts used blue. Scope used Primary.
-    // Let's check call sites.
-
-    // Actually, let's use the passed color or default to Primary if not provided?
-    // In strict mode: Goals passed nothing (checked previous code.. oh, I didn't pass anything for Goals in my previous Step 1820 replacement!).
-    // Wait, in Step 1820, I replaced Code for Goal List.
-    // `_HoverableOptionTile(isSelected: isSelected, ...)`
-    // The previous code for Goal List used `isSelectd ? Colors.cyan`.
-
-    // I need to ensure _HoverableOptionTile defaults to Cyan if I want to match Goal List without passing color?
-    // No, cleaner to pass the color.
-    // BUT I ALREADY WROTE the code for Goal List in Step 1820 and I DID NOT pass a color.
-    // So the default MUST be Cyan to match what I wrote? Or I should update Goal List too?
-    // Updating Goal List now would require finding it again.
-    // Let's set default to Cyan to be safe for the code I already wrote, or app-wide primary?
-    // Goals = Cyan.
-    // If I set default to Cyan, Scope (which uses Primary) will be wrong unless I pass Primary.
-    // Scope is in THIS update (Chunk 1). I can pass `overrideSelectionColor: AppColors.primary`.
-
-    // Rechecking Step 1820:
-    // `color: isSelected ? Colors.cyan : ...`
-    // I replaced it with `_HoverableOptionTile(...)`.
-    // So `_HoverableOptionTile` needs to default to Cyan or I need to update Goal List.
-    // I cannot update Goal List easily in this same call without a huge context.
-    // I will set default to Colors.cyan.
-
     final effectiveSelectionColor =
         widget.overrideSelectionColor ?? Colors.cyan;
 

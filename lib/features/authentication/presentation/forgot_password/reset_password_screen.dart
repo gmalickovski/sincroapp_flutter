@@ -2,7 +2,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
-import 'package:sincro_app_flutter/app/routs/app_router.dart';
 import 'package:sincro_app_flutter/main.dart';
 
 class ResetPasswordScreen extends StatefulWidget {

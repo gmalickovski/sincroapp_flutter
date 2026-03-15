@@ -1804,8 +1804,9 @@ class SupabaseService {
       if (data.containsKey('content')) mapped['content'] = data['content'];
       if (data.containsKey('mood')) mapped['mood'] = data['mood']?.toString();
       if (data.containsKey('tags')) mapped['tags'] = data['tags'];
-      if (data.containsKey('title'))
+      if (data.containsKey('title')) {
         mapped['title'] = data['title']; // Ensure title is mapped
+      }
 
       mapped['updated_at'] = DateTime.now().toIso8601String();
 
@@ -1955,17 +1956,18 @@ class SupabaseService {
 
               if (age >= 18 && age <= 24) {
                 ageBuckets['18-24'] = (ageBuckets['18-24'] ?? 0) + 1;
-              } else if (age >= 25 && age <= 34)
+              } else if (age >= 25 && age <= 34) {
                 ageBuckets['25-34'] = (ageBuckets['25-34'] ?? 0) + 1;
-              else if (age >= 35 && age <= 44)
+              } else if (age >= 35 && age <= 44) {
                 ageBuckets['35-44'] = (ageBuckets['35-44'] ?? 0) + 1;
-              else if (age >= 45 && age <= 54)
+              } else if (age >= 45 && age <= 54) {
                 ageBuckets['45-54'] = (ageBuckets['45-54'] ?? 0) + 1;
-              else if (age >= 55)
+              } else if (age >= 55) {
                 ageBuckets['55+'] = (ageBuckets['55+'] ?? 0) + 1;
-              else
+              } else {
                 ageBuckets['N/A'] =
                     (ageBuckets['N/A'] ?? 0) + 1; // Menor de 18 ou erro
+              }
             } else {
               ageBuckets['N/A'] = (ageBuckets['N/A'] ?? 0) + 1;
             }
@@ -2178,7 +2180,6 @@ class SupabaseService {
         .from('site_settings')
         .stream(primaryKey: ['key']).map((event) {
       // Converte lista de key-values para Map único
-      final Map<String, dynamic> settings = {};
       for (var item in event) {
         if (item['key'] == 'global_config') {
           return item['value'] as Map<String, dynamic>;

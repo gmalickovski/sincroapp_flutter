@@ -60,7 +60,7 @@ class CalendarHeader extends StatelessWidget {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                titleText ?? '',
+                                titleText,
                                 style: TextStyle(
                                   color: AppColors.secondaryText,
                                   fontSize: fontSize,
@@ -131,7 +131,7 @@ class CalendarHeader extends StatelessWidget {
                               children: [
                                 Flexible(
                                   child: Text(
-                                    titleText ?? '',
+                                    titleText,
                                     style: TextStyle(
                                       color: AppColors.primaryText,
                                       fontSize: fontSize,

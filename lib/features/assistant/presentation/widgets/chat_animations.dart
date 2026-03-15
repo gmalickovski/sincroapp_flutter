@@ -262,8 +262,6 @@ class MorphingMessageBubble extends StatefulWidget {
 class _MorphingMessageBubbleState extends State<MorphingMessageBubble>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _widthFactor;
-  late Animation<double> _heightFactor;
 
   @override
   void initState() {

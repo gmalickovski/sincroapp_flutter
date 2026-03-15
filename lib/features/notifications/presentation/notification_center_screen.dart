@@ -150,16 +150,6 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
     _supabaseService.deleteNotifications([id]);
   }
 
-  void _markSelectedAsRead() async {
-    final ids = _selectedIds.toList();
-    setState(() {
-      _optimisticallyReadIds.addAll(ids);
-      _isSelectionMode = false;
-      _selectedIds.clear();
-    });
-    _supabaseService.markNotificationsAsRead(ids);
-  }
-
   void _markNotificationAsRead(String id) async {
     setState(() {
       _optimisticallyReadIds.add(id);
@@ -341,9 +331,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(color: Colors.white24, width: 1.5),
                           ),
-                          child: Row(
+                          child: const Row(
                             mainAxisSize: MainAxisSize.min,
-                            children: const [
+                            children: [
                               Icon(Icons.checklist, color: Colors.white, size: 16),
                               SizedBox(width: 6),
                               Text('Todos', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -369,9 +359,9 @@ class _NotificationCenterScreenState extends State<NotificationCenterScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                       border: Border.all(color: Colors.redAccent, width: 1.5),
                                     ),
-                                    child: Row(
+                                    child: const Row(
                                       mainAxisSize: MainAxisSize.min,
-                                      children: const [
+                                      children: [
                                         Icon(Icons.delete_outline, color: Colors.redAccent, size: 16),
                                         SizedBox(width: 6),
                                         Text('Excluir', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w600)),
@@ -841,7 +831,6 @@ class _NotificationTile extends StatelessWidget {
       case NotificationType.reminder:
         return _NotificationTheme(Icons.alarm_rounded, Colors.orangeAccent);
       case NotificationType.system:
-      default:
         return _NotificationTheme(Icons.info_outline_rounded, Colors.blueGrey);
     }
   }

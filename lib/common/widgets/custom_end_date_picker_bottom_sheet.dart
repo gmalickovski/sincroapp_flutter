@@ -94,13 +94,13 @@ class _CustomEndDatePickerBottomSheetState
         mainAxisSize: MainAxisSize.min, // Ocupar o tamanho mínimo necessário
         children: [
           // Title
-          Padding(
-            padding: const EdgeInsets.only(
+          const Padding(
+            padding: EdgeInsets.only(
                 top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
             child: Text(
               "Selecionar Data",
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.primaryText,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -199,7 +199,7 @@ class _CustomEndDatePickerBottomSheetState
                       padding: const EdgeInsets.symmetric(
                           horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
+                        color: Colors.white.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(

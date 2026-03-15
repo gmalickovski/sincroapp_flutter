@@ -154,6 +154,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
         _aiAnalysis = analysis;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Erro na análise IA: ${e.toString()}')),
       );
@@ -518,16 +519,16 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
     final description = _result!['description'] as String;
     final detailedDescription =
         _result!['details']['detailedDescription'] as String?;
-    final harmoniaA = _result!['details']['numA'] as int?;
     final rules = _result!['details']['rules'] as Map<String, dynamic>?;
 
     Color scoreColor;
     if (score >= 80) {
       scoreColor = Colors.greenAccent;
-    } else if (score >= 60)
+    } else if (score >= 60) {
       scoreColor = Colors.amberAccent;
-    else
+    } else {
       scoreColor = Colors.redAccent;
+    }
 
     // Check if premium to show/hide sections
     final isPremium =
@@ -855,7 +856,7 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
               child: CircularProgressIndicator(
                   strokeWidth: 2, color: Colors.white))
           : isPremium
-              ? const FaIcon(FontAwesomeIcons.magic, size: 16)
+              ? const FaIcon(FontAwesomeIcons.wandMagic, size: 16)
               : const Icon(Icons.lock_open, size: 16),
       label: Text(
         _isAnalyzingAI
@@ -1014,7 +1015,6 @@ class _LoveCompatibilityModalState extends State<LoveCompatibilityModal>
 }
 
 class MantraBuilder extends MarkdownElementBuilder {
-  @override
   Widget? visitElement(
       md.Element element, TextStyle? preferredStyle, TextStyle? parentStyle) {
     // Extract text content from the blockquote (usually wrapped in <p>)

@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
-import 'package:sincro_app_flutter/models/recurrence_rule.dart'; // Added
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
 import 'package:sincro_app_flutter/common/parser/task_parser.dart';
@@ -15,7 +14,6 @@ import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 
-import 'package:sincro_app_flutter/features/goals/presentation/create_goal_screen.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/create_goal_dialog.dart';
 import 'package:sincro_app_flutter/features/tasks/services/task_action_service.dart';
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_image_card.dart';
@@ -24,7 +22,6 @@ import 'package:sincro_app_flutter/features/assistant/presentation/assistant_pan
 import 'package:sincro_app_flutter/features/goals/presentation/widgets/first_milestone_modal.dart';
 
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
-import 'package:sincro_app_flutter/features/goals/presentation/widgets/goal_filter_panel.dart';
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart';
 
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
@@ -76,7 +73,6 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   bool _isSelectionMode = false;
   Set<String> _selectedTaskIds = {}; // IDs of selected tasks
 
-  OverlayEntry? _filterOverlay;
   final GlobalKey _dateFilterKey = GlobalKey();
   final GlobalKey _vibrationFilterKey = GlobalKey();
   final GlobalKey _tagFilterKey = GlobalKey();
@@ -314,9 +310,8 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
               tags: parsedTask.tags,
               personalDay: finalPersonalDay,
               // Recurrence Mapping
-              recurrenceType:
-                  parsedTask.recurrenceRule.type ?? RecurrenceType.none,
-              recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek ?? [],
+              recurrenceType: parsedTask.recurrenceRule.type,
+              recurrenceDaysOfWeek: parsedTask.recurrenceRule.daysOfWeek,
               recurrenceEndDate: parsedTask.recurrenceRule.endDate,
               // Reminder Mapping
               reminderTime: parsedTask.reminderTime,
@@ -545,7 +540,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
   List<SincroFilterItem> _buildFilterItems(
       bool isDesktop, List<String> availableTags) {
     // Standalone view filters
-    void _setFilter(String? filter) {
+    void setFilter(String? filter) {
       setState(() {
         _activeFilter = (_activeFilter == filter) ? null : filter;
         _selectedTaskIds.clear();
@@ -557,7 +552,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       icon: Icons.bolt,
       isSelected: _activeFilter == 'foco',
       activeColor: const Color(0xFFFF6D3F),
-      onTap: () => _setFilter('foco'),
+      onTap: () => setFilter('foco'),
     );
 
     final tarefasItem = SincroFilterItem(
@@ -565,7 +560,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       icon: Icons.inbox_outlined,
       isSelected: _activeFilter == 'tarefas',
       activeColor: Colors.amber,
-      onTap: () => _setFilter('tarefas'),
+      onTap: () => setFilter('tarefas'),
     );
 
     final agendamentoItem = SincroFilterItem(
@@ -573,7 +568,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       icon: Icons.event_available,
       isSelected: _activeFilter == 'agendamentos',
       activeColor: Colors.amber,
-      onTap: () => _setFilter('agendamentos'),
+      onTap: () => setFilter('agendamentos'),
     );
 
     final concluidasItem = SincroFilterItem(
@@ -581,7 +576,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       icon: Icons.check_circle_outline,
       isSelected: _activeFilter == 'concluidas',
       activeColor: const Color(0xFF22C55E),
-      onTap: () => _setFilter('concluidas'),
+      onTap: () => setFilter('concluidas'),
     );
 
     final atrasadasItem = SincroFilterItem(
@@ -589,7 +584,7 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
       icon: Icons.warning_amber_rounded,
       isSelected: _activeFilter == 'atrasadas',
       activeColor: const Color(0xFFEF5350),
-      onTap: () => _setFilter('atrasadas'),
+      onTap: () => setFilter('atrasadas'),
     );
 
     // 2. Date (rich label como FocoDoDia)
@@ -1096,9 +1091,10 @@ class _GoalDetailScreenState extends State<GoalDetailScreen> {
                 
                 // Check if still mounted after the modal closes.
                 // If result is NOT true, it means they didn't create a milestone.
-                if (mounted && result != true) {
+                if (!context.mounted) return;
+                if (result != true) {
                   Navigator.of(context).pop();
-                } else if (mounted && result == true) {
+                } else if (result == true) {
                   // User created a milestone.
                   // Rest assured the stream will emit a new list where allMilestones.isEmpty is false.
                   // We also reset the triggered flag just in case they later delete all milestones,

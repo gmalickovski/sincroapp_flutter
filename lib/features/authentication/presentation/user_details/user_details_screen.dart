@@ -480,12 +480,11 @@ class _UserDetailsScreenState extends State<UserDetailsScreen> {
               onPressed: () async {
                 // Cancel registration -> Sign out
                 await Supabase.instance.client.auth.signOut();
-                if (context.mounted) {
-                  Navigator.of(context).pushAndRemoveUntil(
-                    MaterialPageRoute(builder: (_) => const AuthCheck()),
-                    (route) => false,
-                  );
-                }
+                if (!mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const AuthCheck()),
+                  (route) => false,
+                );
               },
               child: const Text("Cancelar",
                   style: TextStyle(color: AppColors.tertiaryText)),

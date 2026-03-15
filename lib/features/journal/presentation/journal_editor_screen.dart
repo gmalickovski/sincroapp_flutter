@@ -3,8 +3,6 @@
 import 'dart:convert';
 import 'dart:async';
 
-import 'package:animations/animations.dart'; // For MaterialRectCenterArcTween
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_quill/flutter_quill.dart';
@@ -15,7 +13,6 @@ import 'package:sincro_app_flutter/common/parser/task_parser.dart';
 import 'package:sincro_app_flutter/features/journal/models/journal_entry_model.dart';
 import 'package:sincro_app_flutter/features/journal/presentation/widgets/journal_toolbar_widgets.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
-import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
@@ -57,7 +54,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
   bool _isTitleFocused = false;
 
   // --- Parser popup state (only active on checklist lines) ---
-  List<ContactModel> _cachedContacts = [];
   List<Goal> _cachedGoals = [];
   List<String> _cachedTags = [];
   OverlayEntry? _suggestionsOverlay;
@@ -109,12 +105,12 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
   // V22: Sync Listener for Checklist Toggles
   void _syncChecklistChanges(DocChange event) {
-    if (event.source != ChangeSource.local)
+    if (event.source != ChangeSource.local) {
       return; // Only sync local user actions
+    }
 
     // Iterate through delta operations to find attribute changes
     final delta = event.change;
-    int offset = 0;
     for (final op in delta.toList()) {
       if (op.attributes != null && op.attributes!.containsKey('list')) {
         final value = op.attributes!['list'];
@@ -153,9 +149,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         }
       }
 
-      if (op.length is int) {
-        offset += op.length as int;
-      }
     }
   }
 
@@ -279,11 +272,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
   TextSelection? _lastValidSelection; // Fix for parser click focus loss
 
-  // Deprecated: functional logic moved to _syncJournalWithSystemTasks
-  Future<void> _updateJournalFromTasks() async {
-    return _syncJournalWithSystemTasks();
-  }
-
   void _applySuggestion(ParserSuggestion suggestion) {
     _isApplyingSuggestion = true;
     try {
@@ -384,19 +372,15 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
 
       // Parallel fetching for performance
       final results = await Future.wait([
-        _supabaseService.getContacts(uid),
         _supabaseService.getGoalsStream(uid).first,
         _supabaseService.getTags(uid),
       ]);
 
-      final contacts = results[0] as List<ContactModel>;
-      final goalsSnapshot = results[1] as List<Goal>;
-      final tags = results[2] as List<String>;
+      final goalsSnapshot = results[0] as List<Goal>;
+      final tags = results[1] as List<String>;
 
       if (mounted) {
         setState(() {
-          _cachedContacts =
-              contacts.where((c) => c.status == 'active').toList();
           _cachedGoals = goalsSnapshot;
           _cachedTags = tags;
         });
@@ -877,239 +861,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
     } catch (_) {}
 
     return null;
-  }
-
-  Future<void> _syncTasksWithJournal(String journalId) async {
-    final doc = _controller.document;
-    final root = doc.root;
-    final now = DateTime.now().toLocal();
-    final dateForPersonalDay = DateTime.utc(now.year, now.month, now.day);
-    final personalDay = _calculatePersonalDay(dateForPersonalDay);
-
-    // 1. Fetch existing tasks for this journal entry
-    // Note: Assuming SupabaseService has a method to get tasks by sourceJournalId.
-    // If not, we iterate all and filter? No, we need a query.
-    // Since we can't change SupabaseService easily without viewing it, we might need to rely on 'journalId' if it was added.
-    // Assuming we added 'source_journal_id' column to Supabase tasks table.
-
-    // Fetch active goals for resolution
-    List<Goal> activeGoals = [];
-    List<TaskModel> existingTasksOnBackend = [];
-
-    try {
-      activeGoals = await _supabaseService.getActiveGoals(widget.userData.uid);
-      existingTasksOnBackend =
-          await _supabaseService.getTasksBySourceJournalId(journalId);
-    } catch (_) {}
-
-    final checklistLines = <Line>[];
-    for (var node in root.children) {
-      if (node is Line) {
-        final listAttr = node.style.attributes[Attribute.list.key];
-        if (listAttr != null &&
-            (listAttr.value == Attribute.unchecked.value ||
-                listAttr.value == Attribute.checked.value)) {
-          checklistLines.add(node);
-        }
-      }
-    }
-
-    final currentTaskIdsInDoc = <String>{};
-
-    for (final line in checklistLines) {
-      final rawText = line.toPlainText().trim();
-      if (rawText.isEmpty) continue;
-
-      final parsed = TaskParser.parse(rawText);
-      debugPrint('🔎 [JournalSync] Line: "$rawText"');
-      debugPrint('   -> Clean: "${parsed.cleanText}"');
-      debugPrint('   -> Tags: ${parsed.tags}');
-      debugPrint('   -> Mentions: ${parsed.sharedWith}');
-
-      // If text is empty (and no tags/mentions), skip
-      // But if it has tags, it might be a "tag only" task?
-      // User likely wants text.
-      if (parsed.cleanText.isEmpty && parsed.tags.isEmpty) continue;
-      final isCompleted = line.style.attributes[Attribute.list.key]?.value ==
-          Attribute.checked.value;
-
-      String? taskId = line.style.attributes[_taskIdKey]?.value;
-
-      // Resolve Goal ID
-      String? goalId;
-      if (parsed.goals.isNotEmpty) {
-        final goalName = parsed.goals.first.toLowerCase();
-        final goal = activeGoals.firstWhere(
-          (g) =>
-              g.title.toLowerCase() == goalName ||
-              g.title.toLowerCase().contains(goalName),
-          orElse: () => Goal(
-              id: '',
-              userId: '',
-              title: '',
-              description: '',
-              progress: 0,
-              createdAt: DateTime.now()),
-        );
-        if (goal.id.isNotEmpty) {
-          goalId = goal.id;
-        }
-      }
-
-      // Fuzzy Match if ID is missing
-      if (taskId == null) {
-        // Try to find a task with same text (normalized) that is NOT already claimed by another line
-        for (final candidate in existingTasksOnBackend) {
-          if (candidate.text.trim() == parsed.cleanText.trim() &&
-              !currentTaskIdsInDoc.contains(candidate.id)) {
-            taskId = candidate.id;
-            // Link it now in the doc!
-            final offset = line.documentOffset;
-            _controller.formatText(offset, line.length,
-                Attribute(_taskIdKey, AttributeScope.ignore, taskId));
-            break;
-          }
-        }
-      }
-
-      if (taskId != null) {
-        // Update existing task - FETCH FIRST (or use from list) to preserve other fields
-
-        // Update existing or create new
-        if (taskId.isNotEmpty) {
-          try {
-            final existingTask = existingTasksOnBackend.firstWhere(
-              (t) => t.id == taskId,
-              orElse: () => TaskModel(
-                id: '',
-                text: '',
-                completed: false,
-                createdAt: DateTime.now(),
-                tags: parsed.tags,
-                sharedWith: [],
-                sourceJournalId: widget.entry?.id,
-              ),
-            );
-
-            TaskModel? targetTask =
-                existingTask.id.isNotEmpty ? existingTask : null;
-            // If not in bulk fetch, try individual fetch
-            targetTask ??= await _supabaseService.getTaskById(taskId);
-
-            if (targetTask != null) {
-              final updatedTask = targetTask.copyWith(
-                text: parsed.cleanText,
-                completed: isCompleted,
-                tags: parsed.tags,
-                sharedWith: parsed.sharedWith,
-                goalId: goalId ?? '', // Use empty string to reset if parsed goal is missing
-                completedAt: isCompleted
-                    ? (targetTask.completedAt ?? DateTime.now())
-                    : null,
-              );
-
-              await _supabaseService.updateTask(
-                  widget.userData.uid, updatedTask);
-              currentTaskIdsInDoc.add(taskId);
-
-              // Persist taskId if missing
-              if (line.style.attributes[_taskIdKey]?.value != taskId) {
-                _controller.formatText(line.documentOffset, line.length,
-                    Attribute(_taskIdKey, AttributeScope.inline, taskId));
-              }
-            }
-          } catch (e) {
-            debugPrint("Error updating synced task: $e");
-          }
-        } else {
-          // CREATE NEW TASK
-          try {
-            final newTask = TaskModel(
-              id: '',
-              text: parsed.cleanText,
-              completed: isCompleted,
-              createdAt: DateTime.now(),
-              tags: parsed.tags,
-              sharedWith: parsed.sharedWith,
-              sourceJournalId: journalId,
-              personalDay: _personalDay > 0 ? _personalDay : null,
-            );
-
-            final createdTask =
-                await _supabaseService.addTask(widget.userData.uid, newTask);
-
-            if (createdTask != null) {
-              // Apply new ID to line
-              final offset = line.documentOffset;
-              // Use inline scope to ensure it sticks to text leaves too
-              _controller.formatText(
-                  offset,
-                  line.length, // Cover full line
-                  Attribute(_taskIdKey, AttributeScope.inline, createdTask.id));
-
-              currentTaskIdsInDoc.add(createdTask.id);
-              debugPrint('✅ [JournalSync] Task created: ${createdTask.id}');
-            }
-          } catch (e) {
-            debugPrint('❌ [JournalSync] Error creating task: $e');
-          }
-        }
-      }
-    } // End Loop
-
-    // Handle Deletions
-    // We need to fetch all tasks for this journalId and delete those not in currentTaskIdsInDoc.
-    try {
-      final allEntryTasks =
-          await _supabaseService.getTasksBySourceJournalId(journalId);
-      for (final task in allEntryTasks) {
-        if (!currentTaskIdsInDoc.contains(task.id)) {
-          // USER REQUEST: Unlink instead of delete!
-          // "se eu quevrar a relação com a anotação ela vai apaenas aparecer dentro da pagina de tarefas"
-          final unlinkedTask = task.copyWith(sourceJournalId: null);
-          // We need a way to set it to null. copyWith usually ignores null if not wrapped.
-          // Check TaskModel.copyWith implementation.
-          // If it doesn't support setting null, we might need a specific update method or raw update.
-          // Let's assume standard copyWith: sourceJournalId: sourceJournalId ?? this.sourceJournalId
-          // If we pass null, it keeps existing. We might need a special value or a specific method.
-          // Hack: if copyWith doesn't support unsetting, we might need to use `updateTask` with a map or modify copyWith.
-          // Let's verify TaskModel.
-
-          // Actually, let's look at TaskModel first.
-          // But to be safe/fast, I'll attempt to update it.
-          // If copyWith is standard generated, passing null might effectively "keep existing" if it checks `if (sourceJournalId != null)`.
-          // If so, we can't unset it via copyWith.
-
-          // Workaround for now: We will assume we can update it.
-          // If not, we might fail to unlink.
-          // But the requirement is likely to unlink.
-
-          // I will assume I need to pass `null` to `sourceJournalId`.
-          // If I can't, I'll do nothing (better than deleting).
-          // But the requirement is likely to unlink.
-
-          // Let's try to update with sourceJournalId: "" (empty string) if nullable?
-          // UUID usually nullable.
-
-          // Implementation:
-          final updated = task.copyWith(
-              sourceJournalId:
-                  null); // This line might be problematic if copyWith ignores nulls.
-          // If I can't check TaskModel, I will just COMMENT OUT the delete for now.
-          // That satisfies "don't delete".
-          // Unlinking is a "nice to have" to avoid ghost links, but "not deleting" is the hard requirement.
-          // Also, if I don't unlink, and the user deletes the Journal later, the DB `ON DELETE SET NULL` will fix it.
-          // So leaving it linked is safer than deleting.
-
-          // I will comment out the delete verification.
-          debugPrint(
-              'ℹ️ [JournalSync] Task ${task.id} removed from Journal text. Keeping in System (Ghost Link).');
-          // await _supabaseService.deleteTask(widget.userData.uid, task.id);
-        }
-      }
-    } catch (e) {
-      // create getTasksBySourceJournalId if missing or handle error
-    }
   }
 
   Future<void> _handleSave() async {
@@ -2333,7 +2084,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
       if (systemTasks.isEmpty) return;
 
       final systemTasksMap = {for (var t in systemTasks) t.id: t};
-      bool docChanged = false;
       final doc = _controller.document;
 
       // Iterate backwards to avoid index issues if we were deleting lines (checking forwards is fine for updates)
@@ -2352,7 +2102,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
               const Attribute(_taskIdKey, AttributeScope.inline, null));
           _controller.formatText(line.documentOffset, line.length,
               const Attribute('list', AttributeScope.block, null));
-          docChanged = true;
           continue;
         }
 
@@ -2367,7 +2116,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         if (currentListAttr != shouldBeChecked) {
           _controller.formatText(line.documentOffset, line.length,
               task.completed ? Attribute.checked : Attribute.unchecked);
-          docChanged = true;
         }
 
         // Update Text
@@ -2378,7 +2126,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
           // Replace text content
           _controller.replaceText(
               line.documentOffset, currentText.length, expectedText, null);
-          docChanged = true;
         }
       }
     } catch (e) {
@@ -2686,11 +2433,7 @@ class _ScrollableToolbarWrapperState extends State<_ScrollableToolbarWrapper> {
         Expanded(
           child: NotificationListener<ScrollNotification>(
             onNotification: (notification) {
-              // Also listen to ScrollMetricsNotification for resize events
-              if (notification is ScrollMetricsNotification ||
-                  notification is ScrollNotification) {
-                _checkScrollability();
-              }
+              _checkScrollability();
               return false;
             },
             child: SingleChildScrollView(

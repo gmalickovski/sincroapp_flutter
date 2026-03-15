@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/modern/schedule_task_sheet.dart';
 import 'package:sincro_app_flutter/models/recurrence_rule.dart';
-import 'package:sincro_app_flutter/models/date_picker_result.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:sincro_app_flutter/features/goals/models/goal_model.dart';
 
@@ -227,8 +226,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
       ParserKeyType type, String query) async {
     // REGRA: Meta e contatos são mutuamente exclusivos
     if (type == ParserKeyType.mention && _selectedGoalId != null) return [];
-    if (type == ParserKeyType.goal && _sharedWithUsernames.isNotEmpty)
+    if (type == ParserKeyType.goal && _sharedWithUsernames.isNotEmpty) {
       return [];
+    }
     // REGRA: Menção de contato só funciona com due date
     if (type == ParserKeyType.mention && _selectedDate == null) return [];
 
@@ -621,7 +621,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
             reminderAt: () {
               if (_selectedDate == null) return null;
               if (_selectedReminderOffsets == null ||
-                  _selectedReminderOffsets!.isEmpty) return null;
+                  _selectedReminderOffsets!.isEmpty) {
+                return null;
+              }
 
               DateTime base = _selectedDate!;
               if (_selectedTime != null) {
@@ -636,7 +638,9 @@ class _TaskInputModalState extends State<TaskInputModal> {
 
     widget.onAddTask(finalParsedTask);
 
-    if (mounted) Navigator.of(context).pop();
+    if (mounted) {
+      Navigator.of(context).pop();
+    }
   }
 
   void _openContactPicker() async {
@@ -654,6 +658,7 @@ class _TaskInputModalState extends State<TaskInputModal> {
     // Se falhou ou vazio (verifique lógica de retry se necessário, mas aqui assume que tentou)
     final contactsToPass = _cachedContacts ?? [];
 
+    if (!mounted) return;
     final result = await showModalBottomSheet<List<String>>(
       context: context,
       isScrollControlled: true,
@@ -784,14 +789,6 @@ class _TaskInputModalState extends State<TaskInputModal> {
     _textController.dispose();
     _textFieldFocusNode.dispose();
     super.dispose();
-  }
-
-  void _handleClose() {
-    if (widget.onClose != null) {
-      widget.onClose!();
-    } else {
-      Navigator.pop(context);
-    }
   }
 
   // --- IN├ìCIO DA MUDAN├çA: build() atualizado com "Pills" ---

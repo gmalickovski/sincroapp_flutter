@@ -7,7 +7,6 @@ import 'package:sincro_app_flutter/features/contacts/presentation/add_contact_mo
 import 'package:sincro_app_flutter/models/contact_model.dart';
 import 'package:sincro_app_flutter/models/user_model.dart'; // We use UserModel internally for richer data if needed, but list uses ContactModel
 import 'package:sincro_app_flutter/services/supabase_service.dart';
-import 'package:share_plus/share_plus.dart';
 
 class ContactsSettingsTab extends StatefulWidget {
   final UserModel userData;
@@ -143,14 +142,6 @@ class _ContactsSettingsTabState extends State<ContactsSettingsTab> {
         _showFeedback('Erro ao remover contato.', isError: true);
       }
     }
-  }
-
-  void _shareProfile() {
-    // Generate a deep link or just share text for now
-    Share.share(
-      'Me adicione no Sincro App! Meu usuário é @${widget.userData.username ?? ""}',
-      subject: 'Convite Sincro App',
-    );
   }
 
   void _showFeedback(String message, {bool isError = false}) {

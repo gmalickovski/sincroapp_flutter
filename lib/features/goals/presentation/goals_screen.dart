@@ -14,7 +14,6 @@ import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
-import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'package:sincro_app_flutter/common/widgets/fab_opacity_manager.dart';
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart';

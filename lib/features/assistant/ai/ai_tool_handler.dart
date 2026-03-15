@@ -4,7 +4,6 @@
 // Cada método corresponde a um function name definido em AiConfig.toolDefinitions.
 // Retorna Map<String, dynamic> que é serializado e devolvido ao LLM.
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:sincro_app_flutter/services/numerology_engine.dart';
@@ -182,7 +181,7 @@ class AiToolHandler {
     final todayIso = todayStart.toUtc().toIso8601String();
     final tomorrowIso = tomorrowStart.toUtc().toIso8601String();
 
-    final selectCols =
+    const selectCols =
         'id, text, completed, due_date, start_date, tags, '
         'journey_id, journey_title, goal_id, '
         'recurrence_type, recurrence_category, recurrence_interval, recurrence_days_of_week, '

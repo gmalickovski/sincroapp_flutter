@@ -30,7 +30,6 @@ class _AdminUsersTabState extends State<AdminUsersTab> {
   Map<String, Map<String, dynamic>> _userUsage = {}; // Armazena uso de IA por usuário
   bool _isLoading = true;
   String _filterPlan = 'all'; // all, free, plus, premium
-  final double _usdToBrl = 6.0;
 
   @override
   void initState() {

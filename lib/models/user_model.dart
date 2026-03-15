@@ -100,7 +100,6 @@ class UserModel {
     return {
       'email': email,
       'photoUrl': photoUrl,
-      'photoUrl': photoUrl,
       'username': username,
       'gender': gender,
       'first_name': primeiroNome,

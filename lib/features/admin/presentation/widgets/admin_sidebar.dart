@@ -17,11 +17,6 @@ class AdminSidebar extends StatefulWidget {
 }
 
 class _AdminSidebarState extends State<AdminSidebar> {
-  // Admin sidebar is always expanded on desktop for now, matching the requested image
-  // where it looks like a permanent sidebar. Or we can make it collapsible if desired.
-  // The images show a wide sidebar.
-  final bool _isExpanded = true;
-
   @override
   Widget build(BuildContext context) {
     return Container(

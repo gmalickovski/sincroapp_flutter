@@ -22,7 +22,6 @@ class _SelectUserModalState extends State<SelectUserModal> {
   List<UserModel> _displayedUsers = [];
 
   bool _isLoading = true;
-  String? _successMessage;
 
   @override
   void initState() {

@@ -375,7 +375,6 @@ class _AgentStarPainter extends CustomPainter {
 
     // Brow Helpers (scaled)
     final bW = 5.0 * ratio; // Width half
-    final bH = 2.0 * ratio; // small height adjustments
     final bW7 = 7.0 * ratio;
 
     if (emotionState == 'task_neutral') {

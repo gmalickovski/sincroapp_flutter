@@ -113,7 +113,7 @@ class AssistantService {
     final messages = <Map<String, dynamic>>[
       {
         'role': 'system',
-        'content': AiPrompts.systemPrompt + '\n\n' + contextBlock,
+        'content': '${AiPrompts.systemPrompt}\n\n$contextBlock',
       },
       // Otimização: Oculta arrays pesados ("tasks", "actions") do histórico.
       ...recentHistory.map((m) {
@@ -359,7 +359,7 @@ class AssistantService {
     // ═══════════════════════════════════════════════════════════════════════════
 
     // ── MERGE TASKS: Injetar tasks capturadas APENAS se for cenário de LISTAGEM ──
-    if (result!.embeddedTasks.isEmpty && capturedTasks.isNotEmpty && result.actions.isEmpty) {
+    if (result.embeddedTasks.isEmpty && capturedTasks.isNotEmpty && result.actions.isEmpty) {
       debugPrint('[OutputParser] 📋 Injetando ${capturedTasks.length} tasks capturadas');
       result = AssistantAnswer(
         answer: result.answer,

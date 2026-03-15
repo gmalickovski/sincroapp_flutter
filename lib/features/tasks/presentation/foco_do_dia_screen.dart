@@ -1,12 +1,10 @@
 // lib/features/tasks/presentation/foco_do_dia_screen.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:table_calendar/table_calendar.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_loading_spinner.dart';
 import 'package:sincro_app_flutter/features/authentication/data/auth_repository.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_model.dart';
-import 'package:sincro_app_flutter/features/tasks/models/task_view_scope.dart';
 import 'package:sincro_app_flutter/models/user_model.dart';
 import 'package:sincro_app_flutter/services/supabase_service.dart';
 import 'package:sincro_app_flutter/features/tasks/presentation/widgets/tasks_list_view.dart';
@@ -26,9 +24,7 @@ import 'package:sincro_app_flutter/common/utils/smart_popup_utils.dart';
 // --- FIM DA MUDANÃ‡A ---
 
 // --- INÃCIO DA MUDANÃ‡A (SolicitaÃ§Ã£o 2): Adicionado 'concluidas' ---
-import 'package:sincro_app_flutter/features/tasks/models/task_view_scope.dart';
 import 'package:sincro_app_flutter/common/widgets/sincro_toolbar.dart';
-import 'package:sincro_app_flutter/common/widgets/page_info_modal.dart';
 import 'package:sincro_app_flutter/common/widgets/page_title_row.dart';
 import 'package:sincro_app_flutter/common/widgets/mobile_filter_sheet.dart';
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
@@ -61,7 +57,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   DateTime? _startDateFilter; // Range start
   DateTime? _endDateFilter; // Range end
   int? _selectedVibrationNumber;
-  final List<int> _vibrationNumbers = List.generate(9, (i) => i + 1) + [11, 22];
 
   // Stream to prevent rebuilds
   late Stream<List<TaskModel>> _tasksStream;
@@ -281,6 +276,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
 
     _supabaseService.addTask(_userId, newTask).catchError((error) {
       _showErrorSnackbar("Erro ao salvar tarefa: $error");
+      return null;
     });
   }
 
@@ -292,9 +288,9 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     // A nova lÃ³gica cria APENAS A PRIMEIRA e deixa o backend (n8n) criar a prÃ³xima ao concluir.
 
     // Usa a data definida ou 'Hoje' (meia-noite local)
-    final _nowFallback = DateTime.now();
+    final nowFallback = DateTime.now();
     final firstDate = parsedTask.dueDate ?? parsedTask.startDate ??
-        DateTime(_nowFallback.year, _nowFallback.month, _nowFallback.day);
+        DateTime(nowFallback.year, nowFallback.month, nowFallback.day);
 
     final isFlow = parsedTask.recurrenceRule.recurrenceCategory == 'flow';
 
@@ -317,84 +313,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       );
     }
   }
-
-  //
-  // --- Nenhuma mudanÃ§a nas funÃ§Ãµes de cÃ¡lculo de recorrÃªncia ---
-  //
-  List<DateTime> _calculateRecurrenceDates(
-      RecurrenceRule rule, DateTime? startDate) {
-    final List<DateTime> dates = [];
-    DateTime currentDate = (startDate ?? DateTime.now()).toLocal();
-    currentDate =
-        DateTime(currentDate.year, currentDate.month, currentDate.day);
-
-    final DateTime safetyLimit =
-        DateTime.now().add(const Duration(days: 365 * 2));
-    final DateTime loopEndDate = (rule.endDate?.toLocal() ?? safetyLimit);
-    final DateTime finalEndDate = DateTime(
-        loopEndDate.year, loopEndDate.month, loopEndDate.day, 23, 59, 59);
-
-    int iterations = 0;
-    const int maxIterations = 100;
-
-    if (rule.type != RecurrenceType.none &&
-        _doesDateMatchRule(rule, currentDate, startDate)) {
-      dates.add(currentDate);
-      iterations++;
-    }
-
-    DateTime nextDate = _getNextDate(rule, currentDate);
-
-    while (nextDate.isBefore(finalEndDate) && iterations < maxIterations) {
-      if (_doesDateMatchRule(rule, nextDate, startDate)) {
-        dates.add(nextDate);
-        iterations++;
-      }
-      nextDate = _getNextDate(rule, nextDate);
-      if (iterations > maxIterations + 5) {
-        break;
-      }
-    }
-    return dates;
-  }
-
-  bool _doesDateMatchRule(
-      RecurrenceRule rule, DateTime date, DateTime? ruleStartDate) {
-    switch (rule.type) {
-      case RecurrenceType.daily:
-        return true;
-      case RecurrenceType.weekly:
-        return rule.daysOfWeek.contains(date.weekday);
-      case RecurrenceType.monthly:
-        return date.day == (ruleStartDate?.day ?? date.day);
-      case RecurrenceType.none:
-        return false;
-    }
-  }
-
-  DateTime _getNextDate(RecurrenceRule rule, DateTime currentDate) {
-    switch (rule.type) {
-      case RecurrenceType.daily:
-      case RecurrenceType.weekly:
-        return currentDate.add(const Duration(days: 1));
-      case RecurrenceType.monthly:
-        int nextMonth = currentDate.month + 1;
-        int nextYear = currentDate.year;
-        if (nextMonth > 12) {
-          nextMonth = 1;
-          nextYear++;
-        }
-        int daysInNextMonth = DateTime(nextYear, nextMonth + 1, 0).day;
-        int nextDay = currentDate.day > daysInNextMonth
-            ? daysInNextMonth
-            : currentDate.day;
-        return DateTime(nextYear, nextMonth, nextDay);
-      case RecurrenceType.none:
-        return DateTime.now().add(const Duration(days: 365 * 10));
-    }
-  }
-  // --- Fim das funÃ§Ãµes de cÃ¡lculo de recorrÃªncia ---
-  //
 
   void _showErrorSnackbar(String message) {
     if (mounted) {
@@ -1082,11 +1000,6 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
     );
   }
 
-  // _buildHeader (original) MODIFICADO para (SolicitaÃ§Ã£o 1 e 3)
-  final GlobalKey _filterButtonKey = GlobalKey();
-
-  // Removed duplicate _selectedDate
-
   bool get _isFilterActive {
     return _activeFilter != null ||
         _selectedDate != null ||
@@ -1270,7 +1183,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   List<SincroFilterItem> _buildFilterItems(
       bool isDesktop, List<String> availableTags) {
     // Standalone view filters
-    void _setFilter(String? filter) {
+    void setFilter(String? filter) {
       setState(() {
         _activeFilter = (_activeFilter == filter) ? null : filter;
         _clearSelection();
@@ -1282,7 +1195,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       icon: Icons.bolt,
       isSelected: _activeFilter == 'foco',
       activeColor: const Color(0xFFFF6D3F),
-      onTap: () => _setFilter('foco'),
+      onTap: () => setFilter('foco'),
     );
 
     final tarefasItem = SincroFilterItem(
@@ -1290,7 +1203,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       icon: Icons.inbox_outlined,
       isSelected: _activeFilter == 'tarefas',
       activeColor: Colors.amber,
-      onTap: () => _setFilter('tarefas'),
+      onTap: () => setFilter('tarefas'),
     );
 
     final agendamentoItem = SincroFilterItem(
@@ -1298,7 +1211,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       icon: Icons.event_available,
       isSelected: _activeFilter == 'agendamentos',
       activeColor: Colors.amber,
-      onTap: () => _setFilter('agendamentos'),
+      onTap: () => setFilter('agendamentos'),
     );
 
     final concluidasItem = SincroFilterItem(
@@ -1306,7 +1219,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       icon: Icons.check_circle_outline,
       isSelected: _activeFilter == 'concluidas',
       activeColor: const Color(0xFF22C55E),
-      onTap: () => _setFilter('concluidas'),
+      onTap: () => setFilter('concluidas'),
     );
 
     final atrasadasItem = SincroFilterItem(
@@ -1314,7 +1227,7 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       icon: Icons.warning_amber_rounded,
       isSelected: _activeFilter == 'atrasadas',
       activeColor: const Color(0xFFEF5350),
-      onTap: () => _setFilter('atrasadas'),
+      onTap: () => setFilter('atrasadas'),
     );
 
     // 2. Date Filter (with rich label like Journal)

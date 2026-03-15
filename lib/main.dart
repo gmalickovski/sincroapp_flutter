@@ -162,9 +162,7 @@ Future<void> main() async {
   // Initialize Workmanager
   if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     try {
-      Workmanager().initialize(callbackDispatcher,
-          isInDebugMode: kDebugMode // Set to false in production
-          );
+      Workmanager().initialize(callbackDispatcher);
       // Register Periodic Task (15 min minimum on Android)
       Workmanager().registerPeriodicTask(
         "1",
@@ -306,7 +304,6 @@ class _AuthCheckState extends State<AuthCheck> {
   final AuthRepository _authRepository = AuthRepository();
   User? _user;
   bool _isLoading = true;
-  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -316,7 +313,6 @@ class _AuthCheckState extends State<AuthCheck> {
         setState(() {
           _user = user;
           _isLoading = false;
-          _hasNavigated = false; // Reset ao mudar usuário
         });
       }
     });

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sincro_app_flutter/features/tasks/models/task_view_scope.dart';
 import 'package:sincro_app_flutter/common/constants/app_colors.dart';
-import 'package:sincro_app_flutter/features/tasks/presentation/foco_do_dia_screen.dart'; // To access TaskViewScope
 import 'package:sincro_app_flutter/common/widgets/vibration_pill.dart';
 import 'package:intl/intl.dart';
 import 'package:sincro_app_flutter/common/widgets/custom_end_date_picker_bottom_sheet.dart';
@@ -173,8 +172,7 @@ class _GoalFilterPanelState extends State<GoalFilterPanel> {
                     });
                   },
                   borderRadius: BorderRadius.circular(8),
-                  child: Container(
-                    child: Row(
+                  child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
@@ -205,7 +203,6 @@ class _GoalFilterPanelState extends State<GoalFilterPanel> {
                       ],
                     ),
                   ),
-                ),
               ),
 
               // Vibration Filter
