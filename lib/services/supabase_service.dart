@@ -1243,6 +1243,27 @@ class SupabaseService {
     }
   }
 
+  /// Deleta uma recorrência inteira: o template + todas as instâncias geradas.
+  /// [templateId] = id do template (recurrenceId em instâncias aponta para ele).
+  Future<void> deleteTaskRecurrence(String uid, String templateId) async {
+    try {
+      // 1. Deleta todas as instâncias (recurrence_id = templateId)
+      await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .delete()
+          .eq('recurrence_id', templateId);
+      // 2. Deleta o próprio template
+      await _supabase
+          .schema('sincroapp')
+          .from('tasks')
+          .delete()
+          .eq('id', templateId);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<void> updateTaskFields(
       String uid, String taskId, Map<String, dynamic> updates) async {
     try {

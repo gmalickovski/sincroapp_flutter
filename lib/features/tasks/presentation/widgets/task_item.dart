@@ -476,42 +476,22 @@ class TaskItem extends StatelessWidget {
       return content;
     }
 
-    // Retorna o Dismissible
+    // Retorna o Dismissible — somente swipe esquerdo (excluir)
     return Dismissible(
       key: ValueKey('dismiss_${task.id}'),
-      direction: DismissDirection.horizontal,
+      direction: DismissDirection.endToStart, // apenas ← para excluir
       background: Container(
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20.0),
-        decoration: BoxDecoration(
-          color: task.hasDeadline ? Colors.orange : Colors.amber.shade700,
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: Icon(
-          task.hasDeadline ? Icons.calendar_month_outlined : Icons.bolt,
-          color: Colors.white,
-        ),
-      ),
-      secondaryBackground: Container(
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20.0),
         decoration: BoxDecoration(
-          color: Colors.red, // Vermelho (Excluir)
+          color: Colors.red,
           borderRadius: BorderRadius.circular(8.0),
         ),
         child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
       ),
       confirmDismiss: (direction) async {
-        if (direction == DismissDirection.endToStart) {
-          // Swipe Left (Excluir)
-          if (onSwipeLeft != null) {
-            return await onSwipeLeft!(task);
-          }
-        } else if (direction == DismissDirection.startToEnd) {
-          // Swipe Right (Reagendar)
-          if (onSwipeRight != null) {
-            return await onSwipeRight!(task);
-          }
+        if (onSwipeLeft != null) {
+          return await onSwipeLeft!(task);
         }
         return false;
       },

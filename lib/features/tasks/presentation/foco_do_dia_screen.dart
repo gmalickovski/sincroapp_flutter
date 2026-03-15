@@ -844,55 +844,147 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
   }
 
   Future<bool?> _handleSwipeLeft(TaskModel task) async {
+    final bool isRecurrentTask = task.recurrenceType != RecurrenceType.none ||
+        task.recurrenceCategory == 'commitment_instance' ||
+        task.recurrenceCategory == 'flow' ||
+        task.recurrenceCategory == 'flow_instance';
+
+    if (isRecurrentTask) {
+      await _showDeleteRecurrenceDialog(task);
+    } else {
+      await _showDeleteSingleDialog(task);
+    }
+    // Sempre retorna false — o Dismissible nunca remove o widget sozinho.
+    return false;
+  }
+
+  /// Dialog para tarefas NORMAIS (sem recorrência).
+  Future<void> _showDeleteSingleDialog(TaskModel task) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
         title: const Text('Excluir Tarefa?',
-            style: TextStyle(color: Colors.white)),
+            style: TextStyle(color: Colors.white, fontFamily: 'Poppins')),
         content: const Text(
-            'Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.',
-            style: TextStyle(color: AppColors.secondaryText)),
+            'Esta ação não pode ser desfeita.',
+            style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
         actionsAlignment: MainAxisAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Cancelar',
-                      style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontFamily: 'Poppins')),
+          Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                foregroundColor: Colors.redAccent,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
-                    foregroundColor: Colors.redAccent,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side:
-                          const BorderSide(color: Colors.redAccent, width: 1.5),
-                    ),
+              child: const Text('Excluir',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            )),
+          ]),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await _supabaseService.deleteTask(_userId, task.id);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tarefa excluída'), backgroundColor: AppColors.success),
+          );
+          setState(() {});
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  /// Dialog para tarefas RECORRENTES — opção de excluir só esta ou toda a recorrência.
+  Future<void> _showDeleteRecurrenceDialog(TaskModel task) async {
+    // 'only_this' | 'all' | null (cancelar)
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Recorrência',
+            style: TextStyle(color: Colors.white, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: const Text(
+            'Como deseja excluir esta tarefa recorrente?',
+            style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Excluir só esta
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop('only_this'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent.withValues(alpha: 0.08),
+                  foregroundColor: Colors.redAccent,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.redAccent, width: 1.5),
                   ),
-                  child: const Text('Excluir',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
                 ),
+                child: const Text('Excluir só este',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+              ),
+              const SizedBox(height: 10),
+              // Excluir toda a recorrência
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop('all'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.withValues(alpha: 0.12),
+                  foregroundColor: Colors.red,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.red, width: 1.5),
+                  ),
+                ),
+                child: const Text('Excluir toda a recorrência',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+              ),
+              const SizedBox(height: 10),
+              // Cancelar
+              OutlinedButton(
+                onPressed: () => Navigator.of(ctx).pop(null),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Cancelar',
+                    style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
               ),
             ],
           ),
@@ -900,33 +992,35 @@ class _FocoDoDiaScreenState extends State<FocoDoDiaScreen> {
       ),
     );
 
-    if (confirmed == true) {
-      try {
+    if (choice == null || !mounted) return;
+
+    try {
+      if (choice == 'only_this') {
         await _supabaseService.deleteTask(_userId, task.id);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tarefa excluída com sucesso'),
-              backgroundColor: AppColors.success,
-            ),
+            const SnackBar(content: Text('Agendamento excluído'), backgroundColor: AppColors.success),
           );
-          setState(() {}); // Força rebuild da lista via stream
+          setState(() {});
         }
-      } catch (e) {
-        debugPrint("Erro ao excluir tarefa: $e");
+      } else if (choice == 'all') {
+        // Encontra o ID do template: se for instância, usa recurrenceId; se for template, usa o próprio id
+        final templateId = task.recurrenceId ?? task.id;
+        await _supabaseService.deleteTaskRecurrence(_userId, templateId);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Erro ao excluir tarefa: $e'),
-              backgroundColor: Colors.red,
-            ),
+            const SnackBar(content: Text('Recorrência excluída por completo'), backgroundColor: AppColors.success),
           );
+          setState(() {});
         }
       }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
-    // Sempre retorna false — o Dismissible nunca remove o widget sozinho.
-    // A remoção acontece via rebuild do stream após deleteTask.
-    return false;
   }
 
   // Swipe Right: Reagendar (com deadline) ou Toggle Foco (sem deadline)

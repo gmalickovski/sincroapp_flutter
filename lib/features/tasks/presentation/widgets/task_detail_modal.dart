@@ -601,60 +601,148 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
 
   Future<void> _deleteTask() async {
     if (_isLoading || !mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
 
+    final bool isRecurrentTask =
+        widget.task.recurrenceType != RecurrenceType.none ||
+        widget.task.recurrenceCategory == 'commitment_instance' ||
+        widget.task.recurrenceCategory == 'flow' ||
+        widget.task.recurrenceCategory == 'flow_instance';
+
+    if (isRecurrentTask) {
+      await _deleteRecurrentTask();
+    } else {
+      await _deleteSingleTask();
+    }
+  }
+
+  /// Exclusão simples para tarefas normais (sem recorrência).
+  Future<void> _deleteSingleTask() async {
+    final messenger = ScaffoldMessenger.of(context);
     final bool? confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: AppColors.cardBackground,
-        title: const Text('Confirmar Exclusão',
-            style:
-                TextStyle(fontFamily: 'Poppins', color: AppColors.primaryText)),
-        content: const Text('Tem certeza que deseja excluir esta tarefa?',
-            style: TextStyle(
-                fontFamily: 'Poppins', color: AppColors.secondaryText)),
+        title: const Text('Excluir Tarefa?',
+            style: TextStyle(fontFamily: 'Poppins', color: AppColors.primaryText, fontWeight: FontWeight.bold)),
+        content: const Text('Esta ação não pode ser desfeita.',
+            style: TextStyle(fontFamily: 'Poppins', color: AppColors.secondaryText)),
         actionsAlignment: MainAxisAlignment.center,
         actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(ctx, false),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    side: const BorderSide(color: AppColors.border),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Cancelar',
-                      style: TextStyle(
-                          color: AppColors.secondaryText,
-                          fontFamily: 'Poppins')),
+          Row(children: [
+            Expanded(child: OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: AppColors.border),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Cancelar',
+                  style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+            )),
+            const SizedBox(width: 12),
+            Expanded(child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.redAccent.withValues(alpha: 0.1),
+                foregroundColor: Colors.redAccent,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: const BorderSide(color: Colors.redAccent, width: 1.5),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                        Colors.redAccent.withValues(alpha: 0.1),
-                    foregroundColor: Colors.redAccent,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: Colors.redAccent, width: 1.5),
-                    ),
+              child: const Text('Excluir',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+            )),
+          ]),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _supabaseService.deleteTask(widget.userData.uid, widget.task.id);
+      if (widget.task.journeyId != null && widget.task.journeyId!.isNotEmpty) {
+        await _supabaseService.updateGoalProgress(widget.userData.uid, widget.task.journeyId!);
+      }
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Tarefa excluída.'), backgroundColor: Colors.orange),
+        );
+        _handleClose();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        messenger.showSnackBar(SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  /// Exclusão de tarefas RECORRENTES — opção de excluir só esta ou toda a recorrência.
+  Future<void> _deleteRecurrentTask() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.cardBackground,
+        title: const Text('Excluir Recorrência',
+            style: TextStyle(color: AppColors.primaryText, fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        content: const Text('Como deseja excluir esta tarefa recorrente?',
+            style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
+        actionsAlignment: MainAxisAlignment.center,
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Excluir só este
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop('only_this'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.redAccent.withValues(alpha: 0.08),
+                  foregroundColor: Colors.redAccent,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.redAccent, width: 1.5),
                   ),
-                  child: const Text('Excluir',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontFamily: 'Poppins')),
                 ),
+                child: const Text('Excluir só este',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+              ),
+              const SizedBox(height: 10),
+              // Excluir toda a recorrência
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop('all'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.withValues(alpha: 0.12),
+                  foregroundColor: Colors.red,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: Colors.red, width: 1.5),
+                  ),
+                ),
+                child: const Text('Excluir toda a recorrência',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontFamily: 'Poppins')),
+              ),
+              const SizedBox(height: 10),
+              // Cancelar
+              OutlinedButton(
+                onPressed: () => Navigator.of(ctx).pop(null),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Cancelar',
+                    style: TextStyle(color: AppColors.secondaryText, fontFamily: 'Poppins')),
               ),
             ],
           ),
@@ -662,34 +750,31 @@ class _TaskDetailModalState extends State<TaskDetailModal> {
       ),
     );
 
-    if (confirmed != true) return;
-
-    String? goalIdToUpdate = widget.task.journeyId;
-    if (!mounted) return;
-    // _handleClose(); // REMOVED: Moved to after success
+    if (choice == null || !mounted) return;
 
     try {
-      await _supabaseService.deleteTask(widget.userData.uid, widget.task.id);
-      if (goalIdToUpdate != null && goalIdToUpdate.isNotEmpty) {
-        await _supabaseService.updateGoalProgress(
-            widget.userData.uid, goalIdToUpdate);
-      }
-      if (mounted) {
-        messenger.showSnackBar(
-          const SnackBar(
-              content: Text('Tarefa excluída.'),
-              backgroundColor: Colors.orange),
-        );
-        _handleClose(); // Close after success
+      if (choice == 'only_this') {
+        await _supabaseService.deleteTask(widget.userData.uid, widget.task.id);
+        if (mounted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Agendamento excluído.'), backgroundColor: Colors.orange),
+          );
+          _handleClose();
+        }
+      } else if (choice == 'all') {
+        final templateId = widget.task.recurrenceId ?? widget.task.id;
+        await _supabaseService.deleteTaskRecurrence(widget.userData.uid, templateId);
+        if (mounted) {
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Recorrência excluída por completo.'), backgroundColor: Colors.orange),
+          );
+          _handleClose();
+        }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
-        messenger.showSnackBar(
-          SnackBar(
-              content: Text('Erro ao excluir: $e'),
-              backgroundColor: Colors.red),
-        );
+        messenger.showSnackBar(SnackBar(content: Text('Erro: $e'), backgroundColor: Colors.red));
       }
     }
   }
