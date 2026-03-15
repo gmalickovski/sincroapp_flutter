@@ -1510,53 +1510,6 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
         ),
         child: Row(
           children: [
-            // ── Botão salvar mobile (animado) ────────────────────────────
-            // Aparece quando há alterações e empurra os emojis para o lado
-            if (isMobile)
-              AnimatedSize(
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeInOut,
-                child: (_hasUnsavedChanges || _isSaving)
-                    ? Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: GestureDetector(
-                          onTap: _hasUnsavedChanges ? _handleSave : null,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 150),
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.primary,
-                              borderRadius: BorderRadius.circular(12),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Colors.black26,
-                                  blurRadius: 6,
-                                  offset: Offset(0, 2),
-                                )
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: _isSaving
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : const Icon(
-                                    Icons.check_rounded,
-                                    color: Colors.white,
-                                    size: 22,
-                                  ),
-                          ),
-                        ),
-                      )
-                    : const SizedBox.shrink(),
-              ),
-
             // ── Emojis de humor — ocupa toda a largura restante ──────────
             Expanded(
               child: _MoodSelector(
@@ -1569,6 +1522,74 @@ class _JournalEditorScreenState extends State<JournalEditorScreen> {
                 },
               ),
             ),
+
+            // ── Botão direito (mobile): X fechar ↔ ✓ salvar ─────────────
+            // Sem alterações → X outline branco (fechar)
+            // Com alterações → ✓ roxo preenchido (salvar)
+            if (isMobile) ...[
+              const SizedBox(width: 12),
+              GestureDetector(
+                onTap: (_hasUnsavedChanges || _isSaving)
+                    ? (_hasUnsavedChanges ? _handleSave : null)
+                    : () => Navigator.of(context).pop(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeInOut,
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    // Sem alterações: sem preenchimento + borda branca
+                    // Com alterações: roxo preenchido + sem borda
+                    color: (_hasUnsavedChanges || _isSaving)
+                        ? AppColors.primary
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                    border: (_hasUnsavedChanges || _isSaving)
+                        ? null
+                        : Border.all(color: Colors.white54, width: 1.5),
+                    boxShadow: (_hasUnsavedChanges || _isSaving)
+                        ? const [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 6,
+                              offset: Offset(0, 2),
+                            )
+                          ]
+                        : null,
+                  ),
+                  alignment: Alignment.center,
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 180),
+                          transitionBuilder: (child, anim) => ScaleTransition(
+                            scale: anim,
+                            child: child,
+                          ),
+                          child: (_hasUnsavedChanges)
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  key: ValueKey('check'),
+                                  color: Colors.white,
+                                  size: 22,
+                                )
+                              : const Icon(
+                                  Icons.close_rounded,
+                                  key: ValueKey('close'),
+                                  color: Colors.white54,
+                                  size: 22,
+                                ),
+                        ),
+                ),
+              ),
+            ],
 
             // ── Desktop: dica Ctrl+S + botão Salvar ─────────────────────
             if (isDesktop) ...[
