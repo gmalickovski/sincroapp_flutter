@@ -1,6 +1,15 @@
 # Registro de Mudanças
 
 Todas as mudanças notáveis ​​neste projeto serão documentadas neste arquivo.
+### [1.15.1](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.15.0...v1.15.1) (2026-03-16)
+
+
+### Correções de Bugs 🐛
+
+* **assistant:** corrige prompts, harmonia conjugal e data solicitada no bubble ([2a485d0](https://github.com/gmalickovski/sincroapp_flutter/commit/2a485d0909d817c8c7854c2bcf6eb8dbb6e6542e))
+* **assistant:** melhora retry 429, datas sem horário e detecção de loop duplicado ([4e97db5](https://github.com/gmalickovski/sincroapp_flutter/commit/4e97db5051cf7ac6fe5b8e56befea201bec56667))
+* **tasks:** calcula dia pessoal com base na data da tarefa e não na data atual ([ce25f7d](https://github.com/gmalickovski/sincroapp_flutter/commit/ce25f7d7c5b71862561d5066ac086b44eb66fc3d))
+
 ## [1.15.0](https://github.com/gmalickovski/sincroapp_flutter/compare/v1.14.0...v1.15.0) (2026-03-15)
 
 
