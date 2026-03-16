@@ -113,12 +113,23 @@ class AiProvider {
 
       if (response.statusCode == 429 && attempt < maxRetries) {
         attempt++;
-        // Extrair tempo de espera do header ou usar backoff exponencial
+        // 1. Tenta header retry-after
+        // 2. Tenta parsear "try again in X.Xs" do corpo (Groq coloca no body, não no header)
+        // 3. Fallback: backoff exponencial com mínimo de 10s
+        double waitSeconds;
         final retryAfterHeader = response.headers['retry-after'];
-        final waitSeconds = retryAfterHeader != null
-            ? (double.tryParse(retryAfterHeader) ?? 2.0)
-            : (attempt * 2.0);
-        debugPrint('[AiProvider] ⏳ Rate limit (429). Retry $attempt/$maxRetries em ${waitSeconds}s...');
+        if (retryAfterHeader != null) {
+          waitSeconds = double.tryParse(retryAfterHeader) ?? 10.0;
+        } else {
+          final bodyMatch = RegExp(r'try again in (\d+\.?\d*)s', caseSensitive: false)
+              .firstMatch(response.body);
+          waitSeconds = bodyMatch != null
+              ? (double.tryParse(bodyMatch.group(1)!) ?? 10.0) + 1.0
+              : (attempt * attempt * 3.0); // 3s, 12s, 27s
+        }
+        // Nunca esperar menos de 5s para evitar loops rápidos
+        if (waitSeconds < 5.0) waitSeconds = 5.0;
+        debugPrint('[AiProvider] ⏳ Rate limit (429). Retry $attempt/$maxRetries em ${waitSeconds.toStringAsFixed(1)}s...');
         await Future.delayed(Duration(milliseconds: (waitSeconds * 1000).toInt()));
         continue;
       }

@@ -462,10 +462,10 @@ class AiToolHandler {
         final month = current.month.toString().padLeft(2, '0');
         candidatos.add({
           'data': '$day/$month/${current.year}',
-          'data_iso': DateTime(current.year, current.month, current.day, 9, 0).toUtc().toIso8601String(),
+          'data_iso': DateTime(current.year, current.month, current.day).toUtc().toIso8601String(),
           'dia_pessoal': personalDay,
           'modo_sincroflow': StrategyEngine.getModeTitle(mode),
-          'modo_descricao': StrategyEngine.getModeDescription(mode),
+          // modo_descricao omitido: economiza ~80 tokens/data sem perder precisão
           'dia_favoravel_pessoal': isDiaFavoravel,
           '_score': score,
         });

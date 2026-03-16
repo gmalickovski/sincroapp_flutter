@@ -29,17 +29,40 @@ class AiLoopGuard {
   final int limit;
   final String sessionId;
 
+  /// Rastreia chamadas anteriores: "toolName|argsJson" → número de chamadas
+  final Map<String, int> _toolCallHistory = {};
+
   AiLoopGuard({
     required this.sessionId,
     int? limit,
   }) : limit = limit ?? AiConfig.maxIterations;
 
-  /// Incrementa o contador. Lança [AiLoopException] se o limite for atingido.
-  void tick(String toolName) {
+  /// Incrementa o contador. Lança [AiLoopException] se o limite for atingido
+  /// ou se a mesma ferramenta for chamada com os mesmos argumentos mais de uma vez.
+  void tick(String toolName, {Map<String, dynamic>? args}) {
     _iterations++;
     debugPrint(
       '[AiLoopGuard] Sessão=$sessionId | Iteração=$_iterations/$limit | Ferramenta=$toolName',
     );
+
+    // Detecta chamada duplicada (mesma tool + mesmos args)
+    if (args != null) {
+      final key = '$toolName|${args.toString()}';
+      final prev = _toolCallHistory[key] ?? 0;
+      _toolCallHistory[key] = prev + 1;
+      if (prev >= 1) {
+        debugPrint(
+          '[AiLoopGuard] ⚠️  CHAMADA DUPLICADA detectada: $toolName (${prev + 1}x com mesmos args)',
+        );
+        throw AiLoopException(
+          message:
+              'O assistente chamou "$toolName" repetidamente com os mesmos argumentos. '
+              'Por favor, tente reformular sua pergunta.',
+          iterations: _iterations,
+        );
+      }
+    }
+
     if (_iterations > limit) {
       debugPrint(
         '[AiLoopGuard] ⚠️  LOOP DETECTADO na sessão $sessionId após $_iterations iterações!',
