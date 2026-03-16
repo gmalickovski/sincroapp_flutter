@@ -210,21 +210,36 @@ class TaskItem extends StatelessWidget {
     // Mostra ícone de data para tarefas normais e recorrentes de compromisso; nunca para flow
     final bool shouldShowDateIcon =
         (task.hasDeadline || task.startDate != null) && !isFlowOrInstance;
-    // Calcula o dia pessoal efetivo: dinâmico para tarefas perpétuas, estático para agendadas
+    // Calcula o dia pessoal efetivo:
+    // - Tarefas com dueDate (agendamentos): usa dueDate como referência
+    // - Tarefas com startDate (flow/recorrentes): usa startDate como referência
+    // - Tarefas perpétuas (sem data): recalcula dinamicamente com a data de hoje
     int? effectivePersonalDay = task.personalDay;
     if (userData != null &&
         userData!.nomeAnalise.isNotEmpty &&
         userData!.dataNasc.isNotEmpty) {
-      // Tarefa perpétua (nem flow nem agendada): calcula dia pessoal baseado na data de hoje
       try {
         final engine = NumerologyEngine(
           nomeCompleto: userData!.nomeAnalise,
           dataNascimento: userData!.dataNasc,
         );
-        final now = DateTime.now();
-        final todayUtc = DateTime.utc(now.year, now.month, now.day);
-        final day = engine.calculatePersonalDayForDate(todayUtc);
-        if (day > 0) effectivePersonalDay = day;
+
+        final DateTime? referenceDate = task.dueDate ?? task.startDate;
+
+        if (referenceDate != null) {
+          // Agendamento ou flow: usa a data da tarefa
+          final refLocal = referenceDate.toLocal();
+          final refUtc =
+              DateTime.utc(refLocal.year, refLocal.month, refLocal.day);
+          final day = engine.calculatePersonalDayForDate(refUtc);
+          if (day > 0) effectivePersonalDay = day;
+        } else {
+          // Tarefa perpétua: recalcula sempre com a data de hoje
+          final now = DateTime.now();
+          final todayUtc = DateTime.utc(now.year, now.month, now.day);
+          final day = engine.calculatePersonalDayForDate(todayUtc);
+          if (day > 0) effectivePersonalDay = day;
+        }
       } catch (_) {}
     }
 
@@ -507,7 +522,14 @@ class TaskItem extends StatelessWidget {
                 color: Colors.amber.shade700,
                 borderRadius: BorderRadius.circular(8.0),
               ),
-              child: const Icon(Icons.bolt, color: Colors.white),
+              // Tarefas com data: ícone de calendário (reagendar)
+              // Tarefas sem data: ícone de raio (toggle foco)
+              child: Icon(
+                task.dueDate != null
+                    ? Icons.calendar_month_rounded
+                    : Icons.bolt,
+                color: Colors.white,
+              ),
             ),
       // secondaryBackground: swipe ← (endToStart) para tarefas normais
       secondaryBackground: isRecurrentTask
