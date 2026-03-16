@@ -146,6 +146,8 @@ class AssistantService {
     // ── Captura de resultados de ferramentas para injeção no resultado final ──
     // Garante que tasks/actions apareçam mesmo se a IA não gerar o JSON correto.
     List<Map<String, dynamic>> capturedTasks = [];
+    List<DateTime> capturedSuggestedDates = [];
+    String capturedDateActivity = '';
 
     try {
       // ─── 3. Loop de Function Calling ────────────────────────────────────────
@@ -164,8 +166,8 @@ class AssistantService {
         }
 
         if (response.hasToolCall) {
-          // Verificar limite anti-loop
-          guard.tick(response.toolCallName!);
+          // Verificar limite anti-loop (passa args para detectar chamadas duplicadas)
+          guard.tick(response.toolCallName!, args: response.toolCallArgs);
 
           // Executar a ferramenta
           final toolResult = await toolHandler.dispatch(
@@ -181,6 +183,21 @@ class AssistantService {
                   .whereType<Map<String, dynamic>>()
                   .toList();
               debugPrint('[AssistantService] 📋 Captured ${capturedTasks.length} tasks from tool');
+            }
+          }
+
+          // ── Capturar datas de calcular_datas_favoraveis ──
+          // Fallback: se o LLM gerar datas só no texto (sem actions JSON), usamos estas.
+          if (response.toolCallName == 'calcular_datas_favoraveis') {
+            final datas = toolResult['datas_favoraveis'];
+            if (datas is List) {
+              capturedDateActivity = toolResult['atividade']?.toString() ?? '';
+              capturedSuggestedDates = datas
+                  .whereType<Map<String, dynamic>>()
+                  .map((d) => DateTime.tryParse(d['data_iso']?.toString() ?? ''))
+                  .whereType<DateTime>()
+                  .toList();
+              debugPrint('[AssistantService] 📅 Captured ${capturedSuggestedDates.length} suggested dates for "$capturedDateActivity"');
             }
           }
 
@@ -261,7 +278,13 @@ class AssistantService {
       modelName: totalUsage.model,
     ));
 
-    return _parseAiOutput(finalContent, capturedTasks: capturedTasks, userQuestion: question);
+    return _parseAiOutput(
+      finalContent,
+      capturedTasks: capturedTasks,
+      capturedSuggestedDates: capturedSuggestedDates,
+      capturedDateActivity: capturedDateActivity,
+      userQuestion: question,
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -272,6 +295,8 @@ class AssistantService {
   static AssistantAnswer _parseAiOutput(
     String rawText, {
     List<Map<String, dynamic>> capturedTasks = const [],
+    List<DateTime> capturedSuggestedDates = const [],
+    String capturedDateActivity = '',
     String userQuestion = '',
   }) {
     debugPrint('[OutputParser] RAW (${rawText.length} chars): ${rawText.substring(0, rawText.length > 500 ? 500 : rawText.length)}...');
@@ -372,15 +397,71 @@ class AssistantService {
       debugPrint('[OutputParser] ⏭️ Tasks capturadas IGNORADAS (actions presente)');
     }
 
-    // ── DETECT SCHEDULING: Se IA não gerou actions mas user pediu agendamento ──
+    // ── FALLBACK DATAS: Se calcular_datas_favoraveis foi chamado, sobrescreve com dados reais ──
+    // Distingue dois cenários:
+    //   Cenário H (data específica): LLM setou date → preserva date, adiciona suggestedDates se data é ruim.
+    //   Cenário I (sugestão pura): LLM não setou date → date: null, suggestedDates com as 3 datas.
+    if (capturedSuggestedDates.isNotEmpty) {
+      String title;
+      if (capturedDateActivity.isNotEmpty) {
+        title = capturedDateActivity[0].toUpperCase() + capturedDateActivity.substring(1);
+      } else if (result.actions.isNotEmpty && (result.actions.first.title?.isNotEmpty ?? false)) {
+        title = result.actions.first.title!;
+      } else {
+        title = 'Agendamento';
+      }
+
+      // Verifica se o LLM setou uma data específica (Cenário H)
+      // Se não, tenta extrair do userQuestion (Cenário H→I fallback)
+      DateTime? existingDate = result.actions.isNotEmpty ? result.actions.first.date : null;
+      if (existingDate == null && _isSchedulingIntent(userQuestion)) {
+        existingDate = _extractRequestedDateFromQuestion(userQuestion);
+      }
+
+      List<DateTime> finalSuggestedDates;
+      if (existingDate != null) {
+        // Cenário H: data específica — verifica se é favorável
+        final dateIsFavorable = capturedSuggestedDates.any((d) =>
+            d.year == existingDate!.year &&
+            d.month == existingDate.month &&
+            d.day == existingDate.day);
+        // Se favorável → sem sugestões; se ruim → mostra alternativas para o usuário escolher
+        finalSuggestedDates = dateIsFavorable ? [] : capturedSuggestedDates;
+        debugPrint('[OutputParser] 📅 Cenário H: data=${existingDate.toIso8601String()}, favorável=$dateIsFavorable, sugestões=${finalSuggestedDates.length}');
+      } else {
+        // Cenário I: sugestão pura (usuário pediu sugestões, sem data específica)
+        finalSuggestedDates = capturedSuggestedDates;
+        debugPrint('[OutputParser] 📅 Cenário I: ${capturedSuggestedDates.length} sugestões, título="$title"');
+      }
+
+      result = AssistantAnswer(
+        answer: result.answer,
+        actions: [
+          AssistantAction(
+            type: AssistantActionType.create_task,
+            title: title,
+            date: existingDate,
+            suggestedDates: finalSuggestedDates,
+            needsUserInput: true,
+          ),
+        ],
+        embeddedTasks: result.embeddedTasks,
+      );
+    }
+
+    // ── DETECT SCHEDULING: Se IA não gerou actions E não há datas capturadas da tool ──
     if (result.actions.isEmpty && _isSchedulingIntent(userQuestion)) {
       debugPrint('[OutputParser] 🔧 Post-processor: detectou intent de agendamento');
-      final extracted = _extractSchedulingData(result.answer, userQuestion);
+      final extracted = _extractSchedulingData(
+        result.answer,
+        userQuestion,
+        capturedDateActivity: capturedDateActivity,
+      );
       if (extracted != null) {
         debugPrint('[OutputParser] 🔧 Criando action: title="${extracted['title']}", date="${extracted['date']}"');
         final extractedDateStr = extracted['date'] as String?;
         final parsedDate = extractedDateStr != null ? DateTime.parse(extractedDateStr) : null;
-        
+
         result = AssistantAnswer(
           answer: result.answer,
           actions: [
@@ -401,13 +482,105 @@ class AssistantService {
                   [],
             ),
           ],
-          embeddedTasks: [],  // Limpar tasks se virou agendamento
+          embeddedTasks: [],
         );
       }
     }
 
+    // ── NORMALIZE DATES: Zera horário se usuário não mencionou hora explícita ──
+    // Evita que o LLM use "Hora atual" do contexto como horário de agendamento.
+    if (result.actions.isNotEmpty && !_userMentionedTime(userQuestion)) {
+      DateTime? stripTime(DateTime? d) =>
+          d != null ? DateTime(d.year, d.month, d.day) : null;
+
+      final normalizedActions = result.actions.map((action) {
+        return action.copyWith(
+          date: stripTime(action.date),
+          suggestedDates: action.suggestedDates
+              .map((d) => DateTime(d.year, d.month, d.day))
+              .toList(),
+        );
+      }).toList();
+
+      result = AssistantAnswer(
+        answer: result.answer,
+        actions: normalizedActions,
+        embeddedTasks: result.embeddedTasks,
+      );
+      debugPrint('[OutputParser] 🕐 Horários normalizados para meia-noite (sem hora explícita)');
+    }
+
     debugPrint('[OutputParser] ✅ Final: embeddedTasks=${result.embeddedTasks.length}, actions=${result.actions.length}');
     return result;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detecta se o usuário mencionou um horário explícito na mensagem
+  // Ex: "às 15h", "14:00", "14h30", "9h" → true
+  // Ex: "semana que vem", "dia 20/03"     → false
+  // ---------------------------------------------------------------------------
+  static bool _userMentionedTime(String question) {
+    if (question.isEmpty) return false;
+    return RegExp(r'(\d{1,2})\s*h(?:oras?)?\s*(?:\d{2})?|[àa]s?\s+\d{1,2}\s*h|(\d{1,2}):(\d{2})', caseSensitive: false)
+        .hasMatch(question);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Extrai a data específica mencionada pelo usuário na pergunta
+  // Ex: "dia 20 de março" → DateTime(2026,3,20)
+  // Ex: "20/03" → DateTime(2026,3,20)
+  // Ex: "amanhã" → DateTime.now()+1d
+  // ---------------------------------------------------------------------------
+  static DateTime? _extractRequestedDateFromQuestion(String question) {
+    if (question.isEmpty) return null;
+    final q = question.toLowerCase();
+    final now = DateTime.now();
+
+    // "amanhã"
+    if (q.contains('amanhã') || q.contains('amanha')) {
+      final t = now.add(const Duration(days: 1));
+      return DateTime(t.year, t.month, t.day);
+    }
+    // "hoje"
+    if (q.contains('hoje')) {
+      return DateTime(now.year, now.month, now.day);
+    }
+
+    const monthNames = {
+      'janeiro': 1, 'fevereiro': 2, 'março': 3, 'marco': 3, 'abril': 4,
+      'maio': 5, 'junho': 6, 'julho': 7, 'agosto': 8, 'setembro': 9,
+      'outubro': 10, 'novembro': 11, 'dezembro': 12,
+    };
+
+    // "dia 20 de março" ou "20 de março"
+    final textMatch = RegExp(
+      r'(?:dia\s+)?(\d{1,2})\s+de\s+([a-zçãáéíóú]+)',
+      caseSensitive: false,
+    ).firstMatch(q);
+    if (textMatch != null) {
+      final day = int.tryParse(textMatch.group(1)!);
+      final monthStr = textMatch.group(2)?.toLowerCase();
+      if (day != null && monthStr != null && monthNames.containsKey(monthStr)) {
+        final month = monthNames[monthStr]!;
+        var year = now.year;
+        if (month < now.month || (month == now.month && day < now.day)) year++;
+        return DateTime(year, month, day);
+      }
+    }
+
+    // "DD/MM" ou "DD/MM/YYYY" ou "DD-MM"
+    final slashMatch =
+        RegExp(r'(\d{1,2})[/\-](\d{1,2})(?:[/\-](\d{4}))?').firstMatch(q);
+    if (slashMatch != null) {
+      final day = int.tryParse(slashMatch.group(1)!);
+      final month = int.tryParse(slashMatch.group(2)!);
+      final year = int.tryParse(slashMatch.group(3) ?? '') ?? now.year;
+      if (day != null && month != null && day <= 31 && month <= 12) {
+        return DateTime(year, month, day);
+      }
+    }
+
+    return null;
   }
 
   // ---------------------------------------------------------------------------
@@ -436,7 +609,8 @@ class AssistantService {
       'registr', 'registre',
       'melhor dia', 'melhor data', 'melhor horário',
       'sugestão de', 'sugestões de', 'sugerir data', 'sugerir dia',
-      'quando devo',
+      'sugira', 'sugir', 'datas favor', 'dias favor', 'data favor',
+      'quando devo', 'melhor moment',
     ];
     return keywords.any((k) => q.contains(k));
   }
@@ -444,11 +618,24 @@ class AssistantService {
   // ---------------------------------------------------------------------------
   // Extrai título e data do texto da IA para criar actions automaticamente
   // ---------------------------------------------------------------------------
-  static Map<String, dynamic>? _extractSchedulingData(String aiAnswer, String userQuestion) {
+  static Map<String, dynamic>? _extractSchedulingData(
+    String aiAnswer,
+    String userQuestion, {
+    String capturedDateActivity = '',
+  }) {
     // ── Extrair título ──
-    // 1. Tentar extrair do userQuestion primeiro (É a fonte mais confiável)
-    String? title = _extractTitleFromQuestion(userQuestion);
-    
+    // 0. Fonte mais confiável: atividade capturada diretamente da tool call
+    String? title;
+    if (capturedDateActivity.isNotEmpty) {
+      final act = capturedDateActivity.trim();
+      title = act[0].toUpperCase() + act.substring(1);
+    }
+
+    // 1. Tentar extrair do userQuestion (se ainda não temos título)
+    if (title == null || title.isEmpty) {
+      title = _extractTitleFromQuestion(userQuestion);
+    }
+
     // 2. Fallback: pegar texto em **negrito** na resposta da IA
     if (title == null || title.isEmpty || title == "Novo Compromisso") {
       final boldMatches = RegExp(r'\*\*([^*]+)\*\*').allMatches(aiAnswer).toList();
@@ -457,7 +644,9 @@ class AssistantService {
         for (final m in boldMatches) {
           final text = m.group(1)!;
           final isTime = RegExp(r'^\d{1,2}h').hasMatch(text) || RegExp(r'^\d{1,2}:\d{2}').hasMatch(text);
-          final isDate = text.toLowerCase().contains('feira') || text.toLowerCase().contains('de março');
+          final isDate = text.toLowerCase().contains('feira') ||
+              RegExp(r'de\s+\w+', caseSensitive: false).hasMatch(text) ||
+              RegExp(r'^\d{1,2}[/\-]\d{1,2}').hasMatch(text); // DD/MM ou DD-MM
           if (!isTime && !isDate) {
             title = text;
             break;
@@ -587,6 +776,8 @@ class AssistantService {
 
     // Padrões comuns
     final patterns = [
+      // "sugira datas para corrida ao ar livre" → "corrida ao ar livre"
+      RegExp(r'(?:sugira?|sugestion|sugest[aã]o\s+de?\s+datas?)\s+(?:\d+\s+)?(?:datas?\s+)?(?:favor[aá]veis?\s+)?(?:para\s+)(.+?)$', caseSensitive: false),
       RegExp(r'agend\w*\s+(?:para\s+mim\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
       RegExp(r'(?:marcar|criar|registrar|marque)\s+(?:um\s+|uma\s+compromisso\s+|uma?\s+)?(.+?)(?:\s+para\s+|\s+amanh[ãa]|\s+hoje|\s+dia\s+\d|\s+[àa]s?\s+\d)', caseSensitive: false),
       RegExp(r'agend\w*\s+(.+?)$', caseSensitive: false),
@@ -600,6 +791,12 @@ class AssistantService {
         raw = raw.replaceFirst(RegExp(r'^(um|uma|uns|umas)\s+', caseSensitive: false), '');
         
         if (raw.length > 3 && raw.length < 100) {
+          // Rejeitar preposições/artigos soltos que o regex capturou por engano
+          const prepositionFilter = {
+            'para', 'pra', 'de', 'em', 'no', 'na', 'ao', 'a', 'o',
+            'por', 'com', 'do', 'da', 'dos', 'das', 'pelo', 'pela',
+          };
+          if (prepositionFilter.contains(raw.toLowerCase())) continue;
           // Capitalizar primeira letra
           return raw[0].toUpperCase() + raw.substring(1);
         }
@@ -651,6 +848,18 @@ class AssistantService {
       }
     }
 
+    // Pré-calcular ranges de datas para evitar erros de cálculo do LLM
+    final tomorrow = now.add(const Duration(days: 1));
+    // Próxima semana: segunda-feira da semana que vem até domingo
+    final daysUntilNextMonday = (8 - now.weekday) % 7 == 0 ? 7 : (8 - now.weekday) % 7;
+    final nextMonday = DateTime(now.year, now.month, now.day + daysUntilNextMonday);
+    final nextSunday = nextMonday.add(const Duration(days: 6));
+    // Esta semana: segunda-feira desta semana até domingo
+    final thisMonday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+    final thisSunday = thisMonday.add(const Duration(days: 6));
+
+    final fmt = DateFormat('dd/MM/yyyy');
+
     return '''
 # CONTEXTO DO USUÁRIO
 - Nome: ${user.primeiroNome} ${user.sobrenome}
@@ -659,6 +868,9 @@ class AssistantService {
 - Gênero: ${user.gender ?? 'não informado'}
 - Data atual: $dateStr ($weekday)
 - Hora atual: $timeStr
+- Amanhã: ${fmt.format(tomorrow)}
+- Esta semana: ${fmt.format(thisMonday)} a ${fmt.format(thisSunday)}
+- Próxima semana: ${fmt.format(nextMonday)} a ${fmt.format(nextSunday)}
 - Primeira interação do dia: ${isFirst ? 'SIM (cumprimente com carinho)' : 'NÃO (não reintroduza)'}
 $numerologyCtx
 ''';
@@ -719,7 +931,7 @@ Responda SOMENTE com um array JSON de strings: ["sugestão 1", "sugestão 2", "s
         }
 
         if (response.hasToolCall) {
-          guard.tick(response.toolCallName!);
+          guard.tick(response.toolCallName!, args: response.toolCallArgs);
           final toolResult = await toolHandler.dispatch(
             response.toolCallName!,
             response.toolCallArgs ?? {},
